@@ -1,6 +1,11 @@
 # TimeGym
 A package for prototyping and debuging forecasting pipelines. TimeGym is compatible with the most popular machine learning and forecasting packages: sklearn, sktime, gluonts, keras, xgboost, catboost, etc.
 
+Install using pip:
+
+```
+pip install timegym
+```
 
 # Quick Start
 
