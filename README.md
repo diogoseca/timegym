@@ -1,11 +1,12 @@
 # TimeGym
-A package for prototyping and debuging forecasting pipelines. TimeGym is compatible with the most popular machine learning and forecasting packages: sklearn, sktime, gluonts, keras, xgboost, catboost, etc.
 
+[![PyPI](https://img.shields.io/pypi/v/timegym)](pypi link)
+[![GitHub release](https://img.shields.io/github/v/release/diogoseca/timegym)](https://github.com/diogoseca/timegym/releases/)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/diogoseca/timegym/graphs/commit-activity)
+[![Open In Collab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/diogoseca/timegym)
+[![Binder](https://binder.pangeo.io/badge_logo.svg)](https://binder.pangeo.io/v2/gh/diogoseca/timegym/master)
 
-# Quick Start
-
-**Step 1. Specify the forecasting pipeline.**  
-The pipeline should include all steps of preprocessing, statistical modeling, machine learning, and hyperparameter optimization:
+**TimeGym** is a simple way to engineer and test forecasting pipelines.
 
 ```python
 from timegym import Pipeline
@@ -15,18 +16,24 @@ from xgboost import XGBRegressor
 pipeline = Pipeline()
 pipeline.add(PCA(0.95))
 pipeline.add(XGBRegressor)
-```
-
-**Step 2. Test the pipeline**  
-Let's see how the pipeline reacts to the most common problems in forecasting:
-
-```python
 pipeline.test()
 ```
 
-After a few minutes (time varies according to the pipeline) you should see results.
+## Features
 
-# Need help?
+* Feature 1
+* TimeGym is compatible with the most popular machine learning and forecasting packages: sklearn, sktime, gluonts, keras, xgboost, catboost, etc.
+* Easy install via pip using `pip install timegym`
+
+## Installation
+
+Easy install via pip install:
+
+```bash
+pip install timegym
+```
+
+## Need help?
 
 [Leave us a ticket on GitHub](https://github.com/diogoseca/timegym/issues/new/choose).
 

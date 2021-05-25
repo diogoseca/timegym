@@ -1,5 +1,7 @@
 
+from data.synthetic import basic_synthetics
 import numpy as np
+import pandas as pd
 from functools import partial
 import matplotlib.pyplot as plt
 from sktime.utils.validation._dependencies import _check_soft_dependencies
@@ -12,7 +14,7 @@ from sklearn.pipeline import Pipeline as SkPipeline
 from sktime.performance_metrics.forecasting import smape_loss
 # other metrics: https://stats.stackexchange.com/questions/425390/how-do-i-decide-when-to-use-mape-smape-and-mase-for-time-series-analysis-on-sto
 import types
-from sklearn.base import TransformerMixin, RegressorMixin
+from sklearn.base import TransformerMixin, RegressorMixin, BaseEstimator
 from collections import defaultdict
 from sktime.forecasting.naive import NaiveForecaster
 import inspect
@@ -22,7 +24,7 @@ from tqdm.auto import tqdm
 import seaborn as sns
 
 
-class FunctionTransformation(TransformerMixin):
+class FunctionTransformation(BaseEstimator, TransformerMixin):
     def __init__(self, transformation, **hyperparameters):
         self.transformation = transformation
         self.hyperparameters = hyperparameters
@@ -34,7 +36,7 @@ class FunctionTransformation(TransformerMixin):
         return self.transformation(X, **self.hyperparameters)
     
     
-class Pipeline:
+class Pipeline(BaseEstimator, TransformerMixin):
     
     def __init__(self, strategy='recursive', window_length=100):
         """

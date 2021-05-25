@@ -1,0 +1,34 @@
+site_name: My Docs
+
+site_name: TimeGym Documentation
+site_description: TimeGym is a simple way to engineer and test forecasting pipelines.
+site_author: Diogo Seca
+
+theme: readthedocs
+
+repo_url: https://github.com/diogoseca/timegym
+
+plugins:
+- search
+- autorefs
+- mkdocstrings:
+    default_handler: python
+    handlers:
+      python:
+        rendering:
+          show_source: false
+    custom_templates: templates
+    watch:
+      - timegym
+
+pages:
+- Home: index.md
+- User Guide:
+    - Quickstart: user-guide/quickstart.md
+    - Publish: user-guide/publish-plugin.md
+- Reference: reference.md
+- Contributor Guide:
+    - Quickstart: contributor-guide/quickstart.md
+    - Documentation: contributor-guide/documentation.md
+    
+

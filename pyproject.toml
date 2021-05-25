@@ -1,0 +1,36 @@
+# reference: https://flit.readthedocs.io/en/latest/pyproject_toml.html
+
+[build-system]
+requires = ['flit_core >=2,<4']
+build-backend = 'flit_core.buildapi'
+
+[tool.flit.metadata]
+module = 'timegym'
+author = 'Diogo Seca'
+author-email = 'diogo.seca@fe.up.pt'
+home-page = 'https://github.com/diogoseca/timegym'
+classifiers = [
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent',
+]
+description-file = 'README.md'
+
+[tool.flit.metadata.requires-extra]
+test = [
+    'pytest>=6.2.2',
+    'nbval>=0.9.6',
+    'coverage',
+    'mkdocstrings',
+    'mkdocs-autorefs',
+]
+
+[tool.flit.metadata.urls]
+Documentation = 'https://timegym.readthedocs.io/en/latest/'
+
+#doc = ['sphinx']
+
+

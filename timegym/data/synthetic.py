@@ -353,6 +353,11 @@ class AverageSyntheticSeries(SyntheticSeries):
         return components
           
 
+average = AverageSyntheticSeries(
+    [trend_clean, two_seasonalities, two_gaussians_markov],
+    [5, 3, 2]
+)
+
 basic_synthetics = [
     gaussian,
     uniform,
