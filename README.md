@@ -1,10 +1,18 @@
 # TimeGym
 
+<<<<<<< HEAD
 [![PyPI](https://img.shields.io/pypi/v/timegym)](pypi link)
 [![GitHub release](https://img.shields.io/github/v/release/diogoseca/timegym)](https://github.com/diogoseca/timegym/releases/)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/diogoseca/timegym/graphs/commit-activity)
 [![Open In Collab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/diogoseca/timegym)
 [![Binder](https://binder.pangeo.io/badge_logo.svg)](https://binder.pangeo.io/v2/gh/diogoseca/timegym/master)
+=======
+Install using pip:
+
+```
+pip install timegym
+```
+>>>>>>> 57e264da95ae36252c4615a59433b16bd8e68438
 
 **TimeGym** is a simple way to engineer and test forecasting pipelines.
 
