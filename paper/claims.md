@@ -1,6 +1,6 @@
 # Claim and evidence ledger
 
-Evidence reviewed 26 October 2026. The contribution is an executable workflow that combines established testing and forecasting principles with inspectable conditional references. A claim becomes an empirical result only when its generated artifacts exist and the manuscript reports their actual output. Passing tests supports the tested cases; it does not prove correctness for all inputs.
+Evidence reviewed 28 October 2026; citation identifiers and the financial-source entries refreshed 30 October 2026. The contribution is an executable workflow that combines established testing and forecasting principles with inspectable conditional references. A claim becomes an empirical result only when its generated artifacts exist and the manuscript reports their actual output. Passing tests supports the tested cases; it does not prove correctness for all inputs.
 
 | Claim | Evidence and boundary | Manuscript treatment |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ Evidence reviewed 26 October 2026. The contribution is an executable workflow th
 | A repair can restore the intended algorithm without improving forecast loss. | `experiments/results-v2/model-repair-losses.csv`: the corrected stale-state branch worsens average realised MSE for the random-walk condition with drift while restoring implementation agreement. The generated manuscript retains the paired effect and interval, not only the improved cases. | Verification and predictive model selection are distinct objectives. Repairs are specified, not discovered. |
 | Marginal and family-wise error rates answer different questions. | `experiments/results-v2/covariance-conditions.csv` and suite records: clean, partial-shuffle, and reduced-spread variants retain raw and Holm decisions. Factorised white noise under permutation remains a true null. The declared family contains four checks within one suite and variant. | Theoretical control relies on valid null p-values; observed counts and Wilson intervals do not prove calibration. Power losses after adjustment remain visible. |
 | Reports and experiments support replay and inspection. | Scenario specifications, model identifiers, dimensions, seeds, settings, and outcomes are recorded. `tests/test_replay.py` checks scenario reconstruction; experiment manifests record the code/environment and generated artifacts. Reproducing arbitrary external training requires that model's own source and environment. | Reproducibility of the specified case and controlled studies; no blanket determinism claim. |
-| The 2021 manuscript is corrected and extended. | Original source preserved; current manuscript gives corrected conditioning, metrics, uncertainty and scope. | Explicit historical relationship. |
+| The 2021 manuscript is corrected and extended. | Original source available from [arXiv:2105.01404v1](https://arxiv.org/abs/2105.01404v1); current manuscript gives corrected conditioning, metrics, uncertainty and scope. | Explicit historical relationship. |
 
 ## Claims excluded from this version
 
@@ -32,23 +32,32 @@ Evidence reviewed 26 October 2026. The contribution is an executable workflow th
 
 ## Literature evidence checked from primary sources
 
+Canonical sources use publication DOIs where available and versioned arXiv
+abstract pages for preprints. Official documentation and the stable JSTOR
+record are retained where neither applies.
+
 | Key | Source | Supported use |
 | --- | --- | --- |
 | `seca2021timegym` | https://arxiv.org/abs/2105.01404v1 | Historical predecessor. |
-| `tan2025syntsbench` | https://papers.nips.cc/paper_files/paper/2025/hash/d60361f3d0021c76626b2597957261d6-Abstract-Datasets_and_Benchmarks_Track.html | Controlled synthetic feature evaluation and theoretical reference comparisons already exist. |
-| `ghoroghchian2026simpletimebench` | https://arxiv.org/html/2610.02058v1 | SimpleTimeBench already frames elementary forecasting tasks as diagnostic unit tests; cited as a preprint. |
-| `dwarakanath2019metamorphic` | https://arxiv.org/html/1907.06632v1 | Forecasting metamorphic tests, eight reported application issues, and mutation evaluation predate TimeGym; this predecessor has real-issue evidence absent here. |
-| `sktimeConformance` | https://www.sktime.net/en/latest/api_reference/auto_generated/sktime.utils.estimator_checks.check_estimator.html | Framework-specific estimator conformance checks are an existing comparison class; no head-to-head evaluation is claimed. |
-| `qiu2024tfb` | https://www.vldb.org/pvldb/vol17/p2363-hu.pdf | Standardised forecasting evaluation pipelines address a related implementation problem. The checked publication is PVLDB 17(9), 2024. |
+| `tan2025syntsbench` | https://doi.org/10.52202/085713-4860 | Controlled synthetic feature evaluation and theoretical reference comparisons already exist. |
+| `ghoroghchian2026simpletimebench` | https://arxiv.org/abs/2610.02058v1 | SimpleTimeBench already frames elementary forecasting tasks as diagnostic unit tests; cited as a preprint. |
+| `dwarakanath2019metamorphic` | https://doi.org/10.1109/MET.2019.00014 | Forecasting metamorphic tests, eight reported application issues, and mutation evaluation predate TimeGym; this predecessor has real-issue evidence absent here. |
+| `sktimeConformance` | https://www.sktime.net/docs/api-reference/sktimeutilsestimator-checkscheck-estimator/ | Framework-specific estimator conformance checks are an existing comparison class; no head-to-head evaluation is claimed. |
+| `qiu2024tfb` | https://doi.org/10.14778/3665844.3665863 | Standardised forecasting evaluation pipelines address a related implementation problem. The checked publication is PVLDB 17(9), 2024. |
 | `hope1968montecarlo` | https://doi.org/10.1111/j.2517-6161.1968.tb00759.x | Monte Carlo significance testing predates the implemented reference-covariance rank check. |
-| `lei2018conformal` | https://www.stat.cmu.edu/~ryantibs/papers/conformal-jasa.pdf | Split calibration yields marginal finite-sample guarantees under exchangeability; it does not guarantee conditional error control for each realised calibration set. |
+| `lei2018conformal` | https://doi.org/10.1080/01621459.2017.1307116 | Split calibration yields marginal finite-sample guarantees under exchangeability; it does not guarantee conditional error control for each realised calibration set. |
 | `holm1979multiple` | https://www.jstor.org/stable/4615733 | Step-down multiplicity adjustment applies to a declared family of valid tests, not arbitrary adaptive searches. |
 | `gneiting2011point` | https://doi.org/10.1198/jasa.2011.r10138 | Point scoring functions must match the requested statistical functional. |
-| `gneiting2007proper` | https://sites.stat.washington.edu/people/raftery/Research/PDF/Gneiting2007jasa.pdf | Proper distributional scoring; energy score and CRPS. |
-| `scheuerer2015variogram` | https://repository.library.noaa.gov/view/noaa/22327/ | Variogram scores complement energy scores when evaluating dependence. |
+| `gneiting2007proper` | https://doi.org/10.1198/016214506000001437 | Proper distributional scoring; energy score and CRPS. |
+| `scheuerer2015variogram` | https://doi.org/10.1175/MWR-D-14-00269.1 | Variogram scores complement energy scores when evaluating dependence. |
 | `rAirPassengers` | https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/AirPassengers.html | Official provenance for the single historical real-series repair example. |
-
-The pasted review is a useful research brief, not a citable bibliography: its opaque search and file citation tokens cannot be resolved from the pasted file. Only the verified sources above are used in the manuscript.
+| `gama2014drift` | https://doi.org/10.1145/2523813 | The distinction between process drift and changes in the generating parameters or predictive relationship in “Seasonality, process drift, and changing mechanisms” (`main.tex`). It does not make every changing latent state concept drift. |
+| `merton1976jumps` | https://doi.org/10.1016/0304-405X(76)90022-2 | The Merton construction in “Financial stress mechanisms and non-Gaussian references” (`main.tex`): continuous diffusion plus compound-Poisson jumps. TimeGym specifies a physical drift, not an option-pricing validation. |
+| `bollerslev1986garch` | https://doi.org/10.1016/0304-4076(86)90063-1 | The GARCH(1,1) conditional-variance recursion and its parameter restrictions in “Financial stress mechanisms and non-Gaussian references” (`main.tex`). |
+| `hamilton1989regimes` | https://doi.org/10.2307/1912559 | The hidden-regime principle in “Financial stress mechanisms and non-Gaussian references” (`main.tex`): inference integrates over an unobserved Markov state; the terminal regime is not observed forecaster input. |
+| `sun2026finstressts` | https://doi.org/10.1145/3770855.3817578 | The related-work sentence identifying isolated and composed financial mechanisms, including volatility, regimes, and jumps (`main.tex`). FinStressTS is direct prior work; financial composition alone is not a novelty claim. |
+| `hu2026fintsb` | https://doi.org/10.1007/s11704-026-51064-5 | The related-work sentence about market constraints and transaction costs in financial evaluation (`main.tex`). The present synthetic tests do not establish trading performance. |
+| `bollerslev1990ccc` | https://doi.org/10.2307/2109358 | The constant conditional correlation construction (CCC-GARCH) in “Joint mechanisms and dependence-aware uncertainty” (`main.tex`). It supplies the model precedent, not a claim of exact multi-step cross-moments or arbitrary dynamic correlations. |
 
 ## Main-figure evidence
 
@@ -80,12 +89,11 @@ The financial matrix reads configurations directly from application notebook
 26 and records its 18 illustrative cases in the figure provenance file.
 The original observation-dot / forecast-cross visual language is retained.
 
-Financial composition has direct prior work: FinStressTS (2026),
-https://arxiv.org/abs/2606.03184. Its existence rules out a novelty claim based
-merely on controlled or composed financial generators. The contribution remains
-forecast contracts, fault evidence, and repair verification. Merton (1976),
-Bollerslev (1986), Hamilton (1989), Gama et al. (2014), and FinTSB (2026) are
-recorded in both bibliography forms with verified primary-source identifiers.
+The literature table above records the financial and process-model precedents,
+including the direct prior work FinStressTS and the CCC-GARCH construction.
+Their existence rules out novelty based merely on controlled or composed
+financial generators. The contribution remains forecast contracts, fault
+evidence, and repair verification.
 
 ## Multivariate financial extension (28 October 2026)
 

@@ -36,4 +36,4 @@ addopts = "-ra"
 
 [tool.flit.sdist]
 include = ["tests/", "experiments/", "paper/", "docs/", "notebooks/", "tools/", "examples/", "requirements-study.txt", "lab.sh", "CITATION.cff", "CHANGELOG.md", "mkdocs.yml"]
-exclude = ["paper/build/", "paper/*.pdf", "paper/__pycache__/", "notebooks/.ipynb_checkpoints/", "notebooks/html/", "tools/__pycache__/", "notebooks/__pycache__/"]
+exclude = ["paper/build/", "paper/*.pdf", "paper/**/*.pdf", "paper/figures/*.svg", "paper/figures/*.png", "paper/timegym-v2.tex", "paper/__pycache__/", "notebooks/.ipynb_checkpoints/", "notebooks/html/", "tools/__pycache__/", "notebooks/__pycache__/"]

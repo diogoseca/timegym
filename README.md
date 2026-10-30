@@ -185,23 +185,20 @@ immediately following consecutive future labels.
 
 ## Read and reproduce the paper
 
-The original 2021 manuscript is preserved in the workspace's sibling `paper/`
-directory. The new version is maintained **inside this repository**:
+The original manuscript and its source are available from
+[arXiv:2105.01404v1](https://arxiv.org/abs/2105.01404v1). The new version is
+maintained inside this repository:
 
-- [New manuscript](paper/main.tex), [standalone preview source](paper/timegym-v2.tex).
+- [New manuscript](paper/main.tex), [generated single-file build](paper/timegym-v2.tex).
+- [Manuscript build and figures](paper/README.md).
 - [Verified references](paper/references.bib), [claim/evidence ledger](paper/claims.md).
-- [Study protocol and reproduction](experiments/README.md).
+- [Study protocols and evidence](experiments/README.md).
 - [Recorded numerical results](experiments/results/results.json).
 - [Publication strategy](docs/publication-strategy.md).
 - [Migration notes](docs/migration.md).
 
-```bash
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m experiments.run_study
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m experiments.run_supplement
-MPLCONFIGDIR=/tmp/timegym-matplotlib python -m experiments.render_results
-MPLCONFIGDIR=/tmp/timegym-matplotlib python -m experiments.render_supplement
-python paper/build_standalone.py
-```
+Follow the [canonical reproduction recipe](paper/README.md) to reproduce both
+studies and regenerate their tables, figures, and the standalone manuscript.
 
 The selected pilot detected the injected structural and distribution faults,
 while retaining false alarms in clean controls. Its marginal-preserving
