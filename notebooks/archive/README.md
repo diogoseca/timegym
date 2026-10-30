@@ -3,13 +3,13 @@
 These are the ten original development notebooks and the original Quick Start,
 moved into the unified notebook collection with their contents and saved outputs
 preserved. The [SHA-256 inventory](inventory.json) records their paths before the
-move and their preserved bytes. The Quick Start already contained a v2 notice
-when this inventory was created.
+move and their preserved bytes, including the helper used by the notebooks.
 
 The notebooks show TimeGym's original notebook-first development process:
 concepts, implementation cells, experiments, and figures lived together.
 `%%runwrite` executed implementation cells and wrote or appended them to package
-modules. The active [source notebooks](../README.md) continue that approach with
+modules. `%%runwrite` is defined in [utils.py](utils.py), preserved alongside the
+notebooks. The active [source notebooks](../README.md) continue that approach with
 explicit nbdev exports of complete modules. Their figures retain the original
 discrete observations, forecast crosses, component views, and scenario matrices.
 

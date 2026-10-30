@@ -44,7 +44,8 @@ The manifest uses project-relative paths and lists every Python module under
 ```
 
 Each source notebook declares `{"timegym": {"role": "source"}}` in its
-notebook metadata. Its cells have stable, unique IDs. The notebook has one
+notebook metadata. Module ownership lives only in `source-map.json`; do not
+duplicate a `modules` list in notebook metadata. Its cells have stable, unique IDs. The notebook has one
 default module directive, for example `#| default_exp example`, and marks
 library cells with `#| export`. A cell for another module can use
 `#| export helpers.scaling`. Both modules must belong to that notebook in the
@@ -66,6 +67,30 @@ Notebook 12 owns `timegym/_internal.py`: integer guards, real-array coercion, an
 JSON-safe evidence conversion shared by sibling modules. Import these helpers
 from that module rather than through contracts or reporting; changes to them
 apply across the package. The module is private, with no public API guarantee.
+
+## Same-chapter dependencies
+
+A chapter can define several modules in one kernel. Exported implementation
+cells must import sibling modules from the installed package, but those imports
+can replace names just defined in the notebook with previously exported copies.
+When this happens, use a non-exported `local-<thing>-capture` cell to save the live
+objects before the importing cell, then a non-exported `local-<thing>-restore`
+cell to rebind them after the imports and before the examples. For example,
+chapter 01 saves `(Case, Scenario)` and restores them before its demonstrations.
+
+Every restore cell must assert that the examples use the intended live objects:
+use identity checks such as `metrics.mse is mse`, or check that a local class or
+function has `__module__ == __name__`. Check the dependent function's globals
+when the binding is indirect, as chapter 09 does for `evaluate_forecast`.
+Chapters 10 and 12 need only assertions in their `local-*-restore` cells: their
+current imports do not overwrite local definitions, so no capture is needed.
+
+These bindings require **Restart Kernel and Run All** in cell order. Rerunning a
+definition or import alone can leave the saved objects stale. Add a pair only
+when a new same-chapter import would shadow a definition used in an example;
+ordinary imports from other chapters need no pair. After changes elsewhere,
+save and export those notebooks, then restart the dependent kernel. Export reads
+saved implementation cells and ignores these development-only bindings.
 
 ## Validation boundary
 

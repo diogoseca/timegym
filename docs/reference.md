@@ -288,3 +288,114 @@ observations and returns `count`, `n`, `rate`, and the Wilson `ci95` bounds.
 case-level differences and returns `mean`, `n`, and Student t `ci95` bounds.
 Cases must be independent; horizons and targets within a case are not replications.
 The t interval is for continuous score differences, not differences in alarm rates.
+
+## Optional market data
+
+`timegym.data.real.get_stock(ticker, columns="Close", *, auto_adjust=False,
+cache_path=None, refresh=False)` is a public opt-in network helper. Install
+`timegym[market-data]` for a fetch. It requests one ticker's maximum daily history
+through [yfinance's history API](https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.history.html).
+It always returns a new pandas DataFrame, including for a single column, in the
+requested column order with the provider's timezone and dates (nanosecond index
+resolution). Missing observations are preserved; empty history, unavailable
+columns, and duplicate or unordered dates raise `ValueError`.
+
+`auto_adjust=False` keeps the provider's unadjusted OHLC fields and `Close`;
+`True` requests adjusted OHLC, including `Close`. Choose and record this setting
+before defining the forecasting target. The default preserves the earlier
+helper's price convention while making it explicit. Selecting `"Close"` used to
+return a Series; callers that need one can now select `result["Close"]`.
+
+`cache_path` names a JSON snapshot file containing full history, ticker and
+adjustment metadata. A matching existing snapshot is read without importing
+yfinance or making a network request. It can serve different column selections.
+Malformed snapshots or different ticker/adjustment settings raise; they never
+trigger an implicit refetch. `refresh=True` fetches again and atomically replaces
+the snapshot only after validation. Fetch errors propagate, and an unsuccessful
+refresh leaves the previous snapshot intact. No cache is written when the path
+is omitted. JSON preserves numeric values to 15 decimal places; comparison of
+floating-point values across a cache round trip should allow rounding tolerance.
+
+```python
+from timegym.data.real import get_stock
+
+prices = get_stock("MSFT", auto_adjust=True, cache_path="data/msft-adjusted.json")
+```
+
+The first call above uses the network unless the snapshot already exists.
+Archive the snapshot and adjustment setting with an experiment: provider history
+can be revised, and today's adjusted prices are not point-in-time data. This
+helper supplies observations, not a known conditional reference. The maintained
+notebooks instead use the bundled AirPassengers CSV and run offline on CPU.
+
+## Data preparation
+
+The functions below are public through `timegym.features`, `timegym.target`, and
+`timegym.smoothing`; import them from those modules. They are standalone pandas
+transformations, not automatic Pipeline stages. They never mutate the supplied
+object. Row offsets are positional, so a lag of one means the previous row even
+when timestamps are irregular. Apply transformations within each training split
+and keep future labels out of predictor matrices. The existing recursive model
+adapter constructs its own lag windows; these helpers support explicit notebook
+experiments and custom models.
+
+### Smoothing
+
+`simple_moving_average(df, window_length=30, min_periods=1)` and
+`exponential_moving_average(df, exponential_alpha=None, statistic="mean", *,
+min_periods=1)` both return the same Series/DataFrame type, index, column order
+and labels as the input, containing only smoothed values for **every column**.
+SMA previously appended one renamed column using only the first input column;
+callers should now plot or concatenate the original data explicitly if needed.
+
+Both means use the current and earlier rows. Shift the result by one row to use
+it for predicting the current observation. SMA uses a trailing `window_length`
+(positive integer); `min_periods` is a nonnegative integer no larger than that
+window. EMA requires finite `exponential_alpha` in `(0, 1]` and supports only
+`statistic="mean"`. It normalizes geometric weights (`adjust=True`) and uses
+absolute row positions through gaps (`ignore_na=False`). Both skip missing
+observations when averaging and return NaN until each column meets
+`min_periods`. These are historical transformations, not future forecasts.
+
+### Features
+
+| Function | Contract |
+| --- | --- |
+| `add_lagged_target(df, lags=10, dropna=True)` | Append `{column}_t-1` through `{column}_t-{lags}` by source column; zero lags adds no columns. Retain originals; exclude a contemporaneous target from predictors. |
+| `cyclical_encoding(values, scaled=False, min_value=None, max_value=None, *, period=None)` | Return cosine/sine features of finite real values using a fixed period and phase. Prefer `period=7, min_value=0` for weekdays. Explicit bounds are inclusive discrete labels; `scaled=True` accepts cycle fractions and forbids period/bounds. No sample-dependent scaling. |
+| `add_time_features(df)` | Require a DatetimeIndex without NaT. Append a fixed calendar schema: elapsed UTC days since the Unix epoch, local year and cosine/sine pairs for quarter, month, day, weekday, hour, minute, second, microsecond and month-relative day. |
+| `add_tsfel_features(df, use_cols=None, window_size=100, domain=None, frequency=100, dropna=True, show_progress=False, lag=1)` | Optional `timegym[features]` helper. Append TSFEL features to selected original columns. At row `t`, the window ends at `t-lag`; default `lag=1` excludes the current row. `frequency` is the sampling frequency in Hz. |
+
+Frame helpers require unique column labels and reject generated-name collisions
+instead of overwriting observations. `use_cols` is a name or sequence of names;
+omitting it selects every column. For lagged and TSFEL features, `dropna=True`
+removes rows missing any returned value, including original values. `False`
+retains the original index and missing warmup features. TSFEL needs at least
+`window_size + lag` rows to produce one feature row, with positive window size
+and nonnegative lag. Optional extraction and progress imports happen only when
+requested; core imports do not require TSFEL or tqdm.
+
+### Targets and differences
+
+| Function | Contract |
+| --- | --- |
+| `multioutput_target(df, horizon=10, dropna=True)` | Append `{column}_t+1` through `{column}_t+{horizon}`, by source column. Positive integer horizon. |
+| `onestep_target(df, dropna=True)` | The same target construction with horizon one. |
+| `step_ahead_target(df, step=5, dropna=True)` | Append only `{column}_t+{step}` for each original column. Positive integer step. |
+| `fractional_weights(d, lags)` | Return a `(lags, 1)` array of the first binomial coefficients of `(1-B)^d`, newest first. Finite real `d`; positive integer coefficient count. |
+| `fractional_differencing(series, order, fractional_coefficients, *, lag=1)` | Apply a finite truncated `(1-B^lag)^order` filter independently to each column. Trim exactly `(fractional_coefficients-1)*lag` warmup rows; order zero returns an unchanged copy. |
+| `differencing(series, order=1, fractional_coefficients=10, *, lag=1)` | Integer order means repeated differences, not lag distance: order two is `y[t]-2*y[t-lag]+y[t-2*lag]`. Trim `order*lag` rows. Noninteger order delegates to the finite fractional filter. |
+
+Target constructors retain originals, reject duplicate or colliding columns, and
+return a new DataFrame. `dropna=True` removes any row with a missing original or
+future value; `False` retains the index and incomplete tail. Future columns are
+labels, never inputs available at the forecast origin. These constructors do
+not implement direct, DirRec or multioutput model adapters.
+
+Differencing accepts a Series or DataFrame and preserves its type and labels on
+the retained rows. Orders must be finite and nonnegative, and lag must be a
+positive integer. Missing observations inside the series propagate; they are
+not filled with zero. `fractional_coefficients` is used only for noninteger
+orders in `differencing`. A finite fractional filter is an approximation, not
+an exact infinite-memory transform. Custom forecasters must reconstruct the
+original target scale before evaluation; no inverse transform is applied here.

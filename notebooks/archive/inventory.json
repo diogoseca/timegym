@@ -1,5 +1,5 @@
 {
-  "description": "Preserved notebook bytes before notebook-first migration. The old Quick Start includes its previously added v2 notice.",
+  "description": "Preserved notebook and helper bytes before notebook-first migration.",
   "notebooks": [
     {
       "original_path": "dev/0. Synthetic Data.ipynb",
@@ -54,7 +54,12 @@
     {
       "original_path": "examples/1. Quick Start.ipynb",
       "archived_path": "archive/Quick Start (2021).ipynb",
-      "sha256": "c7ac70eb544dfc63f98deb94325c29ad38ded5508673f5f6987ded31c81f8856"
+      "sha256": "d64f85958c65706c5c89d38d9b723fefd2dc9cefae6b133c56c51a9fd8a4c8ba"
+    },
+    {
+      "original_path": "dev/utils.py",
+      "archived_path": "archive/utils.py",
+      "sha256": "10fcfe73233dc1275fe780515a4deef1145b5d7b3bd70bad4d049320d323f7fb"
     }
   ]
 }
