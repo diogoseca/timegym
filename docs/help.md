@@ -1,6 +1,8 @@
-Help
-====
+# Help
 
-If you need help, please [leave us a ticket on GitHub](https://github.com/diogoseca/timegym/issues/new/choose).
+Start with the [quick start](../README.md) and [migration guide](migration.md).
+For a diagnostic failure, include the JSON report, exact package versions, model
+configuration, scenario manifest and seed when opening an issue. Avoid including
+private training data or credentials.
 
-We are commited to making _timegym_ better.
+Project issues: https://github.com/diogoseca/timegym/issues

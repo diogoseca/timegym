@@ -1,34 +1,31 @@
-site_name: My Docs
-
-site_name: TimeGym Documentation
-site_description: TimeGym is a simple way to engineer and test forecasting pipelines.
+site_name: TimeGym v2
+site_description: Controlled verification and diagnosis for forecasting pipelines
 site_author: Diogo Seca
-
-theme: readthedocs
-
 repo_url: https://github.com/diogoseca/timegym
-
-plugins:
-- search
-- autorefs
-- mkdocstrings:
-    default_handler: python
-    handlers:
-      python:
-        rendering:
-          show_source: false
-    custom_templates: templates
-    watch:
-      - timegym
-
-pages:
-- Home: index.md
-- User Guide:
-    - Quickstart: user-guide/quickstart.md
-    - Publish: user-guide/publish-plugin.md
-- Reference: reference.md
-- Contributor Guide:
-    - Quickstart: contributor-guide/quickstart.md
-    - Documentation: contributor-guide/documentation.md
-    
-
+site_url: https://diogoseca.github.io/timegym/
+theme: readthedocs
+hooks:
+  - tools/docs_hooks.py
+validation:
+  links:
+    anchors: warn
+    unrecognized_links: warn
+not_in_nav: |
+  /docs/index.md
+  /notebooks/**
+  /examples/**
+  /experiments/**
+  /paper/**
+  /tools/**
+  /CHANGELOG.md
+nav:
+  - Home: README.md
+  - Command line: docs/cli.md
+  - API contracts: docs/reference.md
+  - Synthetic stress cases: docs/stress-cases.md
+  - Jupyter tutorials: docs/notebooks.md
+  - Migration: docs/migration.md
+  - Contributing: docs/contributing.md
+  - Validation record: docs/validation.md
+  - Publication strategy: docs/publication-strategy.md
+  - Help: docs/help.md

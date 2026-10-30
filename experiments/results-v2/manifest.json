@@ -1,0 +1,316 @@
+{
+  "original_pilot_results_sha256": "cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014",
+  "platform": "macOS-15.7.9-arm64-arm-64bit-Mach-O",
+  "protocol": {
+    "covariance_study": {
+      "alpha": 0.05,
+      "calibration_seed_offset": 2000000,
+      "conditions": [
+        {
+          "context_length": 80,
+          "horizon": 6,
+          "id": "factorized_white_noise",
+          "kind": "white_noise",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": 0.0,
+            "mean": [
+              2.0,
+              -1.0
+            ],
+            "sigma": [
+              0.8,
+              1.2
+            ]
+          }
+        },
+        {
+          "context_length": 80,
+          "horizon": 6,
+          "id": "correlated_white_noise",
+          "kind": "white_noise",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": 0.65,
+            "mean": [
+              2.0,
+              -1.0
+            ],
+            "sigma": [
+              0.8,
+              1.2
+            ]
+          }
+        },
+        {
+          "context_length": 80,
+          "horizon": 6,
+          "id": "negative_ar1",
+          "kind": "ar1",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": -0.6,
+            "mean": [
+              2.0,
+              -1.0
+            ],
+            "phi": -0.5,
+            "sigma": [
+              0.8,
+              1.2
+            ]
+          }
+        },
+        {
+          "context_length": 80,
+          "horizon": 6,
+          "id": "correlated_random_walk",
+          "kind": "random_walk",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": 0.65,
+            "drift": [
+              0.1,
+              -0.05
+            ],
+            "intercept": [
+              2.0,
+              -1.0
+            ],
+            "sigma": [
+              0.8,
+              1.2
+            ]
+          }
+        }
+      ],
+      "independent_suites": 64,
+      "multiplicity": "One predeclared family contains four condition-specific covariance checks within a suite and variant. Report raw any-rejection and Holm step-down family-wise decisions. No multiplicity claim across variants or between the different study sections.",
+      "mutation_seed_offset": 3000000,
+      "n_calibration": 199,
+      "n_samples": 64,
+      "negative_control": "The factorized white-noise conditional law is invariant under coordinate-wise sample permutations; a shuffle rejection there is a false alarm, not successful fault detection.",
+      "reference_sample_seed_offset": 1000000,
+      "seed_base": 80000,
+      "shuffle_strength": 0.5,
+      "spread_multiplier": 0.75,
+      "suite_seed_stride": 10,
+      "variants": [
+        "clean",
+        "partial_shuffle",
+        "reduced_spread"
+      ]
+    },
+    "limits": [
+      "Four selected implementation defects with known repairs",
+      "No automatic causal localization",
+      "Independent mathematical conformance comparator and target-specific shift comparator are experimental, not public toolkit diagnostics",
+      "New parameter settings but no unseen generator family or external bug corpus",
+      "No foundation-model or framework superiority comparison"
+    ],
+    "model_study": {
+      "atol": 1e-08,
+      "calibration_cases": 128,
+      "calibration_seed_base": 20000,
+      "comparators": {
+        "implementation_agreement": "Supplementary independent NumPy ridge normal-equation implementation; no generating parameters or future values",
+        "output_contract": "Existing Forecast.validate",
+        "point_loss": "Supplementary calibrated realized-MSE alarm",
+        "scalar_shift": "Existing opt-in check_shift_equivariance",
+        "target_shift": "Supplementary experiment-only per-target translation comparator"
+      },
+      "condition_seed_stride": 1000,
+      "conditions": [
+        {
+          "context_length": 120,
+          "horizon": 8,
+          "id": "white_noise_locations",
+          "kind": "white_noise",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": 0.4,
+            "mean": [
+              5.0,
+              -3.0
+            ],
+            "sigma": [
+              1.0,
+              0.7
+            ]
+          }
+        },
+        {
+          "context_length": 120,
+          "horizon": 8,
+          "id": "ar1_positive",
+          "kind": "ar1",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": 0.5,
+            "mean": [
+              3.0,
+              -2.0
+            ],
+            "phi": 0.6,
+            "sigma": [
+              0.8,
+              1.2
+            ]
+          }
+        },
+        {
+          "context_length": 80,
+          "horizon": 8,
+          "id": "ar1_negative",
+          "kind": "ar1",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": -0.4,
+            "mean": [
+              10.0,
+              -5.0
+            ],
+            "phi": -0.45,
+            "sigma": [
+              0.4,
+              1.2
+            ]
+          }
+        },
+        {
+          "context_length": 120,
+          "horizon": 8,
+          "id": "opposing_trends",
+          "kind": "trend",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": 0.3,
+            "intercept": [
+              3.0,
+              -1.0
+            ],
+            "sigma": [
+              0.7,
+              1.1
+            ],
+            "slope": [
+              0.08,
+              -0.04
+            ]
+          }
+        },
+        {
+          "context_length": 144,
+          "horizon": 12,
+          "id": "seasonal_scales",
+          "kind": "seasonal",
+          "n_targets": 2,
+          "parameters": {
+            "amplitude": [
+              2.0,
+              1.0
+            ],
+            "correlation": 0.25,
+            "mean": [
+              5.0,
+              -3.0
+            ],
+            "period": 12.0,
+            "sigma": [
+              0.6,
+              0.8
+            ]
+          }
+        },
+        {
+          "context_length": 120,
+          "horizon": 8,
+          "id": "random_walk_drifts",
+          "kind": "random_walk",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": 0.5,
+            "drift": [
+              0.05,
+              -0.03
+            ],
+            "intercept": [
+              5.0,
+              -3.0
+            ],
+            "sigma": [
+              0.6,
+              0.9
+            ]
+          }
+        }
+      ],
+      "evaluation_cases": 64,
+      "evaluation_seed_base": 50000,
+      "exchangeability": "Calibration and evaluation use independent draws from the same fixed condition and fixed implementation. The clean conformal bound is marginal over calibration and test draws. Rate intervals condition on the one frozen calibration sample; no conditional type-I guarantee is claimed.",
+      "faults": [
+        "reverse_prediction_lags",
+        "stale_recursive_state",
+        "omit_inverse_target_scaling",
+        "swap_recursive_targets"
+      ],
+      "loss_alarm": "Clean calibration MSE order statistic k=ceil((n+1)*(1-alpha)); alarm iff held-out realized MSE exceeds it. Equivalent p-value=(1+# calibration scores>=test score)/(n+1), with conservative ties.",
+      "loss_alpha": 0.05,
+      "repair": "Fit the corrected implementation afresh on the identical context and compare it with the clean output; repairs are specified, not discovered.",
+      "ridge_alpha": 1.0,
+      "rtol": 1e-07,
+      "scalar_shift": 10.0,
+      "target_shifts": [
+        7.0,
+        -11.0
+      ],
+      "tolerance_selection": "Fixed engineering tolerances before evaluation; not learned from evaluation errors. All branches are compared at identical tolerances.",
+      "window": 6
+    },
+    "protocol_version": "2.0",
+    "purpose": "Additional selected implementation-regression evidence; preserve the original protocol1 pilot separately",
+    "runtime": "Wall time and runtime environment are saved separately from deterministic numerical records. CPU only, no paid resources or network datasets.",
+    "selection": "Conditions and four implementation branches were selected before this supplement evaluation. They are developer-constructed fixtures, not an independent real-bug corpus or unseen generator families.",
+    "study_id": "selected-implementation-and-covariance-supplement",
+    "uncertainty": "Wilson95 intervals over independent cases or independent suites; model loss rates conditional on the frozen calibration sample. Paired t95 intervals over independent case-level score/alarm differences. Multiple descriptive comparisons are not multiplicity-adjusted unless explicitly labeled Holm."
+  },
+  "protocol_sha256": "6de8628cc1e05d1c64dd087d3b4d22b5dfcda017bc7321f6ddfc1f5976dcb301",
+  "python": "3.13.2",
+  "results_sha256": "ba9b2e90145ca50d4049e469869ea575a95c34d6d80fd16d0946cb8ae9395bc7",
+  "source_files": {
+    "experiments/model_faults.py": "3449ed9b9d74cb150ccf2a341340ff9516036c0ec1e665f4f339ae04ae0a119d",
+    "experiments/protocol-v2.json": "6de8628cc1e05d1c64dd087d3b4d22b5dfcda017bc7321f6ddfc1f5976dcb301",
+    "experiments/run_supplement.py": "3ea8d443da1075fc022017a1f690ce8a24beef124522b6274c9ce10903b915e2",
+    "timegym/__init__.py": "e3e9d52dd9ad38d6c814463f3caaf521b7e7e7cb9e26974bd8e05f885484b45e",
+    "timegym/__main__.py": "81e026f91dde91d0a3e3a953f054e7d5eb5101693432aac1326c4fc1cbd54dd6",
+    "timegym/checks.py": "7cfb41fc7b61c61cdd690529f754f1ad0b248ef2f9574d036e6172434683b01a",
+    "timegym/cli.py": "45f72558a1bf99d99798c170f20ba186937794b1d0dfd5b28b4342fc817e212c",
+    "timegym/contracts.py": "58b42ef63031d94f6cd41a4a91a8c449d918aa1d243ef1c7c909e36daec8d3bf",
+    "timegym/data/__init__.py": "23a71edf22f8acd435062da8a187989ab24fa0ae99e47f652d827f296e0c0d8a",
+    "timegym/data/real.py": "2d40236328ddc433a6bac28717112e1dfcf2b4fe5be0a6b5b21e92458b431d2c",
+    "timegym/data/synthetic.py": "c67e41f64c277c80b0ddc53eec1cdbba3bd4043ac6b5d2c92f55b6acadf88f34",
+    "timegym/diagnostics.py": "2600ec7d8b534661e70a25f9a2f9565cc850ede7ea00cd6a17efab56ed537449",
+    "timegym/evaluation.py": "72b3f0d6c9bf2bc78d0e6fa5c0b5d28b28b08496e02c09b54eb1ce4182a0a7b4",
+    "timegym/features.py": "2b87a377bc630f29712540c072afd676860ded6dacec98f608de8b2a64d903db",
+    "timegym/joint_processes.py": "cb2fdb1891c1568ceb9a154da1bee9bd0ccabc68dd1b8f9ae7be8d039d60d97f",
+    "timegym/metrics.py": "4983a6fde59a87ddaacd5ce1373ed72cdc033ae9f9a2111a4ab28394f43292af",
+    "timegym/models.py": "c0e2044eff3a1493b1f17714e024812f07afe98b96cfce22392766bbd974cb4b",
+    "timegym/mutations.py": "54cb0c40264f13c371b9ddfc461726e173c73c3e48224bc1941ddf683c4d65f7",
+    "timegym/pipeline.py": "32ba13484bd59e1f2d229ec9d1c28e42b0baf3bc24844c3d29f8fe4ce3966150",
+    "timegym/plotting.py": "1ebdaa2917f74be5f93561e3ae9810e8f3fee93bd196da0efc5ff2ae00d90711",
+    "timegym/processes.py": "b6cf7653290e6c63fb87f58217c5e05fcd9afd086e96dbacb5f580a33e17dfe7",
+    "timegym/provenance.py": "51a1f87eb1756cec65a95fc005abe98ec516316d602fa58261e3ba1f6b8cb5ee",
+    "timegym/reporting.py": "0e95ab3e9f0f0b3828f5b733437402c55504a50a03d327198f196a742b2a5a81",
+    "timegym/scenarios.py": "3ba32a81512437bf7c1e55c2c2a31ec813244397e1edaf0288a8e3074412df9f",
+    "timegym/smoothing.py": "711ff61c874d875c55c512ba0812d3911620dabed497399b9a7f7c555bd00250",
+    "timegym/strategy.py": "b17c87f8e431b93e8c0a492affa6bdfe22ca95e9dc5d247fa437337ef2f9cdc3",
+    "timegym/target.py": "15bfc2d14a0e72dd787e5eef7b5754fb581a9b1b64fd8b61884b14a6292e457a"
+  },
+  "source_note": "Hashes identify the working source, including generated package files; no uncommitted changes are represented by a base Git revision alone.",
+  "versions": {
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.18.1"
+  }
+}

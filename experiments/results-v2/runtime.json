@@ -1,0 +1,11 @@
+{
+  "covariance_seconds": 2.7391017079353333,
+  "model_seconds": 19.258739875163883,
+  "note": "Observed wall time for this execution; excluded from deterministic numerical results.",
+  "threads": {
+    "MKL_NUM_THREADS": null,
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "total_seconds": 21.997841583099216
+}

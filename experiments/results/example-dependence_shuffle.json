@@ -1,0 +1,130 @@
+{
+  "diagnostics": [
+    {
+      "category": "correctness",
+      "evidence": {},
+      "message": "Forecast indices, target order, shapes, finiteness, and quantile order satisfy the declared contract.",
+      "name": "forecast_contract",
+      "status": "PASS"
+    },
+    {
+      "category": "capability",
+      "evidence": {
+        "mae": 1.2097728938459837,
+        "mase": 1.4840424673958117,
+        "mean_reference_mse": 0.0,
+        "mse": 2.3956295023561007
+      },
+      "message": "Point scores are descriptive; no capability acceptance tolerance was declared.",
+      "name": "point_accuracy",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "category": "capability",
+      "evidence": {},
+      "message": "Quantile loss is descriptive; no capability acceptance tolerance was declared.",
+      "name": "quantile_accuracy",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "category": "uncertainty",
+      "evidence": {
+        "lower_level": 0.1,
+        "mean_width": 3.744817253336163,
+        "nominal_coverage": 0.8,
+        "observed_coverage": 0.75,
+        "upper_level": 0.9
+      },
+      "message": "One-path coverage across possibly dependent coordinates does not establish calibration.",
+      "name": "interval_coverage",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "category": "capability",
+      "evidence": {},
+      "message": "Empirical marginal and joint scores are descriptive; no capability acceptance tolerance was declared.",
+      "name": "sample_scores",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "category": "distribution",
+      "evidence": {
+        "alpha": 0.05,
+        "critical_value": 0.2627857773509725,
+        "minimum_p_value": 0.01,
+        "multiplicity": "per-check alpha; no correction across cases",
+        "n_calibration": 99,
+        "n_coordinates": 16,
+        "n_samples": 128,
+        "null": "iid draws from the specified conditional reference law",
+        "p_value": 0.01,
+        "seed": 310000,
+        "statistic": 0.895311758773711,
+        "statistic_name": "normalized_covariance_frobenius_error"
+      },
+      "message": "Ensemble covariance differs from the specified reference at the declared per-check level.",
+      "name": "reference_covariance",
+      "status": "FAIL"
+    }
+  ],
+  "manifest": {
+    "array_order": "horizon_major_C",
+    "conditioning": {
+      "future_observations_used": false,
+      "initialization": "stationary_distribution",
+      "known_generator_parameters": true,
+      "last_observed": [
+        0.08042336063319783,
+        -0.7328368557902775
+      ],
+      "observed_through": 119
+    },
+    "context_length": 120,
+    "horizon": 8,
+    "kind": "ar1",
+    "n_targets": 2,
+    "parameters": {
+      "correlation": [
+        [
+          1.0,
+          0.7
+        ],
+        [
+          0.7,
+          1.0
+        ]
+      ],
+      "mean": [
+        0.0,
+        0.0
+      ],
+      "phi": 0.8,
+      "sigma": [
+        1.0,
+        1.0
+      ]
+    },
+    "reference_kind": "analytic_conditional",
+    "schema_version": 1,
+    "seed": 10000,
+    "target_names": [
+      "y0",
+      "y1"
+    ]
+  },
+  "metrics": {
+    "crps": 0.8933215710713047,
+    "energy_score": 4.3811530540088,
+    "interval_coverage": 0.75,
+    "interval_nominal_coverage": 0.8,
+    "interval_width": 3.744817253336163,
+    "mae": 1.2097728938459837,
+    "mase": 1.4840424673958117,
+    "mean_reference_mse": 0.0,
+    "mse": 2.3956295023561007,
+    "pinball": 0.39505186263532027,
+    "variogram_score": 0.19467126046642153
+  },
+  "scenario": "ar1",
+  "seed": 10000
+}

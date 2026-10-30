@@ -1,0 +1,63 @@
+# TimeGym v2 manuscript
+
+`main.tex` is the editable v2 manuscript. The generated result fragments contain tables and narrative derived from saved study records; do not edit their numbers by hand. `references.bib` mirrors the inline bibliography, and `claims.md` links each substantive claim to its evidence and boundary. The historical 2021 source remains in the sibling directory outside this repository.
+
+From the repository root, with the development environment installed:
+
+```sh
+python -m experiments.run_study
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m experiments.run_supplement
+python -m experiments.render_results
+python -m experiments.render_supplement
+python paper/render_figures.py
+python paper/build_standalone.py
+```
+
+Both studies run locally on CPU. The original protocol and records remain in `experiments/protocol.json` and `experiments/results/`. The implementation-regression and covariance supplement has its own `experiments/protocol-v2.json` and `experiments/results-v2/`, including case records, summary CSVs, a source/environment manifest, and separate wall-time metadata. Rendering consumes saved records; it does not rerun experiments. The standalone output, `timegym-v2.tex`, includes the generated tables and bibliography, so the Codex LaTeX preview needs no additional source files. The normal `main.tex` can be compiled from this directory using a standard LaTeX engine.
+
+The original pilot exports three scientific figures in both PNG and vector PDF under `figures/`:
+
+- `fault-alarm-matrix`: observed alarms for each selected fixture, with unsupported covariance cells visibly masked. The clean row shows false alarms.
+- `dependence-score-deltas`: paired score changes against permutation strength, with 95% t intervals across independent seeds. Panels have different scales; marginal CRPS differences are numerical roundoff.
+- `capability-curves`: mean-reference MSE across three innovation scales, five scenario families, and three unmodified models. Curves are descriptive means over 16 cases; panel scales differ. `capability-summary.csv` includes the means and seed-level intervals.
+
+The supplement adds `supplement-implementation-ablation` (complementary checks on the selected implementation regressions) and `supplement-covariance-holm` (raw versus Holm-adjusted suite rejection rates), also in PNG and PDF. The generated tables retain per-condition counts so the aggregate ablation cannot conceal differences among conditions.
+
+The manuscript now embeds five primary vector figures, designed at print width:
+
+1. [Forecast matrix (SVG)](figures/paper-forecast-matrix.svg): six configurations from five families by three fixed seeds, using gray observation dots, unconnected blue forecast crosses, and thin conditional references. It uses the quick-start model and settings, with paired random walks without drift and with drift (0.03 per step) sharing identical innovations. To remain readable, it shows the final 72 context values and first 48 predictions from each complete 300-context/100-horizon run.
+2. [Marginal versus joint dependence (SVG)](figures/paper-dependence.svg): the first predefined pilot case, identical empirical marginals, different joint sample clouds, and saved paired score changes over all 64 evaluation cases.
+3. [Diagnostic evidence (SVG)](figures/paper-diagnostic-evidence.svg): the implementation ablation with clean/refit controls and the random-walk-with-drift counterexample where correcting an algorithm worsens forecast loss.
+
+4. [Financial stress matrix (SVG)](figures/paper-financial-stresses.svg): six univariate configurations from application notebook 26, showing diffusion, jumps, GARCH, hidden regimes, and combined regimes/jumps. Filter approximation and output units are explicit. These are illustrative software cases; neither Gaussian fault-study protocol is expanded.
+5. [Joint financial uncertainty (SVG)](figures/paper-joint-stresses.svg): notebook 27 preserves each target trajectory while breaking cross-series pairing, revealing changes in joint and aggregate uncertainty. This is a controlled reference demonstration.
+
+`render_figures.py` generates editable SVGs, PNG previews, and self-contained
+TikZ scenes from a common vector geometry. It regenerates the illustrative
+quick-start fits and first dependence case; aggregate results are read from
+the existing studies and checked against their raw records. It does not change
+either study protocol or numerical results. The
+[figure provenance record](figures/paper-figure-provenance.json) records the
+inputs, seeds, plotted values, settings, and file fingerprints.
+
+`main.tex` inputs these scenes; `build_standalone.py` embeds their complete
+vector commands into the existing `timegym-v2.tex`. The open editor preview
+therefore needs no external images, raster fallbacks, or SVG conversion tools.
+The SVG files are separate reusable assets for websites, slides, and submission
+workflows. Their text remains editable. The earlier five research figures remain
+supplementary assets, including the full three-scale capability plot and Holm
+comparison. The text-only workflow schematic is a table rather than a numbered
+main figure.
+
+The studies retain clean false alarms, missed defects, negative controls, and paired repair effects. The first pilot reverses selected output corruptions. The supplement changes implementation branches inside a fitted recursive model and compares complementary diagnostic rules. Repairs are specified by the experimenter; automatic cause identification and repair discovery are outside the claim. The covariance supplement reports a declared four-check Holm family; other exploratory comparisons are not covered by that guarantee. See [the claim ledger](claims.md) and [publication strategy](../docs/publication-strategy.md).
+
+The [notebook collection](../notebooks/README.md) contains executable source
+notebooks that export the package and application notebooks that explain its
+methods, including univariate and joint multivariate
+uncertainty. They are teaching examples with their own seeds and smaller studies,
+not additional empirical results in this manuscript. Install `.[notebooks]` and
+run `python tools/export_notebooks.py --check` and then
+`python notebooks/check_notebooks.py` from the repository root to verify source
+parity and execute every active notebook in a fresh kernel. Their source and saved
+outputs accompany the source distribution. The original notebooks are
+preserved separately in `notebooks/archive/` and excluded from execution.

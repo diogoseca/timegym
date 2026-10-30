@@ -1,0 +1,87 @@
+name: package checks
+on: [push, pull_request]
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  MPLBACKEND: Agg
+  OPENBLAS_NUM_THREADS: '1'
+  OMP_NUM_THREADS: '1'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -e '.[dev]'
+      - run: python tools/export_notebooks.py --check
+      - run: python -m pytest
+      - run: python examples/quickstart.py
+      - run: python -m build
+  compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[dev]' 'numpy==1.26.4' 'pandas==2.2.3' 'scipy==1.11.4' 'scikit-learn==1.4.2' 'matplotlib==3.8.4'
+      - run: python tools/export_notebooks.py --check
+      - run: python -m pytest
+  installed-wheel:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install build 'twine>=6,<7'
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - run: python -c "import glob, subprocess, sys; subprocess.check_call([sys.executable, '-m', 'pip', 'install', glob.glob('dist/*.whl')[0]])"
+      - run: python -I tools/smoke_installed.py
+      - run: timegym demo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distribution-${{ matrix.os }}
+          path: dist/*
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[docs]'
+      - run: python -m mkdocs build --strict
+  research-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements-study.txt
+      - run: python -m pip install --no-build-isolation --no-deps -e .
+      - run: python -m experiments.run_study --output /tmp/timegym-study
+      - run: python -m experiments.run_supplement --output /tmp/timegym-supplement
+  notebooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e '.[notebooks]'
+      - run: python tools/export_notebooks.py --check
+      - run: python notebooks/check_notebooks.py

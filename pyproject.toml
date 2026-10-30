@@ -1,36 +1,39 @@
-# reference: https://flit.readthedocs.io/en/latest/pyproject_toml.html
-
 [build-system]
-requires = ['flit_core >=2,<4']
-build-backend = 'flit_core.buildapi'
+requires = ["flit_core>=3.9,<4"]
+build-backend = "flit_core.buildapi"
 
-[tool.flit.metadata]
-module = 'timegym'
-author = 'Diogo Seca'
-author-email = 'diogo.seca@fe.up.pt'
-home-page = 'https://github.com/diogoseca/timegym'
-classifiers = [
-    'Natural Language :: English',
-    'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.7',
-    'Programming Language :: Python :: 3.8',
-    'License :: OSI Approved :: MIT License',
-    'Operating System :: OS Independent',
-]
-description-file = 'README.md'
+[project]
+name = "timegym"
+version = "0.2.0"
+description = "Controlled verification and diagnosis for forecasting pipelines"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [{name = "Diogo Seca"}]
+dependencies = ["numpy>=1.26", "pandas>=2.2", "scipy>=1.11"]
+classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License"]
 
-[tool.flit.metadata.requires-extra]
-test = [
-    'pytest>=6.2.2',
-    'nbval>=0.9.6',
-    'coverage',
-    'mkdocstrings',
-    'mkdocs-autorefs',
-]
+[project.scripts]
+timegym = "timegym.cli:main"
 
-[tool.flit.metadata.urls]
-Documentation = 'https://timegym.readthedocs.io/en/latest/'
+[project.optional-dependencies]
+sklearn = ["scikit-learn>=1.4"]
+plots = ["matplotlib>=3.8"]
+features = ["tsfel", "tqdm"]
+market-data = ["yfinance"]
+dev = ["pytest>=8", "build>=1.2", "matplotlib>=3.8", "scikit-learn>=1.4", "nbdev==3.3.26", "nbformat>=5.10"]
+notebooks = ["jupyterlab>=4.2", "ipykernel>=6.29", "nbformat>=5.10", "nbclient>=0.10", "nbconvert>=7.16", "matplotlib>=3.8", "scikit-learn>=1.4", "nbdev==3.3.26"]
+docs = ["mkdocs>=1.6,<2"]
+release = ["build>=1.2", "twine>=6,<7"]
 
-#doc = ['sphinx']
+[project.urls]
+Repository = "https://github.com/diogoseca/timegym"
+Issues = "https://github.com/diogoseca/timegym/issues"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
 
+[tool.flit.sdist]
+include = ["tests/", "experiments/", "paper/", "docs/", "notebooks/", "tools/", "examples/", "requirements-study.txt", "lab.sh", "CITATION.cff", "CHANGELOG.md", "mkdocs.yml"]
+exclude = ["paper/build/", "paper/*.pdf", "paper/__pycache__/", "notebooks/.ipynb_checkpoints/", "notebooks/html/", "tools/__pycache__/", "notebooks/__pycache__/"]

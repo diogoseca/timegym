@@ -1,0 +1,1175 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,array}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,citecolor=blue!45!black,urlcolor=blue!45!black}
+\setlength{\emergencystretch}{3em}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.75}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{TimeGym v2: Contract-Based Verification and Diagnosis\newline for Forecasting Pipelines}
+\author{Diogo Seca}
+\date{28 October 2026\\\small Working manuscript: reproducible controlled studies}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Forecast accuracy alone does not distinguish an implementation fault from
+a model limitation or future noise. TimeGym v2 makes that distinction
+explicit through forecast contracts, conditional references, declared
+behavioural relations, and reproducible repair rechecks. The Python package
+supports point forecasts, marginal quantiles, and joint trajectory samples
+over five core Gaussian families and univariate and multivariate composed
+and financial stresses, including jumps, conditional volatility, and hidden regimes.
+Reference capabilities and approximation status are explicit. References
+condition on observed history and generator parameters; ordinary forecasters receive only the
+history and forecast indices. Local CPU studies evaluate selected output
+corruptions and four internal regressions in a fitted recursive lag-Ridge
+pipeline across six conditions. All four internal regressions preserve the
+output contract. Scalar translation detects one, target-specific
+translation detects two, and an independent implementation comparator
+detects all selected regressions. A specified repair restores algorithm
+agreement yet worsens mean forecast loss in one random-walk-with-drift condition,
+demonstrating that implementation correctness and predictive quality are
+distinct objectives. For joint forecasts, coordinate permutations preserve
+every empirical marginal exactly while changing trajectory dependence;
+factorised negative controls and a multiple-testing study expose the
+assumptions and power limits of a reference-covariance check. A separate
+real-series example reproduces one known preprocessing repair. The
+contribution is an executable diagnostic workflow with transparent,
+paired evidence about what each check establishes. The studies support
+those specified properties and selected faults; they do not estimate
+coverage of naturally occurring forecasting defects.
+\end{abstract}
+
+\paragraph{Keywords.} Time series; forecasting; software testing; conditional
+references; probabilistic verification; mutation testing; reproducibility.
+
+\begin{figure}[!t]
+\centering
+% BEGIN VECTOR FIGURE paper-forecast-matrix
+\input{figures/paper-forecast-matrix.tikz}
+% END VECTOR FIGURE paper-forecast-matrix
+\caption{\textbf{A forecasting test suite at a glance.} The same recursive
+lag-Ridge pipeline is fitted afresh to six configurations from five families,
+each at three fixed seeds (11, 22, 33). The two random-walk rows share the same
+innovations within each seed: one has zero drift and the other adds 0.03 per
+step. A driftless walk can still appear to trend by chance; unlike white
+noise in levels, both walks accumulate shocks. Gray dots show observations;
+blue crosses are unconnected point
+forecasts; thin gray curves are the privileged conditional means. Dashed
+vertical lines mark the forecast origin. Every model is fitted on 300 values
+and predicts 100 steps; for print readability, panels show the final 72
+context values and first 48 forecasts. Value scales vary by panel. These
+illustrative quick-start cases expose capability differences; a gap from a
+conditional reference alone is not a software-fault decision.}
+\label{fig:forecast-matrix}
+\end{figure}
+
+\section{Introduction}
+
+A forecasting system is more than its fitted estimator. Indexing,
+preprocessing, target construction, state handling, output conversion, and
+evaluation all influence its behaviour. An inaccurate forecast may result
+from a software fault, a model that cannot represent the required pattern,
+limited training information, or irreducible uncertainty. Conversely, a
+favourable average loss does not establish that the output obeys its
+declared contract.
+
+Consider three failures. A forecast has the wrong number of future steps;
+its shape violates an interface contract. A last-value predictor returns
+the required shape but misses a deterministic slope; this can be an honest
+capability limitation. A sample-based predictor retains the correct
+distribution at every future coordinate but corrupts the pairing between
+coordinates; point and marginal uncertainty scores can remain unchanged.
+These failures require different evidence and different remedies.
+
+TimeGym v2 makes these distinctions explicit. Here verification means
+exercising specified runtime contracts, not formal proof of a program.
+A scenario defines a
+controlled data-generating process (DGP), the information exposed to the
+forecaster, and the conditional references available to the evaluator.
+A forecast contract defines the meaning and axes of returned values.
+Diagnostics record the violated contract or the observed capability gap,
+together with the case configuration and seed. Known mutations and their
+repairs provide a way to test the diagnostic instrument itself.
+
+The contribution is an executable specification of what a forecasting
+test can establish. It connects three kinds of evidence: output contracts,
+consistency with a known conditional reference, and declared relations
+between transformed tasks. The implementation makes their assumptions,
+outcomes, and counterexamples inspectable. Five Gaussian scenario families
+provide the transparent references used in the controlled studies; additional
+composed and financial mechanisms extend the software catalogue. Paired
+clean, faulty, and repaired runs evaluate the diagnostic instrument itself. A marginal-preserving
+trajectory mutation gives a particularly useful example: identical
+marginal forecasts can conceal different joint forecasts.
+
+This design supports a practical debugging sequence: reproduce a failing
+property, inspect a candidate cause, change the implementation, and rerun
+the same case and its clean controls. The report identifies the failed
+property; the intervention supplies evidence about the candidate cause.
+Neither a capability gap nor one successful repair uniquely identifies
+all faults in a pipeline.
+
+\subsection{Relationship to the original TimeGym proposal}
+
+The 2021 proposal introduced synthetic challenges for debugging forecasting
+pipelines~\cite{seca2021timegym}. This revision retains that practical aim
+while revising its statistical specification. The original compared
+forecasts with a noise-free generator component using sMAPE and described
+that component as an optimal forecast. In v2, the reference depends
+explicitly on the requested functional, loss, and information set: a
+conditional mean is appropriate for squared loss, and future random
+structure must be integrated out rather than treated as known. Fresh
+synthetic samples do not remove adaptive selection or multiple-testing
+concerns. Finally, successful synthetic tests provide evidence about the
+tested mechanisms; they do not establish performance on real data. The
+v2 features and experiments belong to the current work and are not
+attributed retrospectively to 2021.
+
+\section{Related work and positioning}
+
+Controlled forecasting tasks, software conformance, and metamorphic
+testing provide complementary precedents (Table~\ref{tab:positioning}).
+SynTSBench connects configurable temporal features to model capability,
+irregularity robustness, and theoretical performance
+boundaries~\cite{tan2025syntsbench}. SimpleTimeBench uses elementary
+patterns and leading covariates to diagnose time-series foundation
+models~\cite{ghoroghchian2026simpletimebench}; its October 2026 version is
+a preprint. Synthetic challenges and known-generator references alone
+therefore do not distinguish the present contribution.
+
+FinStressTS is a particularly close financial precedent: it evaluates
+isolated and composed synthetic mechanisms, including conditional volatility,
+heavy tails, regimes, and jumps~\cite{sun2026finstressts}. Financial stress
+composition alone is therefore not a novelty claim here. TimeGym emphasises
+declared forecast contracts, controlled implementation faults, and repair
+rechecks. Real financial evaluation also needs target-specific protocols;
+FinTSB includes market constraints and transaction costs~\cite{hu2026fintsb}.
+The present synthetic tests do not establish trading performance or rank
+contemporary forecasting architectures.
+
+Dwarakanath et al. specified 19 metamorphic relations for a forecasting
+application, reported eight previously unknown issues, and evaluated
+mutation detection in a reference LSTM~\cite{dwarakanath2019metamorphic}.
+This is a direct methodological predecessor, including evidence on actual
+application defects that our selected-mutation studies do not provide.
+TimeGym extends the practical testing workflow with explicit conditional
+reference semantics and separate marginal and joint forecast contracts;
+it does not introduce forecasting metamorphic testing.
+
+Framework conformance and evaluation practice also matter. The sktime
+\code{check\_estimator} utility runs tests appropriate to an estimator's
+unified interface~\cite{sktimeConformance}. TFB standardises evaluation
+pipelines to make forecasting comparisons more consistent and
+reproducible~\cite{qiu2024tfb}. TimeGym can sit beside these checks: an API
+can be well formed while an application-specific transformation violates
+a declared relation. We do not measure comparative detection power
+against these frameworks or benchmark their forecasting models.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}p{0.22\linewidth}p{0.34\linewidth}p{0.36\linewidth}@{}}
+\toprule
+Work & Main evaluated object & Relevance to this study \\
+\midrule
+SynTSBench & Model capability under controlled temporal features & Synthetic performance boundaries are an existing idea. \\[0.4em]
+SimpleTimeBench & Foundation-model responses to simple temporal tasks & Elementary task failures can expose capability gaps. \\[0.4em]
+FinStressTS & Isolated and composed financial mechanisms & Mechanism-based financial capability evaluation is an existing approach. \\[0.4em]
+Forecasting metamorphic testing & Behavioural relations, real issues, and injected faults & Relations provide test oracles when exact outputs are unavailable. \\[0.4em]
+sktime conformance & Estimator interface and framework behaviour & Interface tests are a necessary comparison class. \\[0.4em]
+TimeGym v2 & Forecast contracts, conditional references, and repair rechecks & Separates the meaning of a violation from the evidence needed to explain it. \\
+\bottomrule
+\end{tabular}
+\caption{Positioning by the object each work emphasises. This is not a
+feature-completeness matrix or a performance ranking.}
+\label{tab:positioning}
+\end{table}
+
+The statistical foundations are established. Point forecasts must be
+evaluated using a loss consistent with the requested functional, such as
+the mean or a quantile~\cite{gneiting2011point}. Proper scoring rules assess
+predictive distributions~\cite{gneiting2007proper}. For multivariate
+ensembles, the energy score can be supplemented by variogram-based scores
+that respond to dependence misspecification~\cite{scheuerer2015variogram}.
+Our contribution uses these principles to specify executable tests;
+it does not propose a new scoring rule.
+
+\section{Forecasting tasks and conditional references}
+
+\subsection{Information and estimands}
+
+Let $Y_t\in\R^D$ denote the target vector and let the observed context be
+$y_{0:L-1}$. The task requests $H$ future steps,
+$Y_{L:L+H-1}$. The model-facing information consists of this context and
+the forecast indices. In the implemented generators, the evaluator also
+knows the fixed DGP parameters $\theta$. Its reference distribution is
+\begin{equation}
+ F_\theta = \mathcal{L}\!\left(Y_{L:L+H-1}
+       \mid Y_{0:L-1}=y_{0:L-1},\theta\right).
+ \label{eq:conditioning}
+\end{equation}
+Future innovations are integrated out, not exposed to the forecaster.
+The ordinary adapter receives neither the realised future nor the
+reference. Declared change schedules are also evaluator-only information.
+Deliberately privileged controls used to test the evaluator
+are identified separately.
+
+For a conditional-mean forecast, the reference at lead $h$ and target $d$ is
+$m_{hd}=\E_\theta[Y_{L+h-1,d}\mid y_{0:L-1}]$, with $h=1,\ldots,H$.
+Let $K=HD$, let $\Sigma_F$ be the covariance of the flattened future vector,
+and let $a$ be a forecast based only on the allowed information and
+independent model randomness. Conditional squared-error risk decomposes as
+\begin{equation}
+ \frac{1}{K}\E_\theta[\|Y-a\|_2^2\mid y_{0:L-1},a]
+ = \frac{1}{K}\|m-a\|_2^2 + \frac{1}{K}\operatorname{tr}(\Sigma_F).
+ \label{eq:risk}
+\end{equation}
+Thus mean-reference MSE measures conditional excess squared-error risk
+under the known DGP. It is different from realised test-set MSE, which
+contains future randomness. It is also a privileged target: a learned
+forecaster must infer structure and parameters from finite history.
+A nonzero gap alone does not establish an implementation fault.
+
+For level $q\in(0,1)$, the reference is instead the marginal conditional
+quantile $F_{\theta,hd}^{-1}(q)$, evaluated using pinball loss. A median
+forecast corresponds to absolute error. Conditional means and medians
+coincide in the five core Gaussian families. They generally differ in the
+new asymmetric price and jump distributions; the requested functional must
+remain explicit.
+Marginal quantiles do not determine the joint distribution of trajectories.
+
+\subsection{Core Gaussian scenario families}
+
+Figure~\ref{fig:forecast-matrix} shows these mechanisms as a visual test suite.
+The shared plotting convention keeps noisy observations and point forecasts
+as individual marks; only the known conditional reference is connected.
+
+
+Let $\epsilon_t\stackrel{\mathrm{iid}}{\sim}\mathcal{N}(0,\Omega)$, where
+$\Omega=\operatorname{diag}(\sigma)R\operatorname{diag}(\sigma)$ and $R$
+is a valid target-correlation matrix. Innovations are independent across
+time but can be correlated across targets. Vector operations below are
+componentwise, and $\phi$ is scalar.
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{0.18\linewidth}p{0.73\linewidth}@{}}
+\toprule
+Family & Data-generating equation and conditional mean \\
+\midrule
+Fixed-mean white noise & $Y_t=\mu+\epsilon_t$; $m_h=\mu$. \\[0.5em]
+Linear trend + noise & $Y_t=b+ct+\epsilon_t$; $m_h=b+c(L+h-1)$. \\[0.5em]
+Fixed seasonality + noise & $Y_t=\mu+A\sin(2\pi t/p)+\epsilon_t$; evaluate the same deterministic part at $t=L+h-1$. \\[0.5em]
+Stationary AR(1) & $Y_t=\mu+\phi(Y_{t-1}-\mu)+\epsilon_t$, $|\phi|<1$; $m_h=\mu+\phi^h(y_{L-1}-\mu)$. \\[0.5em]
+Random walk (optional drift) & $Y_t=Y_{t-1}+c+\epsilon_t$; $m_h=y_{L-1}+hc$. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{White noise, deterministic structure, and accumulated shocks.}
+These are distinct processes, even when one short realisation looks similar.
+Fixed-mean Gaussian white noise fluctuates around $\mu$; linear trend plus
+white noise fluctuates around $b+ct$; fixed seasonality plus white noise
+fluctuates around a repeating sinusoid. In all three, a shock at time $t$
+does not carry into later observations. A random walk instead has
+$Y_t=Y_0+ct+\sum_{s=1}^{t}\epsilon_s$: shocks persist in its level. Its
+centred increments $Y_t-Y_{t-1}-c$, rather than its levels, are white noise.
+The parameter $c$ is the optional \emph{drift}, an expected change per step;
+$c=0$ does not prevent an individual path from wandering upward or downward.
+The package keeps the stable identifier \texttt{random\_walk} and labels plots
+``Random walk without drift'' or ``Random walk with drift'' from its actual
+parameters (separately by target). It distinguishes \texttt{white\_noise}
+(``Gaussian white noise (fixed mean)'') from \texttt{trend}
+(``Linear trend + white noise''), and labels \texttt{seasonal}
+``Seasonality + white noise''. With known parameters and scalar innovation
+variance $\sigma^2$, the random walk's conditional variance is $h\sigma^2$
+at horizon $h$; the three deterministic-mean, fresh-noise processes retain
+$\sigma^2$. Thus the difference concerns shock persistence and uncertainty,
+not just a visible slope.
+
+The AR(1) context starts from the stationary law
+$Y_0\sim\mathcal{N}(\mu,\Omega/(1-\phi^2))$; the random walk starts at
+a specified deterministic intercept. For white noise, trend, and
+seasonality, future covariance blocks are
+$\Cov(Y_{L+h-1},Y_{L+j-1}\mid y)=\mathbf{1}_{h=j}\Omega$.
+For AR(1), define the lower-triangular innovation map
+$B_{hk}=\phi^{h-k}\mathbf{1}_{k\leq h}$, for $h,k=1,\ldots,H$.
+The full covariance is $(BB^\top)\otimes\Omega$, using horizon-major
+flattening. For a random walk, covariance block $(h,j)$ is
+$\min(h,j)\Omega$. The conditional marginal quantiles are
+\begin{equation}
+ Q_{hd}(q)=m_{hd}+\sqrt{(\Sigma_F)_{(h,d),(h,d)}}\,\Phi^{-1}(q).
+\end{equation}
+Zero innovation variance gives a deterministic reference.
+
+Reference validation compares analytic quantities with conditional
+simulations and tests boundary cases such as zero noise and correlation
+validity. Simulation agreement is an implementation check; it is not an
+independent proof when simulator and reference share code. Algebraic
+checks and explicit small cases are therefore also needed. These five
+core families provide the original study conditions. The extensions below
+add selected mechanisms; missingness, exogenous covariates and irregular
+sampling remain outside the implemented scenario scope.
+
+\subsection{Seasonality, process drift, and changing mechanisms}
+\label{sec:mechanism-changes}
+
+Seasonality is recurring structure; a fixed sinusoid is not the drift term
+of a random walk. Nor is a stable seasonal law automatically concept drift
+when calendar phase is included in the conditioning information. We distinguish
+\emph{process drift}, an expected increment, from changes in the generating
+parameters or predictive relationship~\cite{gama2014drift}. The latter can
+change a trend slope, seasonal amplitude, period or phase, innovation scale,
+or dependence. Likewise, a GARCH variance state or a hidden Markov regime
+can change under a fixed law: a state transition and a parameter change are
+separate experimental interventions.
+
+The \code{composite} scenario specifies a deterministic component
+$g_t=b+ct+A\sin(2\pi t/p+\phi)$ and one residual process: fresh Gaussian
+noise or an accumulated-shock process. The latter may include independent
+compound-Poisson increments. Declared changes can replace mean parameters
+or noise scale at an explicit index. The before/after mean uses absolute
+$t$, so changing the slope need not preserve level continuity. These are
+additive level constructions, not multiplicative financial price models.
+The evaluator knows the change schedule; an ordinary fitted model does not.
+An error after an unannounced future break therefore does not prove that
+an implementation is faulty.
+
+\subsection{Financial stress mechanisms and non-Gaussian references}
+\label{sec:financial-stresses}
+
+Figure~\ref{fig:financial-stresses} illustrates the financial extensions.
+The additional financial families isolate established stochastic mechanisms
+and selected interactions; they are not claims of state-of-the-art stock
+forecasting. Price, log price, log return, and volatility are different
+forecast targets. Both the core Gaussian families and these extensions
+support multivariate targets under explicit dependence laws. The existing
+\code{Scenario} and \code{Pipeline} interfaces apply to both groups.
+
+For \code{merton\_jump\_diffusion}, let $J_i\sim\mathcal N(a,b_J^2)$,
+$N\sim\operatorname{Poisson}(\lambda\Delta t)$, and
+$\kappa=\exp(a+b_J^2/2)-1$. Independent one-step log returns follow
+\begin{equation}
+ R=(\mu-\tfrac12\sigma^2-\lambda\kappa)\Delta t
+   +\sigma\sqrt{\Delta t}\,Z+\sum_{i=1}^{N}J_i,
+ \qquad Z\sim\mathcal N(0,1).
+\end{equation}
+This is the Merton construction~\cite{merton1976jumps}, using a physical
+expected-price-growth convention rather than a risk-neutral pricing
+calibration. Zero jump intensity reduces it to geometric Brownian motion.
+The cumulant $K(u)=\log\E[e^{uR}]$ gives the conditional price mean
+$S_T\exp(hK(1))$ and price covariance; exponentiating a conditional
+log-price mean generally gives the wrong mean on the price scale.
+
+For \code{garch}, Gaussian innovations follow
+$r_t=\mu+\sqrt{v_t}z_t$ and
+$v_{t+1}=\omega+\alpha(r_t-\mu)^2+\beta v_t$, with
+$\omega>0$, $\alpha,\beta\geq0$, and $\alpha+\beta<1$~\cite{bollerslev1986garch}.
+The next variance is reconstructed from observed returns. Each simulated
+future recursively updates its own variance; replacing that recursion by
+independent Gaussian draws with expected variances loses part of the joint
+law. The implementation supplies log-return or log-price tasks, not price
+moments obtained by an unjustified exponentiation.
+
+For \code{markov\_switching}, a finite hidden Markov chain controls return
+means, diffusion scales, and optionally jump parameters. The reference
+filters $\Pr(S_T\mid y_{0:T},\theta)$ from observed returns and propagates
+that distribution, following the hidden-regime principle~\cite{hamilton1989regimes}.
+It never conditions on the simulator's actual terminal regime. Gaussian
+emission filtering supports an exact conditional sampler under the declared
+law. With jumps, the emission likelihood is a truncated Poisson mixture:
+its omitted probability mass is recorded, but is not a posterior-error
+bound. Those references are marked approximate.
+
+\code{SimulationReference} retains analytical means and either analytical or
+explicitly estimated covariance under its declared conditioning distribution,
+and draws joint futures from an explicit sampler.
+Its marginal quantiles are reproducible Monte Carlo estimates, with sample
+count and seed recorded, rather than Gaussian quantiles inferred from two
+moments. The covariance rank check returns \texttt{UNSUPPORTED} for
+approximate conditional samplers. Shape checks and descriptive forecast
+scores remain available; no exact test guarantee is attached to the
+approximate hidden-regime reference.
+
+A useful development sequence isolates mechanisms, compares matched pairs,
+then adds supported interactions. Seeds, parameter regions, and compositions
+must be reserved from model development; a synthetic suite can itself be
+overfit. After pipeline selection, untouched real data and rolling forecast
+origins provide a separate transfer assessment. The executable extension
+examples and mathematical validation do not expand the Gaussian fault-study
+corpus reported in Sections~\ref{sec:implementation-study} and~\ref{sec:results}.
+
+\begin{figure}[p]
+\centering
+% BEGIN VECTOR FIGURE paper-financial-stresses
+\input{figures/paper-financial-stresses.tikz}
+% END VECTOR FIGURE paper-financial-stresses
+\caption{\textbf{Financial mechanisms, isolated and composed.} The same
+last-value forecaster is fitted to six configurations at seeds 11, 22 and 33.
+The first pair contrasts geometric Brownian motion with Merton jumps in log
+prices. Subsequent rows show GARCH log returns, hidden return regimes,
+regimes combined with jumps, and the combined process on the price scale.
+Gray dots are observations and blue crosses are separate point forecasts;
+thin curves show evaluator conditional means. The last two rows use an
+approximate numerically filtered regime posterior, visibly labelled. Each
+model observes 240 values and predicts 24; only the final 72 context values
+are displayed. Units and vertical scales vary by row and panel. These are
+software demonstrations, not additions to the original fault-study sample
+or evidence of financial forecasting superiority.}
+\label{fig:financial-stresses}
+\end{figure}
+
+
+\subsection{Joint mechanisms and dependence-aware uncertainty}
+\label{sec:joint-stresses}
+
+The same four identifiers accept $D>1$ targets. Each sampled future is an
+$H\times D$ array, and covariance uses horizon-major vectorization. A sample
+index identifies one complete future; fitting each target separately and
+independently drawing its uncertainty generally does not reproduce that law.
+Scalar location and scale parameters broadcast over targets, while vectors
+specify target-specific values. The implementation separates ordinary-shock
+correlation, jump-size correlation, shared jump arrivals, and shared regimes.
+
+For additive compositions, contemporaneous innovations have covariance
+$\operatorname{diag}(\boldsymbol\sigma_t)R
+\operatorname{diag}(\boldsymbol\sigma_t)$. An optional shared Poisson clock
+adds vector marks $\boldsymbol J\sim\mathcal N(\boldsymbol a,B)$, giving
+increment covariance
+\begin{equation}
+ Q_t=\operatorname{diag}(\boldsymbol\sigma_t)R
+       \operatorname{diag}(\boldsymbol\sigma_t)
+       +\lambda(B+\boldsymbol a\boldsymbol a^\top).
+\end{equation}
+Fresh residuals have block-diagonal time covariance. Accumulated residuals
+sum $Q_t$ through the earlier of the two forecast horizons. Scheduled changes
+may affect different targets differently; their future schedule remains
+an evaluator information advantage.
+
+Joint Merton returns use correlated diffusion and one shared Poisson arrival
+process, with a separate correlation matrix for Gaussian log-jump marks.
+The cumulant construction extends to vectors. For
+$K(\boldsymbol u)=\log\E\exp(\boldsymbol u^\top\boldsymbol R)$ and coordinate
+vectors $\boldsymbol e_i$, conditional price covariance is
+\begin{equation}
+ \operatorname{Cov}(S_{T+h,i},S_{T+k,j}\mid\mathcal I_T)
+ =m_{h,i}m_{k,j}\left[
+ \exp\!\left(\min(h,k)
+ \{K(\boldsymbol e_i+\boldsymbol e_j)-K(\boldsymbol e_i)
+ -K(\boldsymbol e_j)\}\right)-1\right].
+\end{equation}
+Here $K$ includes one observation step and $m_{h,i}$ is the conditional price
+mean. Zero ordinary-shock correlation does not remove dependence from a
+shared jump clock. The declared construction has common jump arrivals;
+it does not add an unspecified independent jump process for each target.
+
+The GARCH extension is constant-conditional-correlation GARCH
+(CCC-GARCH)~\cite{bollerslev1990ccc}:
+$\boldsymbol\epsilon_t=\operatorname{diag}(\sqrt{\boldsymbol v_t})
+\boldsymbol z_t$, with $\boldsymbol z_t\sim\mathcal N(0,R)$ and one
+GARCH(1,1) recursion per target. Conditional simulation updates all variance
+states along each future trajectory. Means and marginal variances are
+analytical; cross-time return covariances vanish. However, future same-time
+cross-series covariance contains
+\begin{equation}
+ R_{ij}\,\E[\sqrt{v_{T+h,i}v_{T+h,j}}\mid\mathcal I_T],
+\end{equation}
+which is generally not $R_{ij}\sqrt{\E[v_{T+h,i}]\E[v_{T+h,j}]}$.
+An independent Monte Carlo ensemble estimates the expected conditional
+covariance, rescaled to the analytical diagonal to preserve both known
+marginal variances and positive semidefiniteness. The sample count and seed
+are recorded; the default count is 16,384. First-step, zero-correlation,
+and fully deterministic-variance cases use analytical covariance.
+Log-level covariance accumulates the return blocks.
+
+These numerical moments are labelled
+\code{analytic\_mean\_monte\_carlo\_covariance}; the conditional sampler
+remains exact under the declared law. Covariance rank calibration holds the
+estimated target matrix fixed, using independent forecast and null ensembles.
+Conditional on that fixed target, the statistics remain exchangeable under
+the null. This separates the validity of rank calibration from the precision
+of the numerical covariance, which may affect diagnostic power. The check
+still cannot detect every form of higher-order dependence.
+
+Joint Markov scenarios share one hidden chain. Regime parameters may be
+$K\times D$ arrays, and within-regime correlation may differ by state. The
+forward filter uses the complete observed return vector, never the simulated
+state. Analytical recursions propagate the filtered distribution and all
+cross-target/cross-horizon moments. With shared jumps, a truncated multivariate
+Gaussian mixture approximates each emission likelihood; the existing
+approximate-reference diagnostic guard applies. Multivariate filtering
+requires positive diffusion scales and positive-definite state correlation
+matrices, while the other joint families also support singular correlations.
+
+Figure~\ref{fig:joint-stresses} shows a targeted pairing fault: permuting one
+target's entire sample trajectories preserves its marginal distributions and
+within-target temporal paths, while changing dependence between targets.
+This extension demonstration and its numerical checks are separate from the
+recorded Gaussian fault studies.
+
+\begin{figure}[p]
+\centering
+% BEGIN VECTOR FIGURE paper-joint-stresses
+\input{figures/paper-joint-stresses.tikz}
+% END VECTOR FIGURE paper-joint-stresses
+\caption{\textbf{Preserve each series; break their joint future.}
+A two-target Merton log-price reference supplies 768 joint six-step futures
+for one fixed case from notebook 27. The right column re-pairs target 1's
+complete trajectories across sample identities. The top panels show the
+first 384 draws at horizon four, standardized by reference means and standard
+deviations, within a fixed $\pm4.5$ display window. Blue crosses mark the
+unchanged conditional means. Correlation maps and aggregate standard
+deviations use all 768 draws; matrix coordinates alternate targets within
+each horizon. The aggregate is the equal-weight average of
+the two standardized forecast errors, not a portfolio-return estimate.
+Every empirical per-target marginal and temporal path is preserved; marginal
+CRPS is unchanged up to floating-point roundoff. These selected reference
+ensembles illustrate a controlled dependence fault, not fitted forecasting
+performance or an extension of the empirical fault-study sample.}
+\label{fig:joint-stresses}
+\end{figure}
+
+\section{Executable contracts and diagnostic reports}
+
+\subsection{Output representation}
+
+A forecast can contain point values of shape $(H,D)$, marginal quantiles
+of shape $(H,D,Q)$ with strictly increasing levels in $(0,1)$, and sample
+trajectories of shape $(S,H,D)$. Every sample index denotes one complete
+joint future across both horizon and target axes. Exact shapes prevent
+accidental NumPy broadcasting from silently changing the estimand.
+Forecast indices and target names must match the requested values and
+order. Returned values must be finite; quantiles must not cross. An unsupported
+representation is recorded explicitly instead of being counted as a pass.
+
+These contracts are stronger than accepting an arbitrary array, but do
+not fully specify forecasting behaviour. An explicitly displaced index or
+reversed target-name list is detectable. Values shifted internally while
+retaining apparently correct labels require task-specific references or
+explicit invariants. The implementation supplies a bounded set of checks
+rather than an exhaustive information-flow verifier.
+
+\subsection{Outcomes and interpretation}
+
+Each diagnostic returns a named outcome, evidence, and an explanation.
+The outcomes are \code{PASS}, \code{FAIL}, \code{INCONCLUSIVE},
+\code{UNSUPPORTED}, and \code{ERROR}. They distinguish a satisfied
+implemented check, an observed violation, insufficient evidence, an
+inapplicable check, and an execution failure. A model exception is not
+silently converted into a numerical loss. Missing representations do not
+count as successful verification.
+
+Structural checks identify definite violations of the declared output
+contract, and malformed outputs are not scored. Capability scores are
+descriptive and return \code{INCONCLUSIVE} because the package does not
+impose a universal acceptance tolerance. They can reflect statistical
+estimation, a deliberately limited model class, or an implementation fault.
+Coverage computed across one path's dependent horizon-target coordinates
+is also descriptive; it does not establish calibration. The report
+identifies the affected property and a reproducible case, not a unique
+source-code cause. Suspected explanations require an intervention.
+
+A \code{Pipeline} entry point runs the scenario suite and produces
+machine-readable records. Reproducibility requires more than a seed: the
+case parameters, model identification, forecast dimensions, implementation
+and environment versions, diagnostic settings, and all outcomes must be
+retained. Experiment artefacts record these together with the generated
+results. Scope is explicit: these metadata do not make arbitrary external
+training code deterministic.
+
+\subsection{A reproducible diagnosis and repair workflow}
+
+Table~\ref{tab:workflow} summarises the operational sequence. A
+\code{Pipeline.run} call retains the report and case predictions, so a
+forecast plot and an error plot can describe the same execution without
+refitting. A failed case can then be regenerated from its recorded scenario
+configuration. Reproduction establishes that a property fails under those
+conditions; investigating and modifying the implementation remain explicit
+developer actions.
+
+The evidence determines the next action. A horizon or index mismatch is a
+direct contract violation. A covariance rejection is evidence against the
+specified sampling law under the stated Monte Carlo null. A discrepancy
+under a declared shift relation contradicts that relation, provided the
+transformation preserves the model's intended task. A large conditional
+mean gap without such a contract is a capability observation. A useful
+repair recheck repeats the original case, its transformed counterpart
+when applicable, and clean controls, retaining failures as well as passes.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}p{0.21\linewidth}p{0.21\linewidth}p{0.21\linewidth}p{0.25\linewidth}@{}}
+\toprule
+1. Specify & 2. Execute & 3. Inspect & 4. Intervene and recheck \\
+\midrule
+Context and forecast axes; permitted information; required outputs;
+reference or relation &
+Fit and forecast; validate outputs; evaluate applicable checks &
+Named outcomes, evidence, saved predictions, and reproducible case &
+Change a candidate cause; rerun the paired case and clean controls \\
+\bottomrule
+\end{tabular}
+\caption{TimeGym's diagnostic workflow. The software records failed
+properties and replay information; a developer supplies the candidate
+explanation and repair.}
+\label{tab:workflow}
+\end{table}
+
+\subsection{A reference-covariance check}
+
+When a reference covariance, an exact conditional sampler, and at least
+20 joint sample paths with $K\geq2$ are available, an optional Monte Carlo
+check compares the ensemble covariance with the reference. The pilot uses
+analytical covariance; Section~\ref{sec:joint-stresses} describes an
+independently estimated, fixed target for general CCC-GARCH cross-moments. Let $\widehat\Sigma_X$ use the
+usual $S-1$ denominator. The discrepancy is
+\begin{equation}
+ T(X)=\frac{\|\widehat\Sigma_X-\Sigma_F\|_F}{\|\Sigma_F\|_F}.
+\end{equation}
+A zero reference norm is reported as \code{UNSUPPORTED}. Draw $B$
+independent calibration ensembles, each containing $S$ independent paths
+from the same conditional law, and calculate
+\begin{equation}
+ p_{\mathrm{MC}}=\frac{1+\sum_{b=1}^{B}
+                \mathbf{1}\{T(X_b)\geq T(X)\}}{B+1}.
+ \label{eq:mc}
+\end{equation}
+Under the null that the submitted ensemble itself consists of independent
+draws from that reference law, the $B+1$ statistics are exchangeable.
+The Monte Carlo rank rule therefore controls the per-check rejection
+probability at the attainable discrete levels, with conservative treatment
+of ties~\cite{hope1968montecarlo}.
+The pilot uses $B=99$ and rejects when $p_{\mathrm{MC}}\leq0.05$.
+Insufficient rank resolution for the requested level is
+\code{INCONCLUSIVE}. No adjustment across multiple cases is automatic.
+
+This is a reference-sampling consistency check, not a test of all forms of
+forecast calibration. Variance errors as well as dependence errors can
+trigger it. Failure to reject does not establish equality of covariance
+or distributions. In particular, an ensemble generated by deterministic
+quadrature, dependent Monte Carlo, or a learned parameter estimate does
+not satisfy the stated null merely because it is a useful forecast.
+The Gaussian reference is fully specified in this pilot, which makes
+null simulation feasible but limits direct application to real data.
+
+\subsection{Scores and a dependence counterexample}
+
+\begin{figure}[!t]
+\centering
+% BEGIN VECTOR FIGURE paper-dependence
+\input{figures/paper-dependence.tikz}
+% END VECTOR FIGURE paper-dependence
+\caption{\textbf{A marginally identical forecast can have different joint dependence.}
+Top: the first predefined pilot case (seed 10000), with 128 exact-reference
+samples and their fully coordinate-permuted counterparts. The first-horizon
+target-pair clouds change, while the displayed marginal empirical CDFs
+coincide; all 16 horizon--target marginal sample sets are exactly unchanged.
+Bottom: mutated-minus-clean score means and paired 95\% t intervals over
+64 independent cases, at the protocol's fixed permutation strengths. Points
+are unconnected and score panels use different scales. CRPS changes are
+floating-point roundoff; joint-score changes expose this selected dependence
+alteration. Intervals are exploratory and unadjusted. The illustration does
+not imply that shuffling every law is a fault: factorised white noise is a
+negative control in the supplementary study.}
+\label{fig:dependence}
+\end{figure}
+
+
+Figure~\ref{fig:dependence} makes the marginal--joint distinction visible
+before its algebraic formulation. All reported scores are losses, so lower is better. Point results include
+realised MSE and distance from the conditional mean. Marginal quantiles
+use pinball loss. Ensemble CRPS is averaged over individual horizon-target
+coordinates. For flattened ensemble paths $x^{(s)}\in\R^K$ and observation
+$y$, the empirical energy score is
+\begin{equation}
+ \widehat{\mathrm{ES}} = \frac1S\sum_s\|x^{(s)}-y\|_2
+ -\frac{1}{2S^2}\sum_{s,r}\|x^{(s)}-x^{(r)}\|_2.
+\end{equation}
+The implementation includes diagonal sample pairs and scores the finite
+empirical distribution; it is not the fair-ensemble estimator. Euclidean
+norms are not divided by $K$. The variogram score uses $p=1/2$ and equal
+weights over distinct unordered coordinates:
+\begin{equation}
+ \widehat{\mathrm{VS}}_{p} = \binom K2^{-1}
+ \sum_{i<j}\left(|y_i-y_j|^p-
+       \frac1S\sum_s|x_i^{(s)}-x_j^{(s)}|^p\right)^2,
+ \qquad K\geq2.
+\end{equation}
+The score is undefined at $K=1$. Scores are not compared across dimensions
+or normalisations as if they shared one scale. Variogram scores are not
+strictly proper over unrestricted joint distributions and cannot detect
+all defects; they complement rather than replace other diagnostics.
+
+To construct a controlled dependence defect, choose a separate permutation
+$\pi_k$ of $\{1,\ldots,S\}$ for each flattened coordinate $k$ and set
+\begin{equation}
+ \widetilde{x}^{(s)}_k=x^{(\pi_k(s))}_k.
+ \label{eq:permutation}
+\end{equation}
+\paragraph{Proposition (empirical marginal invariance).}
+For any ensemble and coordinate permutations in
+Equation~\eqref{eq:permutation}, each empirical marginal distribution is
+unchanged. Consequently, every deterministic statistic or score depending
+only on these marginals and the observation is unchanged. This includes
+coordinate means, empirical marginal quantiles, and average marginal CRPS.
+
+\paragraph{Proof.}
+For each coordinate $k$, reindexing the finite sum gives
+$S^{-1}\sum_s\delta_{\widetilde{x}^{(s)}_k}
+=S^{-1}\sum_s\delta_{x^{(s)}_k}$, where $\delta_z$ is a point mass at $z$.
+Any function of these empirical marginal measures therefore has the same
+value before and after permutation. Numerical implementations may differ
+by floating-point rounding.\hfill$\square$
+
+Joint trajectory pairing generally changes. Independent random
+permutations tend to disrupt the dependence in a correlated ensemble,
+although a finite permutation need not eliminate it entirely. This simple
+identity supplies an executable negative control for marginal diagnostics,
+rather than a new distributional result. It does not imply that every
+permutation increases every joint score for each realised future. If the
+reference itself factorises across coordinates, independent permutations
+do not create the same population dependence defect.
+
+\section{Controlled evaluation protocol}
+
+\subsection{Questions and experimental units}
+
+The default study uses 64 evaluation seeds (10000--10063), disjoint from
+development seeds 0--15. Its joint-sample task has a context of 120
+observations, $H=8$, $D=2$, and $S=128$. The AR(1) coefficient is 0.8
+and the innovation correlation is 0.7. The executable configuration and
+generated results record any changed settings.
+
+The pilot asks whether the implemented checks detect selected output and
+semantic corruptions; whether removing a known corruption restores the
+affected checks without worsening the tested clean behaviour; and whether
+joint evaluation responds when marginal sample distributions are
+preserved. The unit of replication is an independently generated
+scenario-seed case. Multiple horizons and targets within one case are
+not treated as independent replications.
+
+For each selected mutation, the clean, faulty, and repaired variants use
+the same generated case. Structural checks provide a baseline for
+malformed outputs. A conventional realised-loss threshold, calibrated
+on separate clean cases when used, supplies a second comparison. A
+reported advantage over that threshold applies only to the specified
+calibration and test distribution, not to every possible holdout test.
+We do not report a head-to-head comparison with sktime conformance tests
+or the recent synthetic benchmarks.
+
+\subsection{Controls, selection, and repair}
+
+The unmodified last-value, seasonal-naive (period 12), and fitted Gaussian
+AR(1) baselines illustrate capability limitations without intentionally
+inserted software defects. Privileged reference
+outputs test the mechanics of evaluation and are not counted as learned
+forecasting achievements. Faulty outputs are created with one known
+corruption at a time. Repair means removing that specified corruption and
+rechecking the same contracts; there is no automated repair discovery.
+
+Calibration cases and evaluation seeds are disjoint. Held-out seeds
+provide new stochastic draws, not held-out mechanisms. Mutations are
+selected to illustrate the implemented diagnostic classes, which favours
+detectability. Consequently, detection rates quantify this selected
+corpus, not the frequency or detectability of naturally occurring faults.
+Reports retain misses, unsupported cases, exceptions, and clean false
+alarms. Statistical uncertainty is computed over independent cases and
+the protocol records its exact convention with the results.
+
+Six output corruptions displace the forecast index, swap target labels,
+truncate the horizon, insert a nonfinite point, cross quantiles, or
+transpose the sample axes. These are intentionally direct contract
+violations; their detection tests the implementation of the contract
+rather than demonstrating discovery of subtle bugs. Two further
+mutations shrink ensemble variation or permute trajectory coordinates.
+They retain well-formed outputs and exercise the reference-covariance
+check. A separate preprocessing example omits inverse scaling in a
+standardised historical-mean predictor and rechecks a declared
+shift-equivariance relation after restoring that step.
+
+The sample-dependence experiment begins with correct conditional paths,
+applies Equation~\eqref{eq:permutation}, and compares the resulting
+paired marginal and joint scores. Clean and corrupted paths share the
+same empirical marginals by construction. The question is the response
+of the evaluation measures to the known mutation, rather than the
+relative performance of learned probabilistic models.
+
+\subsection{Implementation regressions and calibrated loss alarms}
+\label{sec:implementation-study}
+
+A second, separately recorded protocol moves the injected faults inside a
+fitted forecasting pipeline. A recursive lag-Ridge predictor uses six
+lags, an unpenalised intercept, penalty 1, and standardised targets.
+Four branches reverse the prediction-time lag order, retain stale
+recursive state, omit inverse target scaling, or silently swap the two
+numeric target columns while preserving their labels. Each changes an
+implementation operation and returns a well-shaped forecast. The repair
+refits the corrected implementation on the identical context.
+
+Six fixed conditions cover white noise with unequal target locations,
+positive and negative AR(1), opposing trends, seasonality, and random
+walks with drift. Every condition has 64 evaluation cases and 128 separate
+clean calibration cases. These expand the parameter settings, but the
+faults and mechanisms remain developer-selected. The full parameters,
+seed ranges, transformations, and tolerances are stored in the second
+protocol before its evaluation run.
+
+Five comparators ask different questions: the output contract; scalar
+shift equivariance with shift 10; per-target shift equivariance with
+shifts $(7,-11)$; agreement with an independently implemented NumPy
+lag-Ridge reference; and a calibrated realised-MSE alarm. The scalar
+relation uses the public diagnostic. Per-target shifts and implementation
+agreement are experimental comparators. The NumPy reference independently
+constructs lag columns and solves augmented normal equations with an
+unpenalised intercept in the original target units. It receives neither
+the future nor generator parameters and checks algorithm agreement, not
+forecast optimality. Numerical comparisons use fixed absolute tolerance
+$10^{-8}$ and relative tolerance $10^{-7}$.
+
+For each condition let $\ell_1,\ldots,\ell_n$, $n=128$, be realised MSEs
+from clean calibration cases and let $\ell$ be the evaluation-case MSE.
+The split-calibration rank rule is
+\begin{equation}
+ p_{\mathrm{loss}}=\frac{1+\sum_{i=1}^n\mathbf{1}\{\ell_i\geq\ell\}}{n+1},
+ \qquad \text{alarm if }p_{\mathrm{loss}}\leq0.05.
+ \label{eq:loss-rank}
+\end{equation}
+Equivalently, reject above calibration order statistic
+$\lceil(n+1)(1-0.05)\rceil$, with conservative ties. For a fixed clean
+algorithm under the same case-generating condition, calibration and test
+losses are exchangeable, yielding a marginal finite-sample rejection
+bound by the split-conformal rank argument~\cite{lei2018conformal}.
+This probability averages over calibration and test samples. It does not
+guarantee a 5\% rejection probability conditional on the one calibration
+sample actually drawn. The reported Wilson intervals condition on that
+frozen calibration sample; no common threshold is pooled across conditions.
+
+Each faulty case is paired with its clean and repaired runs. We retain
+new alarms, lost alarms, misses, and repaired-minus-faulty losses, rather
+than interpreting an unpaired fault alarm rate as diagnostic improvement.
+Loss intervals use case-level paired differences within a condition.
+Restoring agreement with the clean algorithm need not improve realised
+loss on every noisy future.
+
+\subsection{Covariance conditions and multiplicity}
+\label{sec:covariance-study}
+
+The second protocol also evaluates 64 independent four-task suites. Each
+suite contains factorised white noise, correlated white noise, negative
+AR(1), and a correlated random walk with drift, with $H=6$, $D=2$, $S=64$, and
+$B=199$ null ensembles per check. Clean reference samples are paired with
+a partial coordinate shuffle and with a 0.75 multiplier on deviations
+from the conditional mean. The shuffle permutes half the sample indices
+within each coordinate while preserving its complete empirical marginal.
+
+For each variant, the four condition-specific tests form one declared
+family. We report individual rejections, any raw rejection in a suite,
+and any rejection after Holm's step-down adjustment~\cite{holm1979multiple}.
+With sorted valid null $p$-values, Holm compares the $j$th value against
+$0.05/(4-j+1)$ and stops at the first non-rejection. Its family-wise
+guarantee concerns this fixed family; it does not extend to comparisons
+across variants, study sections, or adaptive revisions of the protocol.
+The factorised white-noise shuffle is a negative control: independent
+coordinates remain independent under these sample permutations, so a
+rejection is a false alarm rather than successful defect detection.
+
+\section{Results}
+\label{sec:results}
+
+\begin{figure}[!t]
+\centering
+% BEGIN VECTOR FIGURE paper-diagnostic-evidence
+\input{figures/paper-diagnostic-evidence.tikz}
+% END VECTOR FIGURE paper-diagnostic-evidence
+\caption{\textbf{Diagnostic blind spots and the limits of repair.}
+Top: alarm counts from four internal lag-Ridge regressions, using the same
+six conditions and 64 cases per condition (384 per row). Darker cells mean
+more alarms, including false alarms in the clean and corrected rows.
+All four regressions satisfy output contracts. Asterisks mark experiment-only
+comparators; this is not a universal ranking of the public toolkit's checks.
+Bottom: correcting stale recursion on the random-walk condition with drift restores
+agreement with the declared algorithm, yet increases average realised MSE
+by 0.513 (paired 95\% t interval 0.212--0.814); only 21 of 64 cases improve.
+This selected, unadjusted comparison separates implementation agreement
+from forecasting accuracy. Full condition-specific results follow in the
+tables and accompanying records.}
+\label{fig:diagnostic-evidence}
+\end{figure}
+
+
+Figure~\ref{fig:diagnostic-evidence} summarises the implementation-study
+blind spots and a repair counterexample. The detailed tables retain
+per-condition outcomes, negative controls, and uncertainty. The full
+three-scale capability plot is supplied separately in the reproducibility
+artifact; the main figures foreground the diagnostic argument.
+
+% BEGIN GENERATED RESULTS
+\IfFileExists{generated-results.tex}{\input{generated-results.tex}}{%
+\noindent\textbf{Results not generated in this copy.}
+Run the repository's controlled study and rebuild the standalone
+manuscript before interpreting this document as an empirical report.
+No numerical detection or repair result is asserted by this placeholder.}
+% END GENERATED RESULTS
+
+% BEGIN GENERATED SUPPLEMENT
+\IfFileExists{generated-supplement.tex}{\input{generated-supplement.tex}}{%
+\noindent\textbf{Supplement results not generated in this copy.}
+Run the separately recorded implementation and covariance supplement and
+render its saved results before interpreting this document as the complete
+empirical report. No supplement outcome is asserted by this placeholder.}
+% END GENERATED SUPPLEMENT
+
+\subsection{What the checks establish}
+
+The implementation ablation (Table~\ref{tab:supplement-ablation}) makes
+the diagnostic distinction concrete. Reversing lags and retaining stale
+state preserve both translation relations even though they disagree with
+the intended algorithm. A common shift also misses a numeric target swap;
+different target shifts expose it. These outcomes follow the properties
+being tested, rather than a universal ordering of diagnostic quality.
+Independent implementation agreement is more discriminating in this
+corpus, but requires a second specification of the intended algorithm
+and does not establish forecasting optimality.
+
+The repair counterexample further separates verification from model
+selection. Correcting the stale-state regression restores the declared
+recursive algorithm, while the random-walk condition with drift favours the faulty
+variant's realised loss. A score can therefore reward a specification
+violation, just as a conforming model can forecast poorly. A useful report
+retains both observations rather than relabelling one as the other.
+
+For probabilistic forecasts, marginal-preserving permutations isolate a
+blind spot without relying on a noisy difference in marginal quality.
+The factorised negative control is equally important: shuffling samples
+is not itself evidence of a fault when the intended law has independent
+coordinates. The covariance results (Tables~\ref{tab:supplement-familywise}
+and~\ref{tab:supplement-covariance}) also show why per-check rejection and
+suite-level false alarms must be reported separately, together with the
+power lost after multiplicity adjustment.
+
+\section{Limitations and implications}
+
+The evidence concerns specified properties under controlled conditions.
+The controlled fault-study corpus remains Gaussian and developer-selected.
+The broader software catalogue adds multivariate financial mechanisms and
+compositions, but those additions have not been evaluated in an independent
+real-bug corpus. Known DGP parameters and declared change schedules make
+references more informative than those available to an ordinary fitted
+forecaster; jump-regime filtering is approximate and cannot calibrate the
+exact covariance rank check. CCC-GARCH cross-covariance integration has
+Monte Carlo error, explicitly separate from its exact conditional simulator.
+The joint extensions implement shared jump clocks and shared hidden chains,
+not arbitrary idiosyncratic-jump, cross-lag, or dynamic-correlation systems.
+A reference discrepancy can
+therefore reflect estimation or model limitations. Marginal invariance
+under coordinate permutations is an exact algebraic property; the power
+of a particular joint check remains an empirical question.
+
+All faults are selected and visible to the developer, and all repairs
+are specified in advance. The implementation supplement moves beyond
+output corruption but does not supply an independent corpus of naturally
+occurring defects. The mathematical comparator verifies one intended
+algorithm; it cannot establish that the algorithm is appropriate for
+every forecasting task. These studies assess detection and repair
+rechecks, not automatic source-code localisation or repair discovery.
+
+Statistical guarantees apply to their stated nulls and sampling units.
+The covariance rank check assumes independent reference-law samples; the
+loss rank check assumes exchangeable clean cases within a condition.
+Numerical conformance tolerances are engineering choices. Holm adjustment
+protects only the declared four-check family. Other reported comparisons
+are descriptive, and fresh evaluation seeds do not undo adaptive choice
+of scenarios, mutations, or diagnostics.
+
+AirPassengers supplies one known preprocessing repair at four origins
+from one real series. It does not establish synthetic-to-real transfer.
+A broader study should prospectively collect faults from independent
+repositories, compare directly with relevant framework tests, and
+evaluate documented repairs on additional real tasks and unseen
+mechanisms. Those results are needed to assess practical coverage and
+external validity. The present artifact makes such a comparison possible
+by retaining test specifications, paired cases, misses, and false alarms.
+
+\section{Conclusion}
+
+TimeGym v2 connects forecast specifications to reproducible diagnostic
+evidence. Its conditional references separate excess squared-error risk
+from future noise, while typed outputs and declared relations distinguish
+different kinds of failure. The selected implementation study shows that
+valid outputs and translation equivariance can coexist with algorithmic
+regressions, and that restoring an algorithm need not improve its forecast
+loss. The probabilistic study makes the corresponding distinction between
+marginal quality and joint dependence, including a null-preserving
+negative control and explicit multiplicity handling. Together these
+results support a practical discipline: state the property, reproduce the
+case, inspect the evidence, and verify a proposed repair against both the
+original failure and clean controls. The accompanying software and paired
+records provide a basis for testing that discipline on independently
+collected forecasting defects.
+
+\paragraph{Software and reproducibility.}
+The implementation and executable study accompany this manuscript in the
+\href{https://github.com/diogoseca/TimeGym}{TimeGym repository}. See the
+repository README for installation, test, and experiment commands. The
+artifact is developed in executable source notebooks, exported to
+package modules with nbdev. An explicit build checks complete module
+ownership and detects notebook--module drift without executing examples.
+Application notebooks cover univariate
+and multivariate forecasts, marginal and joint uncertainty, fault diagnosis,
+repair checks, replay, real-data integration, and capability sweeps. A
+separate checker executes every active notebook in a fresh kernel; these teaching
+examples are distinct from the controlled pilot reported here. Forecast
+matrices retain scenario, target, and seed facets, displaying stochastic
+observations and predicted means as discrete points. Plotting reuses stored
+case predictions rather than refitting. The original notebooks remain in a
+separate historical archive. The
+generated result fragment records the run configuration. This working
+copy should be tied to an immutable source revision before submission;
+the repository URL alone is not an immutable research artefact.
+
+% Bibliography is inlined for the app's single-file LaTeX compiler.
+% references.bib carries the same checked metadata for journal workflows.
+\begin{thebibliography}{99}
+\bibitem{seca2021timegym}
+D. Seca.
+TimeGym: Debugging for Time Series Modeling in Python.
+arXiv:2105.01404, 2021.
+\href{https://arxiv.org/abs/2105.01404v1}{Original version}.
+
+\bibitem{tan2025syntsbench}
+Q. Tan, Y. Chen, M. Li, R. Gu, Y. Su, and X.-P. Zhang.
+SynTSBench: Rethinking Temporal Pattern Learning in Deep Learning Models
+for Time Series.
+\emph{Advances in Neural Information Processing Systems}, 38,
+Datasets and Benchmarks Track, 2025.
+\href{https://doi.org/10.52202/085713-4860}{doi:10.52202/085713-4860}.
+
+\bibitem{ghoroghchian2026simpletimebench}
+N. Ghoroghchian, H. Zhang, S. Han, A. Labach, and G. Stein.
+Foundations without Fundamentals: Zero-Shot Blind Spots in Time Series FMs.
+arXiv:2610.02058, 2026. Preprint.
+\href{https://arxiv.org/abs/2610.02058v1}{Version 1}.
+
+\bibitem{dwarakanath2019metamorphic}
+A. Dwarakanath, M. Ahuja, S. Podder, S. Vinu, A. Naskar, and Koushik MV.
+Metamorphic Testing of a Deep Learning based Forecaster.
+\emph{2019 IEEE/ACM 4th International Workshop on Metamorphic Testing}.
+\href{https://doi.org/10.1109/MET.2019.00014}{doi:10.1109/MET.2019.00014}.
+
+\bibitem{sktimeConformance}
+sktime developers.
+Estimator API conformance: \code{check\_estimator}.
+Official documentation, accessed 26 October 2026.
+\href{https://www.sktime.net/en/latest/api_reference/auto_generated/sktime.utils.estimator_checks.check_estimator.html}{Estimator-check reference}.
+
+\bibitem{qiu2024tfb}
+X. Qiu, J. Hu, L. Zhou, X. Wu, J. Du, B. Zhang, C. Guo, A. Zhou,
+C. S. Jensen, Z. Sheng, and B. Yang.
+TFB: Towards Comprehensive and Fair Benchmarking of Time Series Forecasting Methods.
+\emph{Proceedings of the VLDB Endowment}, 17(9):2363--2377, 2024.
+\href{https://doi.org/10.14778/3665844.3665863}{doi:10.14778/3665844.3665863}.
+
+\bibitem{hope1968montecarlo}
+A. C. A. Hope.
+A Simplified Monte Carlo Significance Test Procedure.
+\emph{Journal of the Royal Statistical Society: Series B (Methodological)},
+30(3):582--598, 1968.
+\href{https://doi.org/10.1111/j.2517-6161.1968.tb00759.x}{doi:10.1111/j.2517-6161.1968.tb00759.x}.
+
+\bibitem{lei2018conformal}
+J. Lei, M. G'Sell, A. Rinaldo, R. J. Tibshirani, and L. Wasserman.
+Distribution-Free Predictive Inference for Regression.
+\emph{Journal of the American Statistical Association}, 113(523):1094--1111, 2018.
+\href{https://doi.org/10.1080/01621459.2017.1307116}{doi:10.1080/01621459.2017.1307116}.
+
+\bibitem{holm1979multiple}
+S. Holm.
+A Simple Sequentially Rejective Multiple Test Procedure.
+\emph{Scandinavian Journal of Statistics}, 6(2):65--70, 1979.
+\href{https://www.jstor.org/stable/4615733}{Publisher archive}.
+
+\bibitem{gneiting2011point}
+T. Gneiting.
+Making and Evaluating Point Forecasts.
+\emph{Journal of the American Statistical Association}, 106(494):746--762, 2011.
+\href{https://doi.org/10.1198/jasa.2011.r10138}{doi:10.1198/jasa.2011.r10138}.
+
+\bibitem{gneiting2007proper}
+T. Gneiting and A. E. Raftery.
+Strictly Proper Scoring Rules, Prediction, and Estimation.
+\emph{Journal of the American Statistical Association}, 102(477):359--378, 2007.
+\href{https://doi.org/10.1198/016214506000001437}{doi:10.1198/016214506000001437}.
+
+\bibitem{scheuerer2015variogram}
+M. Scheuerer and T. M. Hamill.
+Variogram-Based Proper Scoring Rules for Probabilistic Forecasts of
+Multivariate Quantities.
+\emph{Monthly Weather Review}, 143(4):1321--1334, 2015.
+\href{https://doi.org/10.1175/MWR-D-14-00269.1}{doi:10.1175/MWR-D-14-00269.1}.
+
+\bibitem{gama2014drift}
+J. Gama, I. Zliobaite, A. Bifet, M. Pechenizkiy, and A. Bouchachia.
+A survey on concept drift adaptation.
+\emph{ACM Computing Surveys}, 46(4), Article 44, 2014.
+\href{https://doi.org/10.1145/2523813}{doi:10.1145/2523813}.
+
+\bibitem{merton1976jumps}
+R. C. Merton.
+Option pricing when underlying stock returns are discontinuous.
+\emph{Journal of Financial Economics}, 3(1--2):125--144, 1976.
+\href{https://doi.org/10.1016/0304-405X(76)90022-2}{doi:10.1016/0304-405X(76)90022-2}.
+
+\bibitem{bollerslev1986garch}
+T. Bollerslev.
+Generalized autoregressive conditional heteroskedasticity.
+\emph{Journal of Econometrics}, 31(3):307--327, 1986.
+\href{https://doi.org/10.1016/0304-4076(86)90063-1}{doi:10.1016/0304-4076(86)90063-1}.
+
+
+\bibitem{bollerslev1990ccc}
+T. Bollerslev.
+Modelling the Coherence in Short-run Nominal Exchange Rates:
+A Multivariate Generalized ARCH Model.
+\emph{The Review of Economics and Statistics}, 72(3):498--505, 1990.
+\href{https://doi.org/10.2307/2109358}{doi:10.2307/2109358}.
+
+\bibitem{hamilton1989regimes}
+J. D. Hamilton.
+A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle.
+\emph{Econometrica}, 57(2):357--384, 1989.
+\href{https://doi.org/10.2307/1912559}{doi:10.2307/1912559}.
+
+\bibitem{sun2026finstressts}
+J. Sun, K. J. L. Koa, R. Ni, Y. Liu, H. Chen, and K.-W. Huang.
+FinStressTS: A Parametric Synthetic Benchmark for Time-Series Forecasting in Finance.
+\emph{KDD}, 2026.
+\href{https://doi.org/10.1145/3770855.3817578}{doi:10.1145/3770855.3817578}.
+
+\bibitem{hu2026fintsb}
+Y. Hu, Y. Li, P. Liu, Y. Zhu, N. Li, T. Dai, S.-t. Xia, D. Cheng, and C. Jiang.
+FinTSB: A Comprehensive and Practical Benchmark for Financial Time Series Forecasting.
+\emph{Frontiers of Computer Science}, 2026.
+\href{https://doi.org/10.1007/s11704-026-51064-5}{doi:10.1007/s11704-026-51064-5}.
+
+\bibitem{rAirPassengers}
+R Core Team.
+AirPassengers: Monthly Airline Passenger Numbers 1949--1960.
+\emph{R datasets documentation}, accessed 24 October 2026.
+\href{https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/AirPassengers.html}{Official dataset documentation}.
+\end{thebibliography}
+
+\end{document}

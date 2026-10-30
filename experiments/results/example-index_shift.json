@@ -1,0 +1,61 @@
+{
+  "diagnostics": [
+    {
+      "category": "correctness",
+      "evidence": {
+        "code": "index_mismatch"
+      },
+      "message": "Forecast index does not match the requested future index.",
+      "name": "contract_index_mismatch",
+      "status": "FAIL"
+    }
+  ],
+  "manifest": {
+    "array_order": "horizon_major_C",
+    "conditioning": {
+      "future_observations_used": false,
+      "initialization": "stationary_distribution",
+      "known_generator_parameters": true,
+      "last_observed": [
+        0.08042336063319783,
+        -0.7328368557902775
+      ],
+      "observed_through": 119
+    },
+    "context_length": 120,
+    "horizon": 8,
+    "kind": "ar1",
+    "n_targets": 2,
+    "parameters": {
+      "correlation": [
+        [
+          1.0,
+          0.7
+        ],
+        [
+          0.7,
+          1.0
+        ]
+      ],
+      "mean": [
+        0.0,
+        0.0
+      ],
+      "phi": 0.8,
+      "sigma": [
+        1.0,
+        1.0
+      ]
+    },
+    "reference_kind": "analytic_conditional",
+    "schema_version": 1,
+    "seed": 10000,
+    "target_names": [
+      "y0",
+      "y1"
+    ]
+  },
+  "metrics": {},
+  "scenario": "ar1",
+  "seed": 10000
+}
