@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture
 def paper_tree(tmp_path):
+    (tmp_path / "CITATION.cff").write_bytes((ROOT / "CITATION.cff").read_bytes())
+    tmp_path = tmp_path / "paper"
+    tmp_path.mkdir()
     source = ROOT / "paper"
     for name in ("main.tex", "references.bib", "build_standalone.py",
                  "generated-results.tex", "generated-supplement.tex", "generated-macros.tex"):
@@ -80,3 +83,12 @@ def test_bibliography_rejects_ambiguous_input(tmp_path, source, error):
     path.write_text(source)
     with pytest.raises(ValueError, match=error):
         read_bibliography(path)
+
+
+def test_standalone_tracks_release_identity(paper_tree):
+    original = build(paper_dir=paper_tree)
+    from timegym import __version__
+    assert f"TimeGym {__version__}" in original
+    citation = paper_tree.parent / "CITATION.cff"
+    citation.write_text(citation.read_text().replace(f"version: {__version__}", "version: 999.0.1"))
+    assert "TimeGym 999.0.1" in build(paper_dir=paper_tree)

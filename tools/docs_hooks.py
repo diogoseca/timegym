@@ -7,15 +7,36 @@ from __future__ import annotations
 
 import atexit
 from pathlib import Path
-import re
+from html.parser import HTMLParser
 import shutil
 from tempfile import TemporaryDirectory
 from urllib.parse import unquote, urlsplit
 
+from markdown import markdown
 from mkdocs.exceptions import PluginError
 
 
 _STAGING = []
+
+
+class _Links(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.targets = []
+
+    def handle_starttag(self, tag, attrs):
+        attribute = {"a": "href", "img": "src"}.get(tag)
+        if attribute:
+            target = dict(attrs).get(attribute)
+            if target:
+                self.targets.append(target)
+
+
+def local_link_targets(source: str) -> list[str]:
+    # Markdown escapes fenced/inline code and separates optional link titles.
+    parser = _Links()
+    parser.feed(markdown(source, extensions=["fenced_code"]))
+    return parser.targets
 
 
 def on_config(config):
@@ -40,8 +61,8 @@ def on_config(config):
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(resolved, destination)
         if source.suffix == ".md":
-            for target in re.findall(r"\]\(([^)]+)\)", source.read_text(encoding="utf-8")):
-                parts = urlsplit(target.strip("<>"))
+            for target in local_link_targets(source.read_text(encoding="utf-8")):
+                parts = urlsplit(target)
                 if parts.scheme or parts.netloc or not parts.path:
                     continue
                 pending.append(source.parent / unquote(parts.path))

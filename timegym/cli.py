@@ -111,9 +111,9 @@ def _write_demo(args):
     figure = None
     if args.plot:
         # The CLI writes an image file and must work without a display server.
-        import matplotlib
+        from timegym.plotting import _pyplot
 
-        matplotlib.use("Agg")
+        plt = _pyplot(backend="Agg")
         figure = comparison.plot_forecasts(figsize=(13, 4))
         figure.axes[0].set_title("Fault: correct values, wrong time labels", loc="left")
         figure.axes[1].set_title(
@@ -134,14 +134,13 @@ def _write_demo(args):
         return summary, 0 if summary["expected_behavior_verified"] else 1
     finally:
         if figure is not None:
-            import matplotlib.pyplot as plt
-
             plt.close(figure)
 
 
 def main(argv=None):
-    """CLI exit codes: 0 expected outcome, 1 failed check/mismatch, 2 invalid use.
+    """Return 0 for expected outcomes and 1 for failed checks or mismatches.
 
+    Invalid arguments, dependency or file errors return 2.
     Inspect succeeds if the report has no FAIL/ERROR; unsupported/inconclusive
     checks remain visible. Replay succeeds when measurements and diagnostics
     reproduce, even if the original diagnostic correctly failed.

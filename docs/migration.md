@@ -1,6 +1,6 @@
 # Migrating from the 2021 prototype
 
-TimeGym 0.2 introduces a new diagnostic core and a new v2 manuscript. It does
+TimeGym 1.0 introduces a new diagnostic core and a new v2 manuscript. It does
 not promise execution compatibility with the exploratory 2021 notebooks.
 The historical implementation remains available in Git history. The ten former
 `dev/` notebooks and original Quick Start now live together in
@@ -46,7 +46,7 @@ honor the fresh-instance contract so one case cannot train the next.
 ## Notebook development and visual inspection
 
 The active collection lives directly under `notebooks/`: source notebooks
-01–15 build all 25 package modules, while Quick Start 00 and applications 20–27
+01–15 build all 25 package modules, while Quick Start 00 and applications 20–28
 use them. This continues the original notebook-first development approach.
 Selected nbdev cells replace `%%runwrite` append operations; save source edits,
 then run `python tools/export_notebooks.py`. A normal notebook run does not

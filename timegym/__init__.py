@@ -34,4 +34,4 @@ __all__ = [
 
 # %% ../notebooks/12_package.ipynb #12_package-05
 
-__version__ = "0.2.0"
+__version__ = "1.0.0"

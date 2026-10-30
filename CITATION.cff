@@ -3,6 +3,8 @@ message: >-
   If you use TimeGym, cite the software and record the version and source commit
   or the source fingerprint in your report. The v2 manuscript is a working paper;
   this metadata does not assert a published v2 release or DOI.
+version: 1.0.0
+date-released: 2026-10-30
 type: software
 title: "TimeGym: verification and diagnosis for forecasting pipelines"
 authors:
@@ -21,3 +23,12 @@ abstract: >-
   declared metamorphic properties. It supports point forecasts, marginal
   quantiles, coherent joint samples, retained visual experiments, and JSON
   diagnostic reports with replay information.
+references:
+  - type: article
+    title: "TimeGym: Debugging for Time Series Modeling in Python"
+    authors:
+      - family-names: Seca
+        given-names: Diogo
+    year: 2021
+    doi: "10.48550/arXiv.2105.01404"
+    url: "https://arxiv.org/abs/2105.01404v1"

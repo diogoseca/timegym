@@ -1,0 +1,88 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  checks:
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/checks.yml
+  build:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.15' # current-python
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install -e '.[release]'
+      - run: python tools/sync_citation.py --check --tag "$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - run: python paper/build_standalone.py
+      - name: Install LaTeX
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends latexmk texlive-latex-recommended texlive-pictures texlive-fonts-recommended
+      - name: Compile standalone manuscript
+        working-directory: paper
+        run: latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=build timegym-v2.tex
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-distributions
+          path: dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-paper
+          path: |
+            paper/build/timegym-v2.pdf
+            paper/timegym-v2.tex
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/timegym
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-distributions
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+  github-release:
+    needs: [build, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-distributions
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-paper
+          path: paper-artifacts
+      - name: Publish versioned code and manuscript
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "TimeGym $RELEASE_TAG" --generate-notes
+          fi
+          find paper-artifacts -type f -exec gh release upload "$RELEASE_TAG" --clobber {} +
+          gh release upload "$RELEASE_TAG" --clobber dist/*
+          gh release edit "$RELEASE_TAG" --draft=false

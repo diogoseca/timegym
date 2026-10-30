@@ -92,3 +92,19 @@ runpy.run_module('timegym', run_name='__main__')
     result = subprocess.run([sys.executable, '-c', script], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)['expected_behavior_verified']
+
+
+def test_demo_missing_matplotlib_reports_install_extra(tmp_path, capsys, monkeypatch):
+    import builtins
+    original = builtins.__import__
+
+    def without_matplotlib(name, *args, **kwargs):
+        if name == 'matplotlib' or name.startswith('matplotlib.'):
+            raise ImportError('No module named matplotlib')
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, '__import__', without_matplotlib)
+    output = tmp_path / 'demo'
+    assert main(['demo', '--plot', '--output', str(output)]) == 2
+    assert 'Install timegym[plots]' in capsys.readouterr().err
+    assert not output.exists()
