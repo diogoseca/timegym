@@ -1,5 +1,6 @@
 """Verify the notebook build contract in disposable projects, never the checkout."""
 
+import ast
 import importlib.util
 import json
 from pathlib import Path
@@ -55,6 +56,29 @@ def test_export_builds_multiple_owned_modules_without_running_cells(tmp_path):
     assert "../../notebooks/01_math.ipynb" in scaling
     assert str(tmp_path) not in core + scaling
     assert "from ..core import answer" in scaling
+    assert exporter.build(tmp_path, check=True).changed == ()
+
+
+def test_export_canonicalizes_header_and_merges_explicit_reexports(tmp_path):
+    name = notebook(tmp_path, "01_core.ipynb", [
+        "#| default_exp core",
+        "#| export\nfrom __future__ import annotations\nfrom math import sqrt\n__all__ = ['sqrt', 'answer']",
+        "#| export\ndef answer():\n    return 'forty-two'",
+    ])
+    manifest(tmp_path, [source(name, "timegym/core.py")])
+    exporter.build(tmp_path)
+    code = (tmp_path / "timegym/core.py").read_text()
+    tree = ast.parse(code)
+    assert all(isinstance(node, ast.ImportFrom) for node in tree.body[:2])
+    assignments = [node for node in tree.body if isinstance(node, ast.Assign)]
+    assert len(assignments) == 1
+    assert assignments[0] is tree.body[2]
+    namespace = {}
+    exec(code, namespace)
+    assert set(namespace["__all__"]) == {"sqrt", "answer"}
+    assert namespace["answer"]() == "forty-two"
+    assert 'return "forty-two"' in code
+    assert "#cell-1" in code and "#cell-2" in code
     assert exporter.build(tmp_path, check=True).changed == ()
 
 

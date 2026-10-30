@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario
-from timegym.provenance import replay_case
+from timegym.pipeline import replay_case
 
 
 @pytest.mark.parametrize("model", [None, NaiveForecaster("seasonal", period=3),
@@ -120,3 +120,63 @@ def test_report_replay_method_and_cli(tmp_path):
     assert json.loads(completed.stdout)["diagnostics_match"] is True
     assert json.loads(output.read_text())["metadata"]["replay"]["metrics_match"] is True
 
+
+
+def test_configuration_parser_does_not_construct_a_pipeline_and_preserves_subclasses():
+    from timegym.provenance import pipeline_from_config
+
+    class SpecializedPipeline(Pipeline):
+        pass
+
+    config = Pipeline(NaiveForecaster("drift")).to_config()
+    arguments = pipeline_from_config(config)
+    assert isinstance(arguments, dict)
+    assert type(arguments["model"]) is NaiveForecaster
+    restored = SpecializedPipeline.from_config(config)
+    assert type(restored) is SpecializedPipeline
+    assert restored.to_config() == config
+
+
+def test_legacy_strategy_config_and_report_replay_normalize_to_reduction():
+    pipeline = Pipeline(NaiveForecaster("drift"), reduction="recursive")
+    config = pipeline.to_config()
+    assert config["schema_version"] == 2
+    assert config["reduction"] == "recursive"
+    assert config["model"]["parameters"]["strategy"] == "drift"
+    legacy = deepcopy(config)
+    legacy["schema_version"] = 1
+    legacy["strategy"] = legacy.pop("reduction")
+    restored = Pipeline.from_config(legacy)
+    assert restored.reduction == "recursive"
+    assert restored.to_config() == config
+    report = pipeline.test([Scenario("trend", context_length=12, horizon=3)], seeds=[4]).to_dict()
+    report["metadata"]["pipeline_config"] = legacy
+    report["metadata"]["strategy"] = report["metadata"].pop("reduction")
+    replayed = replay_case(report)
+    assert replayed.metadata["replay"]["metrics_match"]
+    assert replayed.metadata["replay"]["diagnostics_match"]
+    assert replayed.metadata["pipeline_config"] == config
+
+
+@pytest.mark.parametrize("version", [True, 1.0, 2.0, 3, None, "2"])
+def test_pipeline_config_requires_an_exact_supported_schema_version(version):
+    config = Pipeline().to_config()
+    config["schema_version"] = version
+    with pytest.raises(ValueError, match="configuration schema"):
+        Pipeline.from_config(config)
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_pipeline_config_rejects_ambiguous_reduction_fields(version):
+    config = Pipeline().to_config()
+    config["schema_version"] = version
+    config["strategy"] = "recursive"
+    with pytest.raises(ValueError, match="configuration schema"):
+        Pipeline.from_config(config)
+
+
+def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options():
+    with pytest.raises(ValueError, match="reduction='recursive'"):
+        Pipeline(reduction="direct")
+    with pytest.raises(ValueError, match="unknown.*last.*mean.*seasonal.*drift"):
+        NaiveForecaster(strategy="unknown")

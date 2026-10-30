@@ -35,7 +35,7 @@ def main():
     import timegym
     from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, TestReport
     from timegym.cli import alignment_demo
-    from timegym.provenance import replay_case
+    from timegym.pipeline import replay_case
 
     installed_path = Path(timegym.__file__).resolve()
     repository = Path(__file__).resolve().parents[1]

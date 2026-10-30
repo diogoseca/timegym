@@ -131,3 +131,6 @@ dmypy.json
 # Desktop metadata and local paper exports
 .DS_Store
 paper/build/
+
+# Claude Code personal settings
+.claude/settings.local.json

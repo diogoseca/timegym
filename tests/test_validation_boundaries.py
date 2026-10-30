@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from timegym import Forecast, ForecastTask, Pipeline, Reference, Scenario
-from timegym.provenance import replay_case
+from timegym.pipeline import replay_case
 
 
 @pytest.mark.parametrize("window", [0, -1, True, False, np.bool_(True), 1.5, "12", None])

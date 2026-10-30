@@ -217,12 +217,13 @@ def test_unknown_or_partly_missing_metrics_never_disappear_silently():
     assert sum(patch.get_height() for patch in axis.patches) == 1
 
 
-def test_plot_style_is_local_and_aliases_return_figures():
+@pytest.mark.parametrize("method", ["plot_errors", "plot_error"])
+def test_plot_style_is_local_and_aliases_return_figures(method):
     scenarios = [Scenario("white_noise", context_length=10, horizon=3)]
     before = dict(plt.rcParams)
     pipeline = Pipeline()
     first = pipeline.plot_tests(scenarios, seeds=[4])
-    second = pipeline.plot_error(scenarios, seeds=[4, 5], metric="mse")
+    second = getattr(pipeline, method)(scenarios, seeds=[4, 5], metric="mse")
     assert len(first.axes) == len(second.axes) == 1
     assert dict(plt.rcParams) == before
 

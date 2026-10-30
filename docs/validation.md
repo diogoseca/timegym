@@ -9,7 +9,7 @@ detection or validation on every supported platform.
 | Package tests, Python 3.13.2 | 506 passed |
 | Package tests, Python 3.12 with older scientific dependencies | 506 passed; 13 upstream Matplotlib/pyparsing deprecation warnings |
 | Fresh-kernel notebooks | 24 executed; 295 code cells and 42 figures |
-| Notebook-to-package export | All 24 modules match their saved source cells |
+| Notebook-to-package export | All 23 modules match their saved source cells |
 | Historical notebook preservation | All 11 archived file hashes match the inventory |
 | Documentation | Strict build passes with local links resolved; original source paths registered for live reload |
 | Distributions | Wheel and source archive build; both pass metadata validation |

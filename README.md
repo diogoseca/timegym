@@ -134,11 +134,11 @@ report = run.report
 
 `run.cases` retains each case, forecast, and diagnostic result. Plotting an
 existing run reuses those outputs. `pipeline.plot_tests(...)` and
-`pipeline.plot_error(...)` are convenient alternatives that each create a new run.
+`pipeline.plot_errors(...)` are convenient alternatives that each create a new run.
 
 ## Develop in notebooks
 
-The source notebooks are authoritative for all 24 Python modules in `timegym/`.
+The source notebooks are authoritative for all 23 Python modules in `timegym/`.
 Their implementation cells are collapsed but editable; demonstrations remain
 beside the code they explain. This continues the original notebook-first
 development workflow, using nbdev's modular exporter to regenerate complete

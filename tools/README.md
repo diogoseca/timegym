@@ -56,6 +56,16 @@ modules; each module has exactly one owner. Notebook imports can use absolute
 `timegym` imports, which nbdev translates to package-relative imports when
 appropriate. Generated source includes a relative link to its notebook and
 cell IDs, independent of the current directory and temporary build location.
+After nbdev export, the builder orders the module banner, imports, and one merged
+`__all__`, then formats the generated source with pinned Black 24.10.0. Formatting
+is part of both build and check mode; never format or edit generated files by hand.
+
+## Shared internal helpers
+
+Notebook 12 owns `timegym/_internal.py`: integer guards, real-array coercion, and
+JSON-safe evidence conversion shared by sibling modules. Import these helpers
+from that module rather than through contracts or reporting; changes to them
+apply across the package. The module is private, with no public API guarantee.
 
 ## Validation boundary
 

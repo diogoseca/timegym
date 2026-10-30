@@ -208,3 +208,37 @@ def test_metamorphic_tolerances_must_be_declared_valid_values():
     case = Scenario("ar1").generate()
     with pytest.raises(ValueError, match="nonnegative"):
         check_shift_equivariance(Pipeline(), case.task.context, case.task.future_index, atol=-1)
+
+
+def test_default_run_uses_the_public_core_scenario_suite():
+    from timegym.data.synthetic import default_scenarios
+    from timegym.scenarios import CORE_KINDS
+
+    specifications = default_scenarios()
+    assert tuple(scenario.kind for scenario in specifications) == CORE_KINDS
+    run = Pipeline().run(seeds=[0])
+    assert [entry.case.manifest for entry in run.cases] == [
+        scenario.generate().manifest for scenario in specifications
+    ]
+
+
+@pytest.mark.parametrize("model", [None, NaiveForecaster, NaiveForecaster(), GaussianAR1Forecaster()])
+def test_model_metadata_name_for_native_models(model):
+    pipeline = Pipeline(model)
+    expected = "GaussianAR1Forecaster" if isinstance(model, GaussianAR1Forecaster) else "NaiveForecaster"
+    assert pipeline._model_name() == expected
+
+
+def test_model_metadata_name_does_not_invoke_factories_and_identifies_steps():
+    def factory():
+        raise AssertionError("Metadata must not instantiate the model")
+
+    assert Pipeline(model_factory=factory)._model_name() == factory.__qualname__
+    pipeline = Pipeline().add(object())
+    assert pipeline._model_name() == "SklearnForecaster"
+
+    class Factory:
+        def __call__(self):
+            raise AssertionError("Metadata must not instantiate the model")
+
+    assert Pipeline(model_factory=Factory())._model_name() == "model_factory"

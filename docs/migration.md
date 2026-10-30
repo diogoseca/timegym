@@ -46,7 +46,7 @@ honor the fresh-instance contract so one case cannot train the next.
 ## Notebook development and visual inspection
 
 The active collection lives directly under `notebooks/`: source notebooks
-01–15 build all 24 package modules, while Quick Start 00 and applications 20–27
+01–15 build all 23 package modules, while Quick Start 00 and applications 20–27
 use them. This continues the original notebook-first development approach.
 Selected nbdev cells replace `%%runwrite` append operations; save source edits,
 then run `python tools/export_notebooks.py`. A normal notebook run does not
@@ -66,7 +66,7 @@ report = run.report
 `run.cases` holds the generated cases, forecasts, and diagnostic results.
 The matrix plot uses discrete blue crosses for means, gray observation dots,
 thin conditional-reference curves, and the forecast origin. The convenience
-methods `pipeline.plot_tests(...)` and `pipeline.plot_error(...)` each perform
+methods `pipeline.plot_tests(...)` and `pipeline.plot_errors(...)` each perform
 their own run; retain a `ForecastRun` when several views should share the same
 fitted outputs. Some original themes, such as semi-synthetic generation and
 automatic optimization, remain research directions rather than implemented APIs.
@@ -128,3 +128,15 @@ comprehensive success.
 
 Existing fitted models using the old feature values must be retrained after
 these corrections. They cannot safely reuse the old preprocessing parameters.
+
+Replay orchestration now lives with Pipeline. Import the standalone helper as
+`from timegym.pipeline import replay_case`; `report.replay_case()` is unchanged.
+`provenance.pipeline_from_config()` validates and returns constructor arguments;
+use `Pipeline.from_config()` to reconstruct a pipeline.
+
+Use `Pipeline(reduction="recursive")` for the sklearn reduction. The old Pipeline
+`strategy` keyword and attribute are now named `reduction`; `NaiveForecaster`
+continues to use `strategy` for its baseline method. New pipeline configurations
+use schema version 2 and a `reduction` field. `Pipeline.from_config()` and report
+replay also accept schema version 1's `strategy` field and normalize it on export.
+The enclosing report schema remains `"2.0"`.

@@ -2,6 +2,14 @@
 
 ## 0.2.0 — unreleased
 
+- Renamed Pipeline’s `strategy` parameter and attribute to `reduction`. Pipeline
+  configuration schema 2 uses `reduction`; saved schema-1 configurations remain
+  replayable. `NaiveForecaster(strategy=...)` continues to select its baseline.
+
+- Renamed `Pipeline.plot_error()` to `Pipeline.plot_errors()` for consistency with
+  retained runs. The singular spelling remains a forwarding alias for the 0.2
+  release; migrate callers before the next release.
+
 ### Joint controlled processes
 
 - Extended composed, Merton, GARCH and Markov scenarios to multiple dependent targets.

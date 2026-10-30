@@ -77,8 +77,7 @@
       "notebook": "notebooks/12_package.ipynb",
       "modules": [
         "timegym/__init__.py",
-        "timegym/data/__init__.py",
-        "timegym/strategy.py"
+        "timegym/_internal.py"
       ]
     },
     {

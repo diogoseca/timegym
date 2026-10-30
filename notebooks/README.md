@@ -45,13 +45,13 @@ report = run.report
 ```
 
 The plot methods reuse `run.cases`; they do not refit. Calling
-`pipeline.plot_tests(...)` or `pipeline.plot_error(...)` creates a separate run.
+`pipeline.plot_tests(...)` or `pipeline.plot_errors(...)` creates a separate run.
 
 ## Develop the package here
 
 The source notebooks combine reasoning, editable implementation cells, examples,
 and plots. Implementation cells are collapsed for reading; expand them to work
-on the code. The [source map](source-map.json) gives each of the 24 package modules
+on the code. The [source map](source-map.json) gives each of the 23 package modules
 one notebook owner.
 
 | Source notebook | Responsibility |

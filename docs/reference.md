@@ -144,7 +144,7 @@ refer to the state before the first return; each return follows one transition.
 
 ## Pipeline and reports
 
-`Pipeline(model=None, window_length=12, strategy="recursive", model_factory=None)`
+`Pipeline(model=None, window_length=12, reduction="recursive", *, model_factory=None)`
 uses a last-value baseline by default. Native model classes/factories or the
 `clone_unfitted()` protocol ensure fresh fits. Optional sklearn steps can be added
 with `.add(estimator, **parameters)`. Only recursive reduction is implemented.
@@ -168,7 +168,7 @@ bins=None, missing="raise", figsize=None)` shows one score per whole case;
 `missing="annotate"` explicitly permits unavailable scores and labels their
 counts and reasons. Neither method refits models. Install `.[plots]` for plotting.
 
-`pipeline.plot_tests(...)` and `pipeline.plot_error(...)` are convenient one-call
+`pipeline.plot_tests(...)` and `pipeline.plot_errors(...)` are convenient one-call
 experiments. Each creates a fresh run. Use `run()` when multiple views must share
 exactly the same predictions, especially for stochastic models.
 
@@ -273,3 +273,9 @@ target is fixed independently of the forecast/null ensembles, and both receive
 the identical statistic. This is a conditional-law diagnostic, not an assertion
 that the estimated covariance is exact. A covariance check also cannot detect
 all higher-order dependence.
+
+The five core families are listed by `timegym.scenarios.CORE_KINDS`, derived from
+the scenario defaults. `timegym.data.synthetic.default_scenarios(context_length=120,
+horizon=12, *, n_targets=1, seed=0)` creates fresh specifications for those families.
+`Pipeline.run()` uses that helper; `Pipeline.plot_tests()` requests the same families
+with a context length of 240 and horizon of 80.

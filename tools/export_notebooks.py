@@ -9,6 +9,7 @@ All exports and syntax checks finish before any package file is replaced.
 from __future__ import annotations
 
 import argparse
+import ast
 from contextlib import contextmanager
 from dataclasses import dataclass
 import json
@@ -181,6 +182,47 @@ def _export_source(root: Path, stage: Path, source: Source) -> None:
         raise BuildError(f"No exported code for {source.notebook}: {', '.join(sorted(missing))}")
 
 
+def _canonical_module(contents: str, module: str) -> bytes:
+    """Keep notebook provenance while giving every module the same header."""
+    try:
+        import black
+    except ImportError as exc:
+        raise BuildError("Install the notebook build dependencies with pip install -e '.[dev]'") from exc
+    try:
+        tree = ast.parse(contents, filename=module)
+        lines = contents.splitlines(keepends=True)
+        imports = []
+        exports = []
+        docstring = []
+        removed = {0}
+        for index, node in enumerate(tree.body):
+            is_import = isinstance(node, (ast.Import, ast.ImportFrom))
+            is_exports = isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "__all__"
+                for target in node.targets
+            )
+            is_docstring = index == 0 and isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
+            if not (is_import or is_exports or is_docstring):
+                continue
+            if is_exports:
+                values = ast.literal_eval(node.value)
+                if not isinstance(values, (list, tuple)) or not all(isinstance(value, str) for value in values):
+                    raise ValueError("__all__ must be a literal sequence of strings")
+                exports.extend(value for value in values if value not in exports)
+            else:
+                destination = imports if is_import else docstring
+                destination.append("".join(lines[node.lineno - 1:node.end_lineno]).strip())
+            removed.update(range(node.lineno - 1, node.end_lineno))
+        body = "".join(line for index, line in enumerate(lines) if index not in removed and not line.startswith("# %% auto "))
+        header = [lines[0].strip(), *docstring, "\n".join(imports), f"__all__ = {exports!r}"]
+        canonical = "\n\n".join(part for part in header if part) + "\n\n" + body.strip() + "\n"
+        return black.format_file_contents(canonical, fast=False, mode=black.Mode(target_versions={black.TargetVersion.PY310})).encode("utf-8")
+    except black.NothingChanged:
+        return canonical.encode("utf-8")
+    except (SyntaxError, ValueError, black.InvalidInput) as exc:
+        raise BuildError(f"Generated module does not compile or has an invalid header: {module}: {exc}") from exc
+
+
 def build(root: str | Path, *, check: bool = False) -> BuildResult:
     """Export and validate everything, then compare or replace generated files.
 
@@ -201,7 +243,7 @@ def build(root: str | Path, *, check: bool = False) -> BuildResult:
             raise BuildError(f"Export output differs from declared modules: {sorted(actual ^ set(declared))}")
         outputs = {}
         for module in declared:
-            contents = (stage / module).read_bytes()
+            contents = _canonical_module((stage / module).read_text(encoding="utf-8"), module)
             try:
                 compile(contents, module, "exec", dont_inherit=True)
             except (SyntaxError, ValueError) as exc:

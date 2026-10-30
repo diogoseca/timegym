@@ -4,7 +4,7 @@ import argparse
 import json
 
 from timegym import TestReport
-from timegym.provenance import replay_case
+from timegym.pipeline import replay_case
 
 
 def main():
