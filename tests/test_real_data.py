@@ -70,7 +70,7 @@ def test_cache_reuses_full_history_without_optional_dependency(
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize("kwargs", [{"ticker": "OTHER"}, {"auto_adjust": True}])
+@pytest.mark.parametrize("kwargs", [{"ticker": "OTHER"}, {"auto_adjust": False}])
 def test_cache_mismatch_never_fetches(stock_history, tmp_path, kwargs):
     _, calls = stock_history
     path = tmp_path / "stock.json"

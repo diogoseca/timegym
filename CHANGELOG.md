@@ -10,6 +10,8 @@ Prepared release; publication is performed only by the version-tag workflow.
   bounded runtime dependencies, and a pinned development Docker image.
 - Documented module imports, built-in models, fault fixtures, and release setup.
 - Excluded historical notebooks from the source archive and consolidated CI checks.
+- `get_stock` now defaults to `auto_adjust=True` (adjusted OHLC); pass `False` for the
+  provider's unadjusted fields.
 
 - Renamed Pipeline’s `strategy` parameter and attribute to `reduction`. Pipeline
   configuration schema 2 uses `reduction`; saved schema-1 configurations remain

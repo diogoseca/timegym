@@ -29,16 +29,17 @@ def get_stock(
     ticker: str,
     columns: str | Sequence[str] = "Close",
     *,
-    auto_adjust: bool = False,
+    auto_adjust: bool = True,
     cache_path: str | Path | None = None,
     refresh: bool = False,
 ) -> pd.DataFrame:
     """Read one ticker's daily history as a DataFrame in requested column order.
 
     Without a matching cache this fetches period='max' from Yahoo Finance via
-    the optional timegym[market-data] dependency. auto_adjust=False retains
-    the provider's unadjusted OHLC fields; True requests adjusted OHLC, including
-    Close. Missing values are preserved, not filled or dropped.
+    the optional timegym[market-data] dependency. auto_adjust=True, the default,
+    requests the provider's adjusted OHLC including Close, so splits and dividends
+    do not appear as jumps; False keeps the unadjusted fields. Missing values are
+    preserved, not filled or dropped.
 
     cache_path is a JSON snapshot file containing full history, ticker and
     adjustment metadata. A cache hit needs neither yfinance nor the network.

@@ -443,7 +443,7 @@ The t interval is for continuous score differences, not differences in alarm rat
 
 ## Optional market data
 
-`timegym.data.real.get_stock(ticker, columns="Close", *, auto_adjust=False,
+`timegym.data.real.get_stock(ticker, columns="Close", *, auto_adjust=True,
 cache_path=None, refresh=False)` is a public opt-in network helper. Install
 `timegym[market-data]` for a fetch. It requests one ticker's maximum daily history
 through [yfinance's history API](https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.history.html).
@@ -452,10 +452,10 @@ requested column order with the provider's timezone and dates (nanosecond index
 resolution). Missing observations are preserved; empty history, unavailable
 columns, and duplicate or unordered dates raise `ValueError`.
 
-`auto_adjust=False` keeps the provider's unadjusted OHLC fields and `Close`;
-`True` requests adjusted OHLC, including `Close`. Choose and record this setting
-before defining the forecasting target. The default preserves the earlier
-helper's price convention while making it explicit. Selecting `"Close"` used to
+`auto_adjust=True`, the default, requests adjusted OHLC including `Close`, so
+splits and dividends do not appear as jumps; `False` keeps the provider's
+unadjusted fields. Choose and record this setting before defining the
+forecasting target. Selecting `"Close"` used to
 return a Series; callers that need one can now select `result["Close"]`.
 
 `cache_path` names a JSON snapshot file containing full history, ticker and
