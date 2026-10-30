@@ -6,7 +6,7 @@ Table~\ref{tab:faults} reports alarms for each selected corruption. The six expl
 
 \begin{table}[htbp]\centering\scriptsize
 
-\caption{Alarm counts and Wilson 95\% intervals (percent). Covariance is not run on malformed outputs; n/a is not a negative result.}
+\caption{Alarm counts and Wilson 95\% intervals (percent). Covariance is not run on malformed outputs; --- denotes an undefined result, not a negative result.}
 
 \label{tab:faults}
 
@@ -16,17 +16,17 @@ Case & Point-MSE alarm & Output contract & Covariance \\ \midrule
 
 Clean control & 5/64 [3.4, 17.0] & 0/64 [0.0, 5.7] & 6/64 [4.4, 19.0] \\
 
-Index shift & 5/64 [3.4, 17.0] & 64/64 [94.3, 100.0] & n/a \\
+Index shift & 5/64 [3.4, 17.0] & 64/64 [94.3, 100.0] & --- \\
 
-Target-label swap & 5/64 [3.4, 17.0] & 64/64 [94.3, 100.0] & n/a \\
+Target-label swap & 5/64 [3.4, 17.0] & 64/64 [94.3, 100.0] & --- \\
 
-Horizon truncation & 64/64 [94.3, 100.0] & 64/64 [94.3, 100.0] & n/a \\
+Horizon truncation & 64/64 [94.3, 100.0] & 64/64 [94.3, 100.0] & --- \\
 
-Nonfinite point & 64/64 [94.3, 100.0] & 64/64 [94.3, 100.0] & n/a \\
+Nonfinite point & 64/64 [94.3, 100.0] & 64/64 [94.3, 100.0] & --- \\
 
-Quantile crossing & 5/64 [3.4, 17.0] & 64/64 [94.3, 100.0] & n/a \\
+Quantile crossing & 5/64 [3.4, 17.0] & 64/64 [94.3, 100.0] & --- \\
 
-Sample-axis transpose & 5/64 [3.4, 17.0] & 64/64 [94.3, 100.0] & n/a \\
+Sample-axis transpose & 5/64 [3.4, 17.0] & 64/64 [94.3, 100.0] & --- \\
 
 Variance shrinkage & 5/64 [3.4, 17.0] & 0/64 [0.0, 5.7] & 64/64 [94.3, 100.0] \\
 
@@ -68,7 +68,7 @@ Strength & CRPS mean & Energy & Variogram \\ \midrule
 
 \subsection{Capability profiles}
 
-The univariate capability sweep uses 16 evaluation seeds, three innovation scales, five mechanisms, and three unmodified models. Table~\ref{tab:capability} shows the middle scale; the accompanying capability figure shows all three. The fitted AR(1) has small mean-reference error on white noise and AR(1), but is not the strongest of these models on every scenario. For the zero-drift random walk, last-value forecasting is the exact conditional mean. These results illustrate mechanism-specific capability, not implementation-fault decisions or a general model ranking.
+The univariate capability sweep uses 16 evaluation seeds, three innovation scales, five mechanisms, and three unmodified models. Table~\ref{tab:capability} shows the middle scale; the full three-scale sweep is in \code{figures/capability-curves.pdf} and \code{capability-summary.csv} of the reproducibility artifact. The fitted AR(1) has small mean-reference error on white noise and AR(1), but is not the strongest of these models on every scenario. For the zero-drift random walk, last-value forecasting is the exact conditional mean. These results illustrate mechanism-specific capability, not implementation-fault decisions or a general model ranking.
 
 \begin{table}[htbp]\centering\small
 
@@ -122,4 +122,4 @@ Repair improves MAE at every displayed origin, but the repaired historical mean 
 
 \paragraph{Recorded environment.}
 
-The run used Python 3.13.2, NumPy 2.5.4, pandas 3.1.0, SciPy 1.18.1, and scikit-learn 1.9.1. The protocol, raw case records, paired score records, and source/data SHA-256 fingerprints are retained with the experiment artefacts. All tables in this section are generated from the saved JSON results.
+The run used Python 3.13.2, NumPy 2.5.4, pandas 3.1.0, and SciPy 1.18.1. The protocol, raw case records, paired score records, and source/data SHA-256 fingerprints are retained with the experiment artefacts. All tables in this section are generated from the saved JSON results.

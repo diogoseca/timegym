@@ -1,15 +1,18 @@
 {
   "inputs_sha256": {
-    "experiments/results-v2/results.json": "ba9b2e90145ca50d4049e469869ea575a95c34d6d80fd16d0946cb8ae9395bc7",
+    "experiments/results-v2/results.json": "1b386768628dd09981ac08f1bf91bb567c678e41e483999a9ac300f7511971f7",
     "experiments/results/results.json": "cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014",
-    "notebooks/00_quick_start.ipynb": "8b33522553bacae582c8b40b1482f366c3b4a156191afcea82f1a17f5164c673",
+    "notebooks/00_quick_start.ipynb": "a2d138659a27bf7f61aa186dde262cacd28d900189384391b31a620017328f62",
     "notebooks/26_composed_and_financial_stresses.ipynb": "ef0b598af9bdd7fc49e35f7d6dff8ac503a138a453eae524c0b16eb6c31f9251",
     "notebooks/27_joint_financial_uncertainty.ipynb": "7a775ba300d42f97ac4b4e152b2b8bdd27ed829a9f8244e5c5ac9cddc2bec124",
-    "paper/figure_evidence.py": "9770016a46f6a5e5c069cbe9fc44fcf63f96e79f55b192f2894eb1bcafeea4b9",
-    "paper/figure_joint_stresses.py": "8e32ab280d756635ab7956ad6dd49cbd9b3d33b7087deb490a7219ca0883f999",
-    "paper/figure_stresses.py": "b048a4b28852b58e5cc3fdd1abfcb91462f358a1abfd8873a0b55b8cd8c5c869",
-    "paper/render_figures.py": "5e179c156e3f1add20f0e24952610184a1547c00fe0ae6a102030a8a983d6b7e",
-    "paper/vector_canvas.py": "f49dee2405cc508e0bc02035a436c336eb0366c460c93b5bbdb4f5db7e9427f8"
+    "paper/figure_common.py": "1e269c4b57bed134ebf33a57f7855e8e52a81b41569980c478059b547bd0209e",
+    "paper/figure_dependence.py": "13ec3ccb64fb8ef7a782dd0e43eb8cb11bf0bf688865be7da5eb6ea7f547042a",
+    "paper/figure_evidence.py": "605b4400dc08d634d454c7220f9303f1132f55b3edd5edace769f2fda07cb01e",
+    "paper/figure_joint_stresses.py": "735ded48669619acad423d7e60edefdeb5b8a314c56d352762b0fc14f659b79e",
+    "paper/figure_matrix.py": "c7c249e8e593b5d5c12ee52d6acf0d68cbcba3dc3c3299dc9e2c45f5027ef5ca",
+    "paper/figure_stresses.py": "b87b8683ea76ed57c365f7f5a9cba0a44c52e949bbbc16832f2829abbe6c73cc",
+    "paper/render_figures.py": "69182e02a457f43afd1e4cc1a4867ef92a5c13e07bb9a774daab836ffcfa2407",
+    "paper/vector_canvas.py": "ddd1bdfe3e4ca8124cecb1c78f648ea3568c4f482987fa0cf0cc0df2158c39c0"
   },
   "paper-dependence": {
     "all_sorted_marginals_exactly_equal": true,
@@ -152,7 +155,7 @@
         }
       }
     },
-    "protocol_version": "1.0",
+    "protocol_version": "1.1",
     "purpose": "Marginal invariance and joint-score response under a selected dependence mutation",
     "regenerated_scores_verified_against_saved_case": [
       {
@@ -196,9 +199,9 @@
       4.0
     ],
     "sources": {
-      "experiments/protocol.json": "06da8dc65b09af03f93e7e6abfdca0719be6f60a239fc8b6229e1c7075a40e59",
-      "experiments/results-v2/manifest.json": "151c14f7a462ccf8118efdb7abf02aaeff1e9f740a5a4c904c273fbcd9c2089b",
-      "experiments/results/manifest.json": "8383dd284c592aa526b043ffd7c9dae3acde2baf5731c99c512bb8f9fd48d045",
+      "experiments/protocol.json": "2c4d9958edf54f9361154a798a0fc6cb9645de424d39411e1fd729856a7ce552",
+      "experiments/results-v2/manifest.json": "0ea1ef0435d9ad9d54fd4af0ba8c8b33abca0f9855871ca77d4255419f1173d7",
+      "experiments/results/manifest.json": "fb84309ffcafbeb14d0b6017dafdaf2d492328bcf24a8d5f1494033b97c000b4",
       "experiments/results/results.json": "cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014"
     }
   },
@@ -294,26 +297,14 @@
         },
         "label": "Swapped recursive targets",
         "n": 384
-      },
-      {
-        "branch": "repaired",
-        "counts": {
-          "conformance": 0,
-          "contract": 0,
-          "loss": 20,
-          "scalar_shift": 0,
-          "target_shift": 0
-        },
-        "label": "Fresh corrected refit",
-        "n": 384
       }
     ],
     "protocol_version": "2.0",
     "purpose": "Complementary diagnostics and a correctness-versus-accuracy counterexample",
     "sources": {
-      "experiments/protocol-v2.json": "6de8628cc1e05d1c64dd087d3b4d22b5dfcda017bc7321f6ddfc1f5976dcb301",
-      "experiments/results-v2/manifest.json": "151c14f7a462ccf8118efdb7abf02aaeff1e9f740a5a4c904c273fbcd9c2089b",
-      "experiments/results-v2/results.json": "ba9b2e90145ca50d4049e469869ea575a95c34d6d80fd16d0946cb8ae9395bc7"
+      "experiments/protocol-v2.json": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30",
+      "experiments/results-v2/manifest.json": "0ea1ef0435d9ad9d54fd4af0ba8c8b33abca0f9855871ca77d4255419f1173d7",
+      "experiments/results-v2/results.json": "1b386768628dd09981ac08f1bf91bb567c678e41e483999a9ac300f7511971f7"
     }
   },
   "paper-financial-stresses": {
@@ -8939,8 +8930,8 @@
       "python_implementation": "CPython",
       "source": {
         "algorithm": "sha256",
-        "digest": "65e963793eb7b100f5d153c5eea29e7504925109d0d855967984d8f50bdf9753",
-        "file_count": 24,
+        "digest": "f3d9a4107f1f186d38baa993d4fae4d613273eace9ab94f4acf46a6d7a1cef01",
+        "file_count": 25,
         "scope": "timegym/**/*.py relative paths and contents"
       },
       "strategy": "recursive",
@@ -13704,7 +13695,70 @@
     ],
     "context_length": 300,
     "forecast_horizon": 100,
-    "model": "StandardScaler + Ridge(alpha=1), recursive, 24 lags",
+    "matrix_specs": [
+      {
+        "context_length": 300,
+        "horizon": 100,
+        "kind": "white_noise",
+        "parameters": {
+          "mean": 20.0,
+          "sigma": 2.0
+        }
+      },
+      {
+        "context_length": 300,
+        "horizon": 100,
+        "kind": "trend",
+        "parameters": {
+          "intercept": 5.0,
+          "sigma": 0.8,
+          "slope": 0.04
+        }
+      },
+      {
+        "context_length": 300,
+        "horizon": 100,
+        "kind": "seasonal",
+        "parameters": {
+          "amplitude": 4.0,
+          "mean": 10.0,
+          "period": 24.0,
+          "sigma": 0.7
+        }
+      },
+      {
+        "context_length": 300,
+        "horizon": 100,
+        "kind": "ar1",
+        "parameters": {
+          "mean": 5.0,
+          "phi": 0.85,
+          "sigma": 0.7
+        }
+      },
+      {
+        "context_length": 300,
+        "horizon": 100,
+        "kind": "random_walk",
+        "parameters": {
+          "drift": 0.0,
+          "sigma": 0.5
+        }
+      },
+      {
+        "context_length": 300,
+        "horizon": 100,
+        "kind": "random_walk",
+        "parameters": {
+          "drift": 0.03,
+          "sigma": 0.5
+        }
+      }
+    ],
+    "model": {
+      "ridge_alpha": 1.0,
+      "window_length": 24
+    },
     "note": "Illustrative quick-start configurations; no change to the study evaluation protocol.",
     "random_walk_pairing": "Within each seed the two walks share innovations; paths differ by 0.03*t.",
     "run_metadata": {
@@ -13763,8 +13817,8 @@
       "python_implementation": "CPython",
       "source": {
         "algorithm": "sha256",
-        "digest": "65e963793eb7b100f5d153c5eea29e7504925109d0d855967984d8f50bdf9753",
-        "file_count": 24,
+        "digest": "f3d9a4107f1f186d38baa993d4fae4d613273eace9ab94f4acf46a6d7a1cef01",
+        "file_count": 25,
         "scope": "timegym/**/*.py relative paths and contents"
       },
       "strategy": "recursive",
@@ -13776,6 +13830,8 @@
       22,
       33
     ],
+    "specification_cell": "quick-03",
+    "specification_source": "notebooks/00_quick_start.ipynb",
     "visible_context": 72,
     "visible_forecast": 48
   },

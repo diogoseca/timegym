@@ -57,7 +57,8 @@
         "timegym/metrics.py",
         "timegym/diagnostics.py",
         "timegym/checks.py",
-        "timegym/mutations.py"
+        "timegym/mutations.py",
+        "timegym/statistics.py"
       ]
     },
     {

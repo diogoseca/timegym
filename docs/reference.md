@@ -279,3 +279,12 @@ the scenario defaults. `timegym.data.synthetic.default_scenarios(context_length=
 horizon=12, *, n_targets=1, seed=0)` creates fresh specifications for those families.
 `Pipeline.run()` uses that helper; `Pipeline.plot_tests()` requests the same families
 with a context length of 240 and horizon of 80.
+
+## Case-level uncertainty intervals
+
+`timegym.statistics.wilson_interval(values)` accepts a nonempty vector of binary
+observations and returns `count`, `n`, `rate`, and the Wilson `ci95` bounds.
+`timegym.statistics.paired_t_interval(values)` accepts at least two finite
+case-level differences and returns `mean`, `n`, and Student t `ci95` bounds.
+Cases must be independent; horizons and targets within a case are not replications.
+The t interval is for continuous score differences, not differences in alarm rates.

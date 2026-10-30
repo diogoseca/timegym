@@ -195,13 +195,8 @@ directory. The new version is maintained **inside this repository**:
 - [Publication strategy](docs/publication-strategy.md).
 - [Migration notes](docs/migration.md).
 
-```bash
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m experiments.run_study
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m experiments.run_supplement
-MPLCONFIGDIR=/tmp/timegym-matplotlib python -m experiments.render_results
-MPLCONFIGDIR=/tmp/timegym-matplotlib python -m experiments.render_supplement
-python paper/build_standalone.py
-```
+See the [study guide](experiments/README.md) for environment setup, separate-output
+reproduction commands, hash comparison, and rendering from frozen records.
 
 The selected pilot detected the injected structural and distribution faults,
 while retaining false alarms in clean controls. Its marginal-preserving

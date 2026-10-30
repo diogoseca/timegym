@@ -11,17 +11,22 @@ import importlib.metadata
 import json
 from pathlib import Path
 import platform
+import os
 import subprocess
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm, t
+from timegym.statistics import paired_t_interval as mean_interval
+from timegym.statistics import wilson_interval as rate_interval
 
 from timegym import Forecast, Pipeline, Scenario, NaiveForecaster, GaussianAR1Forecaster
 from timegym.checks import check_shift_equivariance
 from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
 from timegym.metrics import mse, mae, crps, energy_score, variogram_score
 from timegym.mutations import MUTATIONS, mutate_forecast
+from threadpoolctl import threadpool_info, threadpool_limits
+
+from .common import protect_output, sha256 as fingerprint
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -51,27 +56,58 @@ class StandardizedMeanForecaster:
                         target_names=self.names_)
 
 
-def rate_interval(values):
-    n, k = len(values), int(sum(values))
-    z = norm.ppf(.975)
-    p = k / n
-    center = (p + z*z/(2*n)) / (1 + z*z/n)
-    half = z * np.sqrt(p*(1-p)/n + z*z/(4*n*n)) / (1 + z*z/n)
-    return {"count": k, "n": n, "rate": p, "ci95": [float(max(0, center-half)), float(min(1, center+half))]}
+def source_fingerprints():
+    paths = sorted(list((ROOT / "timegym").rglob("*.py")) + list((ROOT / "experiments").glob("*.py")))
+    paths += [ROOT / "experiments/protocol.json", ROOT / "experiments/data/AirPassengers.csv"]
+    return {str(path.relative_to(ROOT)): fingerprint(path) for path in paths}
 
 
-def mean_interval(values):
-    values = np.asarray(values, dtype=float)
-    mean = float(values.mean())
-    half = float(t.ppf(.975, len(values)-1) * values.std(ddof=1) / np.sqrt(len(values))) if len(values) > 1 else 0.
-    return {"mean": mean, "ci95": [mean-half, mean+half], "n": len(values)}
+def capability_models(task):
+    return {"last_value": lambda: NaiveForecaster(),
+            "seasonal_12": lambda: NaiveForecaster("seasonal", task["seasonal_period"]),
+            "gaussian_ar1": lambda: GaussianAR1Forecaster(n_samples=task["n_samples"])}
 
 
-def fingerprint(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def validate_protocol(protocol):
+    if protocol.get("protocol_version") != "1.1":
+        raise ValueError("Expected pilot protocol 1.1")
+    for name in ("development_seeds", "evaluation_seeds", "capability_seeds"):
+        bounds = protocol[name]
+        if (len(bounds) != 2 or any(type(value) is not int or value < 0 for value in bounds)
+                or bounds[1] - bounds[0] < 2):
+            raise ValueError(f"{name} must be a half-open range of at least two nonnegative seeds")
+    if set(range(*protocol["development_seeds"])) & set(range(*protocol["evaluation_seeds"])):
+        raise ValueError("Development and evaluation seed ranges overlap")
+    if not 0 < protocol["alpha_per_check"] < 1:
+        raise ValueError("alpha_per_check must be in (0, 1)")
+    if protocol["n_samples"] < 20 or protocol["n_calibration"] < 1:
+        raise ValueError("Covariance checks require at least 20 samples and positive calibration count")
+    mutations = protocol["mutations"]
+    if not mutations or len(set(mutations)) != len(mutations) or set(mutations) - set(MUTATIONS):
+        raise ValueError("Mutations must be distinct implemented fixtures")
+    task = protocol["capability_task"]
+    for key in ("context_length", "horizon", "n_targets", "n_samples", "seasonal_period"):
+        if type(task[key]) is not int or task[key] < 1:
+            raise ValueError(f"capability_task.{key} must be a positive integer")
+    names = protocol["capability_models"]
+    if not names or len(set(names)) != len(names) or set(names) - capability_models(task).keys():
+        raise ValueError("capability_models must name distinct implemented models")
+    for name in ("scenario", "inverse_transform_synthetic"):
+        for dimension in ("context_length", "horizon", "n_targets"):
+            if dimension not in protocol[name]:
+                raise ValueError(f"{name}.{dimension} must be explicit")
+    Scenario(**protocol["scenario"])
+    spec = protocol["inverse_transform_synthetic"]
+    Scenario(**{key: value for key, value in spec.items() if key != "shift"})
+    for kind in protocol["capability_scenarios"]:
+        for sigma in protocol["capability_sigma"]:
+            Scenario(kind, parameters={"sigma": sigma}, **{key: task[key] for key in ("context_length", "horizon", "n_targets")})
+    strengths = protocol["dependence_strengths"]
+    if not strengths or any(not 0 <= strength <= 1 for strength in strengths):
+        raise ValueError("dependence_strengths must lie in [0, 1]")
 
 
-def provenance(protocol):
+def provenance(protocol, fingerprints=None):
     paths = sorted(list((ROOT / "timegym").rglob("*.py")) + list((ROOT / "experiments").glob("*.py")))
     digest = hashlib.sha256()
     for path in paths:
@@ -82,10 +118,10 @@ def provenance(protocol):
     except (subprocess.CalledProcessError, FileNotFoundError):
         commit = None
     return {"protocol_sha256": fingerprint(ROOT / "experiments/protocol.json"),
-            "source_sha256": digest.hexdigest(), "base_git_commit": commit,
+            "source_sha256": digest.hexdigest(), "source_files": fingerprints or source_fingerprints(), "base_git_commit": commit,
             "source_note": "Source fingerprint identifies working files; base commit alone does not include uncommitted v2 changes.",
             "python": platform.python_version(), "platform": platform.platform(),
-            "versions": {name: importlib.metadata.version(name) for name in ("numpy", "pandas", "scipy", "scikit-learn")},
+            "versions": {name: importlib.metadata.version(name) for name in ("numpy", "pandas", "scipy")},
             "dataset_sha256": fingerprint(ROOT / "experiments/data/AirPassengers.csv"), "protocol": protocol}
 
 
@@ -114,7 +150,11 @@ def run(protocol):
             if violations:
                 covariance_status, covariance_evidence = "UNSUPPORTED", {}
             else:
-                diagnostic = clean_covariance if name not in {"variance_shrink", "dependence_shuffle"} else covariance_dependence_check(case.reference, forecast.samples, **checks)
+                if name not in {"variance_shrink", "dependence_shuffle"}:
+                    assert np.array_equal(forecast.samples, clean.samples), "Cannot reuse a covariance decision for different samples"
+                    diagnostic = clean_covariance
+                else:
+                    diagnostic = covariance_dependence_check(case.reference, forecast.samples, **checks)
                 covariance_status, covariance_evidence = diagnostic.status, diagnostic.evidence
             if name == "clean":
                 repair_contract, repair_covariance = False, clean_covariance.status
@@ -161,12 +201,14 @@ def run(protocol):
 
 def capability_study(protocol):
     rows = []
+    task = protocol["capability_task"]
+    constructors = capability_models(task)
     for kind in protocol["capability_scenarios"]:
         for sigma in protocol["capability_sigma"]:
-            scenario = Scenario(kind, parameters={"sigma": sigma}, context_length=120, horizon=8)
-            for name, model in [("last_value", NaiveForecaster()), ("seasonal_12", NaiveForecaster("seasonal", 12)),
-                                ("gaussian_ar1", GaussianAR1Forecaster(n_samples=128))]:
-                pipeline = Pipeline(model)
+            scenario = Scenario(kind, parameters={"sigma": sigma},
+                                **{key: task[key] for key in ("context_length", "horizon", "n_targets")})
+            for name in protocol["capability_models"]:
+                pipeline = Pipeline(constructors[name]())
                 for seed in range(*protocol["capability_seeds"]):
                     case = scenario.generate(seed=seed)
                     forecast = pipeline.predict(case.task.context, case.task.future_index)
@@ -180,7 +222,7 @@ def inverse_repair_study(protocol):
     repaired = Pipeline(StandardizedMeanForecaster(inverse=True))
     rows = []
     spec = protocol["inverse_transform_synthetic"]
-    scenario = Scenario(spec["kind"], parameters=spec["parameters"])
+    scenario = Scenario(**{key: value for key, value in spec.items() if key != "shift"})
     for seed in range(*protocol["evaluation_seeds"]):
         case = scenario.generate(seed=seed)
         checks = [check_shift_equivariance(p, case.task.context, case.task.future_index, shift=spec["shift"]) for p in (defective, repaired)]
@@ -205,14 +247,27 @@ def inverse_repair_study(protocol):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "experiments/results")
+    parser.add_argument("--force", action="store_true", help="Replace existing study artifacts")
     args = parser.parse_args()
+    protect_output(args.output, force=args.force)
     protocol = json.loads((ROOT / "experiments/protocol.json").read_text())
-    results = run(protocol)
-    results["capability_records"] = capability_study(protocol)
-    results["inverse_repair"] = inverse_repair_study(protocol)
+    validate_protocol(protocol)
+    fingerprints = source_fingerprints()
+    with threadpool_limits(limits=1):
+        results = run(protocol)
+        results["capability_records"] = capability_study(protocol)
+        results["inverse_repair"] = inverse_repair_study(protocol)
+        runtime = {"threads": {name: os.environ.get(name) for name in
+                               ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS")},
+                   "threadpools": threadpool_info(), "thread_limit": 1}
+    manifest = provenance(protocol, fingerprints)
+    if fingerprints != source_fingerprints():
+        raise RuntimeError("Source files changed during the pilot; no artifacts were written")
     args.output.mkdir(parents=True, exist_ok=True)
     (args.output / "results.json").write_text(json.dumps(results, indent=2, sort_keys=True, allow_nan=False) + "\n")
-    (args.output / "manifest.json").write_text(json.dumps(provenance(protocol), indent=2, sort_keys=True, allow_nan=False) + "\n")
+    manifest["results_sha256"] = fingerprint(args.output / "results.json")
+    (args.output / "runtime.json").write_text(json.dumps(runtime, indent=2, sort_keys=True)+"\n")
+    (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False) + "\n")
     for name, report in results["example_reports"].items():
         (args.output / f"example-{name}.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(json.dumps({"output": str(args.output), "fault_summary": results["fault_summary"],

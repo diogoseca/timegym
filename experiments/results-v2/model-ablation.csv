@@ -1,6 +1,6 @@
-check,clean_alarms,clean_n,fault_alarms,fault_n,repair_alarms,repair_n,scope
-contract,0,384,0,1536,0,384,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval
-scalar_shift,0,384,384,1536,0,384,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval
-target_shift,0,384,768,1536,0,384,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval
-conformance,0,384,1536,1536,0,384,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval
-loss,20,384,930,1536,20,384,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval
+check,clean_alarms,clean_n,fault_alarms,fault_n,scope
+contract,0,384,0,1536,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval
+scalar_shift,0,384,384,1536,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval
+target_shift,0,384,768,1536,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval
+conformance,0,384,1536,1536,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval
+loss,20,384,930,1536,Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval

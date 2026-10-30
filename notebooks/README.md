@@ -51,7 +51,7 @@ The plot methods reuse `run.cases`; they do not refit. Calling
 
 The source notebooks combine reasoning, editable implementation cells, examples,
 and plots. Implementation cells are collapsed for reading; expand them to work
-on the code. The [source map](source-map.json) gives each of the 23 package modules
+on the code. The [source map](source-map.json) gives each of the 24 package modules
 one notebook owner.
 
 | Source notebook | Responsibility |
@@ -64,7 +64,7 @@ one notebook owner.
 | [06 · Forecasting models](06_forecasting_models.ipynb) | Native baselines and model adaptation |
 | [07 · Pipeline](07_pipeline.ipynb) | Fresh fitting, evaluation, and retained runs |
 | [08 · Forecast contracts](08_forecast_contracts.ipynb) | Tasks, forecasts, and reference shapes |
-| [09 · Scores and diagnostics](09_scores_and_diagnostics.ipynb) | Scores, checks, and fault fixtures |
+| [09 · Scores and diagnostics](09_scores_and_diagnostics.ipynb) | Scores, case-level intervals, checks, and fault fixtures |
 | [10 · Reports and replay](10_reports_and_replay.ipynb) | Structured results and provenance |
 | [11 · Plotting](11_plotting.ipynb) | Forecast matrices and case-score distributions |
 | [12 · Package](12_package.ipynb) | Public exports and package structure |

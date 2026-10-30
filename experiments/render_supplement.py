@@ -23,6 +23,9 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.ticker import PercentFormatter
 import numpy as np
 
+from .common import MISSING, interval_cell, require_conclusion
+
+
 ROOT = Path(__file__).resolve().parents[1]
 CHECKS = ("contract", "scalar_shift", "target_shift", "conformance", "loss")
 CHECK_LABELS = ("Output\ncontract", "Scalar shift\n(public)", "Target shift\n(experimental)",
@@ -33,7 +36,6 @@ FAULT_LABELS = {
     "stale_recursive_state": "Stale recursive state",
     "omit_inverse_target_scaling": "Missing inverse target scaling",
     "swap_recursive_targets": "Swapped recursive targets",
-    "repaired": "Fresh corrected refit",
 }
 CONDITION_LABELS = {
     "white_noise_locations": "White noise",
@@ -64,7 +66,7 @@ def validate_recorded_results(results_path, results, manifest):
 
 
 def branch_counts(results, protocol):
-    branches = ["clean", *protocol["model_study"]["faults"], "repaired"]
+    branches = ["clean", *protocol["model_study"]["faults"]]
     rows = []
     for branch in branches:
         records = [row for row in results["model"]["records"] if row["branch"] == branch]
@@ -99,7 +101,6 @@ def plot_ablation(results, protocol, directory):
     ax.grid(which="minor", color="white", linewidth=2)
     ax.tick_params(which="minor", length=0)
     ax.axhline(.5, color="#536774", lw=1)
-    ax.axhline(len(rows)-1.5, color="#536774", lw=1)
     for spine in ax.spines.values():
         spine.set_visible(False)
     colorbar = fig.colorbar(heat, ax=ax, pad=.025, fraction=.025)
@@ -108,7 +109,7 @@ def plot_ablation(results, protocol, directory):
     fig.suptitle("Different specifications expose different implementation defects", x=.025, ha="left",
                  fontsize=16, fontweight="bold")
     fig.text(.025, .025, f"Counts over {len(protocol['model_study']['conditions'])} fixed conditions, "
-             f"{protocol['model_study']['evaluation_cases']} independent cases each. Clean and refit alarms are negative controls.\n"
+             f"{protocol['model_study']['evaluation_cases']} independent cases each. Clean alarms are negative controls.\n"
              "All faults satisfy output contracts. Engineering agreement is not a claim of optimal forecasting accuracy.",
              fontsize=9.5, color="#425466")
     fig.subplots_adjust(left=.30, right=.96, top=.78, bottom=.16)
@@ -153,7 +154,7 @@ def plot_covariance(results, protocol, directory):
 
 def rate_cell(stat):
     if stat is None:
-        return "---"
+        return MISSING
     lo, hi = stat["ci95"]
     return f"{stat['count']}/{stat['n']} [{100*lo:.1f}, {100*hi:.1f}]"
 
@@ -165,7 +166,7 @@ def scientific_tex(value):
     return "$" + mantissa + r"\times10^{" + str(int(exponent)) + "}$"
 
 
-def render_tex(results, manifest, runtime=None):
+def render_tex(results, manifest):
     protocol = manifest["protocol"]
     model, covariance = protocol["model_study"], protocol["covariance_study"]
     rows = branch_counts(results, protocol)
@@ -183,14 +184,23 @@ def render_tex(results, manifest, runtime=None):
         if delta["ci95"][0] > 0:
             repair_counterexamples.append(
                 f"For {CONDITION_LABELS[row['condition']].lower()} with {SHORT_FAULTS[row['fault']].lower()}, "
-                f"corrected-minus-faulty mean MSE was ${delta['mean']:+.4f}$ "
-                f"(paired 95\\% interval $[{delta['ci95'][0]:+.4f},{delta['ci95'][1]:+.4f}]$); "
+                f"clean-minus-faulty mean MSE was {interval_cell(delta)} (paired 95\\% t interval); "
                 f"only {row['cases_improved_by_repair']}/{row['n']} realized forecasts improved. "
                 "Restoring the declared algorithm can therefore worsen forecast accuracy on a particular condition."
             )
     max_crps = max(abs(row["score_delta_from_clean"]["crps"]) for row in results["covariance"]["records"]
                    if row["variant"] == "partial_shuffle")
     suites = {row["variant"]: row for row in results["covariance"]["suite_summaries"]}
+    require_conclusion(all(not row["alarms"]["contract"] for row in results["model"]["records"]),
+                       "all retained implementation branches preserve the output contract")
+    require_conclusion(suites["clean"]["holm_any_false_alarm"]["rate"] < suites["clean"]["raw_any_false_alarm"]["rate"],
+                       "Holm reduces clean suite false alarms")
+    require_conclusion(suites["reduced_spread"]["holm_any_alarm"]["rate"] < suites["reduced_spread"]["raw_any_alarm"]["rate"],
+                       "Holm reduces detection in reduced-spread suites")
+    require_conclusion(max_crps < 1e-12, "partial permutations preserve marginal CRPS up to roundoff")
+    require_conclusion(all(row["null_hypotheses"] == {"clean": 4, "partial_shuffle": 1, "reduced_spread": 0}[row["variant"]]
+                           for row in suites.values()), "declared suite null counts match the table caption")
+
     lines = [
         "% Generated from experiments/results-v2; do not edit numerical statements manually.",
         r"\subsection{A separately versioned implementation supplement}",
@@ -215,13 +225,14 @@ def render_tex(results, manifest, runtime=None):
         r"\bottomrule\end{tabular}\end{table}",
         "The complete table retains the blind spots and false alarms of every comparison. These results "
         "concern these specifications and selected implementations, rather than the sensitivity of arbitrary "
-        "metamorphic tests. Every repaired point array and every repaired check decision was "
-        "identical to its paired clean result; clean statistical alarms are retained after repair.",
+        "metamorphic tests. In Study 2, corrected means the clean implementation refitted; "
+        "the paired comparison is clean-minus-faulty, with no separate repaired arm. "
+        "Any output-contract violation terminates the study.",
         f"Across the fixed condition--fault pairs, the calibrated loss alarm changed from no alarm to alarm "
         f"in {loss_gained} paired comparisons and from alarm to no alarm in {loss_lost}. "
         "The same clean case appears once per fault in these descriptive paired counts; they are not "
         "independent replicates of a pooled statistical test.",
-        f"Repair reduced mean realized MSE in {improved}/{len(losses)} condition--fault pairs; "
+        f"The clean implementation reduced mean realized MSE in {improved}/{len(losses)} condition--fault pairs; "
         f"{intervals_below_zero}/{len(losses)} paired 95\\% t intervals were wholly below zero. "
         "The full paired loss differences, intervals, and numbers of individually improved cases are retained "
         r"in \code{model-repair-losses.csv}. These exploratory intervals are not adjusted across comparisons. "
@@ -231,7 +242,7 @@ def render_tex(results, manifest, runtime=None):
         r"\caption{Complete condition-specific implementation alarm counts. Each entry is out of "
         f"{model['evaluation_cases']} paired cases. C, S, T, N, and L denote contract, scalar shift, target "
         "shift, NumPy agreement, and calibrated loss respectively. Clean rows are negative controls; "
-        "corrected-refit rows equal their clean rows.}",
+        "there is no separate corrected-refit row.}",
         r"\label{tab:supplement-complete}",
         r"\begin{tabular}{@{}llrrrrr@{}}\toprule",
         r"Condition & Branch & C & S & T & N & L \\ \midrule",
@@ -263,7 +274,7 @@ def render_tex(results, manifest, runtime=None):
         f"{suites['reduced_spread']['holm_any_alarm']['count']}/{suites['reduced_spread']['holm_any_alarm']['n']}. "
         "The correction thus reduces family-wise false alarms at a substantial power cost in this setting.",
         r"\begin{table}[htbp]\centering\small",
-        r"\caption{Any false alarm per four-check suite, counts and Wilson 95\% intervals (percent). Clean suites have four true nulls, partial-shuffle suites one, and reduced-spread suites none. Dashes therefore indicate an undefined false-alarm rate.}",
+        r"\caption{Any false alarm per four-check suite, counts and Wilson 95\% intervals (percent). Clean suites have four true nulls, partial-shuffle suites one, and reduced-spread suites none. --- denotes an undefined result, not a negative result.}",
         r"\label{tab:supplement-familywise}",
         r"\begin{tabular}{@{}lrr@{}}\toprule",
         r"Variant & Raw & Holm \\ \midrule",
@@ -297,20 +308,36 @@ def render_tex(results, manifest, runtime=None):
         "reported. The covariance null remains IID trajectory sampling from the specified exact conditional "
         "reference, not general multivariate calibration of an arbitrary fitted model.",
         r"\paragraph{Cost and reproducibility.}",
-        f"The supplement performed {results['model']['cost_counts']['sklearn_fits']:,} sklearn fits, "
+        f"The retained study design requires {results['model']['cost_counts']['sklearn_fits']:,} sklearn fits, "
         f"{results['model']['cost_counts']['independent_ridge_solves']:,} independent NumPy solves, and "
         f"{results['covariance']['cost_counts']['covariance_checks']:,} covariance checks containing "
         f"{results['covariance']['cost_counts']['calibration_ensembles']:,} calibration ensembles. "
         "Raw case records, protocol and source fingerprints, paired examples, and CSV tables are saved "
         r"under \code{experiments/results-v2/}; the original pilot artefacts remain separate.",
     ])
-    if runtime is not None:
-        lines.append(f"The recorded wall time was {runtime['total_seconds']:.1f} seconds "
-                     f"({runtime['model_seconds']:.1f} for implementation checks and "
-                     f"{runtime['covariance_seconds']:.1f} for covariance checks). This is descriptive timing "
-                     "on the recorded machine and software environment, not a performance benchmark; other "
-                     "local work may share CPU resources. Timing is excluded from deterministic numerical records.")
     return "\n\n".join(lines) + "\n"
+
+
+def render_macros(results):
+    selected = next(row for row in results["model"]["loss_summaries"]
+                    if row["condition"] == "random_walk_drifts" and row["fault"] == "stale_recursive_state")
+    records = results["model"]["records"]
+    clean = {(row["condition"], row["seed"]): row for row in records if row["branch"] == "clean"}
+    faulty = [row for row in records if row["condition"] == selected["condition"] and row["branch"] == selected["fault"]]
+    from timegym.statistics import paired_t_interval
+    differences = [clean[(row["condition"], row["seed"])]["realized_mse"] - row["realized_mse"] for row in faulty]
+    delta = paired_t_interval(differences)
+    require_conclusion(delta == selected["repair_minus_faulty_mse"], "caption interval agrees with paired raw losses")
+    improved = sum(value < 0 for value in differences)
+    require_conclusion(improved == selected["cases_improved_by_repair"], "caption improvement count agrees with raw losses")
+    counts = {sum(row["condition"] == condition for row in clean.values())
+              for condition in {row["condition"] for row in clean.values()}}
+    require_conclusion(counts == {selected["n"]}, "caption has a common case count per condition")
+    values = {"RepairDeltaMean": f"{delta['mean']:.3f}", "RepairDeltaLow": f"{delta['ci95'][0]:.3f}",
+              "RepairDeltaHigh": f"{delta['ci95'][1]:.3f}", "RepairImproved": improved,
+              "CasesPerCondition": selected["n"], "CasesPerRow": len(clean)}
+    return "% Generated from frozen supplement records; do not edit.\n" + "".join(
+        f"\\newcommand{{\\{name}}}{{{value}}}\n" for name, value in values.items())
 
 
 def main():
@@ -322,8 +349,6 @@ def main():
     results = json.loads(path.read_text())
     manifest = json.loads((args.results_dir / "manifest.json").read_text())
     validate_recorded_results(path, results, manifest)
-    runtime_path = args.results_dir / "runtime.json"
-    runtime = json.loads(runtime_path.read_text()) if runtime_path.exists() else None
     directory = args.paper_dir / "figures"
     directory.mkdir(parents=True, exist_ok=True)
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10, "axes.grid": False,
@@ -332,7 +357,8 @@ def main():
     plot_ablation(results, manifest["protocol"], directory)
     plot_covariance(results, manifest["protocol"], directory)
     fragment = args.paper_dir / "generated-supplement.tex"
-    fragment.write_text(render_tex(results, manifest, runtime))
+    fragment.write_text(render_tex(results, manifest))
+    (args.paper_dir / "generated-macros.tex").write_text(render_macros(results))
     print(json.dumps({"tables": str(fragment), "figures": str(directory)}))
 
 
