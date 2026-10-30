@@ -16,9 +16,18 @@ from .processes import (
 from ._internal import positive_int
 from ._internal import nonnegative_int
 
-__all__ = ["Case", "CORE_KINDS", "scenario_label", "Scenario"]
+__all__ = [
+    "Case",
+    "CORE_KINDS",
+    "scenario_label",
+    "Scenario",
+    "MANIFEST_SCHEMA_VERSION",
+]
 
 # %% ../notebooks/01_synthetic_data.ipynb #01_synthetic_data-05
+
+
+MANIFEST_SCHEMA_VERSION = 1
 
 
 # %% ../notebooks/01_synthetic_data.ipynb #01_synthetic_data-07
@@ -281,7 +290,7 @@ class Scenario:
         }
         resolved_parameters["correlation"] = correlation.tolist()
         manifest = {
-            "schema_version": 1,
+            "schema_version": MANIFEST_SCHEMA_VERSION,
             "kind": self.kind,
             "context_length": length,
             "horizon": horizon,

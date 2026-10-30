@@ -103,3 +103,116 @@ def test_saved_model_descriptors_remain_inert_data(saved_report):
     assert report.metadata["pipeline_config"]["model"]["module"] == "this_module_must_never_be_imported"
     with pytest.raises(ValueError, match="not automatically replayable"):
         report.replay_case()
+
+
+@pytest.mark.parametrize("kwargs, message", [
+    ({"name": ""}, "nonempty"),
+    ({"name": None}, "nonempty"),
+    ({"status": "PASSED"}, "diagnostic status"),
+    ({"category": "custom"}, "diagnostic category"),
+    ({"category": ""}, "diagnostic category"),
+    ({"message": None}, "string"),
+    ({"evidence": []}, "evidence must be an object"),
+    ({"evidence": {"p": float("nan")}}, "nonfinite"),
+    ({"evidence": {"p": float("inf")}}, "nonfinite"),
+])
+def test_diagnostic_construction_enforces_the_read_contract(kwargs, message):
+    fields = dict(name="custom", status="PASS", category="correctness", message="")
+    fields.update(kwargs)
+    with pytest.raises(ValueError, match=message):
+        DiagnosticResult(**fields)
+
+
+@pytest.mark.parametrize("kwargs, message", [
+    ({"scenario": ""}, "nonempty"),
+    ({"seed": -1}, "seed"),
+    ({"seed": True}, "seed"),
+    ({"seed": 1.0}, "seed"),
+    ({"metrics": {"mse": None}}, "finite number"),
+    ({"metrics": {"mse": True}}, "finite number"),
+    ({"metrics": {"mse": float("inf")}}, "finite number"),
+    ({"metrics": {"": 1}}, "nonempty"),
+    ({"manifest": []}, "objects"),
+    ({"diagnostics": ["PASS"]}, "DiagnosticResult"),
+])
+def test_case_construction_enforces_the_read_contract(kwargs, message):
+    fields = dict(scenario="custom", seed=None)
+    fields.update(kwargs)
+    with pytest.raises(ValueError, match=message):
+        CaseResult(**fields)
+
+
+def test_numpy_scalars_and_builtin_subclasses_roundtrip_as_exact_json_types():
+    import numpy as np
+    from timegym import DiagnosticCategory, DiagnosticStatus
+
+    class Text(str):
+        pass
+
+    class Number(float):
+        pass
+
+    class Count(int):
+        pass
+
+    diagnostic = DiagnosticResult(Text("custom"), DiagnosticStatus.PASS,
+                                  DiagnosticCategory.CORRECTNESS, Text(""),
+                                  {"p": np.float64(0.1), "text": Text("value"),
+                                   "count": Count(2), "number": Number(0.5)})
+    report = TestReport([CaseResult(Text("custom"), np.int64(2), [diagnostic],
+                                   {Text("mse"): Number(1.5)})])
+    payload = report.to_dict()
+    evidence = payload["cases"][0]["diagnostics"][0]["evidence"]
+    assert [type(evidence[key]) for key in ("p", "text", "count", "number")] == [float, str, int, float]
+    assert TestReport.from_dict(payload).to_dict() == payload
+    assert TestReport.from_json(report.to_json()).to_dict() == payload
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda r: r.cases[0].metrics.update(mse=None),
+    lambda r: r.cases[0].diagnostics[0].evidence.update(p=float("nan")),
+    lambda r: setattr(r.cases[0].diagnostics[0], "category", "invalid"),
+    lambda r: r.metadata.update(p=float("inf")),
+])
+def test_writing_revalidates_mutable_records(saved_report, mutate):
+    report = TestReport.from_dict(saved_report)
+    mutate(report)
+    with pytest.raises(ValueError):
+        report.to_json()
+
+
+def test_category_is_validated_when_loading(saved_report):
+    payload = deepcopy(saved_report)
+    payload["cases"][0]["diagnostics"][0]["category"] = "unknown"
+    with pytest.raises(ValueError, match="diagnostic category"):
+        TestReport.from_dict(payload)
+
+
+@pytest.mark.parametrize("status", ["PASS", "FAIL", "ERROR", "INCONCLUSIVE", "UNSUPPORTED"])
+def test_public_status_failure_semantics_match_report_summary_and_gate(status):
+    from timegym import CaseResult, DiagnosticCategory, DiagnosticResult, DiagnosticStatus
+    import timegym
+
+    assert {"CaseResult", "DiagnosticCategory", "DiagnosticResult", "DiagnosticStatus"} <= set(timegym.__all__)
+    diagnostic = DiagnosticResult("custom", DiagnosticStatus(status), DiagnosticCategory.CORRECTNESS, "check")
+    failed = status in ("FAIL", "ERROR")
+    assert diagnostic.failed is failed
+    report = TestReport([CaseResult("custom", None, [diagnostic])])
+    assert report.summary["failed_cases"] == int(failed)
+    if failed:
+        with pytest.raises(AssertionError):
+            report.assert_passed()
+    else:
+        report.assert_passed()
+
+
+@pytest.mark.parametrize("value", [10**400, pytest.param("numpy_extended", id="numpy-extended-float")])
+def test_numeric_canonicalization_preserves_json_representable_metric_values(value):
+    import numpy as np
+
+    if value == "numpy_extended":
+        value = np.longdouble(0.5)
+    report = TestReport([CaseResult("custom", 0, metrics={"custom_metric": value})])
+    payload = report.to_dict()
+    assert type(payload["cases"][0]["metrics"]["custom_metric"]) in (int, float)
+    assert TestReport.from_dict(payload).to_dict() == payload

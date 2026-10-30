@@ -311,6 +311,10 @@ class Reference:
     conditioning: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        """Check current moments and labels using the construction tolerances."""
         self.mean = _real_array(self.mean, "Reference mean")
         self.variance = _real_array(self.variance, "Reference variance")
         self.covariance = _real_array(self.covariance, "Reference covariance")

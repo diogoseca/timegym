@@ -62,7 +62,7 @@ def check_shift_equivariance(
         return DiagnosticResult(
             "shift_equivariance",
             "ERROR",
-            "execution",
+            "metamorphic",
             f"{type(exc).__name__}: {exc}",
             exception_evidence(exc),
         )

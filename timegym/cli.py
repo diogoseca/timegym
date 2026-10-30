@@ -199,10 +199,16 @@ def main(argv=None):
             report = TestReport.read(args.report)
             regenerated = report.replay_case(args.case_index)
             payload = regenerated.metadata["replay"]
-            required = ["metrics_match", "diagnostics_match", "manifest_match"]
-            if args.require_same_environment:
-                required += ["source_matches", "dependencies_match", "python_matches"]
-            status = 0 if all(payload[key] for key in required) else 1
+            status = (
+                0
+                if (
+                    payload["reproduced"]
+                    and (
+                        not args.require_same_environment or payload["same_environment"]
+                    )
+                )
+                else 1
+            )
             if args.output is not None:
                 regenerated.to_json(args.output)
     except (OSError, ValueError, TypeError, ImportError, OverflowError) as exc:
