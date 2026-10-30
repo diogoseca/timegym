@@ -1,6 +1,6 @@
 """Run the separately versioned CPU supplement without replacing pilot results.
 
-    OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m experiments.run_supplement
+    python -m experiments.run_supplement --output /tmp/timegym-supplement
     python -m experiments.run_supplement --output /tmp/timegym-supplement-repeat
 
 Numerical records exclude runtime and environment metadata. The original
@@ -20,13 +20,17 @@ import platform
 import time
 
 import numpy as np
-from scipy.stats import norm, t
+from timegym.statistics import paired_t_interval as mean_interval
+from timegym.statistics import wilson_interval as wilson
 
 from timegym import Pipeline, Scenario
 from timegym.checks import check_shift_equivariance
 from timegym.diagnostics import covariance_dependence_check
 from timegym.metrics import crps, energy_score, mse, variogram_score
 from timegym.mutations import mutate_forecast
+from threadpoolctl import threadpool_info, threadpool_limits
+
+from .common import protect_output, sha256
 
 from .model_faults import (FAULTS, LagRidgeImplementation, normal_equation_forecast,
                            point_agreement, target_shift_agreement)
@@ -35,31 +39,6 @@ from .model_faults import (FAULTS, LagRidgeImplementation, normal_equation_forec
 ROOT = Path(__file__).resolve().parents[1]
 PROTOCOL = ROOT / "experiments/protocol-v2.json"
 CHECKS = ("contract", "scalar_shift", "target_shift", "conformance", "loss")
-
-
-def sha256(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
-def wilson(values):
-    values = np.asarray(values, dtype=bool)
-    if values.size == 0:
-        raise ValueError("A rate requires observations")
-    count, n = int(values.sum()), len(values)
-    p, z = count / n, float(norm.ppf(.975))
-    center = (p + z*z/(2*n)) / (1 + z*z/n)
-    radius = z * np.sqrt(p*(1-p)/n + z*z/(4*n*n)) / (1 + z*z/n)
-    return {"count": count, "n": n, "rate": p,
-            "ci95": [float(max(0, center-radius)), float(min(1, center+radius))]}
-
-
-def mean_interval(values):
-    values = np.asarray(values, dtype=float)
-    if len(values) < 2 or not np.isfinite(values).all():
-        raise ValueError("A paired mean interval requires at least two finite cases")
-    center = float(values.mean())
-    half = float(t.ppf(.975, len(values)-1) * values.std(ddof=1) / np.sqrt(len(values)))
-    return {"mean": center, "n": len(values), "ci95": [center-half, center+half]}
 
 
 def conformal_threshold(calibration_scores, alpha):
@@ -133,15 +112,23 @@ def validate_protocol(protocol):
         scenario_from_condition(condition)
     if len({c["id"] for c in covariance["conditions"]}) != len(covariance["conditions"]):
         raise ValueError("Covariance conditions must have distinct identifiers")
+    conditions = {row["id"]: row for row in covariance["conditions"]}
+    nulls = covariance["permutation_invariant_conditions"]
+    if len(set(nulls)) != len(nulls) or set(nulls) - conditions.keys():
+        raise ValueError("Permutation-invariant conditions must name distinct existing conditions")
+    for name in nulls:
+        condition = conditions[name]
+        if condition["kind"] != "white_noise" or condition["parameters"].get("correlation") != 0:
+            raise ValueError("Permutation-invariant conditions require white_noise with correlation 0")
 
 
 def evaluate_implementation(case, branch, independent, calibration_scores, threshold, spec):
     """All comparisons are made on freshly fitted models and the same case."""
-    model_branch = "clean" if branch == "repaired" else branch
-    pipeline = Pipeline(LagRidgeImplementation(model_branch, spec["window"], spec["ridge_alpha"]))
+    pipeline = Pipeline(LagRidgeImplementation(branch, spec["window"], spec["ridge_alpha"]))
     forecast = pipeline.predict(case.task.context, case.task.future_index)
     violations = forecast.validate(case.task)
-    if violations:
+    contract_alarm = bool(violations)
+    if contract_alarm:
         raise RuntimeError(f"The semantic-fault fixture unexpectedly violated its contract: {violations}")
     scalar = check_shift_equivariance(pipeline, case.task.context, case.task.future_index,
                                       shift=spec["scalar_shift"], atol=spec["atol"], rtol=spec["rtol"])
@@ -157,7 +144,7 @@ def evaluate_implementation(case, branch, independent, calibration_scores, thres
         raise RuntimeError("Conformal rank and threshold decisions disagree")
     return {
         "branch": branch,
-        "alarms": {"contract": False, "scalar_shift": scalar.status == "FAIL",
+        "alarms": {"contract": contract_alarm, "scalar_shift": scalar.status == "FAIL",
                    "target_shift": target["alarm"], "conformance": differential["alarm"],
                    "loss": loss_alarm},
         "realized_mse": loss,
@@ -192,14 +179,11 @@ def run_model_study(spec):
             independent = normal_equation_forecast(case.task.context, case.task.future_index,
                                                    window=spec["window"], alpha=spec["ridge_alpha"])
             branches, outputs = {}, {}
-            for branch in ("clean",) + tuple(spec["faults"]) + ("repaired",):
+            for branch in ("clean",) + tuple(spec["faults"]):
                 result, output = evaluate_implementation(case, branch, independent, calibration_scores, threshold, spec)
                 result.update(condition=condition["id"], seed=seed)
                 branches[branch], outputs[branch] = result, output
                 records.append(result)
-            np.testing.assert_array_equal(outputs["clean"].point, outputs["repaired"].point)
-            if branches["clean"]["alarms"] != branches["repaired"]["alarms"]:
-                raise RuntimeError("Fresh repaired implementation did not restore the clean decisions")
             paired.append(branches)
             if index == 0:
                 examples.append({"condition": condition["id"], "manifest": case.manifest,
@@ -209,22 +193,20 @@ def run_model_study(spec):
             for check in CHECKS:
                 clean = np.asarray([row["clean"]["alarms"][check] for row in paired])
                 broken = np.asarray([row[fault]["alarms"][check] for row in paired])
-                repaired = np.asarray([row["repaired"]["alarms"][check] for row in paired])
                 condition_summaries.append({
                     "condition": condition["id"], "fault": fault, "check": check,
-                    "clean": wilson(clean), "faulty": wilson(broken), "repaired": wilson(repaired),
+                    "clean": wilson(clean), "faulty": wilson(broken),
                     "paired_alarm_gain": int(np.sum(broken & ~clean)),
                     "paired_alarm_loss": int(np.sum(clean & ~broken)),
-                    "paired_alarm_change": mean_interval(broken.astype(float)-clean.astype(float)),
                     "loss_calibration_threshold": threshold, "loss_calibration_rank": rank,
                 })
             loss_summaries.append({
                 "condition": condition["id"], "fault": fault,
                 "clean_mse": mean_interval([row["clean"]["realized_mse"] for row in paired]),
                 "faulty_mse": mean_interval([row[fault]["realized_mse"] for row in paired]),
-                "repair_minus_faulty_mse": mean_interval([row["repaired"]["realized_mse"]-row[fault]["realized_mse"] for row in paired]),
-                "repair_minus_faulty_reference_mse": mean_interval([row["repaired"]["mean_reference_mse"]-row[fault]["mean_reference_mse"] for row in paired]),
-                "cases_improved_by_repair": int(sum(row["repaired"]["realized_mse"] < row[fault]["realized_mse"] for row in paired)),
+                "repair_minus_faulty_mse": mean_interval([row["clean"]["realized_mse"]-row[fault]["realized_mse"] for row in paired]),
+                "repair_minus_faulty_reference_mse": mean_interval([row["clean"]["mean_reference_mse"]-row[fault]["mean_reference_mse"] for row in paired]),
+                "cases_improved_by_repair": int(sum(row["clean"]["realized_mse"] < row[fault]["realized_mse"] for row in paired)),
                 "n": len(paired),
             })
         print(f"Model condition finished: {condition['id']}", flush=True)
@@ -232,11 +214,9 @@ def run_model_study(spec):
     for check in CHECKS:
         clean = [row for row in records if row["branch"] == "clean"]
         faulty = [row for row in records if row["branch"] in FAULTS]
-        repaired = [row for row in records if row["branch"] == "repaired"]
         ablation.append({"check": check,
                          "clean_alarms": sum(row["alarms"][check] for row in clean), "clean_n": len(clean),
                          "fault_alarms": sum(row["alarms"][check] for row in faulty), "fault_n": len(faulty),
-                         "repair_alarms": sum(row["alarms"][check] for row in repaired), "repair_n": len(repaired),
                          "scope": "Descriptive counts over the fixed equally weighted condition corpus; no pooled IID interval"})
     return {"calibration_records": calibration, "records": records,
             "condition_summaries": condition_summaries, "loss_summaries": loss_summaries,
@@ -269,7 +249,7 @@ def run_covariance_study(spec):
                 scores = {"crps": crps(observed, ensemble), "energy": energy_score(observed, ensemble),
                           "variogram": variogram_score(observed, ensemble)}
                 score_values[variant] = scores
-                null_true = variant == "clean" or (variant == "partial_shuffle" and condition["id"] == "factorized_white_noise")
+                null_true = variant == "clean" or (variant == "partial_shuffle" and condition["id"] in spec["permutation_invariant_conditions"])
                 row = {"suite": suite, "condition": condition["id"], "seed": seed, "variant": variant,
                        "reference_sample_seed": seed+spec["reference_sample_seed_offset"],
                        "calibration_seed": seed+spec["calibration_seed_offset"],
@@ -316,7 +296,7 @@ def run_covariance_study(spec):
 
 def write_csv(path, rows):
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -326,11 +306,8 @@ def export_tables(results, output):
     write_csv(output / "model-conditions.csv", [{
         "condition": row["condition"], "fault": row["fault"], "check": row["check"],
         "clean_alarms": row["clean"]["count"], "fault_alarms": row["faulty"]["count"],
-        "repair_alarms": row["repaired"]["count"], "n": row["clean"]["n"],
+        "n": row["clean"]["n"],
         "gained_alarms": row["paired_alarm_gain"], "lost_alarms": row["paired_alarm_loss"],
-        "paired_alarm_change": row["paired_alarm_change"]["mean"],
-        "paired_lower95": row["paired_alarm_change"]["ci95"][0],
-        "paired_upper95": row["paired_alarm_change"]["ci95"][1],
     } for row in results["model"]["condition_summaries"]])
     write_csv(output / "model-repair-losses.csv", [{
         "condition": row["condition"], "fault": row["fault"],
@@ -350,25 +327,29 @@ def export_tables(results, output):
 
 def source_fingerprints():
     paths = sorted((ROOT / "timegym").rglob("*.py"))
-    paths += [ROOT / "experiments/model_faults.py", Path(__file__).resolve(), PROTOCOL]
+    paths += [ROOT / "experiments/model_faults.py", ROOT / "experiments/common.py", Path(__file__).resolve(), PROTOCOL]
     return {str(path.relative_to(ROOT)): sha256(path) for path in paths}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "experiments/results-v2")
+    parser.add_argument("--force", action="store_true", help="Replace existing study artifacts")
     args = parser.parse_args()
     if args.output.resolve() == (ROOT / "experiments/results").resolve():
         parser.error("The original pilot results directory is protected; choose a separate output")
+    protect_output(args.output, force=args.force)
     protocol = json.loads(PROTOCOL.read_text())
     validate_protocol(protocol)
     fingerprints = source_fingerprints()
     started = time.perf_counter()
-    model = run_model_study(protocol["model_study"])
-    model_seconds = time.perf_counter()-started
-    covariance_started = time.perf_counter()
-    covariance = run_covariance_study(protocol["covariance_study"])
-    covariance_seconds = time.perf_counter()-covariance_started
+    with threadpool_limits(limits=1):
+        model = run_model_study(protocol["model_study"])
+        model_seconds = time.perf_counter()-started
+        covariance_started = time.perf_counter()
+        covariance = run_covariance_study(protocol["covariance_study"])
+        covariance_seconds = time.perf_counter()-covariance_started
+        pools = threadpool_info()
     if fingerprints != source_fingerprints():
         raise RuntimeError("Source files changed during the study; rerun after the shared export completes")
     results = {"study_id": protocol["study_id"], "protocol_version": protocol["protocol_version"],
@@ -384,6 +365,7 @@ def main():
     (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False)+"\n")
     runtime = {"model_seconds": model_seconds, "covariance_seconds": covariance_seconds,
                "total_seconds": model_seconds+covariance_seconds,
+               "thread_limit": 1, "threadpools": pools,
                "threads": {name: os.environ.get(name) for name in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS")},
                "note": "Observed wall time for this execution; excluded from deterministic numerical results."}
     (args.output / "runtime.json").write_text(json.dumps(runtime, indent=2, sort_keys=True)+"\n")

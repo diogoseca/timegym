@@ -75,6 +75,15 @@ jobs:
       - run: python -m pip install --no-build-isolation --no-deps -e .
       - run: python -m experiments.run_study --output /tmp/timegym-study
       - run: python -m experiments.run_supplement --output /tmp/timegym-supplement
+      - name: Compare numerical records with frozen hashes
+        run: |
+          python -m experiments.compare_results --results /tmp/timegym-study/results.json --manifest experiments/results/manifest.json --report /tmp/timegym-pilot-hash.json --warn
+          python -m experiments.compare_results --results /tmp/timegym-supplement/results.json --manifest experiments/results-v2/manifest.json --report /tmp/timegym-supplement-hash.json --warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: research-linux-hashes
+          path: /tmp/timegym-*-hash.json
+
   notebooks:
     runs-on: ubuntu-latest
     steps:

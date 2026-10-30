@@ -9,15 +9,48 @@ from pathlib import Path
 import re
 
 
+def inline_macros(manuscript: str, paper_dir: Path) -> str:
+    """Resolve the caption macro input, including its optional existence guard."""
+    name = "generated-macros.tex"
+    token = r"\input{" + name + "}"
+    if token not in manuscript:
+        return manuscript
+    path = paper_dir / name
+    if not path.is_file():
+        raise SystemExit(f"Missing paper/{name}; render the supplement first")
+    macros = path.read_text(encoding="utf-8")
+
+    def group(start):
+        while start < len(manuscript) and manuscript[start].isspace():
+            start += 1
+        if start == len(manuscript) or manuscript[start] != "{":
+            raise SystemExit("Malformed generated-macros existence guard")
+        depth, end = 1, start + 1
+        while end < len(manuscript) and depth:
+            if manuscript[end] in "{}" and manuscript[end-1] != "\\":
+                depth += 1 if manuscript[end] == "{" else -1
+            end += 1
+        if depth:
+            raise SystemExit("Unclosed generated-macros existence guard")
+        return manuscript[start+1:end-1], end
+
+    guard = re.search(r"\\IfFileExists\s*\{generated-macros\.tex\}", manuscript)
+    if guard:
+        present, end = group(guard.end())
+        _, end = group(end)
+        manuscript = manuscript[:guard.start()] + present + manuscript[end:]
+    return manuscript.replace(token, macros)
+
+
 def build() -> Path:
     paper_dir = Path(__file__).resolve().parent
     manuscript = (paper_dir / "main.tex").read_text(encoding="utf-8")
-    standalone = manuscript
+    standalone = inline_macros(manuscript, paper_dir)
     for name, marker in (("generated-results.tex", "RESULTS"),
                          ("generated-supplement.tex", "SUPPLEMENT")):
         results_path = paper_dir / name
         if not results_path.is_file():
-            raise SystemExit(f"Missing paper/{name}. Run and render both studies before building the manuscript.")
+            raise SystemExit(f"Missing paper/{name}. Render both frozen studies before building the manuscript.")
         start = f"% BEGIN GENERATED {marker}"
         end = f"% END GENERATED {marker}"
         if standalone.count(start) != 1 or standalone.count(end) != 1:

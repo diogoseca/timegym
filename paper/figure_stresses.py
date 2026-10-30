@@ -5,9 +5,7 @@ is read. No notebook cell is executed and no study result is changed.
 """
 from __future__ import annotations
 
-import ast
 import hashlib
-import json
 from pathlib import Path
 
 import numpy as np
@@ -15,27 +13,7 @@ import numpy as np
 from vector_canvas import Canvas
 
 
-BLUE = "#0000ff"
-GRAY = "#808080"
-REFERENCE = "#575757"
-MUTED = "#626b73"
-
-
-def _financial_specs(path):
-    notebook = json.loads(path.read_text(encoding="utf-8"))
-    cells = [cell for cell in notebook["cells"] if cell.get("id") == "stress-finance"]
-    if len(cells) != 1 or cells[0]["cell_type"] != "code":
-        raise ValueError("Expected one stress-finance code cell in the application notebook")
-    tree = ast.parse("".join(cells[0]["source"]))
-    assignments = [node for node in tree.body if isinstance(node, ast.Assign)
-                   and any(isinstance(target, ast.Name) and target.id == "financial_specs"
-                           for target in node.targets)]
-    if len(assignments) != 1:
-        raise ValueError("Expected one literal financial_specs assignment")
-    specs = ast.literal_eval(assignments[0].value)
-    if not isinstance(specs, list) or len(specs) != 6 or not all(isinstance(spec, dict) for spec in specs):
-        raise ValueError("The financial figure requires the notebook's six explicit configurations")
-    return specs
+from figure_common import AXIS, BLUE, GRAY, MUTED, REFERENCE, notebook_literal
 
 
 def _tick_label(value, span):
@@ -52,7 +30,7 @@ def build_stresses(root: Path):
 
     root = Path(root)
     notebook_path = root / "notebooks/26_composed_and_financial_stresses.ipynb"
-    specs = _financial_specs(notebook_path)
+    specs = notebook_literal(notebook_path, "stress-finance", "financial_specs", expect_len=6)
     seeds, context_length, horizon, visible_context = [11, 22, 33], 240, 24, 72
     scenarios = [Scenario(context_length=context_length, horizon=horizon, **spec) for spec in specs]
     run = Pipeline(NaiveForecaster(strategy="last")).run(scenarios, seeds=seeds)
@@ -117,8 +95,8 @@ def build_stresses(root: Path):
             xx = lambda value: left + (float(value) + visible_context) / (visible_context + horizon) * width
             yy = lambda value: top + height - (float(value) - low) / (high - low) * height
 
-            canvas.line(left, top, left, top + height, color="#c9cdd1", width=.45)
-            canvas.line(left, top + height, left + width, top + height, color="#c9cdd1", width=.45)
+            canvas.line(left, top, left, top + height, color=AXIS, width=.45)
+            canvas.line(left, top + height, left + width, top + height, color=AXIS, width=.45)
             tick_values = np.linspace(low + .14 * (high - low), high - .14 * (high - low), 2)
             tick_labels = [_tick_label(value, high - low) for value in tick_values]
             for value, label in zip(tick_values, tick_labels):

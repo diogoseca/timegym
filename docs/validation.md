@@ -15,8 +15,8 @@ detection or validation on every supported platform.
 | Distributions | Wheel and source archive build; both pass metadata validation |
 | Clean installed wheel | Core dependencies only; point/joint forecasts, joint controlled financial processes, reports, replay, retained runs, and CLI demo pass outside the checkout |
 | Source archive | Includes all 24 active notebooks, paper, study records, citation metadata and build tooling; extracted source passes export drift check |
-| Original study | Numerical JSON unchanged; manifest refreshed for current source |
-| Protocol-2 study | Re-executed after the multivariate controlled-process extension; numerical JSON remains byte-identical to the earlier three runs |
+| Original study | Numerical JSON unchanged; historical execution evidence retained in the manifest |
+| Protocol-2 study | Frozen numerical record; offline schema migration described below. Future repeats are compared by the CI research-smoke job |
 | Manuscript | Generated standalone source compiles successfully |
 
 The multivariate extension covers correlated composed processes, vector Merton
@@ -44,11 +44,23 @@ and the study manifests. The clean wheel environment contains only declared
 core dependencies; its smoke check also actively rejects optional imports.
 
 The protocol-2 numerical record has SHA256
+`1b386768628dd09981ac08f1bf91bb567c678e41e483999a9ac300f7511971f7`.
+The pilot numerical record has SHA256
+`cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014`.
+On 30 October 2026 an offline schema migration removed 384 verified duplicate
+repaired records and unused alarm-difference t intervals; no study was rerun.
+All retained measurements and paired loss summaries stayed unchanged. The
+original supplement hash was
 `ba9b2e90145ca50d4049e469869ea575a95c34d6d80fd16d0946cb8ae9395bc7`.
+Both manifests retain original provenance in `record_migration`.
 Its manifest fingerprints individual package, runner, fixture, and protocol
 files. The original pilot records a combined source digest of
 `dece174f629b2647011570775af43f8a657f6a477ae10108972ed135b56f6549`.
-These identify tested working files even before an immutable release commit.
+These historical source fingerprints identify the earlier execution, not the
+current runner after migration. The `research-smoke` CI job now compares fresh
+pilot and supplement JSON hashes, warns on mismatches, and retains the actual
+Linux hashes in the `research-linux-hashes` artifact. It has not been executed
+from this checkout, so no Linux repeatability result is claimed here.
 Timing is recorded separately and is not a benchmark claim.
 
 ## Remaining release and research work

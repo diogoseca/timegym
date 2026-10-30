@@ -124,22 +124,21 @@ def test_protocol_rejects_overlapping_evaluation_calibration_and_unresolvable_ho
         validate_protocol(bad)
 
 
-def test_small_study_preserves_paired_repairs_blind_spots_and_negative_controls():
+def test_small_study_preserves_clean_comparisons_blind_spots_and_negative_controls():
     protocol = small_protocol()
     model = run_model_study(protocol["model_study"])
     assert len(model["calibration_records"]) == 20
-    assert len(model["records"]) == 12
+    assert len(model["records"]) == 10
     assert len(model["condition_summaries"]) == 4*5
     for seed in {row["seed"] for row in model["records"]}:
         rows = {row["branch"]: row for row in model["records"] if row["seed"] == seed}
-        assert rows["clean"]["forecast_sha256"] == rows["repaired"]["forecast_sha256"]
-        assert rows["clean"]["alarms"] == rows["repaired"]["alarms"]
+        assert "repaired" not in rows
         assert all(not row["alarms"]["contract"] for row in rows.values())
     covariance = run_covariance_study(protocol["covariance_study"])
     assert len(covariance["records"]) == 2*4*3
     for row in covariance["records"]:
         assert not row["holm_alarm"] or row["raw_alarm"]
-        if row["condition"] == "factorized_white_noise" and row["variant"] == "partial_shuffle":
+        if row["condition"] in protocol["covariance_study"]["permutation_invariant_conditions"] and row["variant"] == "partial_shuffle":
             assert row["null_true"]
             assert abs(row["score_delta_from_clean"]["crps"]) < 1e-12
     for row in covariance["suite_records"]:
@@ -150,12 +149,11 @@ def test_small_study_preserves_paired_repairs_blind_spots_and_negative_controls(
     from experiments.render_supplement import branch_counts, render_tex
     results = {"model": model, "covariance": covariance}
     table_rows = branch_counts(results, protocol)
-    assert [row["n"] for row in table_rows] == [2]*6
-    assert table_rows[0]["counts"] == table_rows[-1]["counts"]
-    tex = render_tex(results, {"protocol": protocol})
-    assert "2 cases per row" in tex and "2 paired cases" in tex
-    assert "384 cases" not in tex and "64 suites" not in tex
-    assert "Reduced spread & --- & ---" in tex
+    assert [row["n"] for row in table_rows] == [2]*5
+    assert all("paired_alarm_change" not in row and "repaired" not in row for row in model["condition_summaries"])
+    # A tiny fixture need not support the frozen manuscript's empirical conclusions.
+    with pytest.raises(ValueError, match="Recorded evidence"):
+        render_tex(results, {"protocol": protocol})
 
 
 def test_render_rejects_changed_numerical_records(tmp_path):

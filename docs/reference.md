@@ -273,3 +273,12 @@ target is fixed independently of the forecast/null ensembles, and both receive
 the identical statistic. This is a conditional-law diagnostic, not an assertion
 that the estimated covariance is exact. A covariance check also cannot detect
 all higher-order dependence.
+
+## Case-level uncertainty intervals
+
+`timegym.statistics.wilson_interval(values)` accepts a nonempty vector of binary
+observations and returns `count`, `n`, `rate`, and the Wilson `ci95` bounds.
+`timegym.statistics.paired_t_interval(values)` accepts at least two finite
+case-level differences and returns `mean`, `n`, and Student t `ci95` bounds.
+Cases must be independent; horizons and targets within a case are not replications.
+The t interval is for continuous score differences, not differences in alarm rates.

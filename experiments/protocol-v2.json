@@ -13,28 +13,153 @@
     "condition_seed_stride": 1000,
     "loss_alpha": 0.05,
     "scalar_shift": 10.0,
-    "target_shifts": [7.0, -11.0],
-    "atol": 1e-8,
-    "rtol": 1e-7,
+    "target_shifts": [
+      7.0,
+      -11.0
+    ],
+    "atol": 1e-08,
+    "rtol": 1e-07,
     "tolerance_selection": "Fixed engineering tolerances before evaluation; not learned from evaluation errors. All branches are compared at identical tolerances.",
-    "faults": ["reverse_prediction_lags", "stale_recursive_state", "omit_inverse_target_scaling", "swap_recursive_targets"],
+    "faults": [
+      "reverse_prediction_lags",
+      "stale_recursive_state",
+      "omit_inverse_target_scaling",
+      "swap_recursive_targets"
+    ],
     "loss_alarm": "Clean calibration MSE order statistic k=ceil((n+1)*(1-alpha)); alarm iff held-out realized MSE exceeds it. Equivalent p-value=(1+# calibration scores>=test score)/(n+1), with conservative ties.",
     "exchangeability": "Calibration and evaluation use independent draws from the same fixed condition and fixed implementation. The clean conformal bound is marginal over calibration and test draws. Rate intervals condition on the one frozen calibration sample; no conditional type-I guarantee is claimed.",
     "comparators": {
-      "output_contract": "Existing Forecast.validate",
+      "output_contract": "Forecast.validate; any contract violation terminates the run.",
       "scalar_shift": "Existing opt-in check_shift_equivariance",
       "target_shift": "Supplementary experiment-only per-target translation comparator",
       "implementation_agreement": "Supplementary independent NumPy ridge normal-equation implementation; no generating parameters or future values",
       "point_loss": "Supplementary calibrated realized-MSE alarm"
     },
-    "repair": "Fit the corrected implementation afresh on the identical context and compare it with the clean output; repairs are specified, not discovered.",
+    "repair": "Corrected means the clean implementation refitted on the identical context; paired losses compare clean minus faulty. There is no separate repaired arm.",
     "conditions": [
-      {"id": "white_noise_locations", "kind": "white_noise", "context_length": 120, "horizon": 8, "n_targets": 2, "parameters": {"mean": [5.0, -3.0], "sigma": [1.0, 0.7], "correlation": 0.4}},
-      {"id": "ar1_positive", "kind": "ar1", "context_length": 120, "horizon": 8, "n_targets": 2, "parameters": {"mean": [3.0, -2.0], "phi": 0.6, "sigma": [0.8, 1.2], "correlation": 0.5}},
-      {"id": "ar1_negative", "kind": "ar1", "context_length": 80, "horizon": 8, "n_targets": 2, "parameters": {"mean": [10.0, -5.0], "phi": -0.45, "sigma": [0.4, 1.2], "correlation": -0.4}},
-      {"id": "opposing_trends", "kind": "trend", "context_length": 120, "horizon": 8, "n_targets": 2, "parameters": {"intercept": [3.0, -1.0], "slope": [0.08, -0.04], "sigma": [0.7, 1.1], "correlation": 0.3}},
-      {"id": "seasonal_scales", "kind": "seasonal", "context_length": 144, "horizon": 12, "n_targets": 2, "parameters": {"mean": [5.0, -3.0], "amplitude": [2.0, 1.0], "period": 12.0, "sigma": [0.6, 0.8], "correlation": 0.25}},
-      {"id": "random_walk_drifts", "kind": "random_walk", "context_length": 120, "horizon": 8, "n_targets": 2, "parameters": {"intercept": [5.0, -3.0], "drift": [0.05, -0.03], "sigma": [0.6, 0.9], "correlation": 0.5}}
+      {
+        "id": "white_noise_locations",
+        "kind": "white_noise",
+        "context_length": 120,
+        "horizon": 8,
+        "n_targets": 2,
+        "parameters": {
+          "mean": [
+            5.0,
+            -3.0
+          ],
+          "sigma": [
+            1.0,
+            0.7
+          ],
+          "correlation": 0.4
+        }
+      },
+      {
+        "id": "ar1_positive",
+        "kind": "ar1",
+        "context_length": 120,
+        "horizon": 8,
+        "n_targets": 2,
+        "parameters": {
+          "mean": [
+            3.0,
+            -2.0
+          ],
+          "phi": 0.6,
+          "sigma": [
+            0.8,
+            1.2
+          ],
+          "correlation": 0.5
+        }
+      },
+      {
+        "id": "ar1_negative",
+        "kind": "ar1",
+        "context_length": 80,
+        "horizon": 8,
+        "n_targets": 2,
+        "parameters": {
+          "mean": [
+            10.0,
+            -5.0
+          ],
+          "phi": -0.45,
+          "sigma": [
+            0.4,
+            1.2
+          ],
+          "correlation": -0.4
+        }
+      },
+      {
+        "id": "opposing_trends",
+        "kind": "trend",
+        "context_length": 120,
+        "horizon": 8,
+        "n_targets": 2,
+        "parameters": {
+          "intercept": [
+            3.0,
+            -1.0
+          ],
+          "slope": [
+            0.08,
+            -0.04
+          ],
+          "sigma": [
+            0.7,
+            1.1
+          ],
+          "correlation": 0.3
+        }
+      },
+      {
+        "id": "seasonal_scales",
+        "kind": "seasonal",
+        "context_length": 144,
+        "horizon": 12,
+        "n_targets": 2,
+        "parameters": {
+          "mean": [
+            5.0,
+            -3.0
+          ],
+          "amplitude": [
+            2.0,
+            1.0
+          ],
+          "period": 12.0,
+          "sigma": [
+            0.6,
+            0.8
+          ],
+          "correlation": 0.25
+        }
+      },
+      {
+        "id": "random_walk_drifts",
+        "kind": "random_walk",
+        "context_length": 120,
+        "horizon": 8,
+        "n_targets": 2,
+        "parameters": {
+          "intercept": [
+            5.0,
+            -3.0
+          ],
+          "drift": [
+            0.05,
+            -0.03
+          ],
+          "sigma": [
+            0.6,
+            0.9
+          ],
+          "correlation": 0.5
+        }
+      }
     ]
   },
   "covariance_study": {
@@ -49,17 +174,103 @@
     "alpha": 0.05,
     "shuffle_strength": 0.5,
     "spread_multiplier": 0.75,
-    "variants": ["clean", "partial_shuffle", "reduced_spread"],
+    "variants": [
+      "clean",
+      "partial_shuffle",
+      "reduced_spread"
+    ],
     "multiplicity": "One predeclared family contains four condition-specific covariance checks within a suite and variant. Report raw any-rejection and Holm step-down family-wise decisions. No multiplicity claim across variants or between the different study sections.",
     "negative_control": "The factorized white-noise conditional law is invariant under coordinate-wise sample permutations; a shuffle rejection there is a false alarm, not successful fault detection.",
     "conditions": [
-      {"id": "factorized_white_noise", "kind": "white_noise", "context_length": 80, "horizon": 6, "n_targets": 2, "parameters": {"mean": [2.0, -1.0], "sigma": [0.8, 1.2], "correlation": 0.0}},
-      {"id": "correlated_white_noise", "kind": "white_noise", "context_length": 80, "horizon": 6, "n_targets": 2, "parameters": {"mean": [2.0, -1.0], "sigma": [0.8, 1.2], "correlation": 0.65}},
-      {"id": "negative_ar1", "kind": "ar1", "context_length": 80, "horizon": 6, "n_targets": 2, "parameters": {"mean": [2.0, -1.0], "phi": -0.5, "sigma": [0.8, 1.2], "correlation": -0.6}},
-      {"id": "correlated_random_walk", "kind": "random_walk", "context_length": 80, "horizon": 6, "n_targets": 2, "parameters": {"intercept": [2.0, -1.0], "drift": [0.1, -0.05], "sigma": [0.8, 1.2], "correlation": 0.65}}
+      {
+        "id": "factorized_white_noise",
+        "kind": "white_noise",
+        "context_length": 80,
+        "horizon": 6,
+        "n_targets": 2,
+        "parameters": {
+          "mean": [
+            2.0,
+            -1.0
+          ],
+          "sigma": [
+            0.8,
+            1.2
+          ],
+          "correlation": 0.0
+        }
+      },
+      {
+        "id": "correlated_white_noise",
+        "kind": "white_noise",
+        "context_length": 80,
+        "horizon": 6,
+        "n_targets": 2,
+        "parameters": {
+          "mean": [
+            2.0,
+            -1.0
+          ],
+          "sigma": [
+            0.8,
+            1.2
+          ],
+          "correlation": 0.65
+        }
+      },
+      {
+        "id": "negative_ar1",
+        "kind": "ar1",
+        "context_length": 80,
+        "horizon": 6,
+        "n_targets": 2,
+        "parameters": {
+          "mean": [
+            2.0,
+            -1.0
+          ],
+          "phi": -0.5,
+          "sigma": [
+            0.8,
+            1.2
+          ],
+          "correlation": -0.6
+        }
+      },
+      {
+        "id": "correlated_random_walk",
+        "kind": "random_walk",
+        "context_length": 80,
+        "horizon": 6,
+        "n_targets": 2,
+        "parameters": {
+          "intercept": [
+            2.0,
+            -1.0
+          ],
+          "drift": [
+            0.1,
+            -0.05
+          ],
+          "sigma": [
+            0.8,
+            1.2
+          ],
+          "correlation": 0.65
+        }
+      }
+    ],
+    "permutation_invariant_conditions": [
+      "factorized_white_noise"
     ]
   },
-  "uncertainty": "Wilson95 intervals over independent cases or independent suites; model loss rates conditional on the frozen calibration sample. Paired t95 intervals over independent case-level score/alarm differences. Multiple descriptive comparisons are not multiplicity-adjusted unless explicitly labeled Holm.",
+  "uncertainty": "Wilson95 intervals over independent cases or independent suites; model loss rates conditional on the frozen calibration sample. Paired t95 intervals over independent case-level score differences. Multiple descriptive comparisons are not multiplicity-adjusted unless explicitly labeled Holm.",
   "runtime": "Wall time and runtime environment are saved separately from deterministic numerical records. CPU only, no paid resources or network datasets.",
-  "limits": ["Four selected implementation defects with known repairs", "No automatic causal localization", "Independent mathematical conformance comparator and target-specific shift comparator are experimental, not public toolkit diagnostics", "New parameter settings but no unseen generator family or external bug corpus", "No foundation-model or framework superiority comparison"]
+  "limits": [
+    "Four selected implementation defects with known repairs",
+    "No automatic causal localization",
+    "Independent mathematical conformance comparator and target-specific shift comparator are experimental, not public toolkit diagnostics",
+    "New parameter settings but no unseen generator family or external bug corpus",
+    "No foundation-model or framework superiority comparison"
+  ]
 }

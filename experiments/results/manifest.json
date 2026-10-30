@@ -25,6 +25,13 @@
       1.0,
       2.0
     ],
+    "capability_task": {
+      "context_length": 120,
+      "horizon": 8,
+      "n_samples": 128,
+      "n_targets": 1,
+      "seasonal_period": 12
+    },
     "dependence_strengths": [
       0.0,
       0.25,
@@ -41,7 +48,10 @@
       10064
     ],
     "inverse_transform_synthetic": {
+      "context_length": 120,
+      "horizon": 12,
       "kind": "white_noise",
+      "n_targets": 1,
       "parameters": {
         "mean": 5.0,
         "sigma": 2.0
@@ -68,7 +78,7 @@
     ],
     "n_calibration": 99,
     "n_samples": 128,
-    "protocol_version": "1.0",
+    "protocol_version": "1.1",
     "purpose": "Controlled pilot of diagnostic behavior, not a representative fault prevalence study",
     "real_data": {
       "horizon": 12,
@@ -102,14 +112,139 @@
     },
     "uncertainty": "Wilson 95% intervals for rates; paired t intervals across independent seeds for score differences; exploratory multiple comparisons, no familywise claim"
   },
-  "protocol_sha256": "06da8dc65b09af03f93e7e6abfdca0719be6f60a239fc8b6229e1c7075a40e59",
+  "protocol_sha256": "2c4d9958edf54f9361154a798a0fc6cb9645de424d39411e1fd729856a7ce552",
   "python": "3.13.2",
-  "source_note": "Source fingerprint identifies working files; base commit alone does not include uncommitted v2 changes.",
+  "record_migration": {
+    "cost_note": "Pilot numerical results are byte-identical.",
+    "decisions": [
+      "EX1",
+      "EX3"
+    ],
+    "method": "Offline metadata/schema migration; no study rerun and no retained measurements changed.",
+    "migration_script_sha256": "d84d79f5e82c1f64f9d7745dc08f7d5a80b280bc56b70ec1b344744350906dcd",
+    "original_manifest": {
+      "base_git_commit": "ad6434d15f970798017bac2a849eb691d647c825",
+      "dataset_sha256": "bdb98adbd418a6de6842a742e0602f363c3b841c26677e7e61a1e055e9509bd8",
+      "platform": "macOS-15.7.9-arm64-arm-64bit-Mach-O",
+      "protocol": {
+        "alpha_per_check": 0.05,
+        "capability_models": [
+          "last_value",
+          "seasonal_12",
+          "gaussian_ar1"
+        ],
+        "capability_scenarios": [
+          "white_noise",
+          "trend",
+          "seasonal",
+          "ar1",
+          "random_walk"
+        ],
+        "capability_seeds": [
+          10000,
+          10016
+        ],
+        "capability_sigma": [
+          0.25,
+          1.0,
+          2.0
+        ],
+        "dependence_strengths": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "development_seeds": [
+          0,
+          16
+        ],
+        "evaluation_seeds": [
+          10000,
+          10064
+        ],
+        "inverse_transform_synthetic": {
+          "kind": "white_noise",
+          "parameters": {
+            "mean": 5.0,
+            "sigma": 2.0
+          },
+          "shift": 10.0
+        },
+        "limitations": [
+          "Output fault fixtures are hand selected",
+          "No comparison against sktime conformance",
+          "No automatic diagnosis of causal bug locations",
+          "No parameter or generator-family holdout in this pilot",
+          "Real-data example is one known implementation defect on one dataset"
+        ],
+        "mse_alarm": "Above empirical 95th percentile of clean-reference MSE on development seeds; invalid point arrays alarm. Ignores indexes and other outputs.",
+        "mutations": [
+          "index_shift",
+          "target_swap",
+          "horizon_truncation",
+          "nonfinite_point",
+          "quantile_crossing",
+          "sample_axis_swap",
+          "variance_shrink",
+          "dependence_shuffle"
+        ],
+        "n_calibration": 99,
+        "n_samples": 128,
+        "protocol_version": "1.0",
+        "purpose": "Controlled pilot of diagnostic behavior, not a representative fault prevalence study",
+        "real_data": {
+          "horizon": 12,
+          "metric": "MAE",
+          "name": "AirPassengers",
+          "origins": [
+            96,
+            108,
+            120,
+            132
+          ],
+          "replication": "Four ordered origins in one series; no independent-series confidence interval"
+        },
+        "repair": "Disable the single output mutation and regenerate from identical inputs/seeds; separately repair an omitted inverse transformation in a model implementation.",
+        "scenario": {
+          "context_length": 120,
+          "horizon": 8,
+          "kind": "ar1",
+          "n_targets": 2,
+          "parameters": {
+            "correlation": 0.7,
+            "phi": 0.8,
+            "sigma": 1.0
+          }
+        },
+        "seed_interval_semantics": "half-open",
+        "seed_offsets": {
+          "calibration": 300000,
+          "mutation": 400000,
+          "reference_samples": 200000
+        },
+        "uncertainty": "Wilson 95% intervals for rates; paired t intervals across independent seeds for score differences; exploratory multiple comparisons, no familywise claim"
+      },
+      "protocol_sha256": "06da8dc65b09af03f93e7e6abfdca0719be6f60a239fc8b6229e1c7075a40e59",
+      "python": "3.13.2",
+      "source_note": "Source fingerprint identifies working files; base commit alone does not include uncommitted v2 changes.",
+      "source_sha256": "dece174f629b2647011570775af43f8a657f6a477ae10108972ed135b56f6549",
+      "versions": {
+        "numpy": "2.5.4",
+        "pandas": "3.1.0",
+        "scikit-learn": "1.9.1",
+        "scipy": "1.18.1"
+      }
+    },
+    "original_results_sha256": "cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014"
+  },
+  "results_sha256": "cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014",
+  "source_note": "Source fingerprints and environment describe the historical execution. record_migration retains original provenance; updated protocol/schema were applied offline.",
   "source_sha256": "dece174f629b2647011570775af43f8a657f6a477ae10108972ed135b56f6549",
   "versions": {
     "numpy": "2.5.4",
     "pandas": "3.1.0",
-    "scikit-learn": "1.9.1",
     "scipy": "1.18.1"
   }
 }

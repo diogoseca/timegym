@@ -5,15 +5,16 @@
 From the repository root, with the development environment installed:
 
 ```sh
-python -m experiments.run_study
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m experiments.run_supplement
 python -m experiments.render_results
 python -m experiments.render_supplement
 python paper/render_figures.py
 python paper/build_standalone.py
 ```
 
-Both studies run locally on CPU. The original protocol and records remain in `experiments/protocol.json` and `experiments/results/`. The implementation-regression and covariance supplement has its own `experiments/protocol-v2.json` and `experiments/results-v2/`, including case records, summary CSVs, a source/environment manifest, and separate wall-time metadata. Rendering consumes saved records; it does not rerun experiments. The standalone output, `timegym-v2.tex`, includes the generated tables and bibliography, so the Codex LaTeX preview needs no additional source files. The normal `main.tex` can be compiled from this directory using a standard LaTeX engine.
+The commands above render the frozen studies. For new CPU runs in separate output
+directories and SHA256 comparisons, follow [the study guide](../experiments/README.md).
+Both runners limit numerical thread pools to one thread and refuse existing
+artifacts unless `--force` is explicit. Both studies run locally on CPU. The original protocol and records remain in `experiments/protocol.json` and `experiments/results/`. The implementation-regression and covariance supplement has its own `experiments/protocol-v2.json` and `experiments/results-v2/`, including case records, summary CSVs, a source/environment manifest, and separate wall-time metadata. Rendering consumes saved records; it does not rerun experiments. The standalone output, `timegym-v2.tex`, includes the generated tables and bibliography, so the Codex LaTeX preview needs no additional source files. The normal `main.tex` can be compiled from this directory using a standard LaTeX engine.
 
 The original pilot exports three scientific figures in both PNG and vector PDF under `figures/`:
 
@@ -27,13 +28,13 @@ The manuscript now embeds five primary vector figures, designed at print width:
 
 1. [Forecast matrix (SVG)](figures/paper-forecast-matrix.svg): six configurations from five families by three fixed seeds, using gray observation dots, unconnected blue forecast crosses, and thin conditional references. It uses the quick-start model and settings, with paired random walks without drift and with drift (0.03 per step) sharing identical innovations. To remain readable, it shows the final 72 context values and first 48 predictions from each complete 300-context/100-horizon run.
 2. [Marginal versus joint dependence (SVG)](figures/paper-dependence.svg): the first predefined pilot case, identical empirical marginals, different joint sample clouds, and saved paired score changes over all 64 evaluation cases.
-3. [Diagnostic evidence (SVG)](figures/paper-diagnostic-evidence.svg): the implementation ablation with clean/refit controls and the random-walk-with-drift counterexample where correcting an algorithm worsens forecast loss.
+3. [Diagnostic evidence (SVG)](figures/paper-diagnostic-evidence.svg): the implementation ablation with clean controls and the random-walk-with-drift counterexample where correcting an algorithm worsens forecast loss.
 
 4. [Financial stress matrix (SVG)](figures/paper-financial-stresses.svg): six univariate configurations from application notebook 26, showing diffusion, jumps, GARCH, hidden regimes, and combined regimes/jumps. Filter approximation and output units are explicit. These are illustrative software cases; neither Gaussian fault-study protocol is expanded.
 5. [Joint financial uncertainty (SVG)](figures/paper-joint-stresses.svg): notebook 27 preserves each target trajectory while breaking cross-series pairing, revealing changes in joint and aggregate uncertainty. This is a controlled reference demonstration.
 
 `render_figures.py` generates editable SVGs, PNG previews, and self-contained
-TikZ scenes from a common vector geometry. It regenerates the illustrative
+TikZ scenes from shared plotted coordinates; TikZ type is set by the document. It regenerates the illustrative
 quick-start fits and first dependence case; aggregate results are read from
 the existing studies and checked against their raw records. It does not change
 either study protocol or numerical results. The

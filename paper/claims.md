@@ -52,11 +52,11 @@ The pasted review is a useful research brief, not a citable bibliography: its op
 
 ## Main-figure evidence
 
-- **Forecast matrix:** the same settings and fixed seeds as `notebooks/00_quick_start.ipynb`, refitted by `paper/render_figures.py`; plotted observations, forecasts, references, and display limits are recorded in `paper/figures/paper-figure-provenance.json`. The walk rows contrast zero drift with drift 0.03 per step using identical innovations; their labels come from the package. This is an illustrative capability view, not a new performance comparison or extra study replication.
+- **Forecast matrix:** the same settings and fixed seeds as `notebooks/00_quick_start.ipynb`, parsed from cell `quick-03` and refitted by `paper/figure_matrix.py`; plotted observations, forecasts, references, and display limits are recorded in `paper/figures/paper-figure-provenance.json`. The walk rows contrast zero drift with drift 0.03 per step using identical innovations; their labels come from the package. This is an illustrative capability view, not a new performance comparison or extra study replication.
 - **Dependence:** the first protocol-1 evaluation case and original sampling/mutation seed offsets. The renderer checks exact equality of sorted samples at all 16 coordinates, reproduces the saved case scores, and recomputes all plotted paired intervals from the 64-case records. The empirical CDF depicts one coordinate; equality at every coordinate is checked separately.
-- **Diagnostic evidence:** counts and paired repair losses from protocol 2. Pooled alarm counts are descriptive; the clean and corrected rows retain false alarms. The repair counterexample is explicitly selected to illustrate the distinction already reported in the manuscript, and its interval is not multiplicity-adjusted.
+- **Diagnostic evidence:** counts and paired repair losses from protocol 2. Pooled alarm counts are descriptive; the clean row retains false alarms; corrected means clean refitted, with no separate repaired arm. The repair counterexample is explicitly selected to illustrate the distinction already reported in the manuscript, and its interval is not multiplicity-adjusted.
 
-SVG, PNG, and embedded TikZ share geometry. No raster images or external image
+SVG, PNG, and embedded TikZ share plotted coordinates; type is set by the document. No raster images or external image
 files are required by the standalone manuscript. Figure generation does not
 alter experimental records or silently select replacement seeds.
 
