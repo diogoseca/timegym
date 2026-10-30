@@ -1,9 +1,10 @@
-"""Verify the notebook build contract in disposable projects, never the checkout."""
+"""Verify disposable notebook builds and the maintained source-cell convention."""
 
 import ast
 import importlib.util
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -17,6 +18,30 @@ spec = importlib.util.spec_from_file_location("timegym_notebook_build", SCRIPT)
 exporter = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = exporter
 spec.loader.exec_module(exporter)
+
+
+@pytest.mark.parametrize(
+    "source",
+    json.loads((SCRIPT.parents[1] / "notebooks/source-map.json").read_text())["sources"],
+    ids=lambda source: Path(source["notebook"]).stem,
+)
+def test_source_notebook_export_cells_follow_convention(source):
+    path = SCRIPT.parents[1] / source["notebook"]
+    book = nbformat.read(path, as_version=4)
+    assert book.metadata.get("timegym", {}).get("role") == "source", path.name
+    exports = [
+        cell for cell in book.cells
+        if cell.cell_type == "code" and re.match(r"\s*#\s*\|\s*export\b", cell.source)
+    ]
+    assert exports, f"{path.name}: no implementation cells"
+    for cell in exports:
+        location = f"{path.name}#{cell.id}"
+        directive = re.fullmatch(r"#\| export ([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)", cell.source.splitlines()[0])
+        assert directive, f"{location}: use an explicit #| export <module> directive"
+        module = "timegym/" + directive.group(1).replace(".", "/") + ".py"
+        assert module in source["modules"], f"{location}: export must target an owned module"
+        assert "library-source" in cell.metadata.get("tags", []), f"{location}: missing library-source tag"
+        assert cell.metadata.get("jupyter", {}).get("source_hidden") is True, f"{location}: set jupyter.source_hidden to true"
 
 
 def notebook(root, name, cells, *, role="source"):
