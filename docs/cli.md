@@ -46,6 +46,7 @@ an arbitrary Python import.
 
 | Command | Exit 0 | Exit 1 | Exit 2 |
 |---|---|---|---|
+| `--version` | Print the installed package version | — | Invalid arguments |
 | `demo` | Expected fault/repair contrast reproduced | Contrast failed | Invalid arguments, dependency or file error |
 | `inspect` | No detected FAIL/ERROR | At least one failed case | Invalid report or file |
 | `replay` | Required comparisons match | A comparison differs | Unsupported replay or invalid input |

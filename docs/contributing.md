@@ -11,7 +11,7 @@ python -m pip install -e '.[dev,notebooks]'
 All 25 modules under `timegym/` are generated from the 15 source notebooks
 listed in [the source map](../notebooks/source-map.json). Edit the marked
 implementation cells there; expand collapsed cells when needed. Keep explanatory
-examples beside the implementation. Application notebooks 00 and 20–25 import
+examples beside the implementation. Application notebooks 00 and 20–27 import
 the package and demonstrate its use.
 
 The original notebook-first approach used `%%runwrite` to execute and append

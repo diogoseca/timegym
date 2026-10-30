@@ -11,13 +11,15 @@ Try `timegym demo` to see that failure, its diagnostic report, and a verified
 repair. Then use the notebooks to inspect point forecasts, marginal uncertainty,
 and joint dependence with the same workflow.
 
-This is the **0.2.0 development artifact** for a new v2 manuscript. The code and
-paper are a focused, runnable pilot; no new package release or arXiv submission
+The package version is recorded in the generated [citation below](#cite). This
+release preparation accompanies a new v2 manuscript and a focused, runnable pilot; no new package release or arXiv submission
 has been published from this checkout.
 
 ## Install and run
 
-Python 3.10 or later:
+<!-- BEGIN PYTHON SUPPORT -->
+Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
+<!-- END PYTHON SUPPORT -->
 
 ```bash
 python -m venv .venv
@@ -34,9 +36,15 @@ artifacts. Choose another output directory when rerunning it.
 
 Local tests pass on Python 3.13.2 with the scientific versions in
 `requirements-study.txt`, and on Python 3.12 with NumPy 1.26.4, pandas 2.2.3,
-SciPy 1.11.4, scikit-learn 1.4.2, and Matplotlib 3.8.4. CI is configured for
-Python 3.10–3.13 and installed-wheel checks on Linux, macOS, and Windows;
+SciPy 1.11.4, scikit-learn 1.4.2, and Matplotlib 3.8.4. CI covers the Python range above and installed-wheel checks on Linux, macOS, and Windows;
 those remote jobs have not been run from this checkout.
+Runtime dependency ranges are NumPy `>=1.26,<3`, pandas `>=2.2,<4`, and
+SciPy `>=1.11,<2`. The study file pins one reproduction environment; it is not
+the full supported range. Optional feature and market-data dependencies have
+version floors in `pyproject.toml`. The development-only Docker image installs
+that pinned stack before installing TimeGym without dependency resolution.
+See the [release guide](docs/release.md) for compatibility updates and publishing.
+
 The [validation record](docs/validation.md) lists completed checks and remaining
 release and research work.
 
@@ -138,7 +146,7 @@ existing run reuses those outputs. `pipeline.plot_tests(...)` and
 
 ## Develop in notebooks
 
-The source notebooks are authoritative for all 23 Python modules in `timegym/`.
+The source notebooks are authoritative for all 25 Python modules in `timegym/`.
 Their implementation cells are collapsed but editable; demonstrations remain
 beside the code they explain. This continues the original notebook-first
 development workflow, using nbdev's modular exporter to regenerate complete
@@ -243,34 +251,34 @@ Cite the software by version and source commit; GitHub's "Cite this repository"
 button reads the same metadata from [CITATION.cff](CITATION.cff). When a release
 is archived on Zenodo, cite that release's DOI instead.
 
+<!-- BEGIN GENERATED CITATION -->
+
 ```bibtex
 @software{seca2026timegym,
-  author  = {Seca, Diogo},
-  title   = {{TimeGym}: verification and diagnosis for forecasting pipelines},
-  year    = {2026},
-  version = {0.2.0},
-  url     = {https://github.com/diogoseca/timegym},
-  note    = {Unreleased development version; record the source commit or report fingerprint you tested}
+  author = {Seca, Diogo},
+  title = {{TimeGym: verification and diagnosis for forecasting pipelines}},
+  year = {2026},
+  version = {1.0.0},
+  url = {https://github.com/diogoseca/timegym},
 }
 ```
 
 Seca, D. (2026). *TimeGym: verification and diagnosis for forecasting pipelines*
-(Version 0.2.0) [Computer software]. https://github.com/diogoseca/timegym
+(Version 1.0.0) [Computer software]. https://github.com/diogoseca/timegym
 
-The 2021 manuscript that this version corrects and extends:
+The earlier manuscript:
 
 ```bibtex
-@misc{seca2021timegym,
-  author        = {Seca, Diogo},
-  title         = {{TimeGym}: Debugging for Time Series Modeling in Python},
-  year          = {2021},
-  eprint        = {2105.01404},
-  archivePrefix = {arXiv},
-  primaryClass  = {cs.LG},
-  doi           = {10.48550/arXiv.2105.01404},
-  url           = {https://arxiv.org/abs/2105.01404v1}
+@article{seca2021timegym,
+  author = {Seca, Diogo},
+  title = {{TimeGym: Debugging for Time Series Modeling in Python}},
+  year = {2021},
+  doi = {10.48550/arXiv.2105.01404},
+  url = {https://arxiv.org/abs/2105.01404v1},
 }
 ```
 
-See the [changelog](CHANGELOG.md) for the unreleased v2 changes. No v2 DOI or
+<!-- END GENERATED CITATION -->
+
+See the [changelog](CHANGELOG.md) for the 1.0.0 changes. No v2 DOI or
 publication record is claimed.

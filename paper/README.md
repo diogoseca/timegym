@@ -33,7 +33,11 @@ cmp experiments/results-v2/results.json "$supplement_dir/results.json" &&
 To render the frozen evidence without rerunning the studies, start with the
 `experiments.render_results` command. Verify the generated single-file build
 without rewriting it with `.venv/bin/python paper/build_standalone.py --check`.
-The builder uses only the Python standard library. Its bibliography renderer
+The builder uses only the Python standard library. It reads the version and
+date from the root `CITATION.cff` and stamps them into the standalone title
+block; keep that file beside `paper/` when building an extracted source archive.
+See the [release guide](../docs/release.md) for tag-driven PDF publication and
+Zenodo setup. Its bibliography renderer
 accepts the braced, one-field-per-line entries in `references.bib`, sorts by
 author and title like `plain`, and links titles to their canonical identifiers.
 Unsupported bibliography syntax or missing cited entries fails the build.
@@ -89,4 +93,5 @@ run `python tools/export_notebooks.py --check` and then
 `python notebooks/check_notebooks.py` from the repository root to verify source
 parity and execute every active notebook in a fresh kernel. Their source and saved
 outputs accompany the source distribution. The original notebooks are
-preserved separately in `notebooks/archive/` and excluded from execution.
+preserved separately in `notebooks/archive/` in Git and excluded from both
+execution and the source distribution.

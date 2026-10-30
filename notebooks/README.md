@@ -8,7 +8,8 @@ forecast origin.
 
 Everything lives in this folder: **15 source notebooks generate the package,
 9 application notebooks use it**, and the [11 original notebooks](archive/README.md)
-retain their development history and saved figures.
+retain their development history and saved figures in Git. The historical
+archive is excluded from source distributions; the 24 active notebooks are included.
 
 ## Open and explore
 

@@ -1,13 +1,22 @@
 # Changelog
 
-## 0.2.0 — unreleased
+## 1.0.0 — 2026-10-30
+
+Prepared release; publication is performed only by the version-tag workflow.
+
+- Unified package, citation and manuscript version metadata; added checked
+  citation rendering and a tag-driven PyPI/GitHub release workflow.
+- Added scheduled Python compatibility updates following pandas support,
+  bounded runtime dependencies, and a pinned development Docker image.
+- Documented module imports, built-in models, fault fixtures, and release setup.
+- Excluded historical notebooks from the source archive and consolidated CI checks.
 
 - Renamed Pipeline’s `strategy` parameter and attribute to `reduction`. Pipeline
   configuration schema 2 uses `reduction`; saved schema-1 configurations remain
   replayable. `NaiveForecaster(strategy=...)` continues to select its baseline.
 
 - Renamed `Pipeline.plot_error()` to `Pipeline.plot_errors()` for consistency with
-  retained runs. The singular spelling remains a forwarding alias for the 0.2
+  retained runs. The singular spelling remains a forwarding alias for the 1.0
   release; migrate callers before the next release.
 
 ### Joint controlled processes

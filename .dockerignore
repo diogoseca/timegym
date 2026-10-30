@@ -1,8 +1,12 @@
 .git
 .venv
 __pycache__
+**/__pycache__
 .pytest_cache
-.DS_Store
-build
+.ipynb_checkpoints
+**/.ipynb_checkpoints
 dist
+build
 site
+paper/build
+.DS_Store

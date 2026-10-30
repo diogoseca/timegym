@@ -4,14 +4,22 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "timegym"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Controlled verification and diagnosis for forecasting pipelines"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.16"
 license = {file = "LICENSE"}
 authors = [{name = "Diogo Seca"}]
-dependencies = ["numpy>=1.26", "pandas>=2.2", "scipy>=1.11"]
-classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License"]
+dependencies = ["numpy>=1.26,<3", "pandas>=2.2,<4", "scipy>=1.11,<2"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "License :: OSI Approved :: MIT License",
+]
 
 [project.scripts]
 timegym = "timegym.cli:main"
@@ -19,12 +27,12 @@ timegym = "timegym.cli:main"
 [project.optional-dependencies]
 sklearn = ["scikit-learn>=1.4"]
 plots = ["matplotlib>=3.8"]
-features = ["tsfel", "tqdm"]
-market-data = ["yfinance"]
-dev = ["pytest>=8", "build>=1.2", "matplotlib>=3.8", "scikit-learn>=1.4", "nbdev==3.3.26", "black==24.10.0", "nbformat>=5.10"]
-notebooks = ["jupyterlab>=4.2", "ipykernel>=6.29", "nbformat>=5.10", "nbclient>=0.10", "nbconvert>=7.16", "matplotlib>=3.8", "scikit-learn>=1.4", "nbdev==3.3.26", "black==24.10.0"]
+features = ["tsfel>=0.1.9", "tqdm>=4.66"]
+market-data = ["yfinance>=0.2.54"]
+dev = ["pytest>=8", "build>=1.2", "matplotlib>=3.8", "scikit-learn>=1.4", "nbdev==3.3.26", "black==24.10.0", "nbformat>=5.10", "PyYAML>=6,<7"]
+notebooks = ["timegym[dev]", "jupyterlab>=4.2", "ipykernel>=6.29", "nbclient>=0.10", "nbconvert>=7.16"]
 docs = ["mkdocs>=1.6,<2"]
-release = ["build>=1.2", "twine>=6,<7"]
+release = ["build>=1.2", "twine>=6,<7", "PyYAML>=6,<7"]
 
 [project.urls]
 Repository = "https://github.com/diogoseca/timegym"
@@ -35,5 +43,5 @@ testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.flit.sdist]
-include = ["tests/", "experiments/", "paper/", "docs/", "notebooks/", "tools/", "examples/", "requirements-study.txt", "lab.sh", "CITATION.cff", "CHANGELOG.md", "mkdocs.yml"]
-exclude = ["paper/build/", "paper/*.pdf", "paper/**/*.pdf", "paper/figures/*.svg", "paper/figures/*.png", "paper/timegym-v2.tex", "paper/__pycache__/", "notebooks/.ipynb_checkpoints/", "notebooks/html/", "tools/__pycache__/", "notebooks/__pycache__/"]
+include = ["tests/", "experiments/", "paper/", "docs/", "notebooks/", "tools/", "examples/", "requirements-study.txt", "CITATION.cff", "CHANGELOG.md", "AGENTS.md", "mkdocs.yml", ".github/workflows/", "Dockerfile", ".dockerignore"]
+exclude = ["notebooks/archive/", "paper/build/", "paper/*.pdf", "paper/**/*.pdf", "paper/figures/*.svg", "paper/figures/*.png", "paper/timegym-v2.tex", "paper/__pycache__/", "notebooks/.ipynb_checkpoints/", "notebooks/html/", "tools/__pycache__/", "notebooks/__pycache__/"]

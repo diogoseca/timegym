@@ -125,7 +125,16 @@ python -m twine check dist/*
 
 `docs_hooks.py` stages the README and linked repository documents in a temporary
 directory, so the same relative links work on GitHub and in the generated site.
-It fails on missing local links and does not execute notebooks.
+It parses Markdown links after code spans/fences are escaped, supports link
+titles and reference links, fails on missing local targets, and does not execute
+notebooks.
+
+`sync_citation.py` renders README citations from `CITATION.cff`; `--check`
+compares the block without writing and verifies the package/changelog identity.
+`update_python_support.py` reports stable CPython/pandas compatibility; `--apply`
+prepares the coordinated update. The scheduled workflow exports changed
+notebooks, rebuilds citation/manuscript outputs, tests, and opens a PR. See
+[release setup](../docs/release.md) before enabling publication.
 
 After installing the wheel in a separate environment, run its interpreter with
 `-I` to exclude checkout imports:

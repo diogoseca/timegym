@@ -1,5 +1,29 @@
 # Validation record
 
+## Release preparation, 30 October 2026
+
+The 1.0.0 documentation and packaging pass was checked locally on macOS with
+Python 3.13.2. Package tests passed: **887 passed**. All **25 generated modules**
+match their owning notebooks, and the citation/version check, standalone source
+check, strict MkDocs build, wheel/sdist build and `twine check` passed. The source
+archive includes all 24 active notebooks, paper inputs and study records; it
+excludes `notebooks/archive/`, generated paper previews/PDFs and `lab.sh`.
+A clean wheel environment passed the isolated smoke check and saved-report
+replay with matching source/environment. The standalone PDF compiled with
+Tectonic; its title page was inspected and displays version 1.0.0 and 2026-10-30.
+The compiler reported nonfatal underfull paragraph boxes. All four workflow
+files passed actionlint 1.7.12.
+Three changed source chapters (11, 12 and 13) executed in fresh kernels, with
+sandbox process-inspection warnings from the kernel's psutil integration.
+
+The declared Python range and CI matrix now follow pandas' current support;
+these additional Python/OS jobs are configured, not local execution evidence.
+The development Docker build could not run because the local Docker daemon was
+unavailable. PyPI trusted publishing and Zenodo integration require owner setup;
+no package, GitHub release or DOI was published during this pass.
+
+## Earlier scientific validation
+
 Checked locally on 28 October 2026 for the unreleased 0.2.0 development artifact.
 This record describes executed checks; it is not a claim of universal fault
 detection or validation on every supported platform.
@@ -71,7 +95,7 @@ Timing is recorded separately and is not a benchmark claim.
 
 ## Remaining release and research work
 
-CI is configured for Python 3.10–3.13, the older compatibility stack,
+CI covers the [declared Python range](../README.md#install-and-run), the older compatibility stack,
 installed wheels on Linux/macOS/Windows, all notebooks, documentation, and both
 studies. These remote jobs have not been executed from this checkout. Local
 validation was on macOS; do not infer Windows or Linux results from it.

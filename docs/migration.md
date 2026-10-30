@@ -1,6 +1,6 @@
 # Migrating from the 2021 prototype
 
-TimeGym 0.2 introduces a new diagnostic core and a new v2 manuscript. It does
+TimeGym 1.0 introduces a new diagnostic core and a new v2 manuscript. It does
 not promise execution compatibility with the exploratory 2021 notebooks.
 The historical implementation remains available in Git history. The ten former
 `dev/` notebooks and original Quick Start now live together in

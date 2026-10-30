@@ -1,5 +1,44 @@
 # API contracts
 
+## Public surface
+
+The top-level package keeps the main workflow small. Scores, checks, preprocessing
+and other helpers are public through their modules; for example,
+`from timegym.metrics import mase` and
+`from timegym.checks import check_shift_equivariance`.
+The import column names the module to import each listed name from.
+“Public” means supported in this release; consult the changelog when upgrading.
+Schema constants describe stored formats independently of the package version.
+Underscore-prefixed names and modules, including `_internal` and
+`_process_common`, are private and have no compatibility guarantee.
+
+| Name | Import path | Stability |
+| --- | --- | --- |
+| `ForecastTask`, `Forecast`, `Reference`, `SimulationReference`, `Case`, `Scenario` | `timegym` | Public |
+| `Pipeline`, `NaiveForecaster`, `GaussianAR1Forecaster` | `timegym` | Public |
+| `ForecastRun`, `EvaluatedCase`, `TestReport`, `DiagnosticResult`, `CaseResult` | `timegym` | Public |
+| `DiagnosticStatus`, `DiagnosticCategory`, `__version__` | `timegym` | Public |
+| `DEFAULT_LEVELS` | `timegym.contracts` | Public |
+| `mse`, `mae`, `mase`, `mean_reference_mse`, `pinball`, `crps`, `empirical_crps`, `energy_score`, `variogram_score`, `UndefinedMetricError` | `timegym.metrics` | Public; `empirical_crps` aliases `crps` |
+| `evaluate_forecast`, `covariance_dependence_check`, `exception_evidence` | `timegym.diagnostics` | Public |
+| `check_shift_equivariance` | `timegym.checks` | Public; opt-in model property |
+| `SklearnForecaster`, `fresh_model`, `is_sklearn_regressor` | `timegym.models` | Public; sklearn loaded when needed |
+| `MUTATIONS`, `mutate_forecast` | `timegym.mutations` | Public controlled fixtures |
+| `plot_forecasts`, `plot_errors` | `timegym.plotting` | Public; requires plots extra |
+| `wilson_interval`, `paired_t_interval` | `timegym.statistics` | Public; independent cases |
+| `default_scenarios` | `timegym.data.synthetic` | Public |
+| `get_stock` | `timegym.data.real` | Public; provider data may change |
+| `add_lagged_target`, `cyclical_encoding`, `add_time_features`, `add_tsfel_features` | `timegym.features` | Public; TSFEL requires features extra |
+| `multioutput_target`, `onestep_target`, `step_ahead_target`, `fractional_weights`, `fractional_differencing`, `differencing` | `timegym.target` | Public |
+| `simple_moving_average`, `exponential_moving_average` | `timegym.smoothing` | Public |
+| `CORE_KINDS`, `scenario_label`, `MANIFEST_SCHEMA_VERSION` | `timegym.scenarios` | Public; manifest schema versioned separately |
+| `PROCESS_KINDS`, `resolve_process`, `process_label`, `generate_process` | `timegym.processes` | Public low-level generators |
+| `resolve_joint_process`, `generate_joint_process` | `timegym.joint_processes` | Public; resolver is a compatibility wrapper |
+| `replay_case` | `timegym.pipeline` | Public; allowlisted models only |
+| `PIPELINE_CONFIG_SCHEMA_VERSION`, `pipeline_config`, `pipeline_from_config`, `runtime_provenance`, `diagnostic_settings` | `timegym.provenance` | Public; config schema versioned separately |
+| `REPORT_SCHEMA_VERSION` | `timegym.reporting` | Public; report schema versioned separately |
+| `alignment_demo`, `main` | `timegym.cli` | Public CLI entry points |
+
 ## Inputs and outputs
 
 `ForecastTask(context, future_index)` validates a finite pandas DataFrame, unique
@@ -23,8 +62,11 @@ quantile monotonicity are checked before any score is calculated.
 
 ## Scenarios and references
 
-`Scenario(kind, context_length=120, horizon=12, parameters={}, n_targets=1,
+`Scenario(kind, context_length=120, horizon=12, parameters=<factory>, n_targets=1,
 seed=0).generate(seed=None)` returns a `Case(task, observed, reference, manifest)`.
+`parameters` uses `dataclasses.field(default_factory=dict)`, so each instance
+gets its own dictionary. The constructor accepts positional fields;
+`.generate(seed=None)` also accepts a positional seed override.
 Core kinds: `white_noise`, `trend`, `seasonal`, `ar1`, `random_walk`. Additional
 joint-capable kinds: `composite`, `merton_jump_diffusion`, `garch`,
 `markov_switching`. Parameters are
@@ -64,14 +106,16 @@ A walk with zero drift can still appear to trend in one realization.
 `drift` defaults to zero and can differ across targets. Plot facets label each
 target separately; a case combining zero and nonzero drifts is labeled
 “Random walk (mixed drift across targets)” in aggregate views. The helper
-`timegym.scenarios.scenario_label(kind, parameters, target_index=...)` also
+`timegym.scenarios.scenario_label(kind, parameters=None, *, target_index=None)` also
 formats recorded manifest parameters and leaves unknown custom kind names
 unchanged.
 
 `Reference.mean` and `variance` are H × D; `covariance` is (H·D) × (H·D) in
 horizon-major C order. `sample(n_samples, seed)` returns S × H × D and
-`quantile(levels)` returns H × D × Q. `forecast(n_samples=256, seed=0)` constructs
+`quantile(levels)` returns H × D × Q. `forecast(n_samples=256, seed=0, levels=DEFAULT_LEVELS)` constructs
 an explicitly privileged reference forecast for diagnostic calibration.
+`timegym.contracts.DEFAULT_LEVELS` is `(0.1, 0.5, 0.9)`; it also supplies the
+default marginal levels for the Gaussian AR(1) model.
 
 The five core families have exact known-parameter Gaussian reference laws. For AR(1), |phi| < 1 and the
 context starts in its stationary distribution. A random walk starts at its
@@ -151,6 +195,63 @@ all regimes are identically deterministic, because numerical log/difference
 conversion cannot preserve distinct atoms reliably. Initial state probabilities
 refer to the state before the first return; each return follows one transition.
 
+## Built-in models
+
+`NaiveForecaster(strategy="last", period=1)` returns explicit point forecasts.
+`last` repeats the final observation and `mean` repeats the context mean; both
+need at least one observation. `seasonal` repeats the final `period` observations
+and requires at least that many rows. `drift` extrapolates the slope from the
+first to the last observation and needs at least two rows. `period` is a positive
+integer. With two or more context rows, built-in step models require a regular
+index and immediately following consecutive future labels. With one row, the
+naive models can only require increasing future labels after the context.
+
+`GaussianAR1Forecaster(n_samples=256, seed=0, levels=DEFAULT_LEVELS)` requires at
+least five context observations. It fits an intercept and lag coefficient by
+OLS per target and pools residual cross-target covariance with `n - 3` degrees
+of freedom for `n` context rows. Its `Forecast` carries the iterated fitted
+conditional mean, paired Gaussian trajectories of shape `(n_samples, H, D)`, and
+empirical marginal quantiles at the requested levels (by default 0.1, 0.5, 0.9).
+At least two samples are required. A nonnegative integer seed repeats the draws;
+`seed=None` uses fresh randomness. Parameter-estimation uncertainty is omitted;
+this fitted model is not the known-parameter reference.
+
+`timegym.models.SklearnForecaster(steps, window_length=12)` fits a separate cloned
+sklearn pipeline per target. Each input flattens `window_length` consecutive rows
+across all targets, oldest row first; context must be longer than the window.
+Transforms fit only those training windows. Predictions append each full target
+vector to history for recursive forecasting and return point outputs only.
+`steps` must end in an sklearn regressor. `fresh_model(model)` uses
+`clone_unfitted()` for native instances or sklearn's configuration clone;
+it rejects native instances without that protocol and clones returning the
+original object. `is_sklearn_regressor(model)` reads sklearn tags lazily after
+checking for `get_params`. Install `timegym[sklearn]` when using sklearn objects.
+
+## Output-fault fixtures
+
+`timegym.mutations.mutate_forecast(forecast, name, *, seed=0, enabled=True,
+strength=1.0)` deep-copies outputs and coerces their arrays before checking a
+fixture's preconditions. `timegym.mutations.MUTATIONS` lists these eight names.
+The validator codes below assume an otherwise valid forecast for its task;
+truncation can also produce output-shape violations.
+
+| Name | Transformation | Precondition | Validator code |
+| --- | --- | --- | --- |
+| `index_shift` | Add one to index labels | Integer index | `index_mismatch` |
+| `target_swap` | Reverse target names, leave values in place | At least two targets | `target_mismatch` |
+| `horizon_truncation` | Drop the last horizon in every output and index | No additional condition | `index_mismatch` |
+| `nonfinite_point` | Set the first point to NaN | Nonempty explicit points | `nonfinite_point` |
+| `quantile_crossing` | Reverse the quantile axis, retain levels | At least two distinct ordered quantiles | `quantile_crossing` |
+| `sample_axis_swap` | Transpose sample and horizon axes | Samples with unequal sample/horizon sizes | `sample_shape` |
+| `variance_shrink` | Multiply deviations from points by `1 - 0.75 * strength` | Point, quantile and sample outputs | None; distribution checks may detect it |
+| `dependence_shuffle` | Independently permute selected samples per coordinate | Sample outputs | None; marginals are preserved |
+
+`strength` lies in `[0, 1]` and controls only the last two transformations;
+`seed` controls only the shuffle and must be a nonnegative integer. The other
+fixtures ignore these controls after validation. `enabled=False` returns the
+prepared copy without applying the fault, but still validates the name, seed,
+strength and preconditions. This bypass is a specified repair, not repair discovery.
+
 ## Pipeline and reports
 
 `Pipeline(model=None, window_length=12, reduction="recursive", *, model_factory=None)`
@@ -159,7 +260,8 @@ uses a last-value baseline by default. Native model classes/factories or the
 with `.add(estimator, **parameters)`. Only recursive reduction is implemented.
 
 `.predict(context, future_index)` returns the model's Forecast for inspection.
-`.test(scenarios=None, seeds=(0,1,2), check_dependence=False)` evaluates cases and
+`.test(scenarios=None, seeds=(0, 1, 2), *, check_dependence=False,
+n_calibration=99, alpha=0.05, dependence_seed_offset=100_000)` evaluates cases and
 returns a TestReport. Explicit test seeds override a Scenario's default seed.
 Model/evaluation exceptions are recorded with traceback evidence. Invalid scenario
 configuration is a caller error and is raised rather than counted as a model fault.
@@ -170,9 +272,9 @@ retains each `EvaluatedCase`, including the generated case, forecast (or `None`
 on model failure), result, and scenario/seed positions. This in-memory inspection
 object keeps arrays separate from the portable report schema.
 
-`run.plot_forecasts(show_quantiles=False, figsize=None)` draws scenario/target
+`run.plot_forecasts(*, show_quantiles=False, figsize=None)` draws scenario/target
 rows and seed columns with observation dots and unconnected forecast crosses.
-Optional shading shows marginal intervals. `run.plot_errors(metric="mean_reference_mse",
+Optional shading shows marginal intervals. `run.plot_errors(metric="mean_reference_mse", *,
 bins=None, missing="raise", figsize=None)` shows one score per whole case;
 `missing="annotate"` explicitly permits unavailable scores and labels their
 counts and reasons. Neither method refits models. Install `.[plots]` for plotting.
@@ -233,8 +335,8 @@ manifest versions are integers.
 
 ## Statistical and metamorphic diagnostics
 
-`covariance_dependence_check(reference, samples, seed=0, n_calibration=99,
-alpha=.05)` tests independent sampling from the specified conditional reference
+`timegym.diagnostics.covariance_dependence_check(reference, samples, *, seed=0,
+n_calibration=99, alpha=0.05)` tests independent sampling from the specified conditional reference
 law. It compares normalized covariance discrepancy with independent ensembles of
 the same sample size using a conservative finite Monte Carlo rank p-value. Its
 rejection can reflect variance or dependence errors. The threshold is per check;
@@ -249,7 +351,8 @@ scenario period; `point_accuracy` evidence records `mase_seasonality: 1`.
 Point, quantile, and sample accuracy diagnostics include their available scores
 in evidence, with reference capabilities when a simulation reference supplies them.
 
-`check_shift_equivariance(pipeline, context, future_index, shift=10)` tests
+`timegym.checks.check_shift_equivariance(pipeline, context, future_index, *,
+shift=10.0, atol=1e-8, rtol=1e-7)` tests
 f(y+c)=f(y)+c. Use it only when this property is part of the model's intended
 contract; many legitimate models are not location equivariant.
 
