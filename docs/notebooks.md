@@ -16,6 +16,10 @@ Select the Python kernel belonging to that environment. Start with
 [00 · Quick start](../notebooks/00_quick_start.ipynb), then choose an application
 from the [notebook guide](../notebooks/README.md). The examples use CPU and local
 data; the real-data notebook reads the included AirPassengers CSV.
+`timegym.data.real.get_stock` is a separate opt-in network helper for Yahoo
+Finance, requiring `timegym[market-data]` for a fetch. It is not called by the
+notebooks. Its local snapshot cache supports offline reuse; see the
+[market-data contract](reference.md#optional-market-data).
 
 ## Read, experiment, and build
 
