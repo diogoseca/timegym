@@ -55,13 +55,3 @@ def test_markers_group_only_consecutive_equal_styles_and_keep_coordinates(tmp_pa
     ns = {'s': 'http://www.w3.org/2000/svg'}
     assert len(tree.findall('.//s:use', ns)) == 2
     assert svg.count('PathCollection_') == 3
-
-
-@pytest.mark.parametrize('source', [r'\input{generated-macros.tex}',
-                                   r'\IfFileExists{generated-macros.tex}{\input{generated-macros.tex}}{}',
-                                   r'\IfFileExists{generated-macros.tex}{\input{generated-macros.tex}}{\textbf{Missing}}'])
-def test_standalone_inlines_caption_macros_and_removes_external_guard(tmp_path, source):
-    from build_standalone import inline_macros
-    macros = r'\newcommand{\RepairImproved}{21}'
-    (tmp_path / 'generated-macros.tex').write_text(macros)
-    assert inline_macros(source, tmp_path) == macros

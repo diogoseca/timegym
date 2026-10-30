@@ -14,10 +14,16 @@ detection or validation on every supported platform.
 | Documentation | Strict build passes with local links resolved; original source paths registered for live reload |
 | Distributions | Wheel and source archive build; both pass metadata validation |
 | Clean installed wheel | Core dependencies only; point/joint forecasts, joint controlled financial processes, reports, replay, retained runs, and CLI demo pass outside the checkout |
-| Source archive | Includes all 24 active notebooks, paper, study records, citation metadata and build tooling; extracted source passes export drift check |
+| Source archive | Includes all 24 active notebooks, manuscript inputs, study records, citation metadata and build tooling; extracted source passes export drift check |
 | Original study | Numerical JSON unchanged; historical execution evidence retained in the manifest |
 | Protocol-2 study | Frozen numerical record; offline schema migration described below. Future repeats are compared by the CI research-smoke job |
 | Manuscript | Generated standalone source compiles successfully |
+
+The manuscript packaging policy was updated on 30 October 2026: source archives
+retain `main.tex`, `references.bib`, generated result fragments, TikZ scenes,
+figure provenance, and the claim ledger. Regenerable SVG, PNG, and PDF figures
+and the derived `timegym-v2.tex` are excluded. The included standalone builder
+recreates that file from the retained inputs without rendering raster figures.
 
 The multivariate extension covers correlated composed processes, vector Merton
 jumps, CCC-GARCH, shared hidden regimes and regime-dependent jumps. Validation

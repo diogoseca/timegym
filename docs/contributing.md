@@ -65,3 +65,6 @@ The current study is specified in `experiments/protocol.json`. Change protocol
 and artifact versions deliberately when an experiment changes; do not tune
 thresholds or choose seeds after seeing evaluation results. Regenerate tables and
 figures from results, then run `python paper/build_standalone.py`.
+The standalone is generated from `main.tex`, `references.bib`, result fragments,
+and vector scenes. Run `python paper/build_standalone.py --check` to detect
+drift without rewriting it; CI runs this check beside the package export check.
