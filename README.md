@@ -117,7 +117,7 @@ python -m jupyterlab notebooks
 ```
 
 The [notebook guide](notebooks/README.md) brings everything into one folder:
-**15 source notebooks build the package, and 9 application notebooks demonstrate
+**15 source notebooks build the package, and 10 application notebooks demonstrate
 it**. Explore [univariate uncertainty](notebooks/20_univariate_uncertainty.ipynb),
 [multivariate forecasts](notebooks/21_multivariate_forecasting.ipynb), or
 [joint uncertainty](notebooks/22_multivariate_uncertainty.ipynb). The examples
