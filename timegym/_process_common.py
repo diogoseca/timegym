@@ -5,7 +5,13 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 from ._internal import positive_int, nonnegative_int, _real_array
-from .contracts import Case, ForecastTask, Reference, SimulationReference
+from .contracts import (
+    Case,
+    ForecastTask,
+    Reference,
+    SimulationReference,
+    MANIFEST_SCHEMA_VERSION,
+)
 
 __all__ = ["PROCESS_KINDS", "resolve_process"]
 
@@ -577,7 +583,7 @@ def _assemble_case(
             **reference_args, sampler=sampler, **capabilities
         )
     manifest = dict(
-        schema_version=1,
+        schema_version=MANIFEST_SCHEMA_VERSION,
         kind=kind,
         context_length=length,
         horizon=horizon,

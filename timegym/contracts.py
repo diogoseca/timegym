@@ -10,6 +10,7 @@ from scipy.stats import norm
 
 __all__ = [
     "DEFAULT_LEVELS",
+    "MANIFEST_SCHEMA_VERSION",
     "ForecastTask",
     "Forecast",
     "Reference",
@@ -21,6 +22,7 @@ __all__ = [
 
 
 DEFAULT_LEVELS = (0.1, 0.5, 0.9)
+MANIFEST_SCHEMA_VERSION = 1
 
 
 # %% ../notebooks/08_forecast_contracts.ipynb #index-and-target-validation

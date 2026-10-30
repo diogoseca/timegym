@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 import numpy as np
 import pandas as pd
-from .contracts import Case, ForecastTask, Reference
+from .contracts import Case, ForecastTask, Reference, MANIFEST_SCHEMA_VERSION
 from ._internal import _real_array
 from .processes import (
     PROCESS_KINDS,
@@ -16,18 +16,9 @@ from .processes import (
 from ._internal import positive_int
 from ._internal import nonnegative_int
 
-__all__ = [
-    "Case",
-    "CORE_KINDS",
-    "scenario_label",
-    "Scenario",
-    "MANIFEST_SCHEMA_VERSION",
-]
+__all__ = ["Case", "CORE_KINDS", "scenario_label", "Scenario"]
 
 # %% ../notebooks/01_synthetic_data.ipynb #01_synthetic_data-05
-
-
-MANIFEST_SCHEMA_VERSION = 1
 
 
 # %% ../notebooks/01_synthetic_data.ipynb #01_synthetic_data-07
