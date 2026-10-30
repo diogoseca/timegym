@@ -60,6 +60,12 @@ def test_replay_prefix_and_rng_isolation(kind):
     ('markov_switching', {'output': 'log_return', 'dt': .1,
                           'regime_jump_rate': [.2, 1.], 'regime_jump_mean': [-.02, -.1],
                           'regime_jump_sigma': [.02, .1]}),
+    ('markov_switching', {'output': 'log_price', 'dt': .1,
+                          'regime_jump_rate': [.2, 1.], 'regime_jump_mean': [-.02, -.1],
+                          'regime_jump_sigma': [.02, .1]}),
+    ('markov_switching', {'output': 'price', 'dt': .1,
+                          'regime_jump_rate': [.2, 1.], 'regime_jump_mean': [-.02, -.1],
+                          'regime_jump_sigma': [.02, .1]}),
 ])
 def test_analytic_moments_match_conditional_simulation(kind, parameters):
     assert_simulation_moments(case(kind, parameters, horizon=3).reference)
@@ -330,8 +336,80 @@ def test_reference_zero_seed_does_not_reuse_observed_or_held_out_innovations(kin
 
 
 def test_all_named_reference_streams_have_a_separate_seed_namespace():
-    from timegym.processes import _streams, _reference_streams, _reference_rng
-    observation, reference = _streams(0), _reference_streams(0)
+    from timegym._process_common import _streams, _rng
+    observation, reference = _streams(0), _streams(0, role=1)
     for key in observation:
         assert not np.array_equal(observation[key].standard_normal(20), reference[key].standard_normal(20))
-    assert not np.array_equal(np.random.default_rng(0).standard_normal(20), _reference_rng(0).standard_normal(20))
+    assert not np.array_equal(np.random.default_rng(0).standard_normal(20), _rng(0, role=1).standard_normal(20))
+
+
+@pytest.mark.parametrize('kind', PROCESS_KINDS)
+@pytest.mark.parametrize('correlation', [-1., 0., .7, 1., [[1.]]])
+def test_one_target_processes_accept_correlation_without_changing_scalar_laws(kind, correlation):
+    baseline = case(kind)
+    correlated = case(kind, {'correlation': correlation})
+    assert correlated.manifest == baseline.manifest
+    pd.testing.assert_frame_equal(correlated.task.context, baseline.task.context)
+    np.testing.assert_array_equal(correlated.reference.sample(8, 9), baseline.reference.sample(8, 9))
+
+
+@pytest.mark.parametrize('kind,scalar,vector', [
+    ('composite', {'sigma': .3, 'change_point': 4, 'changes': {'slope': .2}},
+                  {'sigma': [.3], 'change_point': 4, 'changes': {'slope': [.2]}}),
+    ('merton_jump_diffusion', {'mu': .2}, {'mu': [.2]}),
+    ('garch', {'alpha': .05, 'initial_variance': .01}, {'alpha': [.05], 'initial_variance': [.01]}),
+    ('markov_switching', {'regime_mu': [.1, -.2]}, {'regime_mu': [[.1], [-.2]]}),
+])
+def test_length_one_parameter_vectors_collapse_to_scalar_manifests(kind, scalar, vector):
+    left, right = case(kind, scalar), case(kind, vector)
+    assert left.manifest == right.manifest
+    pd.testing.assert_frame_equal(left.task.context, right.task.context)
+    np.testing.assert_array_equal(left.reference.sample(8, 9), right.reference.sample(8, 9))
+
+
+@pytest.mark.parametrize('kind', PROCESS_KINDS)
+@pytest.mark.parametrize('correlation', [-1.1, 1.1, [[.5]], [[1, 0], [0, 1]]])
+def test_one_target_processes_validate_correlation(kind, correlation):
+    with pytest.raises(ValueError, match='correlation'):
+        case(kind, {'correlation': correlation})
+
+
+@pytest.mark.parametrize('kind', PROCESS_KINDS)
+@pytest.mark.parametrize('n_targets', [1, 2])
+def test_controlled_scenario_resolves_once_and_owns_its_parameter_snapshot(monkeypatch, kind, n_targets):
+    import timegym.scenarios as scenarios
+    calls = []
+    original = scenarios.resolve_process
+
+    def counted(*args, **kwargs):
+        calls.append(True)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(scenarios, 'resolve_process', counted)
+    specification = scenarios.Scenario(kind, context_length=12, horizon=2, n_targets=n_targets)
+    first = specification.generate(seed=8)
+    specification.display_name
+    again = specification.generate(seed=8)
+    assert len(calls) == 1
+    assert first.manifest == again.manifest
+    first.manifest['parameters']['unrelated'] = 1
+    assert 'unrelated' not in specification.generate(seed=8).manifest['parameters']
+    with pytest.raises(ValueError, match='seed'):
+        specification.generate(seed=-1)
+
+
+def test_controlled_parameters_are_copied_at_construction():
+    from timegym import Scenario
+    parameters = {'change_point': 3, 'changes': {'slope': .2}}
+    specification = Scenario('composite', context_length=8, horizon=2, parameters=parameters)
+    original = specification.generate()
+    parameters['changes']['slope'] = 2.
+    pd.testing.assert_frame_equal(original.observed, specification.generate().observed)
+    assert not original.observed.equals(Scenario('composite', 8, 2, parameters).generate().observed)
+
+
+def test_case_contract_retains_public_import_compatibility():
+    from timegym import Case
+    from timegym.contracts import Case as ContractCase
+    from timegym.scenarios import Case as ScenarioCase
+    assert Case is ContractCase is ScenarioCase

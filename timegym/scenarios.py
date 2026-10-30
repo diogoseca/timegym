@@ -5,28 +5,23 @@ from dataclasses import dataclass, field
 from typing import Any
 import numpy as np
 import pandas as pd
-from .contracts import ForecastTask, Reference
+from .contracts import Case, ForecastTask, Reference
 from ._internal import _real_array
-from .processes import PROCESS_KINDS, resolve_process, generate_process, process_label
+from .processes import (
+    PROCESS_KINDS,
+    resolve_process,
+    _generate_resolved_process,
+    process_label,
+)
 from ._internal import positive_int
 from ._internal import nonnegative_int
 
-__all__ = ["CORE_KINDS", "Case", "scenario_label", "Scenario"]
+__all__ = ["Case", "CORE_KINDS", "scenario_label", "Scenario"]
 
 # %% ../notebooks/01_synthetic_data.ipynb #01_synthetic_data-05
 
 
 # %% ../notebooks/01_synthetic_data.ipynb #01_synthetic_data-07
-@dataclass
-class Case:
-    """One held-out forecast task and its evaluator-only ground truth."""
-
-    task: ForecastTask
-    observed: pd.DataFrame
-    reference: Reference
-    manifest: dict[str, Any]
-
-
 _DEFAULTS = {
     "white_noise": {"mean": 0.0, "sigma": 1.0},
     "trend": {"intercept": 0.0, "slope": 0.1, "sigma": 1.0},
@@ -99,7 +94,9 @@ class Scenario:
     ``sigma`` gives a degenerate deterministic component. Parameters are exposed
     to the evaluator only; a model receives just ``case.task``. The additional
     composite, Merton, GARCH and hidden-regime processes also support joint
-    targets, with explicit dependence laws and reference capabilities.
+    targets, with explicit dependence laws and reference capabilities. These
+    four controlled families snapshot resolved parameters at construction;
+    create a new Scenario to change their parameters.
     """
 
     kind: str
@@ -111,7 +108,7 @@ class Scenario:
 
     def __post_init__(self) -> None:
         if self.kind in PROCESS_KINDS:
-            self._resolve_process()
+            self._resolved_parameters = self._resolve_process()
         else:
             self._resolve()
 
@@ -129,7 +126,7 @@ class Scenario:
     def display_name(self) -> str:
         """Parameter-aware label; ``kind`` remains the stable scenario identifier."""
         if self.kind in PROCESS_KINDS:
-            return process_label(self.kind, self._resolve_process())
+            return process_label(self.kind, self._resolved_parameters)
         parameters, _, _, _, _ = self._resolve()
         return scenario_label(self.kind, parameters)
 
@@ -202,11 +199,10 @@ class Scenario:
     def generate(self, seed: int | None = None) -> Case:
         """Generate context and held-out observations without global RNG state."""
         if self.kind in PROCESS_KINDS:
-            self._resolve_process()
             run_seed = nonnegative_int(self.seed if seed is None else seed, "seed")
-            return generate_process(
+            return _generate_resolved_process(
                 self.kind,
-                self.parameters,
+                self._resolved_parameters,
                 self.context_length,
                 self.horizon,
                 self.n_targets,

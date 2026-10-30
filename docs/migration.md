@@ -46,7 +46,7 @@ honor the fresh-instance contract so one case cannot train the next.
 ## Notebook development and visual inspection
 
 The active collection lives directly under `notebooks/`: source notebooks
-01–15 build all 24 package modules, while Quick Start 00 and applications 20–27
+01–15 build all 25 package modules, while Quick Start 00 and applications 20–27
 use them. This continues the original notebook-first development approach.
 Selected nbdev cells replace `%%runwrite` append operations; save source edits,
 then run `python tools/export_notebooks.py`. A normal notebook run does not

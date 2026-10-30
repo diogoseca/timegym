@@ -11,7 +11,8 @@ from timegym.pipeline import replay_case
 
 
 @pytest.mark.parametrize("model", [None, NaiveForecaster("seasonal", period=3),
-                                   GaussianAR1Forecaster(n_samples=40, seed=37)])
+                                   GaussianAR1Forecaster(n_samples=40, seed=37),
+                                   GaussianAR1Forecaster(n_samples=40, seed=37, levels=(.2, .8))])
 def test_builtin_configuration_roundtrip_reproduces_exact_outputs(model):
     pipeline = Pipeline(model, window_length=7)
     config = json.loads(json.dumps(pipeline.to_config()))
@@ -180,3 +181,52 @@ def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options
         Pipeline(reduction="direct")
     with pytest.raises(ValueError, match="unknown.*last.*mean.*seasonal.*drift"):
         NaiveForecaster(strategy="unknown")
+
+
+@pytest.mark.parametrize('model', [NaiveForecaster('seasonal', period=3),
+                                    GaussianAR1Forecaster(n_samples=16, seed=13, levels=(.2, .8))])
+def test_builtin_params_cover_constructor_clone_and_replay(model):
+    import inspect
+    assert set(model.params()) == set(inspect.signature(type(model)).parameters)
+    case = Scenario('ar1', context_length=24, horizon=3).generate()
+    model.fit(case.task.context)
+    clone = model.clone_unfitted()
+    assert clone is not model and clone.params() == model.params()
+    assert not any(name.endswith('_') for name in vars(clone))
+    restored = Pipeline.from_config(json.loads(json.dumps(Pipeline(model).to_config()))).model
+    assert restored.params() == model.params()
+
+
+@pytest.mark.parametrize('seed', [-1, True, 1.5, 'x', None])
+def test_replay_uses_model_seed_validation(seed):
+    config = Pipeline(GaussianAR1Forecaster()).to_config()
+    config['model']['parameters']['seed'] = seed
+    with pytest.raises(ValueError, match='seed'):
+        Pipeline.from_config(config)
+
+
+@pytest.mark.parametrize('schema', [1, 2])
+def test_old_ar1_configs_restore_the_original_default_quantiles(schema):
+    from timegym.contracts import DEFAULT_LEVELS
+    config = Pipeline(GaussianAR1Forecaster()).to_config()
+    config['schema_version'] = schema
+    if schema == 1:
+        config['strategy'] = config.pop('reduction')
+    del config['model']['parameters']['levels']
+    restored = Pipeline.from_config(config)
+    assert restored.model.levels == DEFAULT_LEVELS
+    assert 'levels' not in config['model']['parameters']
+
+
+def test_sklearn_clone_uses_constructor_parameters_without_fitted_state():
+    import inspect
+    from sklearn.linear_model import Ridge
+    from timegym.models import SklearnForecaster
+    model = SklearnForecaster([Ridge(alpha=3.)], window_length=4)
+    assert set(model.params()) == set(inspect.signature(type(model)).parameters)
+    case = Scenario('ar1', context_length=24, horizon=3).generate()
+    model.fit(case.task.context)
+    clone = model.clone_unfitted()
+    assert clone.params() == model.params()
+    assert clone.steps is not model.steps
+    assert not hasattr(clone, 'models_')

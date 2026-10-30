@@ -67,6 +67,11 @@ JSON-safe evidence conversion shared by sibling modules. Import these helpers
 from that module rather than through contracts or reporting; changes to them
 apply across the package. The module is private, with no public API guarantee.
 
+Notebook 14 also owns `timegym/_process_common.py`: the shared controlled-process
+parameter grammar, seed namespaces, value transforms, registry and case assembly.
+Joint builders import these primitives; `processes` selects the scalar or joint
+builder and `scenarios` retains resolved parameters.
+
 ## Validation boundary
 
 The exporter uses the installed nbdev exporter; it does not execute notebook

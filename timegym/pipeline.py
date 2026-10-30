@@ -139,6 +139,8 @@ class Pipeline:
         ``run.plot_forecasts()`` and ``run.plot_errors()`` inspect these exact
         outputs without additional fitting or predictive sampling.
         """
+        if self.steps:
+            SklearnForecaster(self.steps, self.window_length)
         settings = diagnostic_settings(
             check_dependence=check_dependence,
             n_calibration=n_calibration,

@@ -3,320 +3,32 @@
 from __future__ import annotations
 from copy import deepcopy
 import numpy as np
-import pandas as pd
 from scipy.special import logsumexp
 from scipy.stats import poisson
-from .contracts import ForecastTask, Reference, SimulationReference
-from ._internal import _real_array
-from ._internal import positive_int, nonnegative_int
+from . import joint_processes
+from timegym._process_common import (
+    PROCESS_KINDS,
+    resolve_process,
+    _DEFAULTS,
+    _PROCESS_REGISTRY,
+    _CHANGE_FIELDS,
+    _TAIL_TOLERANCE,
+    _finite,
+    _exp,
+    _log_cumulant,
+    _streams,
+    _rng,
+    _to_values,
+    _observed_returns,
+    _transform_samples,
+    _build_case,
+    _regime_arrays,
+    _common_deterministic_return,
+)
 
 __all__ = ["PROCESS_KINDS", "resolve_process", "process_label", "generate_process"]
 
 # %% ../notebooks/14_controlled_processes.ipynb #controlled-imports
-
-
-PROCESS_KINDS = ("composite", "merton_jump_diffusion", "garch", "markov_switching")
-
-_DEFAULTS = {
-    "composite": dict(
-        intercept=0.0,
-        slope=0.0,
-        amplitude=0.0,
-        period=12.0,
-        phase=0.0,
-        sigma=1.0,
-        residual="white_noise",
-        jump_rate=0.0,
-        jump_mean=0.0,
-        jump_sigma=0.0,
-        change_point=None,
-        changes={},
-    ),
-    "merton_jump_diffusion": dict(
-        mu=0.05,
-        sigma=0.2,
-        jump_rate=0.5,
-        jump_mean=-0.1,
-        jump_sigma=0.15,
-        dt=1 / 252,
-        initial_price=100.0,
-        output="price",
-    ),
-    "garch": dict(
-        mu=0.0,
-        omega=0.00001,
-        alpha=0.08,
-        beta=0.9,
-        initial_variance=None,
-        initial_price=100.0,
-        output="log_return",
-    ),
-    "markov_switching": dict(
-        transition=[[0.97, 0.03], [0.08, 0.92]],
-        initial_probs=[0.8, 0.2],
-        regime_mu=[0.08, -0.15],
-        regime_sigma=[0.15, 0.45],
-        regime_jump_rate=[0.0, 0.0],
-        regime_jump_mean=[0.0, 0.0],
-        regime_jump_sigma=[0.0, 0.0],
-        dt=1 / 252,
-        initial_price=100.0,
-        output="log_return",
-    ),
-}
-_CHANGE_FIELDS = {"intercept", "slope", "amplitude", "period", "phase", "sigma"}
-_TAIL_TOLERANCE = 1e-12
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-integer
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-scalar
-def _scalar(name, value, *, minimum=None, positive=False):
-    a = _real_array(value, name)
-    if a.ndim != 0 or not np.isfinite(a):
-        raise ValueError(f"{name} must be a finite real scalar")
-    result = float(a)
-    if positive and result <= 0 or minimum is not None and result < minimum:
-        raise ValueError(
-            f'{name} must be {"positive" if positive else f">= {minimum}"}'
-        )
-    return result
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-finite
-def _finite(value, purpose):
-    a = np.asarray(value, dtype=float)
-    if not np.isfinite(a).all():
-        raise ValueError(
-            f"{purpose} overflowed; reduce horizon, rates, scales or time step"
-        )
-    return a
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-exp
-def _exp(value, purpose):
-    with np.errstate(over="ignore", under="ignore", invalid="ignore"):
-        result = np.exp(value)
-    _finite(result, purpose)
-    if np.any(result == 0):
-        raise ValueError(
-            f"{purpose} underflowed; reduce horizon, rates, scales or time step"
-        )
-    return result
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-log-cumulant
-def _log_cumulant(k, mu, sigma, rate, jump_mean, jump_sigma, dt):
-    """Physical-measure Merton convention: E[S(t+dt)/S(t)] = exp(mu*dt)."""
-    with np.errstate(over="ignore", invalid="ignore"):
-        kappa = np.expm1(jump_mean + 0.5 * jump_sigma**2)
-        value = (
-            k * (mu - 0.5 * sigma**2 - rate * kappa)
-            + 0.5 * k * k * sigma**2
-            + rate * np.expm1(k * jump_mean + 0.5 * k * k * jump_sigma**2)
-        ) * dt
-    return _finite(value, "Log-return cumulant")
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-resolve-process
-def resolve_process(kind, parameters, context_length, horizon, n_targets, seed):
-    """Validate a controlled scalar or joint process; return JSON-safe parameters.
-
-    ``composite`` changes apply at absolute time ``t >= change_point``. Its
-    deterministic path is always ``intercept + slope*t + amplitude*sin(...)``;
-    changing slope or intercept need not preserve continuity. The future
-    schedule belongs to the evaluator, never the model's ForecastTask.
-    """
-    if kind not in PROCESS_KINDS:
-        raise ValueError(f"Unknown controlled process {kind!r}")
-    positive_int(context_length, "context_length")
-    positive_int(horizon, "horizon")
-    nonnegative_int(seed, "seed")
-    if positive_int(n_targets, "n_targets") > 1:
-        from timegym.joint_processes import resolve_joint_process
-
-        return resolve_joint_process(
-            kind, parameters, context_length, horizon, n_targets, seed
-        )
-    if not isinstance(parameters, dict):
-        raise TypeError("parameters must be a dictionary")
-    unknown = set(parameters) - set(_DEFAULTS[kind])
-    if unknown:
-        raise ValueError(f"Unsupported parameters for {kind}: {sorted(unknown)}")
-    p = {**_DEFAULTS[kind], **parameters}
-    if kind == "composite":
-        if p["residual"] not in ("white_noise", "random_walk"):
-            raise ValueError("residual must be white_noise or random_walk")
-        for key in (
-            "intercept",
-            "slope",
-            "amplitude",
-            "period",
-            "phase",
-            "sigma",
-            "jump_rate",
-            "jump_mean",
-            "jump_sigma",
-        ):
-            p[key] = _scalar(
-                key,
-                p[key],
-                positive=key == "period",
-                minimum=0 if key in ("sigma", "jump_rate", "jump_sigma") else None,
-            )
-        if p["jump_rate"] and p["residual"] != "random_walk":
-            raise ValueError("Compound-Poisson jumps require residual=random_walk")
-        if not isinstance(p["changes"], dict):
-            raise ValueError("changes must be a dictionary")
-        if set(p["changes"]) - _CHANGE_FIELDS:
-            raise ValueError(f"changes may only contain {sorted(_CHANGE_FIELDS)}")
-        p["changes"] = {
-            key: _scalar(
-                key,
-                value,
-                positive=key == "period",
-                minimum=0 if key == "sigma" else None,
-            )
-            for key, value in p["changes"].items()
-        }
-        if p["change_point"] is not None:
-            p["change_point"] = nonnegative_int(p["change_point"], "change_point")
-            if not p["changes"]:
-                raise ValueError("change_point requires nonempty changes")
-        elif p["changes"]:
-            raise ValueError("changes require change_point")
-        if p["jump_rate"] > 1e6:
-            raise ValueError("jump_rate must be <= 1e6 per step for stable simulation")
-        return p
-    p["initial_price"] = _scalar("initial_price", p["initial_price"], positive=True)
-    outputs = (
-        ("log_return", "log_price")
-        if kind == "garch"
-        else ("log_return", "log_price", "price")
-    )
-    if p["output"] not in outputs:
-        raise ValueError(f"{kind} output must be one of {outputs}")
-    if kind == "garch":
-        for key in ("mu", "omega", "alpha", "beta"):
-            p[key] = _scalar(
-                key,
-                p[key],
-                positive=key == "omega",
-                minimum=0 if key in ("alpha", "beta") else None,
-            )
-        if p["alpha"] + p["beta"] >= 1:
-            raise ValueError(
-                "GARCH requires alpha + beta < 1 for finite unconditional variance"
-            )
-        p["initial_variance"] = (
-            _scalar("initial_variance", p["initial_variance"], positive=True)
-            if p["initial_variance"] is not None
-            else p["omega"] / (1 - p["alpha"] - p["beta"])
-        )
-        p["initial_variance"] = _scalar(
-            "initial_variance", p["initial_variance"], positive=True
-        )
-        return p
-    p["dt"] = _scalar("dt", p["dt"], positive=True)
-    if kind == "merton_jump_diffusion":
-        for key in ("mu", "sigma", "jump_rate", "jump_mean", "jump_sigma"):
-            p[key] = _scalar(
-                key,
-                p[key],
-                minimum=0 if key in ("sigma", "jump_rate", "jump_sigma") else None,
-            )
-        if p["jump_rate"] * p["dt"] > 1e6:
-            raise ValueError("jump_rate * dt must be <= 1e6 for stable simulation")
-        for k in (1.0, 2.0):
-            _log_cumulant(
-                k,
-                p["mu"],
-                p["sigma"],
-                p["jump_rate"],
-                p["jump_mean"],
-                p["jump_sigma"],
-                p["dt"],
-            )
-        return p
-    transition = _real_array(p["transition"], "transition")
-    if (
-        transition.ndim != 2
-        or transition.shape[0] != transition.shape[1]
-        or not len(transition)
-    ):
-        raise ValueError("transition must be a nonempty square matrix")
-    n = len(transition)
-    if (
-        not np.isfinite(transition).all()
-        or np.any(transition < 0)
-        or not np.allclose(transition.sum(1), 1, atol=1e-12, rtol=0)
-    ):
-        raise ValueError(
-            "transition must contain nonnegative probabilities with rows summing to one"
-        )
-    p["transition"] = (transition / transition.sum(1, keepdims=True)).tolist()
-    for key in (
-        "initial_probs",
-        "regime_mu",
-        "regime_sigma",
-        "regime_jump_rate",
-        "regime_jump_mean",
-        "regime_jump_sigma",
-    ):
-        a = _real_array(p[key], key)
-        if a.shape != (n,) or not np.isfinite(a).all():
-            raise ValueError(f"{key} must have one finite entry per regime")
-        if key in (
-            "initial_probs",
-            "regime_sigma",
-            "regime_jump_rate",
-            "regime_jump_sigma",
-        ) and np.any(a < 0):
-            raise ValueError(f"{key} must be nonnegative")
-        if key == "initial_probs":
-            if not np.isclose(a.sum(), 1, rtol=0, atol=1e-12):
-                raise ValueError("initial_probs must sum to one")
-            a = a / a.sum()
-        p[key] = a.tolist()
-    sigma = np.asarray(p["regime_sigma"])
-    rate = np.asarray(p["regime_jump_rate"])
-    jump_sigma = np.asarray(p["regime_jump_sigma"])
-    has_atoms = np.any(sigma == 0)
-    has_continuous = np.any((sigma > 0) | ((rate > 0) & (jump_sigma > 0)))
-    if has_atoms and has_continuous:
-        raise ValueError(
-            "Markov emissions must not mix point masses and continuous densities; use strictly positive regime_sigma in every regime, or entirely discrete emissions"
-        )
-    if (
-        has_atoms
-        and p["output"] != "log_return"
-        and context_length > 1
-        and not _common_deterministic_return(p)
-    ):
-        raise ValueError(
-            "Discrete Markov emissions require output=log_return when conditioning on returns; reconstructing discrete returns from price/log_price loses exact support. A length-one level context or identical deterministic regimes is supported"
-        )
-    if np.max(np.asarray(p["regime_jump_rate"]) * p["dt"]) > 100:
-        raise ValueError(
-            "regime_jump_rate * dt must be <= 100 for the bounded Poisson-mixture filter"
-        )
-    for k in (1.0, 2.0):
-        _log_cumulant(
-            k,
-            *[
-                np.asarray(p[key])
-                for key in (
-                    "regime_mu",
-                    "regime_sigma",
-                    "regime_jump_rate",
-                    "regime_jump_mean",
-                    "regime_jump_sigma",
-                )
-            ],
-            p["dt"],
-        )
-    return p
 
 
 # %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-process-label
@@ -360,45 +72,22 @@ def process_label(kind, parameters=None, *, target_index=None):
         "merton_jump_diffusion": (
             "Geometric Brownian motion"
             if p.get("jump_rate", 0.0) == 0
-            else "Merton jump diffusion"
+            else _PROCESS_REGISTRY[kind]["label"]
         ),
         "garch": (
-            "CCC-GARCH(1,1)" if np.asarray(p.get("mu", 0.0)).size > 1 else "GARCH(1,1)"
+            "CCC-GARCH(1,1)"
+            if np.asarray(p.get("mu", 0.0)).size > 1
+            else _PROCESS_REGISTRY[kind]["label"]
         ),
     }
     if kind == "markov_switching":
         labels[kind] = (
             "Hidden regimes + jumps"
             if any(p["regime_jump_rate"])
-            else "Hidden Markov regimes"
+            else _PROCESS_REGISTRY[kind]["label"]
         )
     units = {"price": "price", "log_price": "log price", "log_return": "log returns"}
     return f'{labels[kind]} ({units[p["output"]]})'
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-streams
-def _streams(seed):
-    """Named independent streams preserve diffusion when jump settings change."""
-    keys = ("diffusion", "jump_counts", "jump_sizes", "states")
-    return dict(
-        zip(
-            keys,
-            map(np.random.default_rng, np.random.SeedSequence(seed).spawn(len(keys))),
-        )
-    )
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-reference-streams
-def _reference_streams(seed):
-    """Separate evaluator draws from observation streams even at equal seeds."""
-    keys = ("diffusion", "jump_counts", "jump_sizes", "states")
-    sequence = np.random.SeedSequence([0x5447594D, seed])
-    return dict(zip(keys, map(np.random.default_rng, sequence.spawn(len(keys)))))
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-reference-rng
-def _reference_rng(seed):
-    return np.random.default_rng(np.random.SeedSequence([0x5447594D, seed]))
 
 
 # %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-jump-increment
@@ -423,91 +112,8 @@ def _merton_increment(rng, size, mu, sigma, rate, jump_mean, jump_sigma, dt):
     )
 
 
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-frames
-def _frames(values, length, horizon):
-    names = ("y",)
-    future_index = pd.RangeIndex(length, length + horizon)
-    context = pd.DataFrame(
-        _finite(values[:length], "Generated context"),
-        columns=names,
-        index=pd.RangeIndex(length),
-    )
-    observed = pd.DataFrame(
-        _finite(values[length:], "Generated future"), columns=names, index=future_index
-    )
-    return ForecastTask(context, future_index), observed
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-case
-def _case(
-    kind,
-    p,
-    length,
-    horizon,
-    seed,
-    values,
-    mean,
-    covariance,
-    conditioning,
-    sampler=None,
-    approximate=False,
-):
-    from timegym.scenarios import Case
-
-    task, observed = _frames(values, length, horizon)
-    mean = _finite(mean, "Conditional mean").reshape(horizon, 1)
-    covariance = _finite(covariance, "Conditional covariance")
-    covariance = (covariance + covariance.T) / 2
-    # Only roundoff on a theoretically nonnegative diagonal is removable.
-    diagonal = np.diag(covariance).copy()
-    tolerance = 1e-10 * max(1.0, float(np.max(np.abs(covariance))))
-    if diagonal.min() < -tolerance:
-        raise ValueError(
-            "Conditional variance lost numerical precision; rescale the process"
-        )
-    np.fill_diagonal(covariance, np.maximum(diagonal, 0))
-    conditioning = dict(
-        observed_through=length - 1,
-        known_generator_parameters=True,
-        future_observations_used=False,
-        **conditioning,
-    )
-    reference_args = dict(
-        mean=mean,
-        variance=np.diag(covariance).reshape(horizon, 1).copy(),
-        covariance=covariance,
-        index=task.future_index.copy(),
-        target_names=("y",),
-        conditioning=conditioning,
-    )
-    if sampler is None:
-        reference = Reference(**reference_args)
-    else:
-        reference = SimulationReference(
-            **reference_args,
-            sampler=sampler,
-            sampler_kind=(
-                "approximate_conditional" if approximate else "exact_conditional"
-            ),
-        )
-    manifest = dict(
-        schema_version=1,
-        kind=kind,
-        context_length=length,
-        horizon=horizon,
-        n_targets=1,
-        target_names=["y"],
-        seed=seed,
-        parameters=p,
-        reference_kind=reference.kind,
-        conditioning=deepcopy(reference.conditioning),
-        array_order="horizon_major_C",
-    )
-    return Case(task, observed, reference, manifest)
-
-
 # %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-composite
-def _composite(p, length, horizon, seed):
+def _composite(p, length, horizon, n_targets, seed):
     t = np.arange(length + horizon, dtype=float)
     schedule = {}
     for key in _CHANGE_FIELDS:
@@ -566,7 +172,7 @@ def _composite(p, length, horizon, seed):
     if p["jump_rate"]:
 
         def sampler(n, sample_seed):
-            rng = _reference_streams(sample_seed)
+            rng = _streams(sample_seed, role=1)
             out = np.empty((n, horizon, 1))
             previous = np.full(n, last_residual)
             for h in range(horizon):
@@ -580,43 +186,11 @@ def _composite(p, length, horizon, seed):
                 out[:, h, 0] = signal[length + h] + previous
             return out
 
-    return values, mean, covariance, conditioning, sampler, False
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-to-values
-def _to_values(returns, p):
-    if p["output"] == "log_return":
-        return returns
-    log_values = np.r_[
-        np.log(p["initial_price"]), np.log(p["initial_price"]) + np.cumsum(returns)
-    ]
-    return _exp(log_values, "Simulated price") if p["output"] == "price" else log_values
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-observed-returns
-def _observed_returns(values, p, length):
-    history = np.asarray(values[:length])
-    if p["output"] == "log_return":
-        return history
-    return np.diff(np.log(history) if p["output"] == "price" else history)
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-transform-samples
-def _transform_samples(returns, p, last):
-    if p["output"] == "log_return":
-        return returns[..., None]
-    log_futures = (np.log(last) if p["output"] == "price" else last) + np.cumsum(
-        returns, axis=1
-    )
-    return (
-        _exp(log_futures, "Reference price draws")
-        if p["output"] == "price"
-        else log_futures
-    )[..., None]
+    return values, mean, covariance, conditioning, sampler, {}
 
 
 # %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-merton
-def _merton(p, length, horizon, seed):
+def _merton(p, length, horizon, n_targets, seed):
     rng = _streams(seed)
     count = length + horizon - (p["output"] != "log_return")
     args = [
@@ -642,11 +216,11 @@ def _merton(p, length, horizon, seed):
             )
 
     def sampler(n, sample_seed):
-        rng = _reference_streams(sample_seed)
+        rng = _streams(sample_seed, role=1)
         draws = np.column_stack(
             [_merton_increment(rng, n, *args) for _ in range(horizon)]
         )
-        return _transform_samples(draws, p, last)
+        return _transform_samples(draws[..., None], p, last)
 
     conditioning = dict(
         output_units=p["output"],
@@ -658,12 +232,12 @@ def _merton(p, length, horizon, seed):
         ),
     )
     gaussian = p["jump_rate"] == 0 and p["output"] != "price"
-    return values, mean, covariance, conditioning, None if gaussian else sampler, False
+    return values, mean, covariance, conditioning, None if gaussian else sampler, {}
 
 
 # %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-garch
-def _garch(p, length, horizon, seed):
-    rng = np.random.default_rng(seed)
+def _garch(p, length, horizon, n_targets, seed):
+    rng = _rng(seed)
     count = length + horizon - (p["output"] != "log_return")
     returns = np.empty(count)
     variance = p["initial_variance"]
@@ -692,45 +266,21 @@ def _garch(p, length, horizon, seed):
         ]
 
     def sampler(n, sample_seed):
-        rng = _reference_rng(sample_seed)
+        rng = _rng(sample_seed, role=1)
         variance = np.full(n, next_variance)
         draws = np.empty((n, horizon))
         for h in range(horizon):
             shock = np.sqrt(variance) * rng.standard_normal(n)
             draws[:, h] = p["mu"] + shock
             variance = p["omega"] + p["alpha"] * shock**2 + p["beta"] * variance
-        return _transform_samples(draws, p, last)
+        return _transform_samples(draws[..., None], p, last)
 
     conditioning = dict(
         output_units=p["output"],
         next_variance_from_observed_history=float(next_variance),
         initialization="specified_initial_variance",
     )
-    return values, mean, covariance, conditioning, sampler, False
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-regime-arrays
-def _regime_arrays(p):
-    return [
-        np.asarray(p[key], dtype=float)
-        for key in (
-            "regime_mu",
-            "regime_sigma",
-            "regime_jump_rate",
-            "regime_jump_mean",
-            "regime_jump_sigma",
-        )
-    ]
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-common-deterministic-return
-def _common_deterministic_return(p):
-    mu, sigma, rate, jm, js = _regime_arrays(p)
-    return bool(
-        np.all(sigma == 0)
-        and np.all((rate == 0) | ((jm == 0) & (js == 0)))
-        and np.all(mu == mu[0])
-    )
+    return values, mean, covariance, conditioning, sampler, {}
 
 
 # %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-emission-components
@@ -877,7 +427,7 @@ def _markov_price_moments(
 
 
 # %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-markov
-def _markov(p, length, horizon, seed):
+def _markov(p, length, horizon, n_targets, seed):
     rng = _streams(seed)
     transition = np.asarray(p["transition"])
     arrays = _regime_arrays(p)
@@ -919,7 +469,7 @@ def _markov(p, length, horizon, seed):
             covariance = covariance.cumsum(axis=0).cumsum(axis=1)
 
     def sampler(n, sample_seed):
-        rng = _reference_streams(sample_seed)
+        rng = _streams(sample_seed, role=1)
         states = rng["states"].choice(len(transition), size=n, p=posterior)
         draws = np.empty((n, horizon))
         for h in range(horizon):
@@ -928,7 +478,7 @@ def _markov(p, length, horizon, seed):
             cumulative[:, -1] = 1.0
             states = (uniforms[:, None] > cumulative).sum(axis=1)
             draws[:, h] = _merton_increment(rng, n, *[a[states] for a in arrays], dt)
-        return _transform_samples(draws, p, last)
+        return _transform_samples(draws[..., None], p, last)
 
     has_jumps = bool(np.any(rate > 0))
     conditioning = dict(
@@ -946,44 +496,41 @@ def _markov(p, length, horizon, seed):
             "numerically_filtered_posterior" if has_jumps else "filtered_posterior"
         ),
     )
-    return values, mean, covariance, conditioning, sampler, has_jumps
-
-
-# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-generate-process
-def generate_process(kind, parameters, context_length, horizon, n_targets=1, seed=0):
-    """Generate held-out data and a history-conditioned evaluator reference.
-
-    Finance-inspired families are controlled mechanisms, not claims of
-    stock-prediction superiority. All random streams are local. Hidden states,
-    future variance paths, jump times and scheduled changes never enter the
-    model's task. Joint GARCH labels numerical cross-covariance estimates explicitly;
-    regimes with jumps condition on a numerically filtered posterior.
-    """
-    p = resolve_process(kind, parameters, context_length, horizon, n_targets, seed)
-    if n_targets > 1:
-        from timegym.joint_processes import generate_joint_process
-
-        return generate_joint_process(kind, p, context_length, horizon, n_targets, seed)
-    builders = dict(
-        composite=_composite,
-        merton_jump_diffusion=_merton,
-        garch=_garch,
-        markov_switching=_markov,
-    )
-    with np.errstate(over="ignore", invalid="ignore"):
-        values, mean, covariance, conditioning, sampler, approximate = builders[kind](
-            p, context_length, horizon, seed
-        )
-    return _case(
-        kind,
-        p,
-        context_length,
-        horizon,
-        int(seed),
+    return (
         values,
         mean,
         covariance,
         conditioning,
         sampler,
-        approximate,
+        dict(sampler_kind="approximate_conditional") if has_jumps else {},
+    )
+
+
+# %% ../notebooks/14_controlled_processes.ipynb #controlled-fn-generate-process
+def _generate_resolved_process(
+    kind, parameters, context_length, horizon, n_targets=1, seed=0
+):
+    entry = _PROCESS_REGISTRY[kind]
+    builder = (
+        globals()[entry["scalar"]]
+        if n_targets == 1
+        else getattr(joint_processes, entry["joint"])
+    )
+    return _build_case(
+        builder, kind, parameters, context_length, horizon, n_targets, seed
+    )
+
+
+def generate_process(kind, parameters, context_length, horizon, n_targets=1, seed=0):
+    """Resolve a controlled mechanism and generate a history-conditioned case.
+
+    Financial families are controlled stresses, not evidence of stock-prediction
+    skill. Hidden states, future shocks and schedules remain evaluator-only.
+    Scenario uses the same builders with its already-resolved parameters.
+    """
+    resolved = resolve_process(
+        kind, parameters, context_length, horizon, n_targets, seed
+    )
+    return _generate_resolved_process(
+        kind, resolved, context_length, horizon, n_targets, seed
     )
