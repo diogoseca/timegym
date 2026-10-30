@@ -311,3 +311,45 @@ def test_joint_jump_regimes_are_explicitly_approximate_and_guarded():
     assert check.status=='UNSUPPORTED'
     assert 'p_value' not in check.evidence
     assert 'not_a_posterior_error_bound' in c.manifest['conditioning']['filter_note']
+
+
+def test_joint_fresh_and_accumulated_residuals_share_innovations_at_fixed_seed():
+    fresh = generate('composite', {'residual': 'white_noise', 'correlation': .6}, length=20)
+    walk = generate('composite', {'residual': 'random_walk', 'correlation': .6}, length=20)
+    fresh_values = np.concatenate([fresh.task.context.values, fresh.observed.values])
+    walk_values = np.concatenate([walk.task.context.values, walk.observed.values])
+    np.testing.assert_allclose(np.diff(walk_values, axis=0), fresh_values[1:], atol=1e-14)
+
+
+@pytest.mark.parametrize('correlation', [0., .7])
+def test_joint_garch_uses_canonical_simulation_kind_and_covariance_metadata(correlation):
+    c = generate('garch', {'correlation': correlation, 'moment_samples': 128}, horizon=3)
+    assert c.reference.kind == c.manifest['reference_kind'] == 'analytic_moments_simulation'
+    assert c.manifest['conditioning'] == c.reference.conditioning
+    assert 'variance_kind' not in c.reference.conditioning
+    assert 'covariance_method' not in c.reference.conditioning
+    if correlation:
+        assert c.reference.conditioning['covariance_kind'] == 'monte_carlo'
+        assert c.reference.conditioning['mean_kind'] == 'analytic'
+    else:
+        assert c.reference.moments_kind == 'analytic'
+        assert 'moment_samples' not in c.reference.capabilities
+
+
+@pytest.mark.parametrize('kind', KINDS)
+def test_joint_entry_points_share_manifest_keyword_vocabulary_and_resolved_builder(kind, monkeypatch):
+    import timegym.joint_processes as joint
+    from timegym.processes import resolve_process
+    arguments = dict(kind=kind, parameters={'correlation': .5}, context_length=12,
+                     horizon=2, n_targets=2, seed=9)
+    resolved = joint.resolve_joint_process(**arguments)
+    assert resolved == resolve_process(**arguments)
+
+    def unexpected_validation(*args, **kwargs):
+        raise AssertionError('resolved builder must not validate parameters again')
+
+    monkeypatch.setattr(joint, 'resolve_process', unexpected_validation)
+    direct = joint.generate_joint_process(**{**arguments, 'parameters': resolved})
+    expected = generate(kind, arguments['parameters'], length=12, horizon=2, seed=9)
+    assert direct.manifest == expected.manifest
+    np.testing.assert_array_equal(direct.reference.sample(8, 2), expected.reference.sample(8, 2))

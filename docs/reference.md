@@ -29,7 +29,16 @@ Core kinds: `white_noise`, `trend`, `seasonal`, `ar1`, `random_walk`. Additional
 joint-capable kinds: `composite`, `merton_jump_diffusion`, `garch`,
 `markov_switching`. Parameters are
 validated and serialized in their resolved form, including target-wise values
-and the innovation correlation matrix. All random draws use local generators.
+and the innovation correlation matrix. The four additional controlled families
+resolve their parameters once at construction; create a new `Scenario` to change
+them. Their scalar manifests retain scalar values, accepting a one-target
+`correlation` without adding dependence fields. All random draws use local generators.
+
+`Case` is defined in `timegym.contracts` and remains importable from `timegym` and
+`timegym.scenarios`. Direct `generate_process(...)` calls resolve raw parameters;
+`generate_joint_process(...)` accepts parameters already returned by
+`resolve_process(...)`. `resolve_joint_process(...)` is a compatibility wrapper
+with the same `context_length` and `n_targets` keywords.
 
 `scenario.display_name` provides the same parameter-aware name used in plots.
 The identifiers above remain unchanged in configurations and reports.
@@ -262,9 +271,12 @@ requires integration. The implementation averages conditional covariance
 matrices using a separate Monte Carlo ensemble and rescales their diagonals
 to analytical variances, preserving positive semidefiniteness. Log-level
 covariances accumulate these return blocks. First-step, zero-correlation, and
-fully deterministic-variance cases use analytical covariance.
+fully deterministic-variance cases use analytical covariance. The resolved joint
+GARCH parameters retain `moment_samples` and `moment_seed` for replay even in
+these analytical cases, where neither setting is used.
 
-For the numerical case, `SimulationReference` records
+Both cases retain `kind="analytic_moments_simulation"`. For the numerical case,
+`SimulationReference` records
 `moments_kind="analytic_mean_monte_carlo_covariance"`, `covariance_kind="monte_carlo"`,
 `moment_samples`, and `moment_seed`. Changing the moment seed changes only the
 numerical reference covariance, not observations, analytical means, or sampled

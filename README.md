@@ -180,7 +180,9 @@ pipeline = Pipeline(model_factory=lambda: MyForecaster(...))
 Alternatively provide a zero-argument model class, or an instance implementing
 `clone_unfitted()` that returns a fresh instance. TimeGym does not assume a deep
 copy clears hidden fitted state. The supplied factory/clone must honor that
-contract. Built-in step-based models require regular context indexes and the
+contract. With one observation, naive baselines accept any increasing future
+index after context; no spacing can be verified. With longer contexts, built-in
+step-based models require regular context indexes and the
 immediately following consecutive future labels.
 
 ## Read and reproduce the paper

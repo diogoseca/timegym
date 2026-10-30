@@ -91,7 +91,8 @@
     {
       "notebook": "notebooks/14_controlled_processes.ipynb",
       "modules": [
-        "timegym/processes.py"
+        "timegym/processes.py",
+        "timegym/_process_common.py"
       ]
     },
     {

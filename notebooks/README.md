@@ -51,7 +51,7 @@ The plot methods reuse `run.cases`; they do not refit. Calling
 
 The source notebooks combine reasoning, editable implementation cells, examples,
 and plots. Implementation cells are collapsed for reading; expand them to work
-on the code. The [source map](source-map.json) gives each of the 24 package modules
+on the code. The [source map](source-map.json) gives each of the 25 package modules
 one notebook owner.
 
 | Source notebook | Responsibility |

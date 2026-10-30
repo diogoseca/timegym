@@ -8,9 +8,19 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-__all__ = ["ForecastTask", "Forecast", "Reference", "SimulationReference"]
+__all__ = [
+    "DEFAULT_LEVELS",
+    "ForecastTask",
+    "Forecast",
+    "Reference",
+    "SimulationReference",
+    "Case",
+]
 
 # %% ../notebooks/08_forecast_contracts.ipynb #08_forecast_contract-05
+
+
+DEFAULT_LEVELS = (0.1, 0.5, 0.9)
 
 
 # %% ../notebooks/08_forecast_contracts.ipynb #index-and-target-validation
@@ -347,7 +357,7 @@ class Reference:
         noise = rng.standard_normal((n_samples, self.mean.size)) @ factor.T
         return (noise + self.mean.reshape(-1)).reshape(n_samples, *self.mean.shape)
 
-    def quantile(self, levels: tuple = (0.1, 0.5, 0.9)) -> np.ndarray:
+    def quantile(self, levels: tuple = DEFAULT_LEVELS) -> np.ndarray:
         """Return analytical marginal Gaussian quantiles, shape ``H,D,Q``."""
         probabilities = _real_array(levels, "levels")
         if probabilities.ndim != 1 or probabilities.size == 0:
@@ -363,7 +373,7 @@ class Reference:
         )
 
     def forecast(
-        self, n_samples: int = 256, seed: int = 0, levels: tuple = (0.1, 0.5, 0.9)
+        self, n_samples: int = 256, seed: int = 0, levels: tuple = DEFAULT_LEVELS
     ) -> Forecast:
         """Construct a correctly aligned forecast from this reference law."""
         return Forecast(
@@ -468,7 +478,7 @@ class SimulationReference(Reference):
             )
         return draws.copy()
 
-    def quantile(self, levels: tuple = (0.1, 0.5, 0.9)) -> np.ndarray:
+    def quantile(self, levels: tuple = DEFAULT_LEVELS) -> np.ndarray:
         """Estimate marginal quantiles from the declared reproducible ensemble."""
         probabilities = _real_array(levels, "levels")
         if probabilities.ndim != 1 or probabilities.size == 0:
@@ -485,7 +495,7 @@ class SimulationReference(Reference):
         )
 
     def forecast(
-        self, n_samples: int = 256, seed: int = 0, levels: tuple = (0.1, 0.5, 0.9)
+        self, n_samples: int = 256, seed: int = 0, levels: tuple = DEFAULT_LEVELS
     ) -> Forecast:
         """Return analytical means, Monte Carlo quantiles, and joint samples."""
         return Forecast(
@@ -496,3 +506,14 @@ class SimulationReference(Reference):
             samples=self.sample(n_samples, seed),
             target_names=self.target_names,
         )
+
+
+# %% ../notebooks/08_forecast_contracts.ipynb #case-definition
+@dataclass
+class Case:
+    """One held-out forecast task and its evaluator-only ground truth."""
+
+    task: ForecastTask
+    observed: pd.DataFrame
+    reference: Reference
+    manifest: dict[str, Any]

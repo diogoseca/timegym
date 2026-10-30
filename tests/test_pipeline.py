@@ -186,8 +186,11 @@ def test_series_integer_zero_name_is_preserved():
     assert forecast.target_names == (0,)
 
 
-def test_last_baseline_supports_one_observation():
-    forecast = Pipeline().predict(pd.DataFrame({"y": [3.0]}), pd.RangeIndex(1, 3))
+@pytest.mark.parametrize("strategy", ["last", "mean", "seasonal"])
+@pytest.mark.parametrize("index,future", [(pd.RangeIndex(1), pd.RangeIndex(1, 3)),
+                                         (pd.Index([5]), pd.Index([6, 9]))])
+def test_last_baseline_supports_one_observation(strategy, index, future):
+    forecast = Pipeline(NaiveForecaster(strategy)).predict(pd.DataFrame({"y": [3.0]}, index=index), future)
     np.testing.assert_array_equal(forecast.point, [[3], [3]])
 
 
@@ -242,3 +245,45 @@ def test_model_metadata_name_does_not_invoke_factories_and_identifies_steps():
             raise AssertionError("Metadata must not instantiate the model")
 
     assert Pipeline(model_factory=Factory())._model_name() == "model_factory"
+
+
+@pytest.mark.parametrize('seed', [-1, 1.5, 'x', True, np.bool_(False)])
+def test_ar1_rejects_invalid_seeds_at_construction(seed):
+    with pytest.raises(ValueError, match='seed'):
+        GaussianAR1Forecaster(seed=seed)
+
+
+@pytest.mark.parametrize('seed', [None, 0, np.int64(19)])
+def test_ar1_accepts_optional_nonnegative_integer_seeds(seed):
+    assert GaussianAR1Forecaster(seed=seed).seed == seed
+
+
+def test_sklearn_configuration_errors_fail_before_case_execution():
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.linear_model import Ridge
+    from timegym.models import SklearnForecaster
+
+    for steps in ([], None, 'Ridge', [StandardScaler()]):
+        with pytest.raises(ValueError, match='steps|Final step'):
+            SklearnForecaster(steps)
+    pipeline = Pipeline(window_length=4).add(StandardScaler())
+    with pytest.raises(ValueError, match='Final step.*StandardScaler'):
+        pipeline.run([Scenario('ar1')], seeds=[0])
+    pipeline.add(Ridge())
+    assert not any(d.status == 'ERROR' for d in pipeline.test(seeds=[0]).cases[0].diagnostics)
+
+
+@pytest.mark.parametrize('levels', [(), (.5, .1), (.5, .5), (0, .5), (.5, 1), (np.nan,), (1j,), [[.1, .9]]])
+def test_ar1_rejects_invalid_quantile_levels_at_construction(levels):
+    with pytest.raises(ValueError, match='levels'):
+        GaussianAR1Forecaster(levels=levels)
+
+
+def test_ar1_custom_quantiles_use_the_returned_joint_samples():
+    model = GaussianAR1Forecaster(n_samples=64, seed=7, levels=(.2, .8))
+    case = Scenario('ar1', context_length=30, horizon=4, n_targets=2).generate()
+    forecast = model.fit(case.task.context).predict(case.task.future_index)
+    assert forecast.levels == (.2, .8)
+    np.testing.assert_array_equal(forecast.quantiles,
+                                  np.moveaxis(np.quantile(forecast.samples, model.levels, axis=0), 0, -1))
+    assert forecast.validate(case.task) == []

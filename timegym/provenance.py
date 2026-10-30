@@ -26,10 +26,6 @@ _BUILTINS = {
     "NaiveForecaster": NaiveForecaster,
     "GaussianAR1Forecaster": GaussianAR1Forecaster,
 }
-_PARAMETERS = {
-    "NaiveForecaster": {"strategy", "period"},
-    "GaussianAR1Forecaster": {"n_samples", "seed"},
-}
 
 
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-20
@@ -90,24 +86,18 @@ def pipeline_config(pipeline):
                 if supplied is None or inspect.isclass(supplied)
                 else supplied
             )
-            parameters = {
-                name: getattr(template, name)
-                for name in sorted(_PARAMETERS[model_class.__name__])
-            }
+            parameters = template.params()
             model = {
                 "kind": "builtin",
                 "class": model_class.__name__,
                 "parameters": _json_safe(parameters),
             }
             replayable = True
-            if model_class is GaussianAR1Forecaster:
-                try:
-                    nonnegative_int(template.seed, "Model seed")
-                except ValueError:
-                    replayable = False
-                    model["reason"] = (
-                        "Exact replay requires a fixed nonnegative integer model seed."
-                    )
+            if model_class is GaussianAR1Forecaster and template.seed is None:
+                replayable = False
+                model["reason"] = (
+                    "Exact replay requires a fixed nonnegative integer model seed."
+                )
         else:
             model = {
                 "kind": "external",
@@ -155,15 +145,23 @@ def pipeline_from_config(config):
     if not isinstance(name, str) or name not in _BUILTINS:
         raise ValueError("Model class is not in the replay allowlist")
     parameters = model["parameters"]
-    if not isinstance(parameters, dict) or set(parameters) != _PARAMETERS[name]:
+    defaults = _BUILTINS[name]().params()
+    # Configurations written before configurable AR(1) quantiles used the default levels.
+    if (
+        name == "GaussianAR1Forecaster"
+        and isinstance(parameters, dict)
+        and "levels" not in parameters
+    ):
+        parameters = {**parameters, "levels": defaults["levels"]}
+    if not isinstance(parameters, dict) or set(parameters) != set(defaults):
         raise ValueError("Unexpected or missing built-in model constructor parameters")
     window = config["window_length"]
     window = positive_int(window, "window_length")
-    if name == "GaussianAR1Forecaster":
-        seed = parameters["seed"]
-        seed = nonnegative_int(seed, "seed")
+    restored = _BUILTINS[name](**parameters)
+    if isinstance(restored, GaussianAR1Forecaster) and restored.seed is None:
+        raise ValueError("Exact replay requires a fixed nonnegative integer model seed")
     return {
-        "model": _BUILTINS[name](**parameters),
+        "model": restored,
         "window_length": window,
         "reduction": config[reduction_key],
     }
