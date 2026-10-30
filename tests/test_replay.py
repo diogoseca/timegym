@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario
+from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, TestReport
 from timegym.pipeline import replay_case
 
 
@@ -21,7 +21,7 @@ def test_builtin_configuration_roundtrip_reproduces_exact_outputs(model):
     report = pipeline.test([Scenario("ar1", context_length=24, horizon=3, n_targets=2)],
                            seeds=[4, 8], check_dependence=True, n_calibration=19,
                            alpha=0.1, dependence_seed_offset=51)
-    replayed = replay_case(json.loads(report.to_json()), 1)
+    replayed = TestReport.from_json(report.to_json()).replay_case(1)
     assert replayed.cases[0].to_dict() == report.cases[1].to_dict()
     assert all(replayed.metadata["replay"].values())
     assert report.metadata["diagnostic_settings"]["dependence_seed_offset"] == 51
@@ -91,19 +91,19 @@ def test_replay_rejects_ambiguous_flags_and_case_identity():
     changed = deepcopy(report)
     changed["metadata"]["diagnostic_settings"]["check_dependence"] = "false"
     with pytest.raises(ValueError, match="boolean"):
-        replay_case(changed)
+        TestReport.from_dict(changed).replay_case()
     changed = deepcopy(report)
     changed["cases"][0]["seed"] = 3
     with pytest.raises(ValueError, match="disagree"):
-        replay_case(changed)
+        TestReport.from_dict(changed).replay_case()
     with pytest.raises(ValueError, match="outside"):
-        replay_case(report, 1)
+        TestReport.from_dict(report).replay_case(1)
 
 
 def test_replay_exposes_source_changes_instead_of_asserting_identical_environment():
     report = Pipeline().test([Scenario("random_walk")], seeds=[2]).to_dict()
     report["metadata"]["source"]["digest"] = "different source"
-    replayed = replay_case(report)
+    replayed = TestReport.from_dict(report).replay_case()
     assert replayed.metadata["replay"]["source_matches"] is False
     assert replayed.metadata["replay"]["metrics_match"] is True
 
@@ -152,7 +152,7 @@ def test_legacy_strategy_config_and_report_replay_normalize_to_reduction():
     report = pipeline.test([Scenario("trend", context_length=12, horizon=3)], seeds=[4]).to_dict()
     report["metadata"]["pipeline_config"] = legacy
     report["metadata"]["strategy"] = report["metadata"].pop("reduction")
-    replayed = replay_case(report)
+    replayed = TestReport.from_dict(report).replay_case()
     assert replayed.metadata["replay"]["metrics_match"]
     assert replayed.metadata["replay"]["diagnostics_match"]
     assert replayed.metadata["pipeline_config"] == config
@@ -180,3 +180,67 @@ def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options
         Pipeline(reduction="direct")
     with pytest.raises(ValueError, match="unknown.*last.*mean.*seasonal.*drift"):
         NaiveForecaster(strategy="unknown")
+
+
+def test_replay_rejects_raw_dicts_instead_of_bypassing_report_validation():
+    payload = Pipeline().test([Scenario("trend", context_length=12, horizon=2)], seeds=[0]).to_dict()
+    payload["cases"][0]["diagnostics"][0]["status"] = "PASSED"
+    with pytest.raises(TypeError, match="requires a TestReport"):
+        replay_case(payload)
+    with pytest.raises(ValueError, match="diagnostic status"):
+        TestReport.from_dict(payload)
+
+
+def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp_path):
+    from timegym.cli import main
+
+    report = Pipeline(NaiveForecaster("seasonal", period=50)).test(
+        [Scenario("ar1", context_length=16, horizon=3)], seeds=[0])
+    diagnostic = report.cases[0].diagnostics[0]
+    assert diagnostic.status == "ERROR"
+    diagnostic.evidence["traceback"] = diagnostic.evidence["traceback"].replace(
+        str(Path(__file__).resolve().parents[1]), "/another/machine/timegym")
+    replayed = report.replay_case()
+    comparison = replayed.metadata["replay"]
+    assert comparison["reproduced"]
+    assert comparison["diagnostics_match"]
+    assert not comparison["traceback_match"]
+    assert comparison["same_environment"]
+    path = tmp_path / "error.json"
+    report.to_json(path)
+    assert main(["replay", str(path)]) == 0
+    assert main(["replay", str(path), "--require-same-environment"]) == 0
+    diagnostic.evidence["exception_message"] = "a different failure"
+    assert not report.replay_case().metadata["replay"]["reproduced"]
+
+
+@pytest.mark.parametrize("field", ["metrics", "diagnostics", "manifest", "source", "dependencies", "python"])
+def test_replay_verdicts_distinguish_results_from_environment(field):
+    report = Pipeline().test([Scenario("ar1", context_length=12, horizon=2)], seeds=[0])
+    if field == "metrics":
+        report.cases[0].metrics["mse"] += 1
+    elif field == "diagnostics":
+        report.cases[0].diagnostics[0].message = "different message"
+    elif field == "manifest":
+        report.cases[0].manifest["extra"] = "different manifest"
+    elif field == "source":
+        report.metadata["source"]["digest"] = "changed"
+    elif field == "dependencies":
+        report.metadata["dependencies"]["numpy"] = "changed"
+    else:
+        report.metadata["python"] = "changed"
+    comparison = report.replay_case().metadata["replay"]
+    result_changed = field in {"metrics", "diagnostics", "manifest"}
+    assert comparison["reproduced"] is (not result_changed)
+    assert comparison["same_environment"] is result_changed
+
+
+def test_schema_constants_describe_current_writes_and_legacy_config_reads():
+    from timegym.reporting import REPORT_SCHEMA_VERSION
+    from timegym.provenance import PIPELINE_CONFIG_SCHEMA_VERSION
+    from timegym.scenarios import MANIFEST_SCHEMA_VERSION
+
+    report = Pipeline().test([Scenario("ar1", context_length=12, horizon=2)], seeds=[0])
+    assert report.to_dict()["schema_version"] == REPORT_SCHEMA_VERSION == "2.0"
+    assert report.metadata["pipeline_config"]["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION == 2
+    assert report.cases[0].manifest["schema_version"] == MANIFEST_SCHEMA_VERSION == 1

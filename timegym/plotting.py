@@ -110,7 +110,7 @@ def _diagnostic_problems(entry):
     return [
         f"{diagnostic.status} · {diagnostic.name}: {diagnostic.message}"
         for diagnostic in entry.result.diagnostics
-        if diagnostic.status in {"FAIL", "ERROR"}
+        if diagnostic.failed
     ]
 
 

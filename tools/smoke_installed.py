@@ -35,7 +35,6 @@ def main():
     import timegym
     from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, TestReport
     from timegym.cli import alignment_demo
-    from timegym.pipeline import replay_case
 
     installed_path = Path(timegym.__file__).resolve()
     repository = Path(__file__).resolve().parents[1]
@@ -62,9 +61,8 @@ def main():
         report_path = Path(temporary) / "report.json"
         repaired.to_json(report_path)
         loaded = TestReport.read(report_path)
-        replay = replay_case(loaded.to_dict(), 0)
-        assert all(replay.metadata["replay"][key] for key in
-                   ("metrics_match", "diagnostics_match", "manifest_match"))
+        replay = loaded.replay_case(0)
+        assert replay.metadata["replay"]["reproduced"]
     from timegym.diagnostics import covariance_dependence_check
     joint_processes = []
     for kind in ("composite", "merton_jump_diffusion", "garch", "markov_switching"):
@@ -76,8 +74,7 @@ def main():
         assert distribution.validate(generated.task) == []
         retained = Pipeline(NaiveForecaster()).run([spec], seeds=[17])
         rechecked = TestReport.from_json(retained.report.to_json()).replay_case()
-        assert all(rechecked.metadata["replay"][key] for key in
-                   ("metrics_match", "diagnostics_match", "manifest_match"))
+        assert rechecked.metadata["replay"]["reproduced"]
         if kind == "garch":
             assert generated.reference.moments_kind == "analytic_mean_monte_carlo_covariance"
             assert generated.reference.sampler_kind == "exact_conditional"

@@ -1,3 +1,4 @@
+from timegym import TestReport
 """Boundary inputs must not silently become unreplayable or misaligned tasks."""
 
 from copy import deepcopy
@@ -8,7 +9,6 @@ import pandas as pd
 import pytest
 
 from timegym import Forecast, ForecastTask, Pipeline, Reference, Scenario
-from timegym.pipeline import replay_case
 
 
 @pytest.mark.parametrize("window", [0, -1, True, False, np.bool_(True), 1.5, "12", None])
@@ -94,7 +94,7 @@ def test_replay_schema_versions_do_not_accept_boolean_aliases_for_integers():
     changed = deepcopy(report)
     changed["cases"][0]["manifest"]["schema_version"] = True
     with pytest.raises(ValueError, match="scenario manifest schema"):
-        replay_case(changed)
+        TestReport.from_dict(changed).replay_case()
 
 
 @pytest.mark.parametrize("values, crossing", [([-1e308, 1e308], False), ([1e308, -1e308], True)])

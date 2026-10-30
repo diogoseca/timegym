@@ -4,7 +4,13 @@ from .contracts import Forecast, ForecastTask, Reference, SimulationReference
 from .scenarios import Scenario, Case
 from .pipeline import Pipeline
 from .models import NaiveForecaster, GaussianAR1Forecaster
-from .reporting import TestReport
+from .reporting import (
+    TestReport,
+    DiagnosticStatus,
+    DiagnosticCategory,
+    DiagnosticResult,
+    CaseResult,
+)
 from .evaluation import ForecastRun, EvaluatedCase
 
 __all__ = [
@@ -20,6 +26,10 @@ __all__ = [
     "TestReport",
     "ForecastRun",
     "EvaluatedCase",
+    "DiagnosticStatus",
+    "DiagnosticCategory",
+    "DiagnosticResult",
+    "CaseResult",
 ]
 
 # %% ../notebooks/12_package.ipynb #12_package-05

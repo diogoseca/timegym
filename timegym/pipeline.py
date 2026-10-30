@@ -12,10 +12,10 @@ from .models import (
     fresh_model,
     is_sklearn_regressor,
 )
-from .scenarios import Scenario
+from .scenarios import Scenario, MANIFEST_SCHEMA_VERSION
 from .data.synthetic import default_scenarios
 from .diagnostics import evaluate_forecast, exception_evidence
-from .reporting import CaseResult, DiagnosticResult
+from .reporting import CaseResult, DiagnosticResult, TestReport
 from .evaluation import EvaluatedCase, ForecastRun
 from .provenance import (
     pipeline_config,
@@ -271,24 +271,49 @@ class Pipeline:
 
 
 # %% ../notebooks/07_pipeline.ipynb #10_reports_and_repla-32
-def replay_case(report, case_index=0):
+def _without_tracebacks(value):
+    if isinstance(value, dict):
+        return {
+            key: _without_tracebacks(item)
+            for key, item in value.items()
+            if key != "traceback"
+        }
+    if isinstance(value, list):
+        return [_without_tracebacks(item) for item in value]
+    return value
+
+
+def _tracebacks(value, path=()):
+    found = {}
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == "traceback":
+                found[path + (key,)] = item
+            else:
+                found.update(_tracebacks(item, path + (key,)))
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            found.update(_tracebacks(item, path + (index,)))
+    return found
+
+
+def replay_case(report: TestReport, case_index=0):
     """Replay one report case and compare regenerated metrics and diagnostics.
 
     The return value is a new TestReport. ``metadata['replay']`` records exact
-    result equality and source/dependency agreement. Replaying in a different
-    environment is allowed and reported, not silently called identical.
+    result equality excluding tracebacks, plus traceback and environment agreement.
+    Replaying in a different environment is allowed and reported.
     """
-    payload = report.to_dict() if hasattr(report, "to_dict") else report
-    if not isinstance(payload, dict) or payload.get("schema_version") != "2.0":
-        raise ValueError("Replay requires a TimeGym report with schema_version '2.0'")
+    if not isinstance(report, TestReport):
+        raise TypeError(
+            "replay_case requires a TestReport; load saved data with TestReport.from_dict"
+        )
+    payload = report.to_dict()
     case_index = nonnegative_int(case_index, "case_index")
-    cases = payload.get("cases")
-    if not isinstance(cases, list) or case_index >= len(cases):
+    if case_index >= len(report.cases):
         raise ValueError("case_index is outside the saved report")
-    original = cases[case_index]
-    saved_metadata = payload.get("metadata", {})
-    if not isinstance(original, dict) or not isinstance(saved_metadata, dict):
-        raise ValueError("Report case and metadata must be JSON objects")
+    original = payload["cases"][case_index]
+    saved_metadata = payload["metadata"]
     pipeline = Pipeline.from_config(saved_metadata.get("pipeline_config"))
     settings = saved_metadata.get("diagnostic_settings")
     setting_keys = {
@@ -300,12 +325,10 @@ def replay_case(report, case_index=0):
     if not isinstance(settings, dict) or set(settings) != setting_keys:
         raise ValueError("Report diagnostic settings are absent or unsupported")
     settings = diagnostic_settings(**settings)
-    manifest = original.get("manifest", {})
-    if not isinstance(manifest, dict):
-        raise ValueError("Scenario manifest must be a JSON object")
+    manifest = original["manifest"]
     if (
         type(manifest.get("schema_version")) is not int
-        or manifest["schema_version"] != 1
+        or manifest["schema_version"] != MANIFEST_SCHEMA_VERSION
     ):
         raise ValueError("Unsupported scenario manifest schema")
     constructor_keys = (
@@ -329,7 +352,10 @@ def replay_case(report, case_index=0):
     regenerated.metadata["replay"] = {
         "case_index": case_index,
         "metrics_match": actual["metrics"] == original.get("metrics"),
-        "diagnostics_match": actual["diagnostics"] == original.get("diagnostics"),
+        "diagnostics_match": _without_tracebacks(actual["diagnostics"])
+        == _without_tracebacks(original["diagnostics"]),
+        "traceback_match": _tracebacks(actual["diagnostics"])
+        == _tracebacks(original["diagnostics"]),
         "manifest_match": actual["manifest"] == manifest,
         "source_matches": regenerated.metadata["source"]
         == saved_metadata.get("source"),
@@ -338,4 +364,13 @@ def replay_case(report, case_index=0):
         "python_matches": regenerated.metadata["python"]
         == saved_metadata.get("python"),
     }
+    comparison = regenerated.metadata["replay"]
+    comparison["reproduced"] = all(
+        comparison[key]
+        for key in ("metrics_match", "diagnostics_match", "manifest_match")
+    )
+    comparison["same_environment"] = all(
+        comparison[key]
+        for key in ("source_matches", "dependencies_match", "python_matches")
+    )
     return regenerated

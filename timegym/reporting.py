@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from ._internal import _json_safe
+from ._internal import _json_safe, nonnegative_int
 from enum import Enum
 import json
 from pathlib import Path
@@ -10,7 +10,14 @@ from collections import Counter
 import math
 import numpy as np
 
-__all__ = ["DiagnosticStatus", "DiagnosticResult", "CaseResult", "TestReport"]
+__all__ = [
+    "REPORT_SCHEMA_VERSION",
+    "DiagnosticStatus",
+    "DiagnosticCategory",
+    "DiagnosticResult",
+    "CaseResult",
+    "TestReport",
+]
 
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-05
 
@@ -24,6 +31,19 @@ class DiagnosticStatus(str, Enum):
     ERROR = "ERROR"
 
 
+class DiagnosticCategory(str, Enum):
+    CORRECTNESS = "correctness"
+    EVALUATION = "evaluation"
+    CAPABILITY = "capability"
+    UNCERTAINTY = "uncertainty"
+    DISTRIBUTION = "distribution"
+    METAMORPHIC = "metamorphic"
+    EXECUTION = "execution"
+
+
+REPORT_SCHEMA_VERSION = "2.0"
+
+
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-11
 @dataclass
 class DiagnosticResult:
@@ -34,9 +54,28 @@ class DiagnosticResult:
     evidence: dict = field(default_factory=dict)
 
     def __post_init__(self):
-        self.status = DiagnosticStatus(self.status).value
+        _report_text(self.name, "diagnostic.name")
+        _report_text(self.message, "diagnostic.message", allow_empty=True)
+        try:
+            self.status = DiagnosticStatus(self.status).value
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Unsupported diagnostic status") from exc
+        try:
+            self.category = DiagnosticCategory(self.category).value
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Unsupported diagnostic category") from exc
+        if not isinstance(self.evidence, dict):
+            raise ValueError("diagnostic.evidence must be an object")
+        self.name, self.message = str(self.name), str(self.message)
+        self.evidence = _json_safe(self.evidence)
+
+    @property
+    def failed(self) -> bool:
+        """Whether this finding counts as a detected failure in CI and plots."""
+        return self.status in (DiagnosticStatus.FAIL, DiagnosticStatus.ERROR)
 
     def to_dict(self):
+        self.__post_init__()
         return _json_safe(self)
 
 
@@ -49,7 +88,36 @@ class CaseResult:
     metrics: dict = field(default_factory=dict)
     manifest: dict = field(default_factory=dict)
 
+    def __post_init__(self):
+        _report_text(self.scenario, "case.scenario")
+        self.scenario = str(self.scenario)
+        if self.seed is not None:
+            self.seed = nonnegative_int(self.seed, "case.seed")
+        if not isinstance(self.diagnostics, list):
+            raise ValueError("case.diagnostics must be a list")
+        for diagnostic in self.diagnostics:
+            if not isinstance(diagnostic, DiagnosticResult):
+                raise ValueError(
+                    "case.diagnostics must contain DiagnosticResult objects"
+                )
+            diagnostic.__post_init__()
+        if not isinstance(self.metrics, dict) or not isinstance(self.manifest, dict):
+            raise ValueError("case.metrics and manifest must be objects")
+        for name, value in self.metrics.items():
+            _report_text(name, "case.metrics key")
+            if (
+                isinstance(value, (bool, np.bool_))
+                or not isinstance(value, (int, float, np.integer, np.floating))
+                or (
+                    isinstance(value, (float, np.floating)) and not math.isfinite(value)
+                )
+            ):
+                raise ValueError(f"case.metrics.{name} must be a finite number")
+        self.metrics = _json_safe(self.metrics)
+        self.manifest = _json_safe(self.manifest)
+
     def to_dict(self):
+        self.__post_init__()
         return _json_safe(self)
 
 
@@ -101,6 +169,17 @@ class TestReport:
     cases: list[CaseResult]
     metadata: dict = field(default_factory=dict)
 
+    def __post_init__(self):
+        if not isinstance(self.cases, list) or not isinstance(self.metadata, dict):
+            raise ValueError(
+                "report.cases must be a list and report.metadata must be an object"
+            )
+        for case in self.cases:
+            if not isinstance(case, CaseResult):
+                raise ValueError("report.cases must contain CaseResult objects")
+            case.__post_init__()
+        self.metadata = _json_safe(self.metadata)
+
     @property
     def summary(self):
         counts = Counter(
@@ -113,14 +192,14 @@ class TestReport:
                 status.value: counts[status.value] for status in DiagnosticStatus
             },
             "failed_cases": sum(
-                any(d.status in {"FAIL", "ERROR"} for d in case.diagnostics)
-                for case in self.cases
+                any(d.failed for d in case.diagnostics) for case in self.cases
             ),
         }
 
     def to_dict(self):
+        self.__post_init__()
         return {
-            "schema_version": "2.0",
+            "schema_version": REPORT_SCHEMA_VERSION,
             "cases": _json_safe(self.cases),
             "metadata": _json_safe(self.metadata),
             "summary": self.summary,
@@ -146,8 +225,10 @@ class TestReport:
         _report_fields(
             payload, {"schema_version", "cases", "metadata", "summary"}, "report"
         )
-        if payload["schema_version"] != "2.0":
-            raise ValueError("Unsupported report schema_version; expected '2.0'")
+        if payload["schema_version"] != REPORT_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported report schema_version; expected {REPORT_SCHEMA_VERSION!r}"
+            )
         if not isinstance(payload["cases"], list) or not isinstance(
             payload["metadata"], dict
         ):
@@ -160,20 +241,8 @@ class TestReport:
             _report_fields(
                 record, {"scenario", "seed", "diagnostics", "metrics", "manifest"}, path
             )
-            _report_text(record["scenario"], f"{path}.scenario")
-            seed = record["seed"]
-            if seed is not None and (type(seed) is not int or seed < 0):
-                raise ValueError(f"{path}.seed must be a nonnegative integer or null")
             if not isinstance(record["diagnostics"], list):
                 raise ValueError(f"{path}.diagnostics must be a list")
-            if not isinstance(record["metrics"], dict) or not isinstance(
-                record["manifest"], dict
-            ):
-                raise ValueError(f"{path}.metrics and manifest must be objects")
-            for name, value in record["metrics"].items():
-                _report_text(name, f"{path}.metrics key")
-                if type(value) not in (int, float):
-                    raise ValueError(f"{path}.metrics.{name} must be a finite number")
             diagnostics = []
             for diagnostic_index, item in enumerate(record["diagnostics"]):
                 diagnostic_path = f"{path}.diagnostics[{diagnostic_index}]"
@@ -182,23 +251,11 @@ class TestReport:
                     {"name", "status", "category", "message", "evidence"},
                     diagnostic_path,
                 )
-                for field_name in ("name", "status", "category", "message"):
-                    _report_text(
-                        item[field_name],
-                        f"{diagnostic_path}.{field_name}",
-                        allow_empty=field_name == "message",
-                    )
-                if item["status"] not in {status.value for status in DiagnosticStatus}:
-                    raise ValueError(
-                        f"{diagnostic_path}.status is not a supported diagnostic status"
-                    )
-                if not isinstance(item["evidence"], dict):
-                    raise ValueError(f"{diagnostic_path}.evidence must be an object")
                 diagnostics.append(DiagnosticResult(**item))
             cases.append(
                 CaseResult(
                     record["scenario"],
-                    seed,
+                    record["seed"],
                     diagnostics,
                     record["metrics"],
                     record["manifest"],
@@ -260,7 +317,7 @@ class TestReport:
             f"{case.scenario}[seed={case.seed}] {diagnostic.name}: {diagnostic.message}"
             for case in self.cases
             for diagnostic in case.diagnostics
-            if diagnostic.status in {"FAIL", "ERROR"}
+            if diagnostic.failed
         ]
         if failures:
             raise AssertionError("TimeGym detected failures:\n" + "\n".join(failures))

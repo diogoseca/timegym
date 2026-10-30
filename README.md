@@ -88,7 +88,7 @@ per-check significance level.
   hidden regimes with optional jumps; joint shocks, jumps and regimes, with explicit reference capabilities.
 - Conditional Gaussian means, variances, cross-horizon covariance, quantiles and
   samples. AR(1)/random-walk references condition on the last observed context.
-- MSE, MAE, MASE, pinball loss, marginal empirical CRPS, energy and variogram scores.
+- MSE, MAE, MASE (lag-1 context scaling), pinball loss, marginal empirical CRPS, energy and variogram scores.
 - An optional finite Monte Carlo covariance check against a known reference law.
 - Opt-in location-equivariance testing for models that explicitly claim it.
 - Native naive/seasonal/drift and fitted Gaussian AR(1) baselines, plus a thin

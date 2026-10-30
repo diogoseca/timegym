@@ -3,6 +3,7 @@
 from dataclasses import fields, is_dataclass
 from enum import Enum
 import math
+import traceback
 from typing import Any
 import numpy as np
 
@@ -48,20 +49,38 @@ def _real_array(value: Any, name: str) -> np.ndarray:
 
 
 # %% ../notebooks/12_package.ipynb #10_reports_and_repla-09
+def _exception_evidence(exc: BaseException) -> dict:
+    """Format the supplied exception even outside its handling block."""
+    return {
+        "exception_type": type(exc).__name__,
+        "exception_message": str(exc),
+        "traceback": "".join(traceback.format_exception(exc)),
+    }
+
+
 def _json_safe(value):
-    """Convert evidence without allowing NaN/Infinity or losing exception text."""
+    """Canonicalize evidence to JSON values, rejecting nonfinite numbers."""
     if isinstance(value, Enum):
-        return value.value
-    if value is None or isinstance(value, (str, bool, int)):
-        return value
-    if isinstance(value, float):
-        return value if math.isfinite(value) else None
+        return _json_safe(value.value)
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return str(value)
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    if isinstance(value, (int, np.integer)):
+        return int(value)
+    if isinstance(value, (float, np.floating)):
+        value = float(value)
+        if not math.isfinite(value):
+            raise ValueError("JSON evidence contains a nonfinite number")
+        return float(value)
     if isinstance(value, np.generic):
         return _json_safe(value.item())
     if isinstance(value, np.ndarray):
         return _json_safe(value.tolist())
     if isinstance(value, BaseException):
-        return {"exception_type": type(value).__name__, "exception_message": str(value)}
+        return _exception_evidence(value)
     if is_dataclass(value):
         return {
             item.name: _json_safe(getattr(value, item.name)) for item in fields(value)
@@ -71,5 +90,5 @@ def _json_safe(value):
     if isinstance(value, (tuple, list)):
         return [_json_safe(item) for item in value]
     if hasattr(value, "isoformat"):
-        return value.isoformat()
+        return str(value.isoformat())
     return repr(value)

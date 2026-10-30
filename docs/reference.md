@@ -177,21 +177,50 @@ restore allowlisted built-in models. Factories, custom models and sklearn steps
 are explicitly marked non-replayable. A JSON report records model configuration,
 source fingerprint, dependency versions and diagnostic settings. Use
 `report.replay_case(case_index=0)` or `python examples/reproduce_report.py report.json`
-to reproduce a supported built-in case. No arbitrary module import is performed
+to reproduce a supported built-in case. The script delegates to `timegym replay`.
+Replay accepts a `TestReport`; load dictionaries through `TestReport.from_dict`
+first. The `metadata["replay"]` result contains `reproduced` (metrics, diagnostics,
+and manifest agree) and `same_environment` (source, dependencies, and Python
+version agree). Diagnostic comparison excludes traceback fields, including those
+in nested exception evidence; `traceback_match` records their exact agreement
+separately. A changed exception type, message, or other evidence still prevents
+reproduction. No arbitrary module import is performed
 from a report. Reproduction on different numerical-library versions may require
 tolerance rather than exact floating-point equality.
 
-Outcomes: `PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`.
+`DiagnosticStatus` defines `PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, and
+`ERROR`. Only `FAIL` and `ERROR` count as failures (`DiagnosticResult.failed`).
+`DiagnosticCategory` defines `correctness` (forecast contracts), `evaluation`
+(evaluator inputs), `capability` (descriptive scores), `uncertainty` (intervals),
+`distribution` (joint-law checks), `metamorphic` (declared transformations), and
+`execution` (model execution). A check keeps its category across outcomes;
+`reference_covariance` is always `distribution`, `shift_equivariance` always
+`metamorphic`, and `metric_<name>` always `capability`.
+Both enums and `DiagnosticResult` and `CaseResult` are importable from `timegym`.
+Result construction validates these fields, nonempty names, dictionary evidence,
+nonnegative integer or absent seeds, and finite numeric metrics. Serialization
+canonicalizes NumPy scalars and builtin subclasses and rejects nonfinite values
+in evidence and metadata as well as metrics; it also revalidates mutable results.
 `report.to_json(path=None)` serializes diagnostics, measurements and manifests.
 `TestReport.from_dict(payload)`, `TestReport.from_json(text)`, and
 `TestReport.read(path)` load reports without executing saved model descriptions.
-They reject unknown schemas/statuses, nonfinite metrics, duplicate JSON keys,
+They reject unknown schemas/statuses/categories, nonfinite values, duplicate JSON keys,
 malformed records, and stored summary counts that disagree with the diagnostics.
 `from_json` always expects JSON text; use `read` for a file. Evidence and metadata
 are copied so later edits to the input dictionary cannot change the loaded report.
 `report.assert_passed()` raises for detected FAIL/ERROR outcomes; callers must
 inspect unsupported/inconclusive checks to decide whether their CI coverage is
 adequate. A pass is always scoped to a check.
+
+### Report schema
+
+`timegym.reporting.REPORT_SCHEMA_VERSION = "2.0"` identifies the report envelope.
+`timegym.provenance.PIPELINE_CONFIG_SCHEMA_VERSION = 2` identifies current
+pipeline configuration writes; schema 1 configurations with `strategy` remain
+readable and normalize to `reduction`. Scenario manifests use integer version 1,
+named by `timegym.scenarios.MANIFEST_SCHEMA_VERSION`. These are independent
+schemas: the historical report version is a string, while configuration and
+manifest versions are integers.
 
 ## Statistical and metamorphic diagnostics
 
@@ -201,7 +230,15 @@ law. It compares normalized covariance discrepancy with independent ensembles of
 the same sample size using a conservative finite Monte Carlo rank p-value. Its
 rejection can reflect variance or dependence errors. The threshold is per check;
 no multiple-comparison adjustment is silently applied. Too few samples or
-insufficient p-value resolution yield `INCONCLUSIVE`.
+insufficient p-value resolution yield `INCONCLUSIVE`. Fewer than two coordinates
+or a deterministic reference yield `UNSUPPORTED`. Both this check and
+`evaluate_forecast` require explicit nonnegative integer dependence seeds.
+Invalid seeds, calibration counts, alpha, or dependence flags are caller errors
+and raise before evaluation, including when dependence checking is disabled.
+The evaluator's `mase` scales by the lag-1 in-context naive MAE regardless of
+scenario period; `point_accuracy` evidence records `mase_seasonality: 1`.
+Point, quantile, and sample accuracy diagnostics include their available scores
+in evidence, with reference capabilities when a simulation reference supplies them.
 
 `check_shift_equivariance(pipeline, context, future_index, shift=10)` tests
 f(y+c)=f(y)+c. Use it only when this property is part of the model's intended

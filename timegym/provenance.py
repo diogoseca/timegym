@@ -13,6 +13,7 @@ from .models import GaussianAR1Forecaster, NaiveForecaster
 from ._internal import _json_safe
 
 __all__ = [
+    "PIPELINE_CONFIG_SCHEMA_VERSION",
     "pipeline_config",
     "pipeline_from_config",
     "runtime_provenance",
@@ -30,6 +31,7 @@ _PARAMETERS = {
     "NaiveForecaster": {"strategy", "period"},
     "GaussianAR1Forecaster": {"n_samples", "seed"},
 }
+PIPELINE_CONFIG_SCHEMA_VERSION = 2
 
 
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-20
@@ -116,7 +118,7 @@ def pipeline_config(pipeline):
             }
     return _json_safe(
         {
-            "schema_version": 2,
+            "schema_version": PIPELINE_CONFIG_SCHEMA_VERSION,
             "model": model,
             "window_length": pipeline.window_length,
             "reduction": pipeline.reduction,
@@ -131,7 +133,7 @@ def pipeline_from_config(config):
     if (
         not isinstance(config, dict)
         or type(config.get("schema_version")) is not int
-        or config["schema_version"] not in (1, 2)
+        or config["schema_version"] not in (1, PIPELINE_CONFIG_SCHEMA_VERSION)
     ):
         raise ValueError("Unsupported or incomplete pipeline configuration schema")
     reduction_key = "strategy" if config["schema_version"] == 1 else "reduction"

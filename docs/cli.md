@@ -54,3 +54,8 @@ An inspect exit of 0 can include UNSUPPORTED and INCONCLUSIVE checks. Decide
 which capabilities your application requires from the full report. A successful
 replay may reproduce a diagnostic failure; it certifies reproduction, not a pass.
 The environment flag additionally requires source, dependency and Python matches.
+
+Replay reports `reproduced` and `same_environment` separately. Traceback path
+changes do not change diagnostic reproduction; `traceback_match` preserves that
+comparison as additional evidence. `--require-same-environment` checks source,
+dependency, and Python agreement through `same_environment`.
