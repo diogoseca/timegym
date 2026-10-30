@@ -3,7 +3,7 @@
 from __future__ import annotations
 from ._internal import positive_int, nonnegative_int, _real_array, _has_complex_values
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -348,6 +348,59 @@ class Reference:
                 "Reference variance must agree with the covariance diagonal"
             )
 
+    @classmethod
+    def from_function(
+        cls,
+        mean_function: Callable[[pd.Index], np.ndarray | pd.DataFrame],
+        index: pd.Index,
+        *,
+        covariance: np.ndarray,
+        target_names: tuple = ("y",),
+        conditioning: dict[str, Any] | None = None,
+    ) -> Reference:
+        """Evaluate a user-supplied mean under an explicitly Gaussian noise law.
+
+        ``mean_function(index)`` returns ``H,D`` values in target order, or a
+        DataFrame with exactly matching labels. Covariance uses flattened
+        horizon-major, target-minor order. It is required: knowing a mean does
+        not imply zero noise or identify a conditional distribution.
+
+        The function is evaluated once and is not retained or serialized.
+        Supply only evaluator-known truth, not a fitted estimate presented as
+        ground truth. For non-Gaussian laws, use ``SimulationReference``.
+        """
+        from copy import deepcopy
+
+        if not callable(mean_function):
+            raise TypeError("mean_function must be callable as mean_function(index)")
+        if not isinstance(index, pd.Index) or len(index) == 0:
+            raise ValueError("Reference index must be a nonempty pandas Index")
+        names = _target_labels(target_names, "Reference target names")
+        if conditioning is not None and not isinstance(conditioning, dict):
+            raise TypeError("conditioning must be a dictionary or None")
+        covariance = _real_array(covariance, "Reference covariance").copy()
+        shape = (len(index), len(names))
+        size = shape[0] * shape[1]
+        if covariance.shape != (size, size):
+            raise ValueError(
+                "Reference covariance must have shape (horizon * targets, horizon * targets)"
+            )
+        mean = mean_function(index.copy(deep=True))
+        if isinstance(mean, pd.DataFrame):
+            if not mean.index.equals(index) or tuple(mean.columns) != names:
+                raise ValueError(
+                    "mean_function output index and target order must match the reference"
+                )
+        return cls(
+            mean=_real_array(mean, "Reference mean").copy(),
+            variance=np.diag(covariance).reshape(shape).copy(),
+            covariance=covariance,
+            index=index.copy(deep=True),
+            target_names=names,
+            kind="user_supplied_gaussian",
+            conditioning=deepcopy(conditioning) if conditioning is not None else {},
+        )
+
     def sample(self, n_samples: int, seed: int = 0) -> np.ndarray:
         """Draw joint futures with an isolated random generator, shape ``S,H,D``."""
         n_samples = positive_int(n_samples, "n_samples")
@@ -515,5 +568,5 @@ class Case:
 
     task: ForecastTask
     observed: pd.DataFrame
-    reference: Reference
+    reference: Reference | None
     manifest: dict[str, Any]

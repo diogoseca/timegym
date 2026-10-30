@@ -7,7 +7,7 @@ observation dots, blue prediction crosses, thin reference curves, and a clear
 forecast origin.
 
 Everything lives in this folder: **15 source notebooks generate the package,
-9 application notebooks use it**, and the [11 original notebooks](archive/README.md)
+10 application notebooks use it**, and the [11 original notebooks](archive/README.md)
 retain their development history and saved figures.
 
 ## Open and explore
@@ -34,6 +34,7 @@ explicit seeds. Installing the wheel alone does not install these notebook files
 | [25 · Capability sweeps](25_capability_sweeps.ipynb) | Five scenario families, custom models, context, noise, and repeated cases |
 | [26 · Composed and financial stresses](26_composed_and_financial_stresses.ipynb) | Controlled combinations, jumps, GARCH, hidden regimes, price means, and replay |
 | [27 · Joint financial uncertainty](27_joint_financial_uncertainty.ipynb) | Multi-target mechanisms, joint paths, dependence faults, aggregate uncertainty, and repair |
+| [28 · Write and test a custom model](28_custom_model.ipynb) | Nearest analogues, contract failures, real observations, and a supplied semi-synthetic truth function |
 
 For multiple plots of the same fitted outputs, retain the run:
 

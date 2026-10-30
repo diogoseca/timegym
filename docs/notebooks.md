@@ -1,7 +1,7 @@
 # Working with notebooks
 
 All notebooks live under [`notebooks/`](../notebooks/README.md). The collection
-has **15 source notebooks**, which generate the package, and **9 application
+has **15 source notebooks**, which generate the package, and **10 application
 notebooks**, which use it. The original 11 notebooks remain in
 [`notebooks/archive/`](../notebooks/archive/README.md).
 
@@ -21,7 +21,7 @@ data; the real-data notebook reads the included AirPassengers CSV.
 
 Source notebooks 01–15 pair explanations and examples with editable
 implementation cells. Expand those cells to change the library. Application
-notebooks 00 and 20–25 import the library and focus on forecasting problems.
+notebooks 00 and 20–28 import the library and focus on forecasting problems.
 Each notebook runs in its own kernel without variables from another notebook.
 
 The original `%%runwrite` workflow made notebooks a place to develop both the
@@ -65,3 +65,30 @@ regions. Independent synthetic cases supply replications; horizons and targets
 within a forecast do not become additional independent cases.
 
 The [joint financial uncertainty tutorial](../notebooks/27_joint_financial_uncertainty.ipynb) extends the financial examples to dependent targets and controlled cross-series pairing faults. [Source notebook 15](../notebooks/15_joint_processes.ipynb) explains and builds the joint generators.
+
+## Write and test a custom model
+
+[28 · Write and test a custom model](../notebooks/28_custom_model.ipynb) builds a
+k-nearest-analogues forecaster in three steps: write `fit(context)` and
+`predict(future_index)`, test it on known scenarios with `Pipeline.test`, then
+forecast real observations and a semi-synthetic series with supplied truth.
+Whole historical continuations supply empirical joint paths; their average
+supplies point predictions. An injected missing-row fault demonstrates a
+contract `FAIL`, while valid but inaccurate forecasts retain descriptive scores.
+
+![Nearest-analogue forecasts on Gaussian noise, linear trend, and seasonal scenarios: gray observations, blue prediction crosses, known-mean curves, and passing forecast contracts.](../notebooks/assets/custom-model-knn.png)
+
+This revives the 2021 KNN figure's visual comparison using the v2 plotting
+helpers. It does not reproduce the original recursive implementation. Contract
+success does not establish accuracy: raw historical continuations cannot
+extrapolate a rising level beyond their observed range.
+
+For raw real data, use `Case(reference=None, ...)`; unavailable reference checks
+remain `UNSUPPORTED`. For a declared Gaussian semi-synthetic process,
+`Reference.from_function(truth, index, covariance=..., target_names=...)`
+evaluates a known mean function once and validates its explicit covariance.
+The function returns `(horizon, targets)` values or an exactly aligned
+DataFrame. The tutorial's fixed curve comes from AirPassengers and is truth
+only for the constructed process, not an estimate promoted to the true law
+of the historical data. Custom models and truth functions require the notebook
+code for reproduction; automatic report replay does not reconstruct them.
