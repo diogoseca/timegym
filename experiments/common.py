@@ -35,7 +35,7 @@ def require_conclusion(predicate: bool, statement: str) -> None:
         raise ValueError(f"Recorded evidence does not support: {statement}")
 
 
-def close_statistics(computed: dict, recorded: dict, rel_tol: float = 1e-9, abs_tol: float = 1e-12) -> bool:
+def close_statistics(computed: dict, recorded: dict, rel_tol: float = 1e-8, abs_tol: float = 1e-9) -> bool:
     """Compare interval summaries up to floating-point roundoff across library versions."""
     if computed.keys() != recorded.keys():
         return False

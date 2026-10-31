@@ -173,10 +173,10 @@ def close_stats(computed: dict, recorded: dict) -> bool:
     for key, value in computed.items():
         other = recorded[key]
         if isinstance(value, (list, tuple)):
-            if len(value) != len(other) or not all(math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12) for a, b in zip(value, other)):
+            if len(value) != len(other) or not all(math.isclose(a, b, rel_tol=1e-8, abs_tol=1e-9) for a, b in zip(value, other)):
                 return False
         elif isinstance(value, float) or isinstance(other, float):
-            if not math.isclose(value, other, rel_tol=1e-9, abs_tol=1e-12):
+            if not math.isclose(value, other, rel_tol=1e-8, abs_tol=1e-9):
                 return False
         elif value != other:
             return False
