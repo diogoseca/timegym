@@ -1,255 +1,177 @@
-# TimeGym v2
+# TimeGym
 
 **Controlled verification and diagnosis for forecasting pipelines.**
 
-TimeGym tests forecast contracts, generates reproducible synthetic cases with
-valid conditional references, and records why a check failed. It distinguishes
-invalid outputs from model limitations and statistical uncertainty.
+[![Documentation](https://img.shields.io/badge/docs-diogoseca.github.io%2Ftimegym-black)](https://diogoseca.github.io/timegym/)
+[![Checks](https://github.com/diogoseca/timegym/actions/workflows/checks.yml/badge.svg)](https://github.com/diogoseca/timegym/actions/workflows/checks.yml)
+[![PyPI](https://img.shields.io/pypi/v/timegym)](https://pypi.org/project/timegym/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-**A forecast can have the same numerical error and still be on the wrong dates.**
-Try `timegym demo` to see that failure, its diagnostic report, and a verified
-repair. Then use the notebooks to inspect point forecasts, marginal uncertainty,
-and joint dependence with the same workflow.
+A forecast can have the same numerical error and still be on the wrong dates,
+the wrong targets, or the wrong scale. TimeGym catches that. It generates
+synthetic forecasting cases whose true conditional distribution is known, runs
+your model on them, checks the output against an explicit contract, scores it
+against the known reference, and writes down why anything failed.
 
-The package version is recorded in the generated [citation below](#cite). This
-release preparation accompanies a new v2 manuscript and a focused, runnable pilot; no new package release or arXiv submission
-has been published from this checkout.
+[![Six synthetic configurations, three seeds each: observations as dots, forecasts as crosses, conditional references as thin curves](notebooks/assets/quick-start-matrix.png)](https://diogoseca.github.io/timegym/notebooks/00_quick_start/)
 
-## Install and run
+**[Documentation](https://diogoseca.github.io/timegym/)** ·
+[Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) ·
+[Tutorials](https://diogoseca.github.io/timegym/docs/notebooks/) ·
+[API](https://diogoseca.github.io/timegym/docs/reference/) ·
+[Changelog](CHANGELOG.md)
+
+## Install
 
 <!-- BEGIN PYTHON SUPPORT -->
 Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
 <!-- END PYTHON SUPPORT -->
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e '.[dev]'
-timegym demo --output /tmp/timegym-demo --plot
-python examples/quickstart.py
-python -m pytest
+pip install timegym               # core: NumPy, pandas, SciPy
+pip install "timegym[plots]"      # plus Matplotlib for the figures
+pip install "timegym[sklearn]"    # plus the scikit-learn adapter
 ```
 
-Install from this checkout; the v2 development version is not yet published to
-PyPI. The demo writes two reports and a figure, and refuses to overwrite existing
-artifacts. Choose another output directory when rerunning it.
+From a clone, `pip install -e '.[dev]'` installs everything needed to run the
+tests and notebooks.
 
-Local tests pass on Python 3.13.2 with the scientific versions in
-`requirements-study.txt`, and on Python 3.12 with NumPy 1.26.4, pandas 2.2.3,
-SciPy 1.11.4, scikit-learn 1.4.2, and Matplotlib 3.8.4. CI covers the Python range above and installed-wheel checks on Linux, macOS, and Windows;
-those remote jobs have not been run from this checkout.
-Runtime dependency ranges are NumPy `>=1.26,<3`, pandas `>=2.2,<4`, and
-SciPy `>=1.11,<2`. The study file pins one reproduction environment; it is not
-the full supported range. Optional feature and market-data dependencies have
-version floors in `pyproject.toml`. The development-only Docker image installs
-that pinned stack before installing TimeGym without dependency resolution.
-See the [release guide](docs/release.md) for compatibility updates and publishing.
-
-The [validation record](docs/validation.md) lists completed checks and remaining
-release and research work.
+## Sixty seconds
 
 ```python
-from timegym import Pipeline, Scenario, NaiveForecaster
+from timegym import NaiveForecaster, Pipeline, Scenario
 
 pipeline = Pipeline(NaiveForecaster(strategy="last"))
 report = pipeline.test(
     scenarios=[Scenario("random_walk", context_length=120, horizon=12)],
     seeds=[0, 1, 2],
 )
-report.to_json("report.json")
-report.assert_passed()  # raises on FAIL or ERROR, not on unsupported capabilities
 print(report.summary)
+report.assert_passed()   # raises on FAIL or ERROR, never on unsupported capabilities
+report.to_json("report.json")
 ```
 
-Reports from the built-in naive and Gaussian AR(1) models can be replayed safely:
+Every case in the report carries the scenario, the seed, the model's
+parameters, each diagnostic with its status and evidence, and the versions of
+everything involved, so a failure can be reproduced later from the file alone.
 
-```bash
-timegym inspect report.json
-timegym replay report.json --case-index 0
-```
-
-The report includes model parameters, scenario seeds, diagnostic settings,
-dependency versions and a package-source fingerprint. Custom models and sklearn
-pipelines are described in metadata but explicitly marked as requiring their
-original integration code for replay; reports never dynamically import arbitrary
-model names.
-
-The [command-line guide](docs/cli.md) explains exit codes and environment checks.
-Python users can load a report with `TestReport.read("report.json")`; loading
-validates the schema, diagnostic statuses, finite values, and stored summary.
-
-`assert_passed()` is a CI gate for detected failures. It does **not** mean every
-capability was supported or that the model forecasts accurately. Accuracy scores
-are descriptive `INCONCLUSIVE` evidence until a justified acceptance rule is
-supplied. Optional covariance checks can reject clean ensembles at their stated
-per-check significance level.
-
-## What is implemented
-
-- Explicit `ForecastTask`, `Forecast`, `Reference`, `Scenario`, and `TestReport` objects.
-- Point means `(H,D)`, quantiles `(H,D,Q)`, and joint samples `(S,H,D)` with index,
-  target order, shape, finite-value, and quantile-order checks.
-- Fixed-mean white noise, linear trend plus white noise, seasonality,
-  stationary AR(1), and random walks with or without drift; multiple
-  targets with correlated Gaussian innovations; local seeded random generators.
-- Composed trend/seasonality/noise, scheduled changes, Merton jumps, GARCH, and
-  hidden regimes with optional jumps; joint shocks, jumps and regimes, with explicit reference capabilities.
-- Conditional Gaussian means, variances, cross-horizon covariance, quantiles and
-  samples. AR(1)/random-walk references condition on the last observed context.
-- MSE, MAE, MASE (lag-1 context scaling), pinball loss, marginal empirical CRPS, energy and variogram scores.
-- An optional finite Monte Carlo covariance check against a known reference law.
-- Opt-in location-equivariance testing for models that explicitly claim it.
-- Native naive/seasonal/drift and fitted Gaussian AR(1) baselines, plus a thin
-  recursive scikit-learn adapter with training-only transforms and fresh fits.
-- Eight output-fault fixtures and paired bypass repairs; model-level studies
-  exercise lag order, recursive state, inverse scaling, and target order.
-
-A reference is **privileged**: the evaluator knows the generating parameters;
-ordinary models receive only history and requested future indexes. It supplies a
-controlled diagnostic target, not information secretly given to a forecaster.
-Mean-reference MSE is a squared distance to the conditional mean; MAE/MASE are
-separate observed-data scores and need not rank mean forecasts the same way.
-
-## Learn with Jupyter
-
-Start with [00 · Quick start](notebooks/00_quick_start.ipynb): build a pipeline,
-inspect a matrix of forecast cases, and compare error distributions. Forecast
-means are blue crosses, observations are gray dots, and conditional references
-are thin curves, continuing the visual language of the 2021 notebooks.
-
-[![Six configurations from five families, three seeds each, with observation dots and forecast crosses](notebooks/assets/quick-start-matrix.png)](notebooks/00_quick_start.ipynb)
-
-```bash
-python -m pip install -e '.[notebooks]'
-python -m jupyterlab notebooks
-```
-
-The [notebook guide](notebooks/README.md) brings everything into one folder:
-**15 source notebooks build the package, and 10 application notebooks demonstrate
-it**. Explore [univariate uncertainty](notebooks/20_univariate_uncertainty.ipynb),
-[multivariate forecasts](notebooks/21_multivariate_forecasting.ipynb), or
-[joint uncertainty](notebooks/22_multivariate_uncertainty.ipynb). The examples
-use local data and CPU only. Explore the new [joint financial uncertainty notebook](notebooks/27_joint_financial_uncertainty.ipynb): correlated shocks, shared jumps and regimes, CCC-GARCH, preserved marginals with broken dependence, and repair verification. Explore the [composed and financial stress ladder](notebooks/26_composed_and_financial_stresses.ipynb) to add mechanisms one at a time; the [guide](docs/stress-cases.md) distinguishes generators from models under test.
-
-Keep an evaluated run to inspect its actual forecasts without fitting again:
+To look at the forecasts instead of the numbers, keep the run:
 
 ```python
 run = pipeline.run(seeds=[0, 1, 2])
 run.plot_forecasts()
 run.plot_errors(metric="mean_reference_mse")
-report = run.report
 ```
 
-`run.cases` retains each case, forecast, and diagnostic result. Plotting an
-existing run reuses those outputs. `pipeline.plot_tests(...)` and
-`pipeline.plot_errors(...)` are convenient alternatives that each create a new run.
+## What it checks
 
-## Develop in notebooks
+**Contracts.** A `Forecast` is a point array `(H, D)`, optional quantiles
+`(H, D, Q)` and optional joint samples `(S, H, D)`. TimeGym checks the index
+against the requested future, the target names and order, shapes, finiteness
+and quantile ordering before any score is computed. A misaligned index is a
+`FAIL` with the offending labels in the evidence, not a slightly worse MSE.
 
-The source notebooks are authoritative for all 25 Python modules in `timegym/`.
-Their implementation cells are collapsed but editable; demonstrations remain
-beside the code they explain. This continues the original notebook-first
-development workflow, using nbdev's modular exporter to regenerate complete
-modules from saved cells:
+[![A forecast with the right values on the wrong dates: the same error, a different diagnosis](notebooks/assets/alignment-demo.png)](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/)
+
+**References.** Each synthetic scenario knows its conditional mean, variance,
+cross-horizon covariance, quantiles and samples given the observed context.
+Scores against the reference (mean-reference MSE, CRPS, energy and variogram
+scores) measure distance to the truth, not to one noisy realisation.
+
+**Diagnostics with evidence.** Optional Monte Carlo covariance checks compare an
+ensemble to the known law at a stated significance level; equivariance checks
+verify what a model claims; eight output-fault fixtures with paired repairs
+show what each check catches. Accuracy stays `INCONCLUSIVE` until you supply
+an acceptance rule: TimeGym never invents a threshold.
+
+**Scenarios.** White noise, trend, seasonality, AR(1) and random walks with or
+without drift; multiple correlated targets; composed trend, seasonality and
+noise with scheduled changes, Merton jumps, GARCH volatility and hidden
+regimes; joint shocks, jumps and regimes across targets, each with explicit
+reference capabilities. The [scenario guide](docs/stress-cases.md) explains
+what every family can and cannot certify.
+
+## Bring your own model
+
+Any object with `fit(context)` and `predict(future_index)` returning a
+`Forecast` is a model. The [custom model tutorial](https://diogoseca.github.io/timegym/notebooks/28_custom_model/)
+writes a nearest-analogues forecaster from scratch, tests it on synthetic
+suites, then on real data with and without a known truth.
+
+[![A nearest-analogues forecaster on a synthetic series: truth line, observed points, predicted points](notebooks/assets/custom-model-knn.png)](https://diogoseca.github.io/timegym/notebooks/28_custom_model/)
+
+scikit-learn regressors plug in through a recursive adapter that fits its
+transforms on the training window only:
+
+```python
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import StandardScaler
+from timegym import Pipeline
+
+pipeline = Pipeline(window_length=12).add(StandardScaler()).add(Ridge(alpha=1.0))
+report = pipeline.test(seeds=[0])
+```
+
+Native models pass as an unfitted factory, `Pipeline(model_factory=lambda: MyModel(...))`,
+or as an instance with `clone_unfitted()`; TimeGym refits from scratch for every
+case and never assumes a deep copy clears fitted state.
+
+## Tutorials
+
+| Notebook | What it shows |
+|---|---|
+| [Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) | A pipeline, a matrix of cases, error distributions |
+| [Univariate uncertainty](https://diogoseca.github.io/timegym/notebooks/20_univariate_uncertainty/) | Marginal intervals, coverage, CRPS |
+| [Multivariate forecasting](https://diogoseca.github.io/timegym/notebooks/21_multivariate_forecasting/) | Several targets, lag features, per-target scores |
+| [Multivariate uncertainty](https://diogoseca.github.io/timegym/notebooks/22_multivariate_uncertainty/) | Joint paths, dependence, covariance checks |
+| [Faults, repairs and replay](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/) | Invalid outputs, inverse scaling, replaying a saved report |
+| [Real-data forecasts](https://diogoseca.github.io/timegym/notebooks/24_real_data_forecasts/) | Ordered origins on the AirPassengers series |
+| [Capability sweeps](https://diogoseca.github.io/timegym/notebooks/25_capability_sweeps/) | Five families, context and noise sweeps |
+| [Composed and financial stresses](https://diogoseca.github.io/timegym/notebooks/26_composed_and_financial_stresses/) | Jumps, GARCH, hidden regimes, one mechanism at a time |
+| [Joint financial uncertainty](https://diogoseca.github.io/timegym/notebooks/27_joint_financial_uncertainty/) | Shared shocks and regimes, CCC-GARCH, broken dependence |
+| [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | A forecaster from scratch, synthetic suites, real data |
+
+The notebooks run on CPU with local data. `pip install -e '.[notebooks]'` and
+`python -m jupyterlab notebooks` opens them; the
+[notebook guide](notebooks/README.md) describes the folder.
+
+## The paper
+
+The method and two controlled studies are described in the manuscript kept in
+this repository: [`paper/main.tex`](paper/main.tex), built into a
+[single-file version](paper/timegym-v2.tex) with every figure and table
+generated from the recorded study results. The studies, their frozen records
+and the exact reproduction recipe are in [`experiments/`](experiments/README.md)
+and [`paper/README.md`](paper/README.md). The original 2021 prototype is on
+arXiv as [2105.01404](https://arxiv.org/abs/2105.01404v1).
+
+## Development
+
+The package is written in notebooks. The source notebooks under `notebooks/`
+generate every module in `timegym/`; edit the notebook, export, test:
 
 ```bash
 python tools/export_notebooks.py
 python tools/export_notebooks.py --check
 python -m pytest
-python notebooks/check_notebooks.py
 ```
 
-Running notebook cells does not write package files. Save source edits and run
-the explicit export command before testing the generated package. See
-[contributing](docs/contributing.md) for the development cycle and
-[source ownership](notebooks/source-map.json) for notebook-to-module mappings.
-
-## Integrate an existing model
-
-For scikit-learn (optional `timegym[sklearn]` dependency):
-
-```python
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import Ridge
-from timegym import Pipeline
-
-pipeline = Pipeline(window_length=12)
-pipeline.add(StandardScaler()).add(Ridge(alpha=1.0))
-report = pipeline.test(seeds=[0])
-```
-
-For a native model, implement `fit(context: pandas.DataFrame)` and
-`predict(future_index: pandas.Index) -> Forecast`. Supply an unfitted factory:
-
-```python
-pipeline = Pipeline(model_factory=lambda: MyForecaster(...))
-```
-
-Alternatively provide a zero-argument model class, or an instance implementing
-`clone_unfitted()` that returns a fresh instance. TimeGym does not assume a deep
-copy clears hidden fitted state. The supplied factory/clone must honor that
-contract. With one observation, naive baselines accept any increasing future
-index after context; no spacing can be verified. With longer contexts, built-in
-step-based models require regular context indexes and the
-immediately following consecutive future labels.
-
-## Read and reproduce the paper
-
-The original manuscript and its source are available from
-[arXiv:2105.01404v1](https://arxiv.org/abs/2105.01404v1). The new version is
-maintained inside this repository:
-
-- [New manuscript](paper/main.tex), [generated single-file build](paper/timegym-v2.tex).
-- [Manuscript build and figures](paper/README.md).
-- [Verified references](paper/references.bib), [claim/evidence ledger](paper/claims.md).
-- [Study protocols and evidence](experiments/README.md).
-- [Recorded numerical results](experiments/results/results.json).
-- [Publication strategy](docs/publication-strategy.md).
-- [Migration notes](docs/migration.md).
-
-Follow the [canonical reproduction recipe](paper/README.md) to reproduce both
-studies and regenerate their tables, figures, and the standalone manuscript. The
-[study guide](experiments/README.md) covers environment setup, separate-output
-reruns, hash comparison, and rendering from frozen records.
-
-The selected pilot detected the injected structural and distribution faults,
-while retaining false alarms in clean controls. Its marginal-preserving
-permutation leaves CRPS unchanged up to floating-point rounding and affects joint
-scores. The inverse-scaling example improves four ordered origins of one real
-series. These are deliberately bounded results, not a representative estimate of
-all forecasting bugs or evidence of universal synthetic-to-real transfer.
-
-The separately versioned supplement compares five checks on four implementation
-defects across six conditions. It retains their misses and clean false alarms,
-and reports the cost in detection power of correcting four simultaneous
-covariance checks. One repair restores the intended recursion but worsens
-average forecast loss on the tested random walks: algorithm correctness and
-forecasting accuracy are distinct outcomes. See the
-[supplement records](experiments/results-v2/results.json) and
-[comparison figure](paper/figures/supplement-implementation-ablation.png).
+[Contributing](docs/contributing.md) describes the cycle, the versioning rule
+and the compatibility policy; [releasing](docs/release.md) describes how a tag
+becomes a PyPI release with an archived DOI.
 
 ## Scope
 
-This release does not implement automatic root-cause localization, automatic
-repair, general leakage detection, arbitrary DGP conditional inference, panels,
-hierarchies, missing/irregular observations, foundation-model integrations, or
-sktime/fev/GluonTS/Darts adapters. Quantile predictions are not treated as joint
-sample paths. Unsupported outputs remain explicit rather than being fabricated.
-
-The original ten development notebooks and Quick Start are preserved in
-[the notebook archive](notebooks/archive/README.md), including their plots,
-reasoning, implementation cells, and unfinished research directions. The
-active notebooks modernize the supported topics; they do not imply that every
-historical TODO has been implemented.
-
-Code: MIT license. Dataset and scholarly sources retain their original
-attribution; see [data provenance](experiments/data/README.md).
+TimeGym does not locate the root cause of a bug, repair models, detect general
+leakage, infer conditional references for arbitrary generators, or handle
+panels, hierarchies, missing or irregular observations. Unsupported checks are
+reported as unsupported, never silently skipped or fabricated.
 
 ## Cite
 
-Cite the software by version and source commit; GitHub's "Cite this repository"
-button reads the same metadata from [CITATION.cff](CITATION.cff). When a release
-is archived on Zenodo, cite that release's DOI instead.
+Cite the software by version; GitHub's "Cite this repository" reads the same
+metadata from [CITATION.cff](CITATION.cff). When a release is archived on
+Zenodo, cite that release's DOI.
 
 <!-- BEGIN GENERATED CITATION -->
 
@@ -280,5 +202,5 @@ The earlier manuscript:
 
 <!-- END GENERATED CITATION -->
 
-See the [changelog](CHANGELOG.md) for the 1.0.0 changes. No v2 DOI or
-publication record is claimed.
+MIT license. Datasets and cited works keep their own attribution; see
+[data provenance](experiments/data/README.md).

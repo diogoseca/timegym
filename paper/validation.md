@@ -95,7 +95,7 @@ Timing is recorded separately and is not a benchmark claim.
 
 ## Remaining release and research work
 
-CI covers the [declared Python range](../README.md#install-and-run), the older compatibility stack,
+CI covers the [declared Python range](../README.md#install), the older compatibility stack,
 installed wheels on Linux/macOS/Windows, all notebooks, documentation, and both
 studies. These remote jobs have not been executed from this checkout. Local
 validation was on macOS; do not infer Windows or Linux results from it.
@@ -108,4 +108,4 @@ For a stronger empirical paper, the next evidence should come from independently
 selected defects in other forecasting implementations and additional real tasks.
 The current studies support the specified workflow and expose useful blind spots;
 they do not estimate general debugging effectiveness. See the
-[claim ledger](../paper/claims.md) and [publication strategy](publication-strategy.md).
+[claim ledger](claims.md) and [publication strategy](publication-strategy.md).

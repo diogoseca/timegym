@@ -1,17 +1,63 @@
-site_name: TimeGym v2
+site_name: TimeGym
 site_description: Controlled verification and diagnosis for forecasting pipelines
 site_author: Diogo Seca
 repo_url: https://github.com/diogoseca/timegym
+repo_name: diogoseca/timegym
+edit_uri: ""
 site_url: https://diogoseca.github.io/timegym/
-theme: readthedocs
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: IBM Plex Sans
+    code: IBM Plex Mono
 hooks:
   - tools/docs_hooks.py
+plugins:
+  - search
+  - mkdocs-jupyter:
+      include: ["notebooks/00_*.ipynb", "notebooks/2*.ipynb"]
+      execute: false
+      include_source: true
+      ignore_h1_titles: true
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
 validation:
   links:
     anchors: warn
     unrecognized_links: warn
 not_in_nav: |
-  /notebooks/**
+  /docs/cli.md
+  /notebooks/**/README.md
+  /notebooks/archive/**
+  /notebooks/0[1-9]_*.ipynb
+  /notebooks/1[0-5]_*.ipynb
   /examples/**
   /experiments/**
   /paper/**
@@ -19,13 +65,22 @@ not_in_nav: |
   /CHANGELOG.md
 nav:
   - Home: README.md
-  - Command line: docs/cli.md
-  - API contracts: docs/reference.md
-  - Synthetic stress cases: docs/stress-cases.md
-  - Jupyter tutorials: docs/notebooks.md
-  - Migration: docs/migration.md
-  - Contributing: docs/contributing.md
-  - Validation record: docs/validation.md
-  - Releases: docs/release.md
-  - Publication strategy: docs/publication-strategy.md
-  - Help: docs/help.md
+  - Tutorials:
+      - Overview: docs/notebooks.md
+      - Quick start: notebooks/00_quick_start.ipynb
+      - Univariate uncertainty: notebooks/20_univariate_uncertainty.ipynb
+      - Multivariate forecasting: notebooks/21_multivariate_forecasting.ipynb
+      - Multivariate uncertainty: notebooks/22_multivariate_uncertainty.ipynb
+      - Faults, repairs and replay: notebooks/23_faults_repairs_and_replay.ipynb
+      - Real-data forecasts: notebooks/24_real_data_forecasts.ipynb
+      - Capability sweeps: notebooks/25_capability_sweeps.ipynb
+      - Composed and financial stresses: notebooks/26_composed_and_financial_stresses.ipynb
+      - Joint financial uncertainty: notebooks/27_joint_financial_uncertainty.ipynb
+      - Write and test a custom model: notebooks/28_custom_model.ipynb
+  - Guide:
+      - Synthetic scenarios: docs/stress-cases.md
+      - API: docs/reference.md
+  - Project:
+      - Contributing: docs/contributing.md
+      - Releasing: docs/release.md
+      - Help: docs/help.md

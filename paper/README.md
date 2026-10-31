@@ -82,7 +82,7 @@ supplementary assets, including the full three-scale capability plot and Holm
 comparison. The text-only workflow schematic is a table rather than a numbered
 main figure.
 
-The studies retain clean false alarms, missed defects, negative controls, and paired repair effects. The first pilot reverses selected output corruptions. The supplement changes implementation branches inside a fitted recursive model and compares complementary diagnostic rules. Repairs are specified by the experimenter; automatic cause identification and repair discovery are outside the claim. The covariance supplement reports a declared four-check Holm family; other exploratory comparisons are not covered by that guarantee. See [the claim ledger](claims.md) and [publication strategy](../docs/publication-strategy.md).
+The studies retain clean false alarms, missed defects, negative controls, and paired repair effects. The first pilot reverses selected output corruptions. The supplement changes implementation branches inside a fitted recursive model and compares complementary diagnostic rules. Repairs are specified by the experimenter; automatic cause identification and repair discovery are outside the claim. The covariance supplement reports a declared four-check Holm family; other exploratory comparisons are not covered by that guarantee. See [the claim ledger](claims.md) and [publication strategy](publication-strategy.md).
 
 The [notebook collection](../notebooks/README.md) contains executable source
 notebooks that export the package and application notebooks that explain its

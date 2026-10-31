@@ -83,7 +83,7 @@ contract `FAIL`, while valid but inaccurate forecasts retain descriptive scores.
 
 ![Nearest-analogue forecasts on Gaussian noise, linear trend, and seasonal scenarios: gray observations, blue prediction crosses, known-mean curves, and passing forecast contracts.](../notebooks/assets/custom-model-knn.png)
 
-This revives the 2021 KNN figure's visual comparison using the v2 plotting
+This revives the 2021 KNN figure's visual comparison using the plotting
 helpers. It does not reproduce the original recursive implementation. Contract
 success does not establish accuracy: raw historical continuations cannot
 extrapolate a rising level beyond their observed range.

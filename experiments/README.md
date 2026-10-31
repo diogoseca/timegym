@@ -79,7 +79,7 @@ results. A platform-dependent tolerance may be needed on other BLAS/NumPy versio
 The CI `research-smoke` job compares both rerun hashes to their frozen manifests,
 warns on platform differences, and uploads the observed Linux hashes as
 `research-linux-hashes`. A configured job is not evidence that it has passed; see
-[the validation record](../docs/validation.md). Local comparisons fail on a mismatch
+[the validation record](../paper/validation.md). Local comparisons fail on a mismatch
 unless `--warn` is explicit.
 
 To reproduce one selected controlled counterexample without running the full

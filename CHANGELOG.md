@@ -53,5 +53,5 @@ forecasting pipelines, with a new v2 manuscript and bounded controlled studies.
   that exercise an installed wheel outside the checkout.
 
 The 2021 API and dependency assumptions changed substantially. Follow the
-[migration guide](docs/migration.md). Direct/multioutput forecasting strategies,
+migration guide. Direct/multioutput forecasting strategies,
 automatic repair discovery, and universal fault detection are not claimed.
