@@ -55,6 +55,7 @@ def execute(path: Path, scratch: Path, *, write: bool, html_dir: Path | None) ->
         folder.mkdir(parents=True, exist_ok=True)
         env[key] = str(folder)
     env.update(OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1")
+    env["MPLBACKEND"] = "module://matplotlib_inline.backend_inline"  # CI sets Agg for pytest; kernels must render inline
     # Build the temporary font cache before tutorial execution, so setup chatter
     # does not become part of a notebook's teaching outputs. Cache reuse carries
     # no Python variables or model state between the independent kernels.

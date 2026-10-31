@@ -1,5 +1,6 @@
 from copy import deepcopy
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -165,6 +166,23 @@ def test_hash_comparison_reports_mismatch_and_strict_cli_fails(tmp_path, monkeyp
     main()
 
 
+def close_stats(computed: dict, recorded: dict) -> bool:
+    """Equal up to floating-point roundoff across NumPy and SciPy versions."""
+    if computed.keys() != recorded.keys():
+        return False
+    for key, value in computed.items():
+        other = recorded[key]
+        if isinstance(value, (list, tuple)):
+            if len(value) != len(other) or not all(math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12) for a, b in zip(value, other)):
+                return False
+        elif isinstance(value, float) or isinstance(other, float):
+            if not math.isclose(value, other, rel_tol=1e-9, abs_tol=1e-12):
+                return False
+        elif value != other:
+            return False
+    return True
+
+
 def test_frozen_migration_retained_cases_and_loss_statistics_are_consistent():
     from timegym.statistics import paired_t_interval, wilson_interval
     data, manifest = records('results-v2')
@@ -180,13 +198,13 @@ def test_frozen_migration_retained_cases_and_loss_statistics_are_consistent():
         broken = [row for row in model['records'] if row['condition'] == summary['condition'] and row['branch'] == summary['fault']]
         clean = [index[(row['condition'], row['seed'], 'clean')] for row in broken]
         delta = [a['realized_mse'] - b['realized_mse'] for a, b in zip(clean, broken)]
-        assert paired_t_interval(delta) == summary['repair_minus_faulty_mse']
+        assert close_stats(paired_t_interval(delta), summary['repair_minus_faulty_mse'])
         assert sum(value < 0 for value in delta) == summary['cases_improved_by_repair']
     for summary in model['condition_summaries']:
         for branch, key in [('clean', 'clean'), (summary['fault'], 'faulty')]:
             alarms = [row['alarms'][summary['check']] for row in model['records']
                       if row['condition'] == summary['condition'] and row['branch'] == branch]
-            assert wilson_interval(alarms) == summary[key]
+            assert close_stats(wilson_interval(alarms), summary[key])
     pilot, manifest = records('results')
     assert sha256(ROOT / 'experiments/results/results.json') == manifest['record_migration']['original_results_sha256']
 

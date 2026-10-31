@@ -23,7 +23,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.ticker import PercentFormatter
 import numpy as np
 
-from .common import MISSING, interval_cell, require_conclusion
+from .common import MISSING, close_statistics, interval_cell, require_conclusion
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -327,7 +327,7 @@ def render_macros(results):
     from timegym.statistics import paired_t_interval
     differences = [clean[(row["condition"], row["seed"])]["realized_mse"] - row["realized_mse"] for row in faulty]
     delta = paired_t_interval(differences)
-    require_conclusion(delta == selected["repair_minus_faulty_mse"], "caption interval agrees with paired raw losses")
+    require_conclusion(close_statistics(delta, selected["repair_minus_faulty_mse"]), "caption interval agrees with paired raw losses")
     improved = sum(value < 0 for value in differences)
     require_conclusion(improved == selected["cases_improved_by_repair"], "caption improvement count agrees with raw losses")
     counts = {sum(row["condition"] == condition for row in clean.values())

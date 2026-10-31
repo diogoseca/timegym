@@ -1,6 +1,8 @@
 """Artifact integrity and formatting shared by the two studies."""
 from __future__ import annotations
 
+import math
+
 import hashlib
 from pathlib import Path
 
@@ -31,3 +33,22 @@ def interval_cell(stat: dict | None, precision: int = 4, signed: bool = True, ma
 def require_conclusion(predicate: bool, statement: str) -> None:
     if not predicate:
         raise ValueError(f"Recorded evidence does not support: {statement}")
+
+
+def close_statistics(computed: dict, recorded: dict, rel_tol: float = 1e-9, abs_tol: float = 1e-12) -> bool:
+    """Compare interval summaries up to floating-point roundoff across library versions."""
+    if computed.keys() != recorded.keys():
+        return False
+    for key, value in computed.items():
+        other = recorded[key]
+        if isinstance(value, (list, tuple)):
+            if len(value) != len(other) or not all(
+                math.isclose(a, b, rel_tol=rel_tol, abs_tol=abs_tol) for a, b in zip(value, other)
+            ):
+                return False
+        elif isinstance(value, float) or isinstance(other, float):
+            if not math.isclose(value, other, rel_tol=rel_tol, abs_tol=abs_tol):
+                return False
+        elif value != other:
+            return False
+    return True
