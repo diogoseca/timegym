@@ -141,12 +141,13 @@ def test_configuration_parser_does_not_construct_a_pipeline_and_preserves_subcla
 def test_legacy_strategy_config_and_report_replay_normalize_to_reduction():
     pipeline = Pipeline(NaiveForecaster("drift"), reduction="recursive")
     config = pipeline.to_config()
-    assert config["schema_version"] == 2
+    assert config["schema_version"] == 3
     assert config["reduction"] == "recursive"
     assert config["model"]["parameters"]["strategy"] == "drift"
     legacy = deepcopy(config)
     legacy["schema_version"] = 1
     legacy["strategy"] = legacy.pop("reduction")
+    del legacy["target_transform"]
     restored = Pipeline.from_config(legacy)
     assert restored.reduction == "recursive"
     assert restored.to_config() == config
@@ -159,7 +160,7 @@ def test_legacy_strategy_config_and_report_replay_normalize_to_reduction():
     assert replayed.metadata["pipeline_config"] == config
 
 
-@pytest.mark.parametrize("version", [True, 1.0, 2.0, 3, None, "2"])
+@pytest.mark.parametrize("version", [True, 1.0, 2.0, 4, None, "2"])
 def test_pipeline_config_requires_an_exact_supported_schema_version(version):
     config = Pipeline().to_config()
     config["schema_version"] = version
@@ -177,8 +178,8 @@ def test_pipeline_config_rejects_ambiguous_reduction_fields(version):
 
 
 def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options():
-    with pytest.raises(ValueError, match="reduction='recursive'"):
-        Pipeline(reduction="direct")
+    with pytest.raises(ValueError, match="'iterated'.*recursive.*direct.*multioutput"):
+        Pipeline(reduction="iterated")
     with pytest.raises(ValueError, match="unknown.*last.*mean.*seasonal.*drift"):
         NaiveForecaster(strategy="unknown")
 
@@ -210,6 +211,7 @@ def test_old_ar1_configs_restore_the_original_default_quantiles(schema):
     from timegym.contracts import DEFAULT_LEVELS
     config = Pipeline(GaussianAR1Forecaster()).to_config()
     config['schema_version'] = schema
+    del config['target_transform']
     if schema == 1:
         config['strategy'] = config.pop('reduction')
     del config['model']['parameters']['levels']
@@ -292,5 +294,5 @@ def test_schema_constants_describe_current_writes_and_legacy_config_reads():
 
     report = Pipeline().test([Scenario("ar1", context_length=12, horizon=2)], seeds=[0])
     assert report.to_dict()["schema_version"] == REPORT_SCHEMA_VERSION == "2.0"
-    assert report.metadata["pipeline_config"]["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION == 2
+    assert report.metadata["pipeline_config"]["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION == 3
     assert report.cases[0].manifest["schema_version"] == MANIFEST_SCHEMA_VERSION == 1
