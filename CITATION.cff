@@ -3,8 +3,8 @@ message: >-
   If you use TimeGym, cite the software and record the version and source commit
   or the source fingerprint in your report. The v2 manuscript is a working paper;
   this metadata does not assert a published v2 release or DOI.
-version: 1.0.0
-date-released: 2026-10-30
+version: 1.1.0
+date-released: 2026-11-03
 type: software
 title: "TimeGym: verification and diagnosis for forecasting pipelines"
 authors:

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.0 — 2026-11-03
+
+- Removed the command-line interface: the `timegym` console script,
+  `python -m timegym`, the `timegym.cli` module and source notebook 13.
+  TimeGym is used as a Python package.
+- `examples/reproduce_report.py` is a standalone script: it replays one case with
+  `TestReport.read(...).replay_case(...)`, prints the comparison and exits 1 when
+  the case is not reproduced. The installed-wheel CI job replays the report saved
+  by `tools/smoke_installed.py --report`.
+- Removed `Pipeline.plot_error()`, the 1.0 alias of `Pipeline.plot_errors()`.
+- Pipeline configuration schema 1 (`strategy` instead of `reduction`) is no longer
+  read; `pipeline_from_config` accepts schema 2 only.
+- Removed `timegym.joint_processes.resolve_joint_process()`; call
+  `timegym.processes.resolve_process()` with the same arguments.
+
 ## 1.0.0 — 2026-10-30
 
 Prepared release; publication is performed only by the version-tag workflow.
