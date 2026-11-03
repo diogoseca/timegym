@@ -6,6 +6,10 @@ from numpy.typing import NDArray
 import numpy as np
 import pandas as pd
 from ._internal import positive_int
+from collections.abc import Sequence
+from scipy import optimize, special, stats
+from ._internal import _real_array
+from .contracts import Forecast
 
 __all__ = [
     "multioutput_target",
@@ -14,6 +18,12 @@ __all__ = [
     "fractional_weights",
     "fractional_differencing",
     "differencing",
+    "LogTransform",
+    "BoxCoxTransform",
+    "DifferenceTransform",
+    "ComposedTransform",
+    "transform_config",
+    "transform_from_config",
 ]
 
 # %% ../notebooks/05_target_engineering.ipynb #05_target_engineerin-05
@@ -166,3 +176,356 @@ def differencing(
             result = result.diff(periods=lag)
         return result.iloc[int(order) * lag :]
     return fractional_differencing(series, order, fractional_coefficients, lag=lag)
+
+
+# %% ../notebooks/05_target_engineering.ipynb #target-transforms-imports
+
+
+# %% ../notebooks/05_target_engineering.ipynb #target-transform-base
+def _context_values(context: pd.DataFrame) -> NDArray[np.float64]:
+    if not isinstance(context, pd.DataFrame):
+        raise TypeError("context must be a pandas DataFrame")
+    values = _real_array(context.to_numpy(), "context")
+    if values.size == 0 or not np.isfinite(values).all():
+        raise ValueError("context must contain finite numeric values")
+    return values
+
+
+def _positive_values(context: pd.DataFrame, owner: str) -> NDArray[np.float64]:
+    values = _context_values(context)
+    nonpositive = values <= 0
+    if nonpositive.any():
+        column = int(np.argmax(nonpositive.any(axis=0)))
+        row = int(np.argmax(nonpositive[:, column]))
+        raise ValueError(
+            f"{owner} requires strictly positive context values; target {context.columns[column]!r} "
+            f"has {int(nonpositive[:, column].sum())} nonpositive value(s), the first at index "
+            f"{context.index[row]!r}"
+        )
+    return values
+
+
+class _TargetTransform:
+    """Configuration, fitted state, and forecast checks shared by bundled transforms."""
+
+    def params(self) -> dict:
+        return {}
+
+    def clone_unfitted(self):
+        return type(self)(**self.params())
+
+    def _fitted_on(self, context: pd.DataFrame) -> None:
+        self.target_names_ = tuple(context.columns)
+
+    def _check_forecast(self, forecast: Forecast) -> None:
+        if not hasattr(self, "target_names_"):
+            raise ValueError(
+                f"Call {type(self).__name__}.fit_transform(context) before inverse_transform"
+            )
+        if not isinstance(forecast, Forecast):
+            raise TypeError("inverse_transform requires a timegym.Forecast")
+        problems = sorted({problem["code"] for problem in forecast.validate()})
+        if problems:
+            raise ValueError(
+                f"Cannot invert a forecast that violates its contract: {', '.join(problems)}"
+            )
+        if tuple(forecast.target_names) != self.target_names_:
+            raise ValueError(
+                "Forecast targets or their order differ from the fitted context"
+            )
+
+
+def _invert_elementwise(forecast: Forecast, inverse) -> Forecast:
+    """Map every output through an increasing inverse ``inverse(values, target_axis)``.
+
+    Samples and quantiles map elementwise, so quantiles stay ordered. The
+    inverse of a transformed-scale mean is not the original-scale mean: a
+    point becomes the mean of the inverted samples, else the inverted 0.5
+    quantile, else the inverted point read as a transformed-scale median.
+    """
+    levels = tuple(float(level) for level in forecast.levels)
+    samples = (
+        None
+        if forecast.samples is None
+        else inverse(_real_array(forecast.samples, "samples"), -1)
+    )
+    quantiles = (
+        None
+        if forecast.quantiles is None
+        else inverse(_real_array(forecast.quantiles, "quantiles"), -2)
+    )
+    point = None
+    if forecast.point is not None:
+        if samples is not None:
+            point = samples.mean(axis=0)
+        elif quantiles is not None and 0.5 in levels:
+            point = quantiles[..., levels.index(0.5)]
+        else:
+            point = inverse(_real_array(forecast.point, "point"), -1)
+    return Forecast(
+        index=forecast.index.copy(),
+        point=point,
+        quantiles=quantiles,
+        levels=levels,
+        samples=samples,
+        target_names=tuple(forecast.target_names),
+    )
+
+
+# %% ../notebooks/05_target_engineering.ipynb #target-log
+class LogTransform(_TargetTransform):
+    """Natural logarithm of a strictly positive target, inverted by exp.
+
+    Samples and quantiles invert elementwise. exp(mean of logs) is not the
+    original-scale mean, so the inverted point is the mean of exp(samples),
+    else exp of the 0.5 quantile, else exp of the point read as a median.
+    """
+
+    def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
+        values = _positive_values(context, "LogTransform")
+        self._fitted_on(context)
+        return pd.DataFrame(
+            np.log(values), index=context.index.copy(), columns=context.columns.copy()
+        )
+
+    def inverse_transform(self, forecast: Forecast) -> Forecast:
+        self._check_forecast(forecast)
+        return _invert_elementwise(forecast, lambda values, axis: np.exp(values))
+
+
+# %% ../notebooks/05_target_engineering.ipynb #target-boxcox
+def _box_cox_lambda(values: NDArray[np.float64]) -> float:
+    """Maximize the Box-Cox profile likelihood over [-1, 2], from reciprocal to square."""
+    result = optimize.minimize_scalar(
+        lambda power: -stats.boxcox_llf(power, values),
+        bounds=(-1.0, 2.0),
+        method="bounded",
+    )
+    return float(result.x)
+
+
+class BoxCoxTransform(_TargetTransform):
+    """Box-Cox transform with one lambda per target, fitted by maximum likelihood on the context.
+
+    The lambdas are recomputed for every context and never see future values.
+    Each lies in [-1, 2]: on short contexts the unbounded estimate can be so
+    extreme that ordinary forecast noise has no preimage. Inversion follows
+    LogTransform's point rule. A transformed value v with lambda * v + 1 <= 0
+    has no Box-Cox preimage, and inverting it raises.
+    """
+
+    def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
+        values = _positive_values(context, "BoxCoxTransform")
+        constant = np.ptp(values, axis=0) == 0
+        if constant.any():
+            raise ValueError(
+                f"Box-Cox lambda is not identified for target {context.columns[np.argmax(constant)]!r}, "
+                "which is constant in the context"
+            )
+        self.lambdas_ = np.array([_box_cox_lambda(column) for column in values.T])
+        self._fitted_on(context)
+        return pd.DataFrame(
+            special.boxcox(values, self.lambdas_),
+            index=context.index.copy(),
+            columns=context.columns.copy(),
+        )
+
+    def inverse_transform(self, forecast: Forecast) -> Forecast:
+        self._check_forecast(forecast)
+        return _invert_elementwise(forecast, self._inverse)
+
+    def _inverse(self, values: NDArray[np.float64], axis: int) -> NDArray[np.float64]:
+        lambdas = self.lambdas_.reshape((-1,) + (1,) * (-axis - 1))
+        outside = (lambdas != 0) & (lambdas * values + 1 <= 0)
+        if outside.any():
+            raise ValueError(
+                f"Box-Cox inverse is undefined for {int(outside.sum())} forecast value(s) "
+                "with lambda * value + 1 <= 0"
+            )
+        return special.inv_boxcox(values, lambdas)
+
+
+# %% ../notebooks/05_target_engineering.ipynb #target-difference
+class DifferenceTransform(_TargetTransform):
+    """Repeated lag differences that keep the context tail needed to undo them.
+
+    ``order`` counts repeated differences and ``lag`` is their distance, as in
+    ``differencing``: order=1, lag=12 is a monthly seasonal difference. The
+    forecast rows must be the steps that immediately follow the context.
+    Points (means) and samples integrate exactly. Marginal quantiles of
+    differences do not determine quantiles of their sums, so quantiles are
+    recomputed from the integrated samples, or omitted without samples.
+    """
+
+    def __init__(self, order=1, lag=1):
+        self.order = positive_int(order, "order")
+        self.lag = positive_int(lag, "lag")
+
+    def params(self) -> dict:
+        return {"order": self.order, "lag": self.lag}
+
+    def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
+        _context_values(context)
+        span = self.order * self.lag
+        if len(context) <= span:
+            raise ValueError(
+                f"DifferenceTransform(order={self.order}, lag={self.lag}) needs more than "
+                f"{span} context rows"
+            )
+        self.tails_ = [
+            differencing(context, stage, lag=self.lag).to_numpy(dtype=float)[
+                -self.lag :
+            ]
+            for stage in range(self.order)
+        ]
+        self._fitted_on(context)
+        return differencing(context, self.order, lag=self.lag)
+
+    def inverse_transform(self, forecast: Forecast) -> Forecast:
+        self._check_forecast(forecast)
+        point = (
+            None
+            if forecast.point is None
+            else self._integrate(_real_array(forecast.point, "point"))
+        )
+        samples = (
+            None
+            if forecast.samples is None
+            else self._integrate(_real_array(forecast.samples, "samples"))
+        )
+        quantiles, levels = None, ()
+        if forecast.quantiles is not None:
+            if samples is not None:
+                levels = tuple(float(level) for level in forecast.levels)
+                quantiles = np.moveaxis(np.quantile(samples, levels, axis=0), 0, -1)
+            elif point is None:
+                raise ValueError(
+                    "Quantiles of differences do not determine quantiles of levels; "
+                    "DifferenceTransform needs a point or samples to invert"
+                )
+        return Forecast(
+            index=forecast.index.copy(),
+            point=point,
+            quantiles=quantiles,
+            levels=levels,
+            samples=samples,
+            target_names=self.target_names_,
+        )
+
+    def _integrate(self, values: NDArray[np.float64]) -> NDArray[np.float64]:
+        for tail in reversed(self.tails_):
+            restored = np.concatenate(
+                [np.broadcast_to(tail, values.shape[:-2] + tail.shape), values], axis=-2
+            )
+            for step in range(values.shape[-2]):
+                restored[..., self.lag + step, :] += restored[..., step, :]
+            values = restored[..., self.lag :, :]
+        return values
+
+
+# %% ../notebooks/05_target_engineering.ipynb #target-composed
+class ComposedTransform(_TargetTransform):
+    """Apply bundled transforms in order and invert them in reverse order.
+
+    Members are LogTransform, BoxCoxTransform or DifferenceTransform
+    instances, copied unfitted so that no instance holds two fitted states.
+    """
+
+    def __init__(self, transforms):
+        if (
+            isinstance(transforms, (str, bytes))
+            or not isinstance(transforms, Sequence)
+            or not transforms
+        ):
+            raise ValueError(
+                "transforms must be a nonempty sequence of bundled target transforms"
+            )
+        for transform in transforms:
+            if type(transform) not in (
+                LogTransform,
+                BoxCoxTransform,
+                DifferenceTransform,
+            ):
+                raise TypeError(
+                    "ComposedTransform members must be LogTransform, BoxCoxTransform or "
+                    f"DifferenceTransform instances, not {type(transform).__name__}"
+                )
+        self.transforms = tuple(transform.clone_unfitted() for transform in transforms)
+
+    def params(self) -> dict:
+        return {"transforms": self.transforms}
+
+    def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
+        _context_values(context)
+        self._fitted_on(context)
+        for transform in self.transforms:
+            context = transform.fit_transform(context)
+        return context
+
+    def inverse_transform(self, forecast: Forecast) -> Forecast:
+        self._check_forecast(forecast)
+        for transform in reversed(self.transforms):
+            forecast = transform.inverse_transform(forecast)
+        return forecast
+
+
+# %% ../notebooks/05_target_engineering.ipynb #target-transform-config
+_BUNDLED_TRANSFORMS = {
+    kind.__name__: kind
+    for kind in (LogTransform, BoxCoxTransform, DifferenceTransform, ComposedTransform)
+}
+
+
+def transform_config(transform) -> dict:
+    """Describe a target transform for pipeline configuration and replay.
+
+    Only exact bundled classes are described as ``builtin``; any other object,
+    including a subclass, is ``external`` and cannot be rebuilt from data.
+    """
+    kind = type(transform)
+    if _BUNDLED_TRANSFORMS.get(kind.__name__) is not kind:
+        return {
+            "kind": "external",
+            "module": kind.__module__,
+            "qualname": kind.__qualname__,
+            "reason": "Only bundled target transforms are rebuilt from configuration data.",
+        }
+    parameters = transform.params()
+    if kind is ComposedTransform:
+        parameters = {
+            "transforms": [
+                transform_config(member) for member in parameters["transforms"]
+            ]
+        }
+    return {"kind": "builtin", "class": kind.__name__, "parameters": parameters}
+
+
+def transform_from_config(config: dict) -> _TargetTransform:
+    """Rebuild an unfitted bundled transform from ``transform_config`` output."""
+    if (
+        not isinstance(config, dict)
+        or set(config) != {"kind", "class", "parameters"}
+        or config["kind"] != "builtin"
+    ):
+        raise ValueError("Replay accepts only bundled target transform descriptions")
+    name, parameters = config["class"], config["parameters"]
+    if not isinstance(name, str) or name not in _BUNDLED_TRANSFORMS:
+        raise ValueError("Target transform class is not in the replay allowlist")
+    if name == "ComposedTransform":
+        if (
+            not isinstance(parameters, dict)
+            or set(parameters) != {"transforms"}
+            or not isinstance(parameters["transforms"], list)
+        ):
+            raise ValueError("Unexpected or missing target transform parameters")
+        members = [transform_from_config(member) for member in parameters["transforms"]]
+        if any(isinstance(member, ComposedTransform) for member in members):
+            raise ValueError(
+                "A composed target transform cannot contain another composition"
+            )
+        return ComposedTransform(members)
+    if not isinstance(parameters, dict) or set(parameters) != set(
+        _BUNDLED_TRANSFORMS[name]().params()
+    ):
+        raise ValueError("Unexpected or missing target transform parameters")
+    return _BUNDLED_TRANSFORMS[name](**parameters)
