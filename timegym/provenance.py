@@ -123,14 +123,13 @@ def pipeline_from_config(config):
     if (
         not isinstance(config, dict)
         or type(config.get("schema_version")) is not int
-        or config["schema_version"] not in (1, PIPELINE_CONFIG_SCHEMA_VERSION)
+        or config["schema_version"] != PIPELINE_CONFIG_SCHEMA_VERSION
     ):
         raise ValueError("Unsupported or incomplete pipeline configuration schema")
-    reduction_key = "strategy" if config["schema_version"] == 1 else "reduction"
-    expected = {"schema_version", "model", "window_length", reduction_key, "replayable"}
+    expected = {"schema_version", "model", "window_length", "reduction", "replayable"}
     if set(config) != expected:
         raise ValueError("Unsupported or incomplete pipeline configuration schema")
-    if config[reduction_key] != "recursive":
+    if config["reduction"] != "recursive":
         raise ValueError("This release supports reduction='recursive' only")
     if config["replayable"] is not True:
         raise ValueError(
@@ -165,7 +164,7 @@ def pipeline_from_config(config):
     return {
         "model": restored,
         "window_length": window,
-        "reduction": config[reduction_key],
+        "reduction": config["reduction"],
     }
 
 

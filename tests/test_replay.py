@@ -145,28 +145,7 @@ def test_configuration_parser_does_not_construct_a_pipeline_and_preserves_subcla
     assert restored.to_config() == config
 
 
-def test_legacy_strategy_config_and_report_replay_normalize_to_reduction():
-    pipeline = Pipeline(NaiveForecaster("drift"), reduction="recursive")
-    config = pipeline.to_config()
-    assert config["schema_version"] == 2
-    assert config["reduction"] == "recursive"
-    assert config["model"]["parameters"]["strategy"] == "drift"
-    legacy = deepcopy(config)
-    legacy["schema_version"] = 1
-    legacy["strategy"] = legacy.pop("reduction")
-    restored = Pipeline.from_config(legacy)
-    assert restored.reduction == "recursive"
-    assert restored.to_config() == config
-    report = pipeline.test([Scenario("trend", context_length=12, horizon=3)], seeds=[4]).to_dict()
-    report["metadata"]["pipeline_config"] = legacy
-    report["metadata"]["strategy"] = report["metadata"].pop("reduction")
-    replayed = TestReport.from_dict(report).replay_case()
-    assert replayed.metadata["replay"]["metrics_match"]
-    assert replayed.metadata["replay"]["diagnostics_match"]
-    assert replayed.metadata["pipeline_config"] == config
-
-
-@pytest.mark.parametrize("version", [True, 1.0, 2.0, 3, None, "2"])
+@pytest.mark.parametrize("version", [True, 1, 1.0, 2.0, 3, None, "2"])
 def test_pipeline_config_requires_an_exact_supported_schema_version(version):
     config = Pipeline().to_config()
     config["schema_version"] = version
@@ -174,10 +153,8 @@ def test_pipeline_config_requires_an_exact_supported_schema_version(version):
         Pipeline.from_config(config)
 
 
-@pytest.mark.parametrize("version", [1, 2])
-def test_pipeline_config_rejects_ambiguous_reduction_fields(version):
+def test_pipeline_config_rejects_ambiguous_reduction_fields():
     config = Pipeline().to_config()
-    config["schema_version"] = version
     config["strategy"] = "recursive"
     with pytest.raises(ValueError, match="configuration schema"):
         Pipeline.from_config(config)
@@ -212,13 +189,9 @@ def test_replay_uses_model_seed_validation(seed):
         Pipeline.from_config(config)
 
 
-@pytest.mark.parametrize('schema', [1, 2])
-def test_old_ar1_configs_restore_the_original_default_quantiles(schema):
+def test_old_ar1_configs_restore_the_original_default_quantiles():
     from timegym.contracts import DEFAULT_LEVELS
     config = Pipeline(GaussianAR1Forecaster()).to_config()
-    config['schema_version'] = schema
-    if schema == 1:
-        config['strategy'] = config.pop('reduction')
     del config['model']['parameters']['levels']
     restored = Pipeline.from_config(config)
     assert restored.model.levels == DEFAULT_LEVELS
@@ -290,7 +263,7 @@ def test_replay_verdicts_distinguish_results_from_environment(field):
     assert comparison["same_environment"] is result_changed
 
 
-def test_schema_constants_describe_current_writes_and_legacy_config_reads():
+def test_schema_constants_describe_current_writes():
     from timegym.reporting import REPORT_SCHEMA_VERSION
     from timegym.provenance import PIPELINE_CONFIG_SCHEMA_VERSION
     from timegym.scenarios import MANIFEST_SCHEMA_VERSION

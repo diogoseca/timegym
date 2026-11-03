@@ -33,7 +33,7 @@ Underscore-prefixed names and modules, including `_internal` and
 | `simple_moving_average`, `exponential_moving_average` | `timegym.smoothing` | Public |
 | `CORE_KINDS`, `scenario_label`, `MANIFEST_SCHEMA_VERSION` | `timegym.scenarios` | Public; manifest schema versioned separately |
 | `PROCESS_KINDS`, `resolve_process`, `process_label`, `generate_process` | `timegym.processes` | Public low-level generators |
-| `resolve_joint_process`, `generate_joint_process` | `timegym.joint_processes` | Public; resolver is a compatibility wrapper |
+| `generate_joint_process` | `timegym.joint_processes` | Public; takes `resolve_process` output |
 | `replay_case` | `timegym.pipeline` | Public; allowlisted models only |
 | `PIPELINE_CONFIG_SCHEMA_VERSION`, `pipeline_config`, `pipeline_from_config`, `runtime_provenance`, `diagnostic_settings` | `timegym.provenance` | Public; config schema versioned separately |
 | `REPORT_SCHEMA_VERSION` | `timegym.reporting` | Public; report schema versioned separately |
@@ -78,8 +78,7 @@ them. Their scalar manifests retain scalar values, accepting a one-target
 `Case` is defined in `timegym.contracts` and remains importable from `timegym` and
 `timegym.scenarios`. Direct `generate_process(...)` calls resolve raw parameters;
 `generate_joint_process(...)` accepts parameters already returned by
-`resolve_process(...)`. `resolve_joint_process(...)` is a compatibility wrapper
-with the same `context_length` and `n_targets` keywords.
+`resolve_process(...)`.
 
 `scenario.display_name` provides the same parameter-aware name used in plots.
 The identifiers above remain unchanged in configurations and reports.
@@ -327,8 +326,8 @@ adequate. A pass is always scoped to a check.
 
 `timegym.reporting.REPORT_SCHEMA_VERSION = "2.0"` identifies the report envelope.
 `timegym.provenance.PIPELINE_CONFIG_SCHEMA_VERSION = 2` identifies current
-pipeline configuration writes; schema 1 configurations with `strategy` remain
-readable and normalize to `reduction`. Scenario manifests use integer version 1,
+pipeline configuration writes; schema 1 configurations, which used `strategy`,
+are no longer read. Scenario manifests use integer version 1,
 named by `timegym.scenarios.MANIFEST_SCHEMA_VERSION`. These are independent
 schemas: the historical report version is a string, while configuration and
 manifest versions are integers.

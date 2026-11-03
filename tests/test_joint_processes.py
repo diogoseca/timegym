@@ -338,17 +338,17 @@ def test_joint_garch_uses_canonical_simulation_kind_and_covariance_metadata(corr
 
 @pytest.mark.parametrize('kind', KINDS)
 def test_joint_entry_points_share_manifest_keyword_vocabulary_and_resolved_builder(kind, monkeypatch):
+    import timegym._process_common as common
     import timegym.joint_processes as joint
     from timegym.processes import resolve_process
     arguments = dict(kind=kind, parameters={'correlation': .5}, context_length=12,
                      horizon=2, n_targets=2, seed=9)
-    resolved = joint.resolve_joint_process(**arguments)
-    assert resolved == resolve_process(**arguments)
+    resolved = resolve_process(**arguments)
 
     def unexpected_validation(*args, **kwargs):
         raise AssertionError('resolved builder must not validate parameters again')
 
-    monkeypatch.setattr(joint, 'resolve_process', unexpected_validation)
+    monkeypatch.setattr(common, 'resolve_process', unexpected_validation)
     direct = joint.generate_joint_process(**{**arguments, 'parameters': resolved})
     expected = generate(kind, arguments['parameters'], length=12, horizon=2, seed=9)
     assert direct.manifest == expected.manifest

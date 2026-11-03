@@ -267,10 +267,6 @@ class Pipeline:
             metric=metric, bins=bins, missing=missing, figsize=figsize
         )
 
-    def plot_error(self, *args, **kwargs):
-        """Compatibility alias for plot_errors, retained for the 0.2 release."""
-        return self.plot_errors(*args, **kwargs)
-
 
 # %% ../notebooks/07_pipeline.ipynb #10_reports_and_repla-32
 def _without_tracebacks(value):
