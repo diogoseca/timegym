@@ -53,7 +53,6 @@ validation:
     anchors: warn
     unrecognized_links: warn
 not_in_nav: |
-  /docs/cli.md
   /notebooks/**/README.md
   /notebooks/archive/**
   /notebooks/0[1-9]_*.ipynb

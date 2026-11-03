@@ -143,9 +143,11 @@ After installing the wheel in a separate environment, run its interpreter with
 /path/to/wheel-environment/bin/python -I tools/smoke_installed.py
 ```
 
-This checks point and joint-sample forecasts, retained runs, validated report
-loading, replay, and the diagnostic demo while deliberately blocking optional
-plotting, sklearn, and notebook imports. CI runs the installed-wheel check on
-Linux, macOS, and Windows; these jobs must actually pass before claiming support
+This checks point and joint-sample forecasts, retained runs, contract-fault
+detection, validated report loading, and replay while deliberately blocking
+optional plotting, sklearn, and notebook imports. `--report PATH` also saves the
+replayed report, which CI replays again in a new process with
+`examples/reproduce_report.py`. CI runs the installed-wheel check on Linux,
+macOS, and Windows; these jobs must actually pass before claiming support
 from those runs. The broader test matrix also includes an older compatible
 scientific stack on Python 3.12. Building artifacts does not publish a release.

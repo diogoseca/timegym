@@ -1,7 +1,7 @@
 # Working with notebooks
 
 All notebooks live under [`notebooks/`](../notebooks/README.md). The collection
-has **15 source notebooks**, which generate the package, and **10 application
+has **14 source notebooks**, which generate the package, and **10 application
 notebooks**, which use it. The original 11 notebooks remain in
 [`notebooks/archive/`](../notebooks/archive/README.md) in Git, outside the source
 distribution.

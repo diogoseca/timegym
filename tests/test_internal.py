@@ -3,7 +3,6 @@ import pytest
 
 from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario
 from timegym._internal import nonnegative_int, positive_int
-from timegym.cli import alignment_demo
 from timegym.metrics import energy_score, mase
 from timegym.provenance import diagnostic_settings
 
@@ -37,9 +36,6 @@ def test_metric_counts_reject_both_boolean_types(value):
 
 
 def test_numpy_integer_settings_are_normalized_across_entry_points():
-    summary, *_ = alignment_demo(seed=np.int64(2))
-    assert summary["expected_behavior_verified"]
-    assert type(summary["seed"]) is int
     assert type(NaiveForecaster(period=np.int64(3)).period) is int
     assert type(GaussianAR1Forecaster(n_samples=np.int64(3)).n_samples) is int
     assert type(Pipeline(window_length=np.int64(3)).window_length) is int

@@ -37,7 +37,6 @@ Underscore-prefixed names and modules, including `_internal` and
 | `replay_case` | `timegym.pipeline` | Public; allowlisted models only |
 | `PIPELINE_CONFIG_SCHEMA_VERSION`, `pipeline_config`, `pipeline_from_config`, `runtime_provenance`, `diagnostic_settings` | `timegym.provenance` | Public; config schema versioned separately |
 | `REPORT_SCHEMA_VERSION` | `timegym.reporting` | Public; report schema versioned separately |
-| `alignment_demo`, `main` | `timegym.cli` | Public CLI entry points |
 
 ## Inputs and outputs
 
@@ -288,7 +287,8 @@ restore allowlisted built-in models. Factories, custom models and sklearn steps
 are explicitly marked non-replayable. A JSON report records model configuration,
 source fingerprint, dependency versions and diagnostic settings. Use
 `report.replay_case(case_index=0)` or `python examples/reproduce_report.py report.json`
-to reproduce a supported built-in case. The script delegates to `timegym replay`.
+to reproduce a supported built-in case. The script prints the comparison and exits
+with status 1 when the case is not reproduced.
 Replay accepts a `TestReport`; load dictionaries through `TestReport.from_dict`
 first. The `metadata["replay"]` result contains `reproduced` (metrics, diagnostics,
 and manifest agree) and `same_environment` (source, dependencies, and Python

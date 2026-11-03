@@ -109,7 +109,7 @@ def test_replay_exposes_source_changes_instead_of_asserting_identical_environmen
     assert replayed.metadata["replay"]["metrics_match"] is True
 
 
-def test_report_replay_method_and_cli(tmp_path):
+def test_report_replay_method_and_example_script(tmp_path):
     report = Pipeline(NaiveForecaster("drift")).test([Scenario("trend")], seeds=[2])
     assert report.replay_case().metadata["replay"]["metrics_match"] is True
     saved, output = tmp_path / "report.json", tmp_path / "replayed.json"
@@ -120,6 +120,13 @@ def test_report_replay_method_and_cli(tmp_path):
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout)["diagnostics_match"] is True
     assert json.loads(output.read_text())["metadata"]["replay"]["metrics_match"] is True
+    moved = report.to_dict()
+    moved["metadata"]["source"]["digest"] = "different source"
+    TestReport.from_dict(moved).to_json(saved)
+    for gate, status in [([], 0), (["--require-same-environment"], 1)]:
+        completed = subprocess.run([sys.executable, str(script), str(saved), *gate],
+                                   text=True, capture_output=True, check=False)
+        assert completed.returncode == status, completed.stderr
 
 
 
@@ -242,8 +249,6 @@ def test_replay_rejects_raw_dicts_instead_of_bypassing_report_validation():
 
 
 def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp_path):
-    from timegym.cli import main
-
     report = Pipeline(NaiveForecaster("seasonal", period=50)).test(
         [Scenario("ar1", context_length=16, horizon=3)], seeds=[0])
     diagnostic = report.cases[0].diagnostics[0]
@@ -258,8 +263,8 @@ def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp
     assert comparison["same_environment"]
     path = tmp_path / "error.json"
     report.to_json(path)
-    assert main(["replay", str(path)]) == 0
-    assert main(["replay", str(path), "--require-same-environment"]) == 0
+    loaded = TestReport.read(path).replay_case().metadata["replay"]
+    assert loaded["reproduced"] and loaded["same_environment"]
     diagnostic.evidence["exception_message"] = "a different failure"
     assert not report.replay_case().metadata["replay"]["reproduced"]
 
