@@ -2,6 +2,17 @@
 
 ## 1.1.0 — 2026-11-03
 
+- Added reversible target transforms to `timegym.target`: `LogTransform`,
+  `BoxCoxTransform`, `DifferenceTransform` and `ComposedTransform`, with
+  `transform_config` and `transform_from_config` for configuration and replay.
+- `Pipeline(..., target_transform=None)` fits a fresh copy of the transform on each
+  context and inverts the model's forecast before evaluation.
+- `SklearnForecaster` adds the `direct` and `multioutput` reductions beside
+  `recursive`; `timegym.models.REDUCTIONS` lists them and `Pipeline(reduction=...)`
+  selects one.
+- Pipeline configuration schema 3 records `target_transform`; schema 2
+  configurations remain readable.
+- Added tutorials 29 (target transforms) and 30 (reductions).
 - Removed the command-line interface: the `timegym` console script,
   `python -m timegym`, the `timegym.cli` module and source notebook 13.
   TimeGym is used as a Python package.
@@ -11,7 +22,7 @@
   by `tools/smoke_installed.py --report`.
 - Removed `Pipeline.plot_error()`, the 1.0 alias of `Pipeline.plot_errors()`.
 - Pipeline configuration schema 1 (`strategy` instead of `reduction`) is no longer
-  read; `pipeline_from_config` accepts schema 2 only.
+  read; `pipeline_from_config` accepts schemas 2 and 3.
 - Removed `timegym.joint_processes.resolve_joint_process()`; call
   `timegym.processes.resolve_process()` with the same arguments.
 

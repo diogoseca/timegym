@@ -46,7 +46,8 @@ def on_config(config):
     atexit.register(temporary.cleanup)
     stage = Path(temporary.name)
     pending = [root / "README.md", *sorted((root / "docs").glob("*.md")),
-               *sorted((root / "notebooks").glob("00_*.ipynb")), *sorted((root / "notebooks").glob("2[0-9]_*.ipynb"))]
+               *sorted((root / "notebooks").glob("00_*.ipynb")), *sorted((root / "notebooks").glob("2[0-9]_*.ipynb")),
+               *sorted((root / "notebooks").glob("3[0-9]_*.ipynb"))]
     copied = set()
     while pending:
         source = pending.pop()

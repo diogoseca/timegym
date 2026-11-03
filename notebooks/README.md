@@ -7,9 +7,9 @@ observation dots, blue prediction crosses, thin reference curves, and a clear
 forecast origin.
 
 Everything lives in this folder: **14 source notebooks generate the package,
-10 application notebooks use it**, and the [11 original notebooks](archive/README.md)
+12 application notebooks use it**, and the [11 original notebooks](archive/README.md)
 retain their development history and saved figures in Git. The historical
-archive is excluded from source distributions; the 24 active notebooks are included.
+archive is excluded from source distributions; the 26 active notebooks are included.
 
 ## Open and explore
 
@@ -36,6 +36,8 @@ explicit seeds. Installing the wheel alone does not install these notebook files
 | [26 · Composed and financial stresses](26_composed_and_financial_stresses.ipynb) | Controlled combinations, jumps, GARCH, hidden regimes, price means, and replay |
 | [27 · Joint financial uncertainty](27_joint_financial_uncertainty.ipynb) | Multi-target mechanisms, joint paths, dependence faults, aggregate uncertainty, and repair |
 | [28 · Write and test a custom model](28_custom_model.ipynb) | Nearest analogues, contract failures, real observations, and a supplied semi-synthetic truth function |
+| [29 · Target transforms](29_target_transforms.ipynb) | Log, Box-Cox and difference transforms fitted per context and inverted on the forecast |
+| [30 · Reductions](30_reductions.ipynb) | Recursive, direct and multioutput reductions of one regressor, and where their errors differ |
 
 For multiple plots of the same fitted outputs, retain the run:
 
@@ -62,8 +64,8 @@ one notebook owner.
 | [02 · Real data](02_real_data.ipynb) | Real-data helper |
 | [03 · Smoothing](03_smoothing.ipynb) | Moving averages |
 | [04 · Feature engineering](04_feature_engineering.ipynb) | Lagged and calendar features |
-| [05 · Target engineering](05_target_engineering.ipynb) | Integer and fractional differencing |
-| [06 · Forecasting models](06_forecasting_models.ipynb) | Native baselines and model adaptation |
+| [05 · Target engineering](05_target_engineering.ipynb) | Integer and fractional differencing, reversible target transforms |
+| [06 · Forecasting models](06_forecasting_models.ipynb) | Native baselines and recursive, direct and multioutput reductions |
 | [07 · Pipeline](07_pipeline.ipynb) | Fresh fitting, evaluation, and retained runs |
 | [08 · Forecast contracts](08_forecast_contracts.ipynb) | Tasks, forecasts, and reference shapes |
 | [09 · Scores and diagnostics](09_scores_and_diagnostics.ipynb) | Scores, case-level intervals, checks, and fault fixtures |

@@ -37,7 +37,7 @@ hooks:
 plugins:
   - search
   - mkdocs-jupyter:
-      include: ["notebooks/00_*.ipynb", "notebooks/2*.ipynb"]
+      include: ["notebooks/00_*.ipynb", "notebooks/2*.ipynb", "notebooks/3*.ipynb"]
       execute: false
       include_source: true
       ignore_h1_titles: true
@@ -76,6 +76,8 @@ nav:
       - Composed and financial stresses: notebooks/26_composed_and_financial_stresses.ipynb
       - Joint financial uncertainty: notebooks/27_joint_financial_uncertainty.ipynb
       - Write and test a custom model: notebooks/28_custom_model.ipynb
+      - Target transforms: notebooks/29_target_transforms.ipynb
+      - Reductions: notebooks/30_reductions.ipynb
   - Guide:
       - Synthetic scenarios: docs/stress-cases.md
       - API: docs/reference.md
