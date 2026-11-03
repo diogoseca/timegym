@@ -54,7 +54,7 @@ def build_ablation(root: Path):
     differences = [selected_records["clean"][seed]["realized_mse"] - row["realized_mse"]
                    for seed, row in selected_records[selected["fault"]].items()]
     counterexample = _interval(differences)
-    _verify_summary(counterexample, selected["repair_minus_faulty_mse"])
+    _verify_summary(counterexample, selected["clean_minus_faulty_mse"])
     improved = int(sum(delta < 0 for delta in differences))
     if improved != selected["cases_improved_by_repair"]:
         raise ValueError("Saved number of repair improvements is inconsistent")
@@ -116,7 +116,7 @@ def build_ablation(root: Path):
         "aggregation": "Descriptive counts over six equally weighted fixed conditions; no pooled IID interval",
         "counterexample": {"condition": selected["condition"], "fault": selected["fault"],
                            "selection": "Descriptive counterexample among 24 exploratory fault-condition comparisons",
-                           "repair_minus_faulty_realized_mse": counterexample,
+                           "clean_minus_faulty_realized_mse": counterexample,
                            "cases_improved": improved, "axis_limits": [-1, 1]},
         "sources": _sources(root, ["experiments/protocol-v2.json", "experiments/results-v2/results.json",
                                     "experiments/results-v2/manifest.json"]),

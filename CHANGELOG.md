@@ -25,6 +25,10 @@
   read; `pipeline_from_config` accepts schemas 2 and 3.
 - Removed `timegym.joint_processes.resolve_joint_process()`; call
   `timegym.processes.resolve_process()` with the same arguments.
+- Renamed the supplement's paired loss fields `repair_minus_faulty_mse` and
+  `repair_minus_faulty_reference_mse` to `clean_minus_faulty_mse` and
+  `clean_minus_faulty_reference_mse` in `experiments/results-v2`, as a recorded
+  offline migration; no value changed.
 
 ## 1.0.0 — 2026-10-30
 

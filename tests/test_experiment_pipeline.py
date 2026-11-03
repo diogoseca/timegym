@@ -182,7 +182,7 @@ def test_frozen_migration_retained_cases_and_loss_statistics_are_consistent():
         broken = [row for row in model['records'] if row['condition'] == summary['condition'] and row['branch'] == summary['fault']]
         clean = [index[(row['condition'], row['seed'], 'clean')] for row in broken]
         delta = [a['realized_mse'] - b['realized_mse'] for a, b in zip(clean, broken)]
-        assert close_statistics(paired_t_interval(delta), summary['repair_minus_faulty_mse'])
+        assert close_statistics(paired_t_interval(delta), summary['clean_minus_faulty_mse'])
         assert sum(value < 0 for value in delta) == summary['cases_improved_by_repair']
     for summary in model['condition_summaries']:
         for branch, key in [('clean', 'clean'), (summary['fault'], 'faulty')]:
