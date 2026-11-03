@@ -145,7 +145,7 @@ def test_configuration_parser_does_not_construct_a_pipeline_and_preserves_subcla
     assert restored.to_config() == config
 
 
-@pytest.mark.parametrize("version", [True, 1, 1.0, 2.0, 3, None, "2"])
+@pytest.mark.parametrize("version", [True, 1, 1.0, 2.0, 4, None, "2"])
 def test_pipeline_config_requires_an_exact_supported_schema_version(version):
     config = Pipeline().to_config()
     config["schema_version"] = version
@@ -161,8 +161,8 @@ def test_pipeline_config_rejects_ambiguous_reduction_fields():
 
 
 def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options():
-    with pytest.raises(ValueError, match="reduction='recursive'"):
-        Pipeline(reduction="direct")
+    with pytest.raises(ValueError, match="'iterated'.*recursive.*direct.*multioutput"):
+        Pipeline(reduction="iterated")
     with pytest.raises(ValueError, match="unknown.*last.*mean.*seasonal.*drift"):
         NaiveForecaster(strategy="unknown")
 
@@ -192,6 +192,8 @@ def test_replay_uses_model_seed_validation(seed):
 def test_old_ar1_configs_restore_the_original_default_quantiles():
     from timegym.contracts import DEFAULT_LEVELS
     config = Pipeline(GaussianAR1Forecaster()).to_config()
+    config['schema_version'] = 2
+    del config['target_transform']
     del config['model']['parameters']['levels']
     restored = Pipeline.from_config(config)
     assert restored.model.levels == DEFAULT_LEVELS
@@ -270,5 +272,5 @@ def test_schema_constants_describe_current_writes():
 
     report = Pipeline().test([Scenario("ar1", context_length=12, horizon=2)], seeds=[0])
     assert report.to_dict()["schema_version"] == REPORT_SCHEMA_VERSION == "2.0"
-    assert report.metadata["pipeline_config"]["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION == 2
+    assert report.metadata["pipeline_config"]["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION == 3
     assert report.cases[0].manifest["schema_version"] == MANIFEST_SCHEMA_VERSION == 1
