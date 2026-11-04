@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.1.0 — 2026-11-03
+
+- Added reversible target transforms to `timegym.target`: `LogTransform`,
+  `BoxCoxTransform`, `DifferenceTransform` and `ComposedTransform`, with
+  `transform_config` and `transform_from_config` for configuration and replay.
+- `Pipeline(..., target_transform=None)` fits a fresh copy of the transform on each
+  context and inverts the model's forecast before evaluation.
+- `SklearnForecaster` adds the `direct` and `multioutput` reductions beside
+  `recursive`; `timegym.models.REDUCTIONS` lists them and `Pipeline(reduction=...)`
+  selects one.
+- Pipeline configuration schema 3 records `target_transform`; schema 2
+  configurations remain readable.
+- Added tutorials 29 (target transforms) and 30 (reductions).
+- Removed the command-line interface: the `timegym` console script,
+  `python -m timegym`, the `timegym.cli` module and source notebook 13.
+  TimeGym is used as a Python package.
+- `examples/reproduce_report.py` is a standalone script: it replays one case with
+  `TestReport.read(...).replay_case(...)`, prints the comparison and exits 1 when
+  the case is not reproduced. The installed-wheel CI job replays the report saved
+  by `tools/smoke_installed.py --report`.
+- Removed `Pipeline.plot_error()`, the 1.0 alias of `Pipeline.plot_errors()`.
+- Pipeline configuration schema 1 (`strategy` instead of `reduction`) is no longer
+  read; `pipeline_from_config` accepts schemas 2 and 3.
+- Removed `timegym.joint_processes.resolve_joint_process()`; call
+  `timegym.processes.resolve_process()` with the same arguments.
+- Renamed the supplement's paired loss fields `repair_minus_faulty_mse` and
+  `repair_minus_faulty_reference_mse` to `clean_minus_faulty_mse` and
+  `clean_minus_faulty_reference_mse` in `experiments/results-v2`, as a recorded
+  offline migration; no value changed.
+
 ## 1.0.0 — 2026-10-30
 
 Prepared release; publication is performed only by the version-tag workflow.

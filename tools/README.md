@@ -58,7 +58,7 @@ modules; each module has exactly one owner. Notebook imports can use absolute
 appropriate. Generated source includes a relative link to its notebook and
 cell IDs, independent of the current directory and temporary build location.
 After nbdev export, the builder orders the module banner, imports, and one merged
-`__all__`, then formats the generated source with pinned Black 24.10.0. Formatting
+`__all__`, then formats the generated source with pinned Black 26.10.1. Formatting
 is part of both build and check mode; never format or edit generated files by hand.
 
 ## Shared internal helpers
@@ -143,9 +143,11 @@ After installing the wheel in a separate environment, run its interpreter with
 /path/to/wheel-environment/bin/python -I tools/smoke_installed.py
 ```
 
-This checks point and joint-sample forecasts, retained runs, validated report
-loading, replay, and the diagnostic demo while deliberately blocking optional
-plotting, sklearn, and notebook imports. CI runs the installed-wheel check on
-Linux, macOS, and Windows; these jobs must actually pass before claiming support
+This checks point and joint-sample forecasts, retained runs, contract-fault
+detection, validated report loading, and replay while deliberately blocking
+optional plotting, sklearn, and notebook imports. `--report PATH` also saves the
+replayed report, which CI replays again in a new process with
+`examples/reproduce_report.py`. CI runs the installed-wheel check on Linux,
+macOS, and Windows; these jobs must actually pass before claiming support
 from those runs. The broader test matrix also includes an older compatible
 scientific stack on Python 3.12. Building artifacts does not publish a release.

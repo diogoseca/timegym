@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from .contracts import Forecast, ForecastTask
 from .models import (
+    REDUCTIONS,
     NaiveForecaster,
     SklearnForecaster,
     fresh_model,
@@ -36,15 +37,36 @@ class Pipeline:
     Native models implement fit(context: DataFrame) and predict(future_index),
     returning a Forecast. Supply a native class, a model_factory producing a
     fresh unfitted instance, or an instance implementing clone_unfitted().
-    sklearn regressors/transformers can be added with add().
-    Only recursive sklearn reduction is supported in this focused release.
+    sklearn regressors/transformers can be added with add(); ``reduction``
+    selects one of REDUCTIONS for them and, like ``window_length``, does not
+    change native models. An optional ``target_transform`` is refitted on
+    each context before the model and inverted on the forecast it returns.
     """
 
     def __init__(
-        self, model=None, window_length=12, reduction="recursive", *, model_factory=None
+        self,
+        model=None,
+        window_length=12,
+        reduction="recursive",
+        *,
+        model_factory=None,
+        target_transform=None,
     ):
-        if reduction != "recursive":
-            raise ValueError("This release supports reduction='recursive' only")
+        if reduction not in REDUCTIONS:
+            raise ValueError(
+                f"Unknown reduction {reduction!r}; choose from {REDUCTIONS}"
+            )
+        protocol = ("clone_unfitted", "fit_transform", "inverse_transform")
+        if target_transform is not None and (
+            inspect.isclass(target_transform)
+            or not all(
+                callable(getattr(target_transform, name, None)) for name in protocol
+            )
+        ):
+            raise TypeError(
+                "target_transform must be an instance implementing clone_unfitted(), "
+                "fit_transform(context) and inverse_transform(forecast)"
+            )
         self.model = model
         if model is not None and model_factory is not None:
             raise ValueError("Specify model or model_factory, not both")
@@ -56,6 +78,7 @@ class Pipeline:
         window_length = positive_int(window_length, "window_length")
         self.window_length = int(window_length)
         self.reduction = reduction
+        self.target_transform = target_transform
         self.steps = []
 
     def add(self, estimator, **parameters):
@@ -69,9 +92,14 @@ class Pipeline:
         self.steps.append(estimator)
         return self
 
-    def _model(self):
+    def _model(self, horizon):
         if self.steps:
-            return SklearnForecaster(self.steps, self.window_length)
+            return SklearnForecaster(
+                self.steps,
+                self.window_length,
+                reduction=self.reduction,
+                horizon=horizon,
+            )
         if self.model is None and self.model_factory is None:
             return NaiveForecaster()
         newly_constructed = self.model_factory is not None or inspect.isclass(
@@ -85,7 +113,12 @@ class Pipeline:
         if callable(getattr(candidate, "clone_unfitted", None)):
             return candidate if newly_constructed else fresh_model(candidate)
         if is_sklearn_regressor(candidate):
-            return SklearnForecaster([candidate], self.window_length)
+            return SklearnForecaster(
+                [candidate],
+                self.window_length,
+                reduction=self.reduction,
+                horizon=horizon,
+            )
         return candidate if newly_constructed else fresh_model(candidate)
 
     def _model_name(self) -> str:
@@ -105,22 +138,41 @@ class Pipeline:
 
     @classmethod
     def from_config(cls, config):
-        """Reconstruct only an allowlisted built-in model, without dynamic imports."""
+        """Rebuild allowlisted built-in models and target transforms without dynamic imports."""
         return cls(**pipeline_from_config(config))
 
     def predict(self, context, future_index):
-        """Fit on context and predict the supplied index, without future targets."""
+        """Fit on context and predict the supplied index, without future targets.
+
+        A target transform is refitted on this context alone and the model sees
+        only the transformed context. A forecast that meets its contract is
+        inverted to the original scale; one that violates it is returned
+        unchanged, so evaluation reports the model's fault, not the inversion's.
+        """
         if isinstance(context, pd.Series):
             context = context.to_frame(
                 name=context.name if context.name is not None else "y"
             )
         # Share the public task contract, including unique target names.
-        ForecastTask(context=context, future_index=future_index)
-        model = self._model()
-        model.fit(context.copy(deep=True))
+        task = ForecastTask(context=context, future_index=future_index)
+        transform = None
+        if self.target_transform is not None:
+            transform = self.target_transform.clone_unfitted()
+            if transform is self.target_transform:
+                raise ValueError(
+                    "clone_unfitted() must return a new target transform instance"
+                )
+            task = ForecastTask(
+                context=transform.fit_transform(context.copy(deep=True)),
+                future_index=future_index,
+            )
+        model = self._model(len(future_index))
+        model.fit(task.context.copy(deep=True))
         forecast = model.predict(future_index.copy())
         if not isinstance(forecast, Forecast):
             raise TypeError("Native model.predict must return a timegym.Forecast")
+        if transform is not None and not forecast.validate(task):
+            forecast = transform.inverse_transform(forecast)
         return forecast
 
     def run(
@@ -192,6 +244,7 @@ class Pipeline:
                         seed_index=seed_index,
                     )
                 )
+        config = self.to_config()
         return ForecastRun(
             cases=results,
             metadata={
@@ -201,7 +254,8 @@ class Pipeline:
                 "model": self._model_name(),
                 "window_length": self.window_length,
                 "reduction": self.reduction,
-                "pipeline_config": self.to_config(),
+                "target_transform": config["target_transform"],
+                "pipeline_config": config,
                 "diagnostic_settings": settings,
             },
         )
@@ -266,10 +320,6 @@ class Pipeline:
         return self.run(scenarios, seeds=seeds, **diagnostic_settings).plot_errors(
             metric=metric, bins=bins, missing=missing, figsize=figsize
         )
-
-    def plot_error(self, *args, **kwargs):
-        """Compatibility alias for plot_errors, retained for the 0.2 release."""
-        return self.plot_errors(*args, **kwargs)
 
 
 # %% ../notebooks/07_pipeline.ipynb #10_reports_and_repla-32

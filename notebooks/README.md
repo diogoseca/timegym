@@ -6,10 +6,10 @@ distributions. The plots continue the 2021 Quick Start's visual language: gray
 observation dots, blue prediction crosses, thin reference curves, and a clear
 forecast origin.
 
-Everything lives in this folder: **15 source notebooks generate the package,
-10 application notebooks use it**, and the [11 original notebooks](archive/README.md)
+Everything lives in this folder: **14 source notebooks generate the package,
+12 application notebooks use it**, and the [11 original notebooks](archive/README.md)
 retain their development history and saved figures in Git. The historical
-archive is excluded from source distributions; the 25 active notebooks are included.
+archive is excluded from source distributions; the 26 active notebooks are included.
 
 ## Open and explore
 
@@ -36,6 +36,8 @@ explicit seeds. Installing the wheel alone does not install these notebook files
 | [26 · Composed and financial stresses](26_composed_and_financial_stresses.ipynb) | Controlled combinations, jumps, GARCH, hidden regimes, price means, and replay |
 | [27 · Joint financial uncertainty](27_joint_financial_uncertainty.ipynb) | Multi-target mechanisms, joint paths, dependence faults, aggregate uncertainty, and repair |
 | [28 · Write and test a custom model](28_custom_model.ipynb) | Nearest analogues, contract failures, real observations, and a supplied semi-synthetic truth function |
+| [29 · Target transforms](29_target_transforms.ipynb) | Log, Box-Cox and difference transforms fitted per context and inverted on the forecast |
+| [30 · Reductions](30_reductions.ipynb) | Recursive, direct and multioutput reductions of one regressor, and where their errors differ |
 
 For multiple plots of the same fitted outputs, retain the run:
 
@@ -53,7 +55,7 @@ The plot methods reuse `run.cases`; they do not refit. Calling
 
 The source notebooks combine reasoning, editable implementation cells, examples,
 and plots. Implementation cells are collapsed for reading; expand them to work
-on the code. The [source map](source-map.json) gives each of the 25 package modules
+on the code. The [source map](source-map.json) gives each of the 23 package modules
 one notebook owner.
 
 | Source notebook | Responsibility |
@@ -62,15 +64,14 @@ one notebook owner.
 | [02 · Real data](02_real_data.ipynb) | Real-data helper |
 | [03 · Smoothing](03_smoothing.ipynb) | Moving averages |
 | [04 · Feature engineering](04_feature_engineering.ipynb) | Lagged and calendar features |
-| [05 · Target engineering](05_target_engineering.ipynb) | Integer and fractional differencing |
-| [06 · Forecasting models](06_forecasting_models.ipynb) | Native baselines and model adaptation |
+| [05 · Target engineering](05_target_engineering.ipynb) | Integer and fractional differencing, reversible target transforms |
+| [06 · Forecasting models](06_forecasting_models.ipynb) | Native baselines and recursive, direct and multioutput reductions |
 | [07 · Pipeline](07_pipeline.ipynb) | Fresh fitting, evaluation, and retained runs |
 | [08 · Forecast contracts](08_forecast_contracts.ipynb) | Tasks, forecasts, and reference shapes |
 | [09 · Scores and diagnostics](09_scores_and_diagnostics.ipynb) | Scores, case-level intervals, checks, and fault fixtures |
 | [10 · Reports and replay](10_reports_and_replay.ipynb) | Structured results and provenance |
 | [11 · Plotting](11_plotting.ipynb) | Forecast matrices and case-score distributions |
 | [12 · Package](12_package.ipynb) | Public exports and package structure |
-| [13 · Command line](13_command_line.ipynb) | A fault/repair demonstration, report inspection, and replay |
 | [14 · Controlled processes](14_controlled_processes.ipynb) | Compositions, parameter changes, Merton/GARCH/regime simulation and references |
 | [15 · Joint controlled processes](15_joint_processes.ipynb) | Correlated innovations, shared jumps and regimes, CCC-GARCH, and joint reference laws |
 

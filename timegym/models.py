@@ -8,6 +8,7 @@ import pandas as pd
 from .contracts import DEFAULT_LEVELS, Forecast
 
 __all__ = [
+    "REDUCTIONS",
     "NaiveForecaster",
     "GaussianAR1Forecaster",
     "SklearnForecaster",
@@ -228,11 +229,49 @@ class GaussianAR1Forecaster(_ConfiguredForecaster):
         )
 
 
+# %% ../notebooks/06_forecasting_models.ipynb #models-reduction-windows
+REDUCTIONS = ("recursive", "direct", "multioutput")
+
+
+def _lag_windows(values, window_length, steps):
+    """Pair each flattened lag window, oldest row first, with its next ``steps`` rows.
+
+    Only windows whose labels are rows of ``values`` are returned, so no
+    training label lies beyond the last context observation.
+    """
+    count = len(values) - window_length - steps + 1
+    windows = np.asarray([values[i : i + window_length].ravel() for i in range(count)])
+    labels = np.asarray(
+        [values[i + window_length : i + window_length + steps] for i in range(count)]
+    )
+    return windows, labels
+
+
+def _native_multioutput(estimator):
+    """Read sklearn's multioutput tag; releases before 1.6 expose it through _get_tags."""
+    try:
+        from sklearn.utils import get_tags
+    except ImportError:
+        return bool(estimator._get_tags().get("multioutput", False))
+    return bool(get_tags(estimator).target_tags.multi_output)
+
+
 # %% ../notebooks/06_forecasting_models.ipynb #06_forecasting_model-13
 class SklearnForecaster(_ConfiguredForecaster):
-    """Recursive lag reduction; transformations fit only on training windows."""
+    """Reduce an sklearn regression pipeline to multi-step forecasts from lag windows.
 
-    def __init__(self, steps, window_length=12):
+    Every reduction trains on the same flattened lag windows of the context,
+    oldest row first, and fits transformers only on those training rows.
+    ``recursive`` fits one-step regressors and appends each prediction to the
+    window. ``direct`` fits one regressor per horizon step and target, always
+    from the last observed window. ``multioutput`` fits one regressor per
+    target for the whole horizon vector, wrapping the final step in
+    MultiOutputRegressor when it lacks native multioutput support.
+    ``horizon`` is the longest forecast returned; direct and multioutput
+    need it to build their labels.
+    """
+
+    def __init__(self, steps, window_length=12, reduction="recursive", horizon=None):
         window_length = positive_int(window_length, "window_length")
         if (
             not isinstance(steps, Sequence)
@@ -244,48 +283,96 @@ class SklearnForecaster(_ConfiguredForecaster):
             )
         if not is_sklearn_regressor(steps[-1]):
             raise ValueError(f"Final step {steps[-1]!r} must be an sklearn regressor")
+        if reduction not in REDUCTIONS:
+            raise ValueError(
+                f"Unknown reduction {reduction!r}; choose from {REDUCTIONS}"
+            )
+        if horizon is not None:
+            horizon = positive_int(horizon, "horizon")
+        elif reduction != "recursive":
+            raise ValueError(
+                f"The {reduction} reduction requires a positive integer horizon"
+            )
         self.steps, self.window_length = list(steps), window_length
+        self.reduction, self.horizon = reduction, horizon
 
     def params(self) -> dict:
-        return dict(steps=self.steps, window_length=self.window_length)
+        return dict(
+            steps=self.steps,
+            window_length=self.window_length,
+            reduction=self.reduction,
+            horizon=self.horizon,
+        )
 
-    def fit(self, context):
+    def _estimator(self, multioutput=False):
         try:
             from sklearn.base import clone
+            from sklearn.multioutput import MultiOutputRegressor
             from sklearn.pipeline import Pipeline as SkPipeline
         except ImportError as exc:
             raise ImportError(
                 "Install timegym[sklearn] to use sklearn estimators"
             ) from exc
+        steps = [clone(step) for step in self.steps]
+        if multioutput and not _native_multioutput(steps[-1]):
+            steps[-1] = MultiOutputRegressor(steps[-1])
+        return SkPipeline([(f"step_{i}", step) for i, step in enumerate(steps)])
+
+    def fit(self, context):
         y = context.to_numpy(dtype=float)
-        if len(y) <= self.window_length:
-            raise ValueError("context must be longer than window_length")
+        steps = 1 if self.reduction == "recursive" else self.horizon
+        if len(y) < self.window_length + steps:
+            raise ValueError(
+                f"The {self.reduction} reduction needs at least window_length + {steps} = "
+                f"{self.window_length + steps} context rows"
+            )
         self.names_, self.history_ = tuple(context.columns), y.copy()
         self.index_ = context.index.copy()
-        x = np.asarray(
-            [
-                y[i - self.window_length : i].ravel()
-                for i in range(self.window_length, len(y))
+        windows, labels = _lag_windows(y, self.window_length, steps)
+        targets = range(y.shape[1])
+        if self.reduction == "direct":
+            self.models_ = [
+                [
+                    self._estimator().fit(windows, labels[:, step, d])
+                    for step in range(steps)
+                ]
+                for d in targets
             ]
-        )
-        target = y[self.window_length :]
-        self.models_ = []
-        for d in range(y.shape[1]):
-            estimator = SkPipeline(
-                [(f"step_{i}", clone(step)) for i, step in enumerate(self.steps)]
-            )
-            estimator.fit(x, target[:, d])
-            self.models_.append(estimator)
+        elif self.reduction == "multioutput" and steps > 1:
+            self.models_ = [
+                self._estimator(multioutput=True).fit(windows, labels[:, :, d])
+                for d in targets
+            ]
+        else:
+            self.models_ = [
+                self._estimator().fit(windows, labels[:, 0, d]) for d in targets
+            ]
         return self
 
     def predict(self, future_index):
         _require_regular_future(self.index_, future_index)
-        history, predictions = list(self.history_.copy()), []
-        for _ in future_index:
-            x = np.asarray(history[-self.window_length :]).reshape(1, -1)
-            step = np.asarray([model.predict(x).item() for model in self.models_])
-            predictions.append(step)
-            history.append(step)
+        h = len(future_index)
+        if self.horizon is not None and h > self.horizon:
+            raise ValueError(
+                f"future_index has {h} labels; this model forecasts at most {self.horizon}"
+            )
+        window = self.history_[-self.window_length :].reshape(1, -1)
+        if self.reduction == "direct":
+            predictions = [
+                [models[step].predict(window).item() for models in self.models_]
+                for step in range(h)
+            ]
+        elif self.reduction == "multioutput":
+            predictions = np.column_stack(
+                [model.predict(window).reshape(-1)[:h] for model in self.models_]
+            )
+        else:
+            history, predictions = list(self.history_.copy()), []
+            for _ in future_index:
+                x = np.asarray(history[-self.window_length :]).reshape(1, -1)
+                step = np.asarray([model.predict(x).item() for model in self.models_])
+                predictions.append(step)
+                history.append(step)
         return Forecast(
             index=future_index.copy(),
             point=np.asarray(predictions),

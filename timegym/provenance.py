@@ -9,7 +9,8 @@ from pathlib import Path
 import platform
 import numpy as np
 from . import models
-from .models import GaussianAR1Forecaster, NaiveForecaster
+from .models import REDUCTIONS, GaussianAR1Forecaster, NaiveForecaster
+from .target import transform_config, transform_from_config
 from ._internal import _json_safe
 
 __all__ = [
@@ -27,7 +28,7 @@ _BUILTINS = {
     "NaiveForecaster": NaiveForecaster,
     "GaussianAR1Forecaster": GaussianAR1Forecaster,
 }
-PIPELINE_CONFIG_SCHEMA_VERSION = 2
+PIPELINE_CONFIG_SCHEMA_VERSION = 3
 
 
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-20
@@ -106,12 +107,17 @@ def pipeline_config(pipeline):
                 **_describe_estimator(supplied),
                 "reason": "Only exact bundled native baseline classes support automatic replay.",
             }
+    transform = None
+    if pipeline.target_transform is not None:
+        transform = transform_config(pipeline.target_transform)
+        replayable = replayable and transform["kind"] == "builtin"
     return _json_safe(
         {
             "schema_version": PIPELINE_CONFIG_SCHEMA_VERSION,
             "model": model,
             "window_length": pipeline.window_length,
             "reduction": pipeline.reduction,
+            "target_transform": transform,
             "replayable": replayable,
         }
     )
@@ -123,15 +129,18 @@ def pipeline_from_config(config):
     if (
         not isinstance(config, dict)
         or type(config.get("schema_version")) is not int
-        or config["schema_version"] not in (1, PIPELINE_CONFIG_SCHEMA_VERSION)
+        or config["schema_version"] not in (2, PIPELINE_CONFIG_SCHEMA_VERSION)
     ):
         raise ValueError("Unsupported or incomplete pipeline configuration schema")
-    reduction_key = "strategy" if config["schema_version"] == 1 else "reduction"
-    expected = {"schema_version", "model", "window_length", reduction_key, "replayable"}
+    expected = {"schema_version", "model", "window_length", "reduction", "replayable"}
+    if config["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION:
+        expected.add("target_transform")
     if set(config) != expected:
         raise ValueError("Unsupported or incomplete pipeline configuration schema")
-    if config[reduction_key] != "recursive":
-        raise ValueError("This release supports reduction='recursive' only")
+    if config["reduction"] not in REDUCTIONS:
+        raise ValueError(
+            f"Unknown reduction {config['reduction']!r}; choose from {REDUCTIONS}"
+        )
     if config["replayable"] is not True:
         raise ValueError(
             "This model configuration is not automatically replayable; supply its original model code"
@@ -162,10 +171,14 @@ def pipeline_from_config(config):
     restored = _BUILTINS[name](**parameters)
     if isinstance(restored, GaussianAR1Forecaster) and restored.seed is None:
         raise ValueError("Exact replay requires a fixed nonnegative integer model seed")
+    transform = config.get("target_transform")
     return {
         "model": restored,
         "window_length": window,
-        "reduction": config[reduction_key],
+        "reduction": config["reduction"],
+        "target_transform": (
+            None if transform is None else transform_from_config(transform)
+        ),
     }
 
 

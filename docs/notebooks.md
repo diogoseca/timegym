@@ -1,7 +1,7 @@
 # Working with notebooks
 
 All notebooks live under [`notebooks/`](../notebooks/README.md). The collection
-has **15 source notebooks**, which generate the package, and **10 application
+has **14 source notebooks**, which generate the package, and **12 application
 notebooks**, which use it. The original 11 notebooks remain in
 [`notebooks/archive/`](../notebooks/archive/README.md) in Git, outside the source
 distribution.
@@ -26,7 +26,7 @@ notebooks. Its local snapshot cache supports offline reuse; see the
 
 Source notebooks 01–15 pair explanations and examples with editable
 implementation cells. Expand those cells to change the library. Application
-notebooks 00 and 20–28 import the library and focus on forecasting problems.
+notebooks 00 and 20–30 import the library and focus on forecasting problems.
 Each notebook runs in its own kernel without variables from another notebook.
 
 The original `%%runwrite` workflow made notebooks a place to develop both the

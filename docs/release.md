@@ -26,14 +26,14 @@ Y does not reset. Only Diogo Seca chooses major-version changes. The root
 `AGENTS.md` records these rules for future contributors.
 
 Set `CITATION.cff`'s version and `date-released` and the leading changelog heading
-to the intended release identity. The date here is 2026-10-30, the preparation
+to the intended release identity. The date here is 2026-11-03, the preparation
 date; change it before tagging if publication happens on another day. Run:
 
 ```bash
 .venv/bin/python tools/export_notebooks.py
 .venv/bin/python tools/sync_citation.py
 .venv/bin/python paper/build_standalone.py
-.venv/bin/python tools/sync_citation.py --check --tag v1.0.0
+.venv/bin/python tools/sync_citation.py --check --tag v1.1.0
 .venv/bin/python paper/build_standalone.py --check
 ```
 
@@ -105,8 +105,8 @@ full tests, strict docs, citation check, source build and `twine check` locally.
 The tag must exactly match `v` plus `__version__`. For this preparation:
 
 ```bash
-git tag -a v1.0.0 -m 'TimeGym 1.0.0'
-git push origin v1.0.0
+git tag -a v1.1.0 -m 'TimeGym 1.1.0'
+git push origin v1.1.0
 ```
 
 `release.yml` runs the complete reusable `checks.yml` workflow against the tag,

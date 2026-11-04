@@ -43,3 +43,17 @@ A successful local check is not evidence that another OS or Python version passe
 
 Publication is tag-driven after owner review. Do not publish, push tags, or
 change external PyPI/Zenodo settings as part of ordinary implementation work.
+
+## Working agreements
+
+Work on a branch and hand over a pull request; never push to `main`, never
+push tags, never force-push. Before handoff run, with the venv interpreter,
+`tools/export_notebooks.py --check`, `python -m pytest -q`,
+`python -m mkdocs build --strict`, `paper/build_standalone.py --check`,
+`tools/sync_citation.py --check`, and `notebooks/check_notebooks.py` on every
+notebook you touched, with `--write` when outputs change, because the docs
+site renders saved outputs. Recount every stated count (source notebooks,
+generated modules, active notebooks, tests) when it changes. Commit messages
+have an imperative subject and no trailers: no `Co-Authored-By`, no session
+links, no tool attribution of any kind. Delegate to subagents on Opus; the
+session's own model is for orchestration and review.

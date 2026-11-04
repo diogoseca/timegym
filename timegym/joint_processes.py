@@ -5,7 +5,6 @@ import numpy as np
 from scipy.special import logsumexp
 from scipy.stats import poisson
 from timegym._process_common import (
-    resolve_process,
     _PROCESS_REGISTRY,
     _CHANGE_FIELDS,
     _TAIL_TOLERANCE,
@@ -21,15 +20,9 @@ from timegym._process_common import (
     _build_case,
 )
 
-__all__ = ["resolve_joint_process", "generate_joint_process"]
+__all__ = ["generate_joint_process"]
 
 # %% ../notebooks/15_joint_processes.ipynb #joint-imports
-
-
-# %% ../notebooks/15_joint_processes.ipynb #joint-resolve-joint-process
-def resolve_joint_process(kind, parameters, context_length, horizon, n_targets, seed):
-    """Compatibility entry point for the shared controlled-process grammar."""
-    return resolve_process(kind, parameters, context_length, horizon, n_targets, seed)
 
 
 # %% ../notebooks/15_joint_processes.ipynb #joint-draw-emission

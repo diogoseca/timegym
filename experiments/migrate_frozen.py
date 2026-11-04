@@ -1,8 +1,13 @@
-"""Apply the EX4/EX17 schema reduction to frozen records without running models.
+"""Apply recorded offline migrations to frozen records without running models.
 
-Use --root with a checkout containing the original records and updated protocols.
-The original manifest evidence is retained under record_migration; source hashes
-continue to identify the historical execution, not this record transformation.
+``schema-reduction`` applies the EX4/EX17 schema reduction. Use --root with a
+checkout containing the original records and updated protocols. The original
+manifest evidence is retained under record_migration; source hashes continue to
+identify the historical execution, not this record transformation.
+
+``loss-keys`` renames the supplement's paired loss fields from repair_minus_faulty_*
+to clean_minus_faulty_* and logs the rename under loss_key_migration. Field order
+follows the sorted serialization the runner writes, and no value changes.
 """
 from __future__ import annotations
 
@@ -80,11 +85,66 @@ def migrate(root: Path) -> None:
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False)+"\n")
 
 
+LOSS_KEYS = {
+    "repair_minus_faulty_mse": "clean_minus_faulty_mse",
+    "repair_minus_faulty_reference_mse": "clean_minus_faulty_reference_mse",
+}
+
+
+def rename_loss_keys(results: dict) -> dict:
+    results = deepcopy(results)
+    renamed = 0
+    for row in results["model"]["loss_summaries"]:
+        for old, new in LOSS_KEYS.items():
+            if new in row:
+                raise ValueError(f"Loss summary already has {new}")
+            row[new] = row.pop(old)
+            renamed += 1
+    if renamed != 2 * len(results["model"]["loss_summaries"]) or not renamed:
+        raise ValueError("Expected both paired loss fields in every loss summary")
+    return results
+
+
+def migrate_loss_keys(root: Path) -> None:
+    directory = root / "experiments" / "results-v2"
+    path, manifest_path = directory / "results.json", directory / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    if "loss_key_migration" in manifest:
+        raise ValueError("results-v2 loss keys have already been migrated")
+    before = sha256(path)
+    if manifest["results_sha256"] != before:
+        raise ValueError("Results do not match their manifest")
+    previous = json.loads(path.read_text())
+    results = rename_loss_keys(previous)
+    if {**results["model"], "loss_summaries": None} != {**previous["model"], "loss_summaries": None} \
+            or {key: value for key, value in results.items() if key != "model"} != \
+            {key: value for key, value in previous.items() if key != "model"}:
+        raise ValueError("Loss-key migration changed fields outside the loss summaries")
+    for new_row, old_row in zip(results["model"]["loss_summaries"], previous["model"]["loss_summaries"]):
+        if {LOSS_KEYS.get(key, key): value for key, value in old_row.items()} != new_row:
+            raise ValueError("Loss-key migration changed a value")
+    path.write_text(json.dumps(results, indent=2, sort_keys=True, allow_nan=False)+"\n")
+    export_tables(results, directory)
+    manifest["results_sha256"] = sha256(path)
+    manifest["loss_key_migration"] = {
+        "decision": "Owner decision, 3 November 2026",
+        "method": "Offline field rename; no study rerun and no numerical value changed.",
+        "renamed_fields": LOSS_KEYS,
+        "original_results_sha256": before,
+        "migration_script_sha256": sha256(Path(__file__)),
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False)+"\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
+    parser.add_argument("--step", choices=("schema-reduction", "loss-keys"), default="schema-reduction")
     args = parser.parse_args()
-    migrate(args.root)
+    if args.step == "loss-keys":
+        migrate_loss_keys(args.root)
+    else:
+        migrate(args.root)
 
 
 if __name__ == "__main__":

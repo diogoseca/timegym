@@ -100,8 +100,8 @@ suites, then on real data with and without a known truth.
 
 [![A nearest-analogues forecaster on a synthetic series: truth line, observed points, predicted points](notebooks/assets/custom-model-knn.png)](https://diogoseca.github.io/timegym/notebooks/28_custom_model/)
 
-scikit-learn regressors plug in through a recursive adapter that fits its
-transforms on the training window only:
+scikit-learn regressors plug in through a recursive, direct or multioutput
+reduction that fits its transforms on the training window only:
 
 ```python
 from sklearn.linear_model import Ridge
@@ -130,6 +130,8 @@ case and never assumes a deep copy clears fitted state.
 | [Composed and financial stresses](https://diogoseca.github.io/timegym/notebooks/26_composed_and_financial_stresses/) | Jumps, GARCH, hidden regimes, one mechanism at a time |
 | [Joint financial uncertainty](https://diogoseca.github.io/timegym/notebooks/27_joint_financial_uncertainty/) | Shared shocks and regimes, CCC-GARCH, broken dependence |
 | [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | A forecaster from scratch, synthetic suites, real data |
+| [Target transforms](https://diogoseca.github.io/timegym/notebooks/29_target_transforms/) | Log, Box-Cox and difference transforms, inverted on the forecast |
+| [Reductions](https://diogoseca.github.io/timegym/notebooks/30_reductions/) | Recursive, direct and multioutput sklearn forecasts compared |
 
 The notebooks run on CPU with local data. `pip install -e '.[notebooks]'` and
 `python -m jupyterlab notebooks` opens them; the
@@ -180,13 +182,13 @@ Zenodo, cite that release's DOI.
   author = {Seca, Diogo},
   title = {{TimeGym: verification and diagnosis for forecasting pipelines}},
   year = {2026},
-  version = {1.0.0},
+  version = {1.1.0},
   url = {https://github.com/diogoseca/timegym},
 }
 ```
 
 Seca, D. (2026). *TimeGym: verification and diagnosis for forecasting pipelines*
-(Version 1.0.0) [Computer software]. https://github.com/diogoseca/timegym
+(Version 1.1.0) [Computer software]. https://github.com/diogoseca/timegym
 
 The earlier manuscript:
 
