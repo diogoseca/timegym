@@ -52,8 +52,10 @@ push tags, never force-push. Before handoff run, with the venv interpreter,
 `python -m mkdocs build --strict`, `paper/build_standalone.py --check`,
 `tools/sync_citation.py --check`, and `notebooks/check_notebooks.py` on every
 notebook you touched, with `--write` when outputs change, because the docs
-site renders saved outputs. Recount every stated count (source notebooks,
-generated modules, active notebooks, tests) when it changes. Commit messages
+site renders saved outputs. When the manuscript changes, also compile
+`paper/timegym.tex` with latexmk as `paper/README.md` describes. Recount
+every stated count (source notebooks, generated modules, active notebooks,
+tests) when it changes. Commit messages
 have an imperative subject and no trailers: no `Co-Authored-By`, no session
 links, no tool attribution of any kind. Delegate to subagents on Opus; the
 session's own model is for orchestration and review.

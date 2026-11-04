@@ -46,6 +46,8 @@ For new CPU runs in separate output directories and SHA256 comparisons, follow [
 
 Both studies run locally on CPU. The original protocol and records remain in `experiments/protocol.json` and `experiments/results/`. The implementation-regression and covariance supplement has its own `experiments/protocol-v2.json` and `experiments/results-v2/`, including case records, summary CSVs, a source/environment manifest, and separate wall-time metadata. Rendering consumes saved records; it does not rerun experiments. The standalone output, `timegym.tex`, includes the generated tables and bibliography, so the single-file standalone build needs no additional source files or BibTeX pass. Compile `main.tex` from this directory using LaTeX, BibTeX, and two further LaTeX passes (`plain` bibliography style).
 
+To compile the standalone PDF, run `latexmk -pdf -outdir=build timegym.tex` from this directory. It needs latexmk, the standard LaTeX and TikZ packages, and the cm-super fonts; MacTeX includes them all, and on Debian or Ubuntu they are `apt-get install latexmk texlive-latex-recommended texlive-pictures texlive-fonts-recommended cm-super`. Without cm-super the T1-encoded fonts fall back to Metafont bitmaps, which can fail to build. The `paper` job in the checks workflow compiles the same file on every push and uploads `timegym.pdf` as the `paper-pdf` artifact.
+
 The original pilot exports three scientific figures in both PNG and vector PDF under `figures/`:
 
 - `fault-alarm-matrix`: observed alarms for each selected fixture, with unsupported covariance cells visibly masked. The clean row shows false alarms.

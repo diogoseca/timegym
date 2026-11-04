@@ -30,7 +30,8 @@ jobs:
       - run: python -m twine check dist/*
       - run: python paper/build_standalone.py
       - name: Install LaTeX
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends latexmk texlive-latex-recommended texlive-pictures texlive-fonts-recommended
+        # cm-super supplies Type 1 T1 fonts; without it Metafont bitmap fonts fail to build.
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends latexmk texlive-latex-recommended texlive-pictures texlive-fonts-recommended cm-super
       - name: Compile standalone manuscript
         working-directory: paper
         run: latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=build timegym.tex
