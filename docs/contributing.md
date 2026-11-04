@@ -45,13 +45,36 @@ python notebooks/check_notebooks.py --group demo
 python notebooks/check_notebooks.py --write --html-dir /tmp/timegym-notebooks
 ```
 
-The checker executes active notebooks in fresh independent kernels; the archive
-is excluded. Inspect the rendered plots and explanations. Use discrete markers
+The checker executes active notebooks in fresh independent kernels with the
+invoking Python interpreter. It clears stale outputs first, rejects uncaught
+errors or skipped code, and excludes the archive. Successful execution does not
+prove that labels, scales or explanations are useful, so inspect the rendered
+plots and explanations. Seeded results are reproducible within an environment,
+while numerical and rendering versions can affect output. Use discrete markers
 for point predictions and observations, distinguish conditional references from
 realized futures, and label marginal intervals separately from joint paths.
 Keep seeds explicit, use local data, and preserve uncertainty caveats. Keep
 implementation cells exportable and demonstration cells unmarked. Run
 `python -m build` before packaging changes.
+
+Source notebooks [14](../notebooks/14_controlled_processes.ipynb) and
+[15](../notebooks/15_joint_processes.ipynb) explain and build the univariate and
+joint stress generators that tutorials 26 and 27 use.
+
+## Check the documentation site
+
+```bash
+python -m pip install -e '.[docs]'
+python -m mkdocs build --strict
+python tools/check_site_links.py site
+```
+
+`--strict` checks Markdown links but not the HTML rendered from notebooks; the
+link checker covers both. Notebook links between tutorials are written relative
+to `notebooks/`, and `tools/docs_hooks.py` points them at the built pages, or at
+GitHub for files the site does not render. The tutorial groups are listed in
+`mkdocs.yml`, the README and the [notebook guide](../notebooks/README.md);
+`tests/test_docs_navigation.py` keeps the three in step.
 
 ## Preserve the scientific contract
 
@@ -68,3 +91,11 @@ figures from results, then run `python paper/build_standalone.py`.
 The standalone is generated from `main.tex`, `references.bib`, result fragments,
 and vector scenes. Run `python paper/build_standalone.py --check` to detect
 drift without rewriting it; CI runs this check beside the package export check.
+
+## Report a problem
+
+Start with the [quick start](../README.md) and the [tutorials](notebooks.md).
+For a diagnostic failure, include the JSON report, exact package versions, model
+configuration, scenario manifest and seed when opening an
+[issue](https://github.com/diogoseca/timegym/issues). Avoid including private
+training data or credentials.

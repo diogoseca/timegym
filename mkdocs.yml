@@ -8,10 +8,12 @@ site_url: https://diogoseca.github.io/timegym/
 theme:
   name: material
   features:
+    - navigation.tabs
     - navigation.sections
     - navigation.top
     - navigation.footer
     - content.code.copy
+    - toc.follow
     - search.suggest
     - search.highlight
   palette:
@@ -47,7 +49,11 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.highlight
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 validation:
   links:
     anchors: warn
@@ -61,27 +67,42 @@ not_in_nav: |
   /experiments/**
   /paper/**
   /tools/**
-  /CHANGELOG.md
 nav:
   - Home: README.md
   - Tutorials:
       - Overview: docs/notebooks.md
-      - Quick start: notebooks/00_quick_start.ipynb
-      - Univariate uncertainty: notebooks/20_univariate_uncertainty.ipynb
-      - Multivariate forecasting: notebooks/21_multivariate_forecasting.ipynb
-      - Multivariate uncertainty: notebooks/22_multivariate_uncertainty.ipynb
-      - Faults, repairs and replay: notebooks/23_faults_repairs_and_replay.ipynb
-      - Real-data forecasts: notebooks/24_real_data_forecasts.ipynb
-      - Capability sweeps: notebooks/25_capability_sweeps.ipynb
-      - Composed and financial stresses: notebooks/26_composed_and_financial_stresses.ipynb
-      - Joint financial uncertainty: notebooks/27_joint_financial_uncertainty.ipynb
-      - Write and test a custom model: notebooks/28_custom_model.ipynb
-      - Target transforms: notebooks/29_target_transforms.ipynb
-      - Reductions: notebooks/30_reductions.ipynb
-  - Guide:
+      - Start:
+          - Quick start: notebooks/00_quick_start.ipynb
+      - Find what breaks:
+          - Faults, repairs and replay: notebooks/23_faults_repairs_and_replay.ipynb
+          - Write and test a custom model: notebooks/28_custom_model.ipynb
+      - Shape the forecast:
+          - Target transforms: notebooks/29_target_transforms.ipynb
+          - Reductions: notebooks/30_reductions.ipynb
+          - Multivariate forecasting: notebooks/21_multivariate_forecasting.ipynb
+          - Real-data forecasts: notebooks/24_real_data_forecasts.ipynb
+      - Measure uncertainty:
+          - Univariate uncertainty: notebooks/20_univariate_uncertainty.ipynb
+          - Multivariate uncertainty: notebooks/22_multivariate_uncertainty.ipynb
+      - Stress-test:
+          - Capability sweeps: notebooks/25_capability_sweeps.ipynb
+          - Composed and financial stresses: notebooks/26_composed_and_financial_stresses.ipynb
+          - Joint financial uncertainty: notebooks/27_joint_financial_uncertainty.ipynb
+  - Concepts:
+      - How TimeGym decides: docs/concepts/how-timegym-decides.md
       - Synthetic scenarios: docs/stress-cases.md
-      - API: docs/reference.md
+  - API reference:
+      - Overview: docs/reference.md
+      - Tasks and forecasts: docs/api/tasks-and-forecasts.md
+      - Scenarios and references: docs/api/scenarios.md
+      - Composed and joint processes: docs/api/processes.md
+      - Models and reductions: docs/api/models.md
+      - Pipeline and reports: docs/api/pipeline.md
+      - Scores and diagnostics: docs/api/diagnostics.md
+      - Fault fixtures: docs/api/fault-fixtures.md
+      - Data preparation: docs/api/data-preparation.md
+      - Market data: docs/api/market-data.md
   - Project:
       - Contributing: docs/contributing.md
       - Releasing: docs/release.md
-      - Help: docs/help.md
+      - Changelog: CHANGELOG.md

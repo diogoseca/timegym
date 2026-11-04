@@ -2,18 +2,24 @@
 
 MkDocs invokes this hook; it never executes notebook code or changes the repo.
 Only documentation and its transitive local file links enter the temporary tree.
+Rendered notebooks keep their repository-relative links, so the hook also
+points those links at the built pages, or at GitHub for files the site does not
+render.
 """
 from __future__ import annotations
 
 import atexit
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from html.parser import HTMLParser
+import posixpath
+import re
 import shutil
 from tempfile import TemporaryDirectory
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 from markdown import markdown
 from mkdocs.exceptions import PluginError
+from mkdocs.utils import get_relative_url
 
 
 _STAGING = []
@@ -45,7 +51,8 @@ def on_config(config):
     _STAGING.append(temporary)
     atexit.register(temporary.cleanup)
     stage = Path(temporary.name)
-    pending = [root / "README.md", *sorted((root / "docs").glob("*.md")),
+    pending = [root / "README.md", *[path for path in [root / "CHANGELOG.md"] if path.exists()],
+               *sorted((root / "docs").rglob("*.md")),
                *sorted((root / "notebooks").glob("00_*.ipynb")), *sorted((root / "notebooks").glob("2[0-9]_*.ipynb")),
                *sorted((root / "notebooks").glob("3[0-9]_*.ipynb"))]
     copied = set()
@@ -79,3 +86,40 @@ def on_config(config):
             watch.append(str(path))
     config["watch"] = watch
     return config
+
+
+_HREF = re.compile(r'(<a\b[^>]*?\bhref=")([^"]*)(")')
+
+
+def notebook_link(href, page_src, page_url, files, repo_url):
+    """Return the built-site form of a link written relative to a notebook.
+
+    A link to a rendered page becomes a relative page URL; a link to any other
+    repository file becomes a GitHub URL. External, absolute and in-page links
+    are returned unchanged.
+    """
+    parts = urlsplit(href)
+    if parts.scheme or parts.netloc or not parts.path or parts.path.startswith("/"):
+        return href
+    target = posixpath.normpath(str(PurePosixPath(page_src).parent / unquote(parts.path)))
+    if target == ".." or target.startswith("../"):
+        return href
+    fragment = f"#{parts.fragment}" if parts.fragment else ""
+    linked = files.get_file_from_path(target)
+    if linked is not None and linked.is_documentation_page():
+        return get_relative_url(linked.url, page_url) + fragment
+    if not repo_url:
+        return href
+    return f"{repo_url.rstrip('/')}/blob/main/{quote(target)}{fragment}"
+
+
+def on_page_content(html, page, config, files):
+    if not page.file.src_uri.endswith(".ipynb"):
+        return html
+    repo_url = config.get("repo_url")
+    return _HREF.sub(
+        lambda match: match.group(1)
+        + notebook_link(match.group(2), page.file.src_uri, page.url, files, repo_url)
+        + match.group(3),
+        html,
+    )
