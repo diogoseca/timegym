@@ -2012,7 +2012,9 @@ distribution at every future coordinate but corrupts the pairing between
 coordinates; point and marginal uncertainty scores can remain unchanged.
 These failures require different evidence and different remedies.
 
-TimeGym v2 makes these distinctions explicit. Here verification means
+TimeGym v2 makes these distinctions explicit. Its intended use is to
+test a forecasting pipeline before deployment and to reproduce a failure
+after one. Here verification means
 exercising specified runtime contracts, not formal proof of a program.
 A scenario defines a
 controlled data-generating process (DGP), the information exposed to the
@@ -2045,7 +2047,9 @@ all faults in a pipeline.
 The 2021 proposal introduced synthetic challenges for debugging forecasting
 pipelines~\cite{seca2021timegym}. This revision retains that practical aim
 while revising its statistical specification. The original compared
-forecasts with a noise-free generator component using sMAPE and described
+forecasts with a noise-free generator component using sMAPE, a measure
+whose treatment of positive and negative errors is itself
+asymmetric~\cite{goodwin1999asymmetry}, and described
 that component as an optimal forecast. In v2, the reference depends
 explicitly on the requested functional, loss, and information set: a
 conditional mean is appropriate for squared loss, and future random
@@ -2057,6 +2061,54 @@ v2 features and experiments belong to the current work and are not
 attributed retrospectively to 2021.
 
 \section{Related work and positioning}
+
+\subsection{The oracle problem}
+
+Testing a forecasting pipeline is an instance of the test oracle problem.
+Weyuker called a program non-testable when no oracle exists or the oracle
+is too costly to use, and listed the remedies that remain available: a
+partial oracle, tests on simplified data with known results, and known
+properties of the output~\cite{weyuker1982testing}. Davis and Weyuker
+added the pseudo-oracle, an independently produced implementation of the
+same specification whose outputs are compared with those of the program
+under test, within a tolerance for numerical programs~\cite{davis1981pseudo}.
+Guderlei and Mayer extended metamorphic relations to programs with random
+output by comparing the output distributions of related executions with
+hypothesis tests~\cite{guderlei2007statistical}. Oracle issues specific to
+machine learning were reviewed in~\cite{seca2021review}. Table~\ref{tab:oracles}
+maps the evidence used in this paper onto these oracle types. None of the
+types is new; the contribution is to make each one executable for
+forecasts, with its assumptions recorded.
+
+Cross-implementation comparison is now a standard oracle for
+deep-learning libraries~\cite{pham2019cradle}. Tolerance-based assertions
+are common in their test suites and a recurring source of flaky
+tests~\cite{nejadgholi2019study,dutta2020detecting}; the explicit
+\code{INCONCLUSIVE} outcome keeps a tolerance choice from being reported
+as a verdict. Declared relations are properties in the sense of
+property-based testing, stated beside the code and checked on generated
+inputs~\cite{claessen2000quickcheck}; here the scenario generators supply
+those inputs.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}p{0.26\linewidth}p{0.40\linewidth}p{0.26\linewidth}@{}}
+\toprule
+Oracle type & TimeGym mechanism & Source \\
+\midrule
+Partial oracle & Forecast contracts on shape, index, finiteness, and quantile order & \cite{weyuker1982testing} \\[0.4em]
+Simplified data with known results & Synthetic scenarios with conditional references & \cite{weyuker1982testing} \\[0.4em]
+Known properties & Declared relations such as shift equivariance & \cite{weyuker1982testing,claessen2000quickcheck} \\[0.4em]
+Pseudo-oracle & Independent NumPy lag-Ridge comparator (experimental) & \cite{davis1981pseudo,pham2019cradle} \\[0.4em]
+Statistical metamorphic test & Reference-covariance rank check; calibrated loss alarm & \cite{guderlei2007statistical} \\
+\bottomrule
+\end{tabular}
+\caption{The evidence in this paper by oracle type. Each row names an
+established idea; the paper specifies and tests its forecasting form.}
+\label{tab:oracles}
+\end{table}
+
+\subsection{Controlled tasks, conformance, and metamorphic testing}
 
 Controlled forecasting tasks, software conformance, and metamorphic
 testing provide complementary precedents (Table~\ref{tab:positioning}).
@@ -2095,6 +2147,10 @@ reproducible~\cite{qiu2024tfb}. TimeGym can sit beside these checks: an API
 can be well formed while an application-specific transformation violates
 a declared relation. We do not measure comparative detection power
 against these frameworks or benchmark their forecasting models.
+Production checklists for machine-learning systems are written as
+assertions and scored~\cite{breck2017test}; TimeGym supplies
+forecasting-specific assertions for the model evaluation and debugging
+stages of that workflow~\cite{amershi2019software}.
 
 \begin{table}[t]
 \centering\small
@@ -2115,12 +2171,29 @@ feature-completeness matrix or a performance ranking.}
 \label{tab:positioning}
 \end{table}
 
+\subsection{Statistical foundations}
+
 The statistical foundations are established. Point forecasts must be
-evaluated using a loss consistent with the requested functional, such as
-the mean or a quantile~\cite{gneiting2011point}. Proper scoring rules assess
-predictive distributions~\cite{gneiting2007proper}. For multivariate
-ensembles, the energy score can be supplemented by variogram-based scores
-that respond to dependence misspecification~\cite{scheuerer2015variogram}.
+evaluated using a loss consistent with the requested
+functional~\cite{gneiting2011point}: the mean is optimal under squared
+error, any median under absolute error, and a quantile under the
+asymmetric piecewise-linear loss~\cite{gneiting2011quantiles}.
+Probabilistic forecasts are assessed by the paradigm of maximizing
+sharpness subject to calibration, where calibration is a joint property of
+forecasts and observations and sharpness a property of the forecasts
+alone~\cite{gneiting2007probabilistic,gneiting2014probabilistic}. Proper
+scoring rules address both at once~\cite{gneiting2007proper}. The CRPS
+originates in the integrated quadratic score of Matheson and
+Winkler~\cite{matheson1976scoring}; for an ensemble it decomposes into
+reliability, resolution, and uncertainty
+terms~\cite{hersbach2000decomposition}, and it can be weighted toward
+tails or quantiles while remaining proper~\cite{gneiting2011comparing}.
+The energy score generalizes the CRPS to multivariate quantities, and the
+multivariate rank histogram checks ensemble
+calibration~\cite{gneiting2008assessing}; variogram-based scores respond
+to dependence misspecification~\cite{scheuerer2015variogram}. Interval
+forecasts require conditional, not merely unconditional,
+coverage~\cite{christoffersen1998evaluating}.
 Our contribution uses these principles to specify executable tests;
 it does not propose a new scoring rule.
 
@@ -2290,7 +2363,9 @@ log-price mean generally gives the wrong mean on the price scale.
 For \code{garch}, Gaussian innovations follow
 $r_t=\mu+\sqrt{v_t}z_t$ and
 $v_{t+1}=\omega+\alpha(r_t-\mu)^2+\beta v_t$, with
-$\omega>0$, $\alpha,\beta\geq0$, and $\alpha+\beta<1$~\cite{bollerslev1986garch}.
+$\omega>0$, $\alpha,\beta\geq0$, and $\alpha+\beta<1$; this is the GARCH
+generalization~\cite{bollerslev1986garch} of Engle's ARCH
+process~\cite{engle1982autoregressive}.
 The next variance is reconstructed from observed returns. Each simulated
 future recursively updates its own variance; replacing that recursion by
 independent Gaussian draws with expected variances loses part of the joint
@@ -4458,7 +4533,13 @@ affected checks without worsening the tested clean behavior; and whether
 joint evaluation responds when marginal sample distributions are
 preserved. The unit of replication is an independently generated
 scenario-seed case. Multiple horizons and targets within one case are
-not treated as independent replications.
+not treated as independent replications. Each case fixes one forecast
+origin and refits the pipeline, a fixed-origin design with recalibration
+in Tashman's terms; for a single real series, rolling origins over
+multiple test periods are more efficient~\cite{tashman2000out}, and
+ordinary $K$-fold cross-validation is valid for purely autoregressive
+models with uncorrelated errors~\cite{bergmeir2018note}. Independent
+synthetic cases replace neither procedure.
 
 For each selected mutation, the clean, faulty, and repaired variants use
 the same generated case. Structural checks provide a baseline for
@@ -4484,8 +4565,23 @@ provide new stochastic draws, not held-out mechanisms. Mutations are
 selected to illustrate the implemented diagnostic classes, which favors
 detectability. Consequently, detection rates quantify this selected
 corpus, not the frequency or detectability of naturally occurring faults.
+Mutation analysis rests on the coupling of simple seeded faults to real
+ones~\cite{jia2011analysis}. Generated mutants have been found similar
+in detectability to real faults, whereas hand-seeded faults were harder
+to detect~\cite{andrews2005mutation}; in a corpus of 357 real faults, 73\%
+were coupled to common mutants and 17\% to none~\cite{just2014mutants}.
+The present corpus is hand-selected and therefore closer to the
+hand-seeded case. In deep learning, mutation operators have instead been
+derived from a taxonomy of real
+faults~\cite{humbatova2020taxonomy,humbatova2021deepcrime}, and mutant
+killing is defined statistically because retraining alone moves
+accuracy~\cite{jahangirova2020empirical}; no comparable taxonomy of
+forecasting-pipeline faults informs the present selection, and the
+calibrated loss alarm of Section~\ref{sec:implementation-study} plays the
+corresponding statistical role here.
 Reports retain misses, unsupported cases, exceptions, and clean false
-alarms. Statistical uncertainty is computed over independent cases and
+alarms. Statistical uncertainty is computed over independent cases, as
+recommended for randomized procedures~\cite{arcuri2011practical}, and
 the protocol records its exact convention with the results.
 
 Six output corruptions displace the forecast index, swap target labels,
@@ -5097,6 +5193,9 @@ of scenarios, mutations, or diagnostics.
 
 AirPassengers supplies one known preprocessing repair at four origins
 from one real series (Table~\ref{tab:real}). It does not establish synthetic-to-real transfer.
+The scenario families were chosen for transparent references, not for
+representativeness; even forecasting benchmark collections differ from
+the distribution of real series~\cite{spiliotis2020forecasting}.
 A broader study should prospectively collect faults from independent
 repositories, compare directly with relevant framework tests, and
 evaluate documented repairs on additional real tasks and unseen
@@ -5137,14 +5236,38 @@ matrices retain scenario, target, and seed facets, displaying stochastic
 observations and predicted means as discrete points. Plotting reuses stored
 case predictions rather than refitting. The original notebooks remain in a
 separate historical archive. The
-generated result fragments record the run configurations. Results correspond
+generated result fragments record the run configurations, following the
+reporting recommendations for forecasting research: a well-defined
+data-generating process with its seeds, described methods and
+parameterization, software versions, and defined
+measures~\cite{makridakis2018objectivity}. Results correspond
 to the pilot source digest \texttt{dece174f629b2647} and supplement result
 digest \texttt{ba9b2e90145ca50d}; their complete SHA-256 values are recorded
 in the respective experiment manifests.
 
 % The standalone builder renders references.bib into a BibTeX-free inline list.
 % BEGIN GENERATED BIBLIOGRAPHY
-\begin{thebibliography}{20}
+\begin{thebibliography}{51}
+\bibitem{amershi2019software}
+Saleema Amershi, Andrew Begel, Christian Bird, Robert DeLine, Harald Gall, Ece Kamar, Nachiappan Nagappan, Besmira Nushi and Thomas Zimmermann.
+\href{https://doi.org/10.1109/ICSE-SEIP.2019.00042}{Software Engineering for Machine Learning: A Case Study}.
+\emph{2019 IEEE/ACM 41st International Conference on Software Engineering: Software Engineering in Practice (ICSE-SEIP)}, pp. 291--300, 2019.
+
+\bibitem{andrews2005mutation}
+J. H. Andrews, L. C. Briand and Y. Labiche.
+\href{https://doi.org/10.1145/1062455.1062530}{Is mutation an appropriate tool for testing experiments?}.
+\emph{Proceedings of the 27th International Conference on Software Engineering (ICSE 2005)}, pp. 402--411, 2005.
+
+\bibitem{arcuri2011practical}
+Andrea Arcuri and Lionel Briand.
+\href{https://doi.org/10.1145/1985793.1985795}{A practical guide for using statistical tests to assess randomized algorithms in software engineering}.
+\emph{Proceedings of the 33rd International Conference on Software Engineering (ICSE 2011)}, pp. 1--10, 2011.
+
+\bibitem{bergmeir2018note}
+Christoph Bergmeir, Rob J. Hyndman and Bonsoo Koo.
+\href{https://doi.org/10.1016/j.csda.2017.11.003}{A note on the validity of cross-validation for evaluating autoregressive time series prediction}.
+\emph{Computational Statistics \& Data Analysis}, 120, pp. 70--83, 2018.
+
 \bibitem{bollerslev1986garch}
 Tim Bollerslev.
 \href{https://doi.org/10.1016/0304-4076(86)90063-1}{Generalized autoregressive conditional heteroskedasticity}.
@@ -5155,10 +5278,40 @@ Tim Bollerslev.
 \href{https://doi.org/10.2307/2109358}{Modelling the Coherence in Short-run Nominal Exchange Rates: A Multivariate Generalized {ARCH} Model}.
 \emph{The Review of Economics and Statistics}, 72(3), pp. 498--505, 1990.
 
+\bibitem{breck2017test}
+Eric Breck, Shanqing Cai, Eric Nielsen, Michael Salib and D. Sculley.
+\href{https://doi.org/10.1109/BigData.2017.8258038}{The {ML} test score: A rubric for {ML} production readiness and technical debt reduction}.
+\emph{2017 IEEE International Conference on Big Data (Big Data)}, pp. 1123--1132, 2017.
+
+\bibitem{christoffersen1998evaluating}
+Peter F. Christoffersen.
+\href{https://doi.org/10.2307/2527341}{Evaluating Interval Forecasts}.
+\emph{International Economic Review}, 39(4), pp. 841--862, 1998.
+
+\bibitem{claessen2000quickcheck}
+Koen Claessen and John Hughes.
+\href{https://doi.org/10.1145/351240.351266}{{QuickCheck}: a lightweight tool for random testing of {Haskell} programs}.
+\emph{Proceedings of the Fifth ACM SIGPLAN International Conference on Functional Programming (ICFP 2000)}, pp. 268--279, 2000.
+
+\bibitem{davis1981pseudo}
+Martin D. Davis and Elaine J. Weyuker.
+\href{https://doi.org/10.1145/800175.809889}{Pseudo-oracles for non-testable programs}.
+\emph{Proceedings of the ACM '81 Conference}, pp. 254--257, 1981.
+
+\bibitem{dutta2020detecting}
+Saikat Dutta, August Shi, Rutvik Choudhary, Zhekun Zhang, Aryaman Jain and Sasa Misailovic.
+\href{https://doi.org/10.1145/3395363.3397366}{Detecting flaky tests in probabilistic and machine learning applications}.
+\emph{Proceedings of the 29th ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA 2020)}, pp. 211--224, 2020.
+
 \bibitem{dwarakanath2019metamorphic}
 Anurag Dwarakanath, Manish Ahuja, Sanjay Podder, Silja Vinu, Arijit Naskar and {Koushik MV}.
 \href{https://doi.org/10.1109/MET.2019.00014}{Metamorphic Testing of a Deep Learning based Forecaster}.
 \emph{2019 IEEE/ACM 4th International Workshop on Metamorphic Testing (MET)}, 2019.
+
+\bibitem{engle1982autoregressive}
+Robert F. Engle.
+\href{https://doi.org/10.2307/1912773}{Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of {United Kingdom} Inflation}.
+\emph{Econometrica}, 50(4), pp. 987--1007, 1982.
 
 \bibitem{gama2014drift}
 Jo{\~a}o Gama, Indr{\.e} {\v{Z}}liobait{\.e}, Albert Bifet, Mykola Pechenizkiy and Abdelhamid Bouchachia.
@@ -5176,15 +5329,55 @@ Tilmann Gneiting.
 \href{https://doi.org/10.1198/jasa.2011.r10138}{Making and Evaluating Point Forecasts}.
 \emph{Journal of the American Statistical Association}, 106(494), pp. 746--762, 2011.
 
+\bibitem{gneiting2011quantiles}
+Tilmann Gneiting.
+\href{https://doi.org/10.1016/j.ijforecast.2009.12.015}{Quantiles as optimal point forecasts}.
+\emph{International Journal of Forecasting}, 27(2), pp. 197--207, 2011.
+
+\bibitem{gneiting2007probabilistic}
+Tilmann Gneiting, Fadoua Balabdaoui and Adrian E. Raftery.
+\href{https://doi.org/10.1111/j.1467-9868.2007.00587.x}{Probabilistic forecasts, calibration and sharpness}.
+\emph{Journal of the Royal Statistical Society: Series B (Statistical Methodology)}, 69(2), pp. 243--268, 2007.
+
+\bibitem{gneiting2014probabilistic}
+Tilmann Gneiting and Matthias Katzfuss.
+\href{https://doi.org/10.1146/annurev-statistics-062713-085831}{Probabilistic Forecasting}.
+\emph{Annual Review of Statistics and Its Application}, 1, pp. 125--151, 2014.
+
 \bibitem{gneiting2007proper}
 Tilmann Gneiting and Adrian E. Raftery.
 \href{https://doi.org/10.1198/016214506000001437}{Strictly Proper Scoring Rules, Prediction, and Estimation}.
 \emph{Journal of the American Statistical Association}, 102(477), pp. 359--378, 2007.
 
+\bibitem{gneiting2011comparing}
+Tilmann Gneiting and Roopesh Ranjan.
+\href{https://doi.org/10.1198/jbes.2010.08110}{Comparing Density Forecasts Using Threshold- and Quantile-Weighted Scoring Rules}.
+\emph{Journal of Business \& Economic Statistics}, 29(3), pp. 411--422, 2011.
+
+\bibitem{gneiting2008assessing}
+Tilmann Gneiting, Larissa I. Stanberry, Eric P. Grimit, Leonhard Held and Nicholas A. Johnson.
+\href{https://doi.org/10.1007/s11749-008-0114-x}{Assessing probabilistic forecasts of multivariate quantities, with an application to ensemble predictions of surface winds}.
+\emph{TEST}, 17(2), pp. 211--235, 2008.
+
+\bibitem{goodwin1999asymmetry}
+Paul Goodwin and Richard Lawton.
+\href{https://doi.org/10.1016/S0169-2070(99)00007-2}{On the asymmetry of the symmetric {MAPE}}.
+\emph{International Journal of Forecasting}, 15(4), pp. 405--408, 1999.
+
+\bibitem{guderlei2007statistical}
+Ralph Guderlei and Johannes Mayer.
+\href{https://doi.org/10.1109/QSIC.2007.4385527}{Statistical Metamorphic Testing: Testing Programs with Random Output by Means of Statistical Hypothesis Tests and Metamorphic Testing}.
+\emph{Seventh International Conference on Quality Software (QSIC 2007)}, pp. 404--409, 2007.
+
 \bibitem{hamilton1989regimes}
 James D. Hamilton.
 \href{https://doi.org/10.2307/1912559}{A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle}.
 \emph{Econometrica}, 57(2), pp. 357--384, 1989.
+
+\bibitem{hersbach2000decomposition}
+Hans Hersbach.
+\href{https://doi.org/10.1175/1520-0434(2000)015%3C0559:DOTCRP%3E2.0.CO;2}{Decomposition of the Continuous Ranked Probability Score for Ensemble Prediction Systems}.
+\emph{Weather and Forecasting}, 15(5), pp. 559--570, 2000.
 
 \bibitem{holm1979multiple}
 Sture Holm.
@@ -5201,15 +5394,60 @@ Yifan Hu, Yuante Li, Peiyuan Liu, Yuxia Zhu, Naiqi Li, Tao Dai, Shu-Tao Xia, Daw
 \href{https://doi.org/10.1007/s11704-026-51064-5}{{FinTSB}: A Comprehensive and Practical Benchmark for Financial Time Series Forecasting}.
 \emph{Frontiers of Computer Science}, 2026.
 
+\bibitem{humbatova2020taxonomy}
+Nargiz Humbatova, Gunel Jahangirova, Gabriele Bavota, Vincenzo Riccio, Andrea Stocco and Paolo Tonella.
+\href{https://doi.org/10.1145/3377811.3380395}{Taxonomy of real faults in deep learning systems}.
+\emph{Proceedings of the ACM/IEEE 42nd International Conference on Software Engineering (ICSE 2020)}, pp. 1110--1121, 2020.
+
+\bibitem{humbatova2021deepcrime}
+Nargiz Humbatova, Gunel Jahangirova and Paolo Tonella.
+\href{https://doi.org/10.1145/3460319.3464825}{{DeepCrime}: mutation testing of deep learning systems based on real faults}.
+\emph{Proceedings of the 30th ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA 2021)}, pp. 67--78, 2021.
+
+\bibitem{jahangirova2020empirical}
+Gunel Jahangirova and Paolo Tonella.
+\href{https://doi.org/10.1109/ICST46399.2020.00018}{An Empirical Evaluation of Mutation Operators for Deep Learning Systems}.
+\emph{2020 IEEE 13th International Conference on Software Testing, Validation and Verification (ICST)}, pp. 74--84, 2020.
+
+\bibitem{jia2011analysis}
+Yue Jia and Mark Harman.
+\href{https://doi.org/10.1109/TSE.2010.62}{An Analysis and Survey of the Development of Mutation Testing}.
+\emph{IEEE Transactions on Software Engineering}, 37(5), pp. 649--678, 2011.
+
+\bibitem{just2014mutants}
+Ren{\'e} Just, Darioush Jalali, Laura Inozemtseva, Michael D. Ernst, Reid Holmes and Gordon Fraser.
+\href{https://doi.org/10.1145/2635868.2635929}{Are mutants a valid substitute for real faults in software testing?}.
+\emph{Proceedings of the 22nd ACM SIGSOFT International Symposium on Foundations of Software Engineering (FSE 2014)}, pp. 654--665, 2014.
+
 \bibitem{lei2018conformal}
 Jing Lei, Max G'Sell, Alessandro Rinaldo, Ryan J. Tibshirani and Larry Wasserman.
 \href{https://doi.org/10.1080/01621459.2017.1307116}{Distribution-Free Predictive Inference for Regression}.
 \emph{Journal of the American Statistical Association}, 113(523), pp. 1094--1111, 2018.
 
+\bibitem{makridakis2018objectivity}
+Spyros Makridakis, Vassilios Assimakopoulos and Evangelos Spiliotis.
+\href{https://doi.org/10.1016/j.ijforecast.2018.05.001}{Objectivity, reproducibility and replicability in forecasting research}.
+\emph{International Journal of Forecasting}, 34(4), pp. 835--838, 2018.
+
+\bibitem{matheson1976scoring}
+James E. Matheson and Robert L. Winkler.
+\href{https://doi.org/10.1287/mnsc.22.10.1087}{Scoring Rules for Continuous Probability Distributions}.
+\emph{Management Science}, 22(10), pp. 1087--1096, 1976.
+
 \bibitem{merton1976jumps}
 Robert C. Merton.
 \href{https://doi.org/10.1016/0304-405X(76)90022-2}{Option pricing when underlying stock returns are discontinuous}.
 \emph{Journal of Financial Economics}, 3(1--2), pp. 125--144, 1976.
+
+\bibitem{nejadgholi2019study}
+Mahdi Nejadgholi and Jinqiu Yang.
+\href{https://doi.org/10.1109/ASE.2019.00078}{A Study of Oracle Approximations in Testing Deep Learning Libraries}.
+\emph{2019 34th IEEE/ACM International Conference on Automated Software Engineering (ASE)}, pp. 785--796, 2019.
+
+\bibitem{pham2019cradle}
+Hung Viet Pham, Thibaud Lutellier, Weizhen Qi and Lin Tan.
+\href{https://doi.org/10.1109/ICSE.2019.00107}{{CRADLE}: Cross-Backend Validation to Detect and Localize Bugs in Deep Learning Libraries}.
+\emph{2019 IEEE/ACM 41st International Conference on Software Engineering (ICSE)}, pp. 1027--1038, 2019.
 
 \bibitem{qiu2024tfb}
 Xiangfei Qiu, Jilin Hu, Lekui Zhou, Xingjian Wu, Junyang Du, Buang Zhang, Chenjuan Guo, Aoying Zhou, Christian S. Jensen, Zhenli Sheng and Bin Yang.
@@ -5227,6 +5465,11 @@ Michael Scheuerer and Thomas M. Hamill.
 \href{https://doi.org/10.1175/MWR-D-14-00269.1}{Variogram-Based Proper Scoring Rules for Probabilistic Forecasts of Multivariate Quantities}.
 \emph{Monthly Weather Review}, 143(4), pp. 1321--1334, 2015.
 
+\bibitem{seca2021review}
+Diogo Seca.
+\href{https://arxiv.org/abs/2105.01407v1}{A Review on Oracle Issues in Machine Learning}.
+arXiv:2105.01407v1, 2021.
+
 \bibitem{seca2021timegym}
 Diogo Seca.
 \href{https://arxiv.org/abs/2105.01404v1}{{TimeGym}: Debugging for Time Series Modeling in Python}.
@@ -5238,6 +5481,11 @@ arXiv:2105.01404v1, 2021.
 2026.
 Official documentation; accessed 30 October 2026.
 
+\bibitem{spiliotis2020forecasting}
+Evangelos Spiliotis, Andreas Kouloumos, Vassilios Assimakopoulos and Spyros Makridakis.
+\href{https://doi.org/10.1016/j.ijforecast.2018.12.007}{Are forecasting competitions data representative of the reality?}.
+\emph{International Journal of Forecasting}, 36(1), pp. 37--53, 2020.
+
 \bibitem{sun2026finstressts}
 Jiaze Sun, Kelvin J. L. Koa, Ruiyang Ni, Yize Liu, Haonan Chen and Ke-Wei Huang.
 \href{https://doi.org/10.1145/3770855.3817578}{{FinStressTS}: A Parametric Synthetic Benchmark for Time-Series Forecasting in Finance}.
@@ -5248,6 +5496,16 @@ Qitai Tan, Yiyun Chen, Mo Li, Ruiwen Gu, Yilin Su and Xiao-Ping Zhang.
 \href{https://doi.org/10.52202/085713-4860}{{SynTSBench}: Rethinking Temporal Pattern Learning in Deep Learning Models for Time Series}.
 \emph{Advances in Neural Information Processing Systems}, 38, 2025.
 Datasets and Benchmarks Track.
+
+\bibitem{tashman2000out}
+Leonard J. Tashman.
+\href{https://doi.org/10.1016/S0169-2070(00)00065-0}{Out-of-sample tests of forecasting accuracy: an analysis and review}.
+\emph{International Journal of Forecasting}, 16(4), pp. 437--450, 2000.
+
+\bibitem{weyuker1982testing}
+Elaine J. Weyuker.
+\href{https://doi.org/10.1093/comjnl/25.4.465}{On Testing Non-Testable Programs}.
+\emph{The Computer Journal}, 25(4), pp. 465--470, 1982.
 
 \end{thebibliography}
 % END GENERATED BIBLIOGRAPHY
