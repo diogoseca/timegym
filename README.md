@@ -118,20 +118,20 @@ case and never assumes a deep copy clears fitted state.
 
 ## Tutorials
 
-| Notebook | What it shows |
-|---|---|
-| [Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) | A pipeline, a matrix of cases, error distributions |
-| [Univariate uncertainty](https://diogoseca.github.io/timegym/notebooks/20_univariate_uncertainty/) | Marginal intervals, coverage, CRPS |
-| [Multivariate forecasting](https://diogoseca.github.io/timegym/notebooks/21_multivariate_forecasting/) | Several targets, lag features, per-target scores |
-| [Multivariate uncertainty](https://diogoseca.github.io/timegym/notebooks/22_multivariate_uncertainty/) | Joint paths, dependence, covariance checks |
-| [Faults, repairs and replay](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/) | Invalid outputs, inverse scaling, replaying a saved report |
-| [Real-data forecasts](https://diogoseca.github.io/timegym/notebooks/24_real_data_forecasts/) | Ordered origins on the AirPassengers series |
-| [Capability sweeps](https://diogoseca.github.io/timegym/notebooks/25_capability_sweeps/) | Five families, context and noise sweeps |
-| [Composed and financial stresses](https://diogoseca.github.io/timegym/notebooks/26_composed_and_financial_stresses/) | Jumps, GARCH, hidden regimes, one mechanism at a time |
-| [Joint financial uncertainty](https://diogoseca.github.io/timegym/notebooks/27_joint_financial_uncertainty/) | Shared shocks and regimes, CCC-GARCH, broken dependence |
-| [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | A forecaster from scratch, synthetic suites, real data |
-| [Target transforms](https://diogoseca.github.io/timegym/notebooks/29_target_transforms/) | Log, Box-Cox and difference transforms, inverted on the forecast |
-| [Reductions](https://diogoseca.github.io/timegym/notebooks/30_reductions/) | Recursive, direct and multioutput sklearn forecasts compared |
+| Group | Notebook | What it shows |
+|---|---|---|
+| Start | [Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) | A pipeline, a matrix of cases, error distributions |
+| Find what breaks | [Faults, repairs and replay](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/) | Invalid outputs, inverse scaling, replaying a saved report |
+| | [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | A forecaster from scratch, synthetic suites, real data |
+| Shape the forecast | [Target transforms](https://diogoseca.github.io/timegym/notebooks/29_target_transforms/) | Log, Box-Cox and difference transforms, inverted on the forecast |
+| | [Reductions](https://diogoseca.github.io/timegym/notebooks/30_reductions/) | Recursive, direct and multioutput sklearn forecasts compared |
+| | [Multivariate forecasting](https://diogoseca.github.io/timegym/notebooks/21_multivariate_forecasting/) | Several targets, lag features, per-target scores |
+| | [Real-data forecasts](https://diogoseca.github.io/timegym/notebooks/24_real_data_forecasts/) | Ordered origins on the AirPassengers series |
+| Measure uncertainty | [Univariate uncertainty](https://diogoseca.github.io/timegym/notebooks/20_univariate_uncertainty/) | Marginal intervals, coverage, CRPS |
+| | [Multivariate uncertainty](https://diogoseca.github.io/timegym/notebooks/22_multivariate_uncertainty/) | Joint paths, dependence, covariance checks |
+| Stress-test | [Capability sweeps](https://diogoseca.github.io/timegym/notebooks/25_capability_sweeps/) | Five families, context and noise sweeps |
+| | [Composed and financial stresses](https://diogoseca.github.io/timegym/notebooks/26_composed_and_financial_stresses/) | Jumps, GARCH, hidden regimes, one mechanism at a time |
+| | [Joint financial uncertainty](https://diogoseca.github.io/timegym/notebooks/27_joint_financial_uncertainty/) | Shared shocks and regimes, CCC-GARCH, broken dependence |
 
 The notebooks run on CPU with local data. `pip install -e '.[notebooks]'` and
 `python -m jupyterlab notebooks` opens them; the

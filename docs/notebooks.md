@@ -1,10 +1,58 @@
-# Working with notebooks
+# Tutorials
 
-All notebooks live under [`notebooks/`](../notebooks/README.md). The collection
-has **14 source notebooks**, which generate the package, and **12 application
-notebooks**, which use it. The original 11 notebooks remain in
-[`notebooks/archive/`](../notebooks/archive/README.md) in Git, outside the source
-distribution.
+TimeGym is for testing a forecasting pipeline before deployment and for
+reproducing a failure after one. The twelve tutorials are notebooks that run on
+CPU with local data and explicit seeds. Start with the quick start, then pick by
+what you want to check.
+
+## What do you want to check?
+
+| I want to | Start with | Then look up |
+| --- | --- | --- |
+| See what a report says about my pipeline | [00 · Quick start](../notebooks/00_quick_start.ipynb) | [Pipeline and reports](api/pipeline.md) |
+| Plug in my own model and check its outputs | [28 · Write and test a custom model](../notebooks/28_custom_model.ipynb) | [Tasks and forecasts](api/tasks-and-forecasts.md) |
+| Tell a broken output from a weak model, and replay a failure | [23 · Faults, repairs and replay](../notebooks/23_faults_repairs_and_replay.ipynb) | [Scores and diagnostics](api/diagnostics.md), [Fault fixtures](api/fault-fixtures.md) |
+| Choose a target transform or a reduction | [29 · Target transforms](../notebooks/29_target_transforms.ipynb), [30 · Reductions](../notebooks/30_reductions.ipynb) | [Data preparation](api/data-preparation.md), [Models and reductions](api/models.md) |
+| Forecast several targets, or real data at several origins | [21 · Multivariate forecasting](../notebooks/21_multivariate_forecasting.ipynb), [24 · Real-data forecasts](../notebooks/24_real_data_forecasts.ipynb) | [Tasks and forecasts](api/tasks-and-forecasts.md) |
+| Check intervals, quantiles or sample paths | [20 · Univariate uncertainty](../notebooks/20_univariate_uncertainty.ipynb), [22 · Multivariate uncertainty](../notebooks/22_multivariate_uncertainty.ipynb) | [Scores and diagnostics](api/diagnostics.md) |
+| Stress a model with jumps, volatility or regime changes | [25 · Capability sweeps](../notebooks/25_capability_sweeps.ipynb), [26 · Composed and financial stresses](../notebooks/26_composed_and_financial_stresses.ipynb), [27 · Joint financial uncertainty](../notebooks/27_joint_financial_uncertainty.ipynb) | [Composed and joint processes](api/processes.md), [Synthetic scenarios](stress-cases.md) |
+
+## What a clean report covers
+
+A report with no `FAIL` and no `ERROR` tells you three things:
+
+- every forecast met its contract: shape, index, finiteness and quantile order;
+- every fit and prediction ran without an exception;
+- with `check_dependence=True`, no sample covariance was rejected against its
+  reference law.
+
+It does not tell you the forecasts are accurate: capability scores are
+descriptive and return `INCONCLUSIVE`. A declared relation such as shift
+equivariance runs separately with `check_shift_equivariance`. See
+[How TimeGym decides](concepts/how-timegym-decides.md).
+
+## The tutorials in order
+
+The groups follow a path: a first run, then the failures TimeGym exists to
+catch, then modeling choices, uncertainty and stress tests. Every tutorial needs
+the plots extra; the ones marked sklearn also need scikit-learn.
+
+| Group | Tutorial | Question it answers | Needs |
+| --- | --- | --- | --- |
+| Start | [00 · Quick start](../notebooks/00_quick_start.ipynb) | Does my pipeline behave sensibly across controlled series? | plots, sklearn |
+| Find what breaks | [23 · Faults, repairs and replay](../notebooks/23_faults_repairs_and_replay.ipynb) | What does a broken output look like, and how do I replay it? | plots |
+| | [28 · Write and test a custom model](../notebooks/28_custom_model.ipynb) | How do I test a model I wrote myself? | plots |
+| Shape the forecast | [29 · Target transforms](../notebooks/29_target_transforms.ipynb) | Which transform of the target, and what does inverting it do? | plots |
+| | [30 · Reductions](../notebooks/30_reductions.ipynb) | Recursive, direct or multioutput: where do their errors differ? | plots, sklearn |
+| | [21 · Multivariate forecasting](../notebooks/21_multivariate_forecasting.ipynb) | How do I forecast and score several targets? | plots, sklearn |
+| | [24 · Real-data forecasts](../notebooks/24_real_data_forecasts.ipynb) | How do I evaluate on real data at ordered origins? | plots, sklearn |
+| Measure uncertainty | [20 · Univariate uncertainty](../notebooks/20_univariate_uncertainty.ipynb) | Are my intervals and quantiles calibrated? | plots |
+| | [22 · Multivariate uncertainty](../notebooks/22_multivariate_uncertainty.ipynb) | Do my joint paths keep the dependence between targets? | plots |
+| Stress-test | [25 · Capability sweeps](../notebooks/25_capability_sweeps.ipynb) | Where does the model stop coping as context and noise change? | plots |
+| | [26 · Composed and financial stresses](../notebooks/26_composed_and_financial_stresses.ipynb) | How does it handle jumps, GARCH and hidden regimes? | plots, sklearn |
+| | [27 · Joint financial uncertainty](../notebooks/27_joint_financial_uncertainty.ipynb) | Does joint uncertainty survive shared shocks and broken dependence? | plots |
+
+## Run the notebooks
 
 From a clone or extracted source distribution:
 
@@ -13,65 +61,24 @@ python -m pip install -e '.[notebooks]'
 python -m jupyterlab notebooks
 ```
 
-Select the Python kernel belonging to that environment. Start with
-[00 · Quick start](../notebooks/00_quick_start.ipynb), then choose an application
-from the [notebook guide](../notebooks/README.md). The examples use CPU and local
-data; the real-data notebook reads the included AirPassengers CSV.
+Select the Python kernel belonging to that environment and use **Restart Kernel
+and Run All Cells**. Each notebook runs in its own kernel. The real-data
+notebook reads the included AirPassengers CSV.
 `timegym.data.real.get_stock` is a separate opt-in network helper for Yahoo
 Finance, requiring `timegym[market-data]` for a fetch. It is not called by the
 notebooks. Its local snapshot cache supports offline reuse; see the
-[market-data contract](reference.md#optional-market-data).
-
-## Read, experiment, and build
-
-Source notebooks 01–15 pair explanations and examples with editable
-implementation cells. Expand those cells to change the library. Application
-notebooks 00 and 20–30 import the library and focus on forecasting problems.
-Each notebook runs in its own kernel without variables from another notebook.
-
-The original `%%runwrite` workflow made notebooks a place to develop both the
-code and its explanation. The current workflow retains that relationship with
-nbdev 3.3.26's modular exporter. Save a source notebook, then explicitly build:
-
-```bash
-python tools/export_notebooks.py
-python tools/export_notebooks.py --check
-```
-
-Export reads marked source cells without executing them or reading their outputs.
-Normal **Run All** does not write package files. After changing an implementation
-cell, restart and Run All to refresh its development bindings and experiment. Changes used by
-other chapters require saving, exporting, and restarting their kernels so imports
-load the updated modules. The [source map](../notebooks/source-map.json) declares
-module ownership; check mode detects differences between saved notebooks and
-generated modules. See the [build guide](../tools/README.md) for details.
-
-## Execute and inspect
-
-```bash
-# Check every active notebook in an independent fresh kernel.
-python notebooks/check_notebooks.py
-
-# Work on one group, or save outputs and rendered HTML for review.
-python notebooks/check_notebooks.py --group source
-python notebooks/check_notebooks.py --group demo
-python notebooks/check_notebooks.py --write --html-dir /tmp/timegym-notebooks
-```
-
-The checker uses the invoking Python interpreter, clears stale outputs before
-execution, and rejects uncaught errors or skipped code. It excludes the archive.
-Inspect plots as well as execution results; successful execution does not prove
-that labels, scales, or explanations are useful. Seeded results are reproducible
-within an environment, while numerical and rendering versions can affect output.
+[market-data contract](api/market-data.md).
 
 The plots distinguish point means at discrete horizons from uncertainty bands
 and joint sample paths. Marginal intervals are not simultaneous prediction
 regions. Independent synthetic cases supply replications; horizons and targets
 within a forecast do not become additional independent cases.
 
-The [joint financial uncertainty tutorial](../notebooks/27_joint_financial_uncertainty.ipynb) extends the financial examples to dependent targets and controlled cross-series pairing faults. [Source notebook 15](../notebooks/15_joint_processes.ipynb) explains and builds the joint generators.
+The 14 source notebooks that generate the package, and the checks that execute
+every notebook, are described in [Contributing](contributing.md) and the
+[notebook guide](../notebooks/README.md).
 
-## Write and test a custom model
+## Bring your own model
 
 [28 · Write and test a custom model](../notebooks/28_custom_model.ipynb) builds a
 k-nearest-analogues forecaster in three steps: write `fit(context)` and

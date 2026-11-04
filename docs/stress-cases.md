@@ -91,8 +91,9 @@ identified as such. Multi-step GARCH distributions need not be Gaussian.
 
 Regime switching with jumps uses a numerical posterior approximation. Its
 covariance rank diagnostic is disabled rather than presented as an exact test.
-Inspect reference metadata and `UNSUPPORTED` outcomes alongside scores. See the
-[API contracts](reference.md) for output shapes and diagnostic semantics.
+Inspect reference metadata and `UNSUPPORTED` outcomes alongside scores. See
+[Tasks and forecasts](api/tasks-and-forecasts.md) for output shapes and
+[Scores and diagnostics](api/diagnostics.md) for diagnostic semantics.
 
 ## Extend a mechanism to dependent targets
 
@@ -122,4 +123,4 @@ The [joint uncertainty notebook](../notebooks/27_joint_financial_uncertainty.ipy
 compares paired futures with deliberately mismatched target trajectories. The
 mutation preserves every target's marginal distribution and temporal path;
 joint diagnostics and aggregate uncertainty reveal what marginal checks miss.
-See the [API reference](reference.md) for shapes, units and filtering boundaries.
+See [Composed and joint processes](api/processes.md) for shapes, units and filtering boundaries.

@@ -24,20 +24,20 @@ Select the Python kernel from that environment and use **Restart Kernel and Run
 All Cells**. The active notebooks run independently on CPU, using local data and
 explicit seeds. Installing the wheel alone does not install these notebook files.
 
-| Application | Explore |
-|---|---|
-| [00 · Quick start](00_quick_start.ipynb) | A pipeline, a scenario matrix, and error distributions |
-| [20 · Univariate uncertainty](20_univariate_uncertainty.ipynb) | Marginal intervals, coverage, CRPS, and uncertainty that is too narrow |
-| [21 · Multivariate forecasting](21_multivariate_forecasting.ipynb) | Several targets, per-target scores, lag features, and target order |
-| [22 · Multivariate uncertainty](22_multivariate_uncertainty.ipynb) | Joint paths, dependence, covariance checks, and joint scores |
-| [23 · Faults, repairs, and replay](23_faults_repairs_and_replay.ipynb) | Invalid outputs, inverse scaling, declared equivariance, and report replay |
-| [24 · Real-data forecasts](24_real_data_forecasts.ipynb) | Training-only transforms and ordered AirPassengers forecast origins |
-| [25 · Capability sweeps](25_capability_sweeps.ipynb) | Five scenario families, custom models, context, noise, and repeated cases |
-| [26 · Composed and financial stresses](26_composed_and_financial_stresses.ipynb) | Controlled combinations, jumps, GARCH, hidden regimes, price means, and replay |
-| [27 · Joint financial uncertainty](27_joint_financial_uncertainty.ipynb) | Multi-target mechanisms, joint paths, dependence faults, aggregate uncertainty, and repair |
-| [28 · Write and test a custom model](28_custom_model.ipynb) | Nearest analogues, contract failures, real observations, and a supplied semi-synthetic truth function |
-| [29 · Target transforms](29_target_transforms.ipynb) | Log, Box-Cox and difference transforms fitted per context and inverted on the forecast |
-| [30 · Reductions](30_reductions.ipynb) | Recursive, direct and multioutput reductions of one regressor, and where their errors differ |
+| Group | Application | Explore |
+|---|---|---|
+| Start | [00 · Quick start](00_quick_start.ipynb) | A pipeline, a scenario matrix, and error distributions |
+| Find what breaks | [23 · Faults, repairs, and replay](23_faults_repairs_and_replay.ipynb) | Invalid outputs, inverse scaling, declared equivariance, and report replay |
+| | [28 · Write and test a custom model](28_custom_model.ipynb) | Nearest analogues, contract failures, real observations, and a supplied semi-synthetic truth function |
+| Shape the forecast | [29 · Target transforms](29_target_transforms.ipynb) | Log, Box-Cox and difference transforms fitted per context and inverted on the forecast |
+| | [30 · Reductions](30_reductions.ipynb) | Recursive, direct and multioutput reductions of one regressor, and where their errors differ |
+| | [21 · Multivariate forecasting](21_multivariate_forecasting.ipynb) | Several targets, per-target scores, lag features, and target order |
+| | [24 · Real-data forecasts](24_real_data_forecasts.ipynb) | Training-only transforms and ordered AirPassengers forecast origins |
+| Measure uncertainty | [20 · Univariate uncertainty](20_univariate_uncertainty.ipynb) | Marginal intervals, coverage, CRPS, and uncertainty that is too narrow |
+| | [22 · Multivariate uncertainty](22_multivariate_uncertainty.ipynb) | Joint paths, dependence, covariance checks, and joint scores |
+| Stress-test | [25 · Capability sweeps](25_capability_sweeps.ipynb) | Five scenario families, custom models, context, noise, and repeated cases |
+| | [26 · Composed and financial stresses](26_composed_and_financial_stresses.ipynb) | Controlled combinations, jumps, GARCH, hidden regimes, price means, and replay |
+| | [27 · Joint financial uncertainty](27_joint_financial_uncertainty.ipynb) | Multi-target mechanisms, joint paths, dependence faults, aggregate uncertainty, and repair |
 
 For multiple plots of the same fitted outputs, retain the run:
 
