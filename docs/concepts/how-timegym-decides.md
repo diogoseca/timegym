@@ -4,7 +4,7 @@ TimeGym is for testing a forecasting pipeline before deployment and for
 reproducing a failure after one. Here verification means exercising specified
 runtime contracts, not formal proof of a program. This page explains where each
 verdict in a report comes from, using the terms of the
-[TimeGym v2 paper](../../paper/README.md).
+[TimeGym manuscript](../../paper/README.md).
 
 ## Why forecasts need other oracles
 
