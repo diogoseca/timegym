@@ -5,7 +5,7 @@ marked implementation cells owned by `notebooks/source-map.json`. Edit the
 owning notebook, preserve cell IDs and `metadata.timegym.role`, save it, then
 run `.venv/bin/python tools/export_notebooks.py` and its `--check` mode. Never
 edit generated modules by hand. Read `tools/README.md` and `notebooks/README.md`
-before changing library code. Paper result fragments and `paper/timegym-v2.tex`
+before changing library code. Paper result fragments and `paper/timegym.tex`
 are generated too; edit their inputs and run their builders.
 
 Create the environment with `python3 -m venv .venv` and

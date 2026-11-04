@@ -1,6 +1,6 @@
-# TimeGym v2 manuscript
+# TimeGym manuscript
 
-`main.tex` is the editable v2 manuscript. The generated result fragments contain tables and narrative derived from saved study records; do not edit their numbers by hand. `references.bib` is the single bibliography source, and `claims.md` links each substantive claim to its evidence and boundary. The historical manuscript and source are available from [arXiv:2105.01404v1](https://arxiv.org/abs/2105.01404v1).
+`main.tex` is the editable manuscript. The generated result fragments contain tables and narrative derived from saved study records; do not edit their numbers by hand. `references.bib` is the single bibliography source, and `claims.md` links each substantive claim to its evidence and boundary. The historical manuscript and source are available from [arXiv:2105.01404v1](https://arxiv.org/abs/2105.01404v1).
 
 From the repository root, install the recorded study environment with Python
 3.13 (the lock is `requirements-study.txt`):
@@ -44,7 +44,7 @@ Unsupported bibliography syntax or missing cited entries fails the build.
 
 For new CPU runs in separate output directories and SHA256 comparisons, follow [the study guide](../experiments/README.md). Both runners limit numerical thread pools to one thread and refuse existing artifacts unless `--force` is explicit.
 
-Both studies run locally on CPU. The original protocol and records remain in `experiments/protocol.json` and `experiments/results/`. The implementation-regression and covariance supplement has its own `experiments/protocol-v2.json` and `experiments/results-v2/`, including case records, summary CSVs, a source/environment manifest, and separate wall-time metadata. Rendering consumes saved records; it does not rerun experiments. The standalone output, `timegym-v2.tex`, includes the generated tables and bibliography, so the single-file standalone build needs no additional source files or BibTeX pass. Compile `main.tex` from this directory using LaTeX, BibTeX, and two further LaTeX passes (`plain` bibliography style).
+Both studies run locally on CPU. The original protocol and records remain in `experiments/protocol.json` and `experiments/results/`. The implementation-regression and covariance supplement has its own `experiments/protocol-v2.json` and `experiments/results-v2/`, including case records, summary CSVs, a source/environment manifest, and separate wall-time metadata. Rendering consumes saved records; it does not rerun experiments. The standalone output, `timegym.tex`, includes the generated tables and bibliography, so the single-file standalone build needs no additional source files or BibTeX pass. Compile `main.tex` from this directory using LaTeX, BibTeX, and two further LaTeX passes (`plain` bibliography style).
 
 The original pilot exports three scientific figures in both PNG and vector PDF under `figures/`:
 
@@ -72,7 +72,7 @@ either study protocol or numerical results. The
 inputs, seeds, plotted values, settings, and file fingerprints.
 
 `main.tex` inputs these scenes; `build_standalone.py` regenerates
-`timegym-v2.tex` with their complete vector commands and the bibliography.
+`timegym.tex` with their complete vector commands and the bibliography.
 The single-file standalone build therefore needs no external images, raster
 fallbacks, or SVG conversion tools. Edit the inputs and rerun the builder;
 changes made directly to the generated file are overwritten.

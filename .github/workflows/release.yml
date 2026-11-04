@@ -33,7 +33,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends latexmk texlive-latex-recommended texlive-pictures texlive-fonts-recommended
       - name: Compile standalone manuscript
         working-directory: paper
-        run: latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=build timegym-v2.tex
+        run: latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=build timegym.tex
       - uses: actions/upload-artifact@v4
         with:
           name: release-distributions
@@ -42,8 +42,8 @@ jobs:
         with:
           name: release-paper
           path: |
-            paper/build/timegym-v2.pdf
-            paper/timegym-v2.tex
+            paper/build/timegym.pdf
+            paper/timegym.tex
   pypi:
     needs: build
     runs-on: ubuntu-latest

@@ -1,6 +1,6 @@
-# TimeGym v2 publication strategy
+# TimeGym publication strategy
 
-Updated 28 October 2026; citation identifiers refreshed 30 October 2026. The author chose a new v2 manuscript for the redesigned package. No submission, arXiv replacement, or public release has been performed.
+Updated 28 October 2026; citation identifiers refreshed 30 October 2026. The author chose a new manuscript for the redesigned package. No submission, arXiv replacement, or public release has been performed.
 
 The paper's central contribution is an executable verification workflow: specify forecast semantics, separate invalid outputs from capability gaps, evaluate conditional references or declared relations, and reproduce a failure before checking a known repair. The mathematical references, notebook-authored software, and controlled studies support that account. Synthetic generators, unit tests, proper scores, and metamorphic testing are established ingredients. Preserve the 2021 source as historical material and attribute each new component to the current version.
 

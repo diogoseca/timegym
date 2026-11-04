@@ -27,7 +27,7 @@ def paper_tree(tmp_path):
 
 def test_standalone_cli_detects_drift_without_writing(paper_tree):
     command = [sys.executable, str(paper_tree / "build_standalone.py")]
-    output = paper_tree / "timegym-v2.tex"
+    output = paper_tree / "timegym.tex"
     assert subprocess.run([*command, "--check"], capture_output=True).returncode == 1
     assert not output.exists()
     subprocess.run(command, check=True, capture_output=True)

@@ -15,7 +15,7 @@ discrete observations, forecast crosses, component views, and scenario matrices.
 
 | Original notebook | Content and current connection |
 |---|---|
-| [0 · Synthetic Data](0.%20Synthetic%20Data.ipynb) | Rich generator and component exploration; active [01](../01_synthetic_data.ipynb) implements the supported v2 families and conditional references |
+| [0 · Synthetic Data](0.%20Synthetic%20Data.ipynb) | Rich generator and component exploration; active [01](../01_synthetic_data.ipynb) implements the currently supported families and conditional references |
 | [1 · Real Data](1.%20Real%20Data.ipynb) | Stock helper and proposed datasets; active [02](../02_real_data.ipynb) and [24](../24_real_data_forecasts.ipynb) cover current data examples |
 | [2 · Smoothing](2.%20Smoothing.ipynb) | Moving averages, with Kalman/GP ideas; active [03](../03_smoothing.ipynb) covers implemented smoothing |
 | [3 · Semi-Synthetic Data](3.%20Semi-Synthetic%20Data.ipynb) | Rationale and proposed integrations; this remains a research direction |

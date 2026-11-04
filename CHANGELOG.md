@@ -61,7 +61,7 @@ Prepared release; publication is performed only by the version-tag workflow.
 
 
 TimeGym now provides a reproducible verification and diagnosis workflow for
-forecasting pipelines, with a new v2 manuscript and bounded controlled studies.
+forecasting pipelines, with a new manuscript and bounded controlled studies.
 
 - Explicit contracts for point means, marginal quantiles, and joint samples.
 - Controlled scalar and joint compositions and parameter changes, Merton jump diffusion,
