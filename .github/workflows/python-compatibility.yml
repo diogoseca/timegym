@@ -45,9 +45,6 @@ jobs:
           python -m pytest -q
           python notebooks/check_notebooks.py
           python examples/quickstart.py
-          timegym demo --output compatibility-demo
-          python examples/reproduce_report.py compatibility-demo/repaired.json --require-same-environment
-          rm -rf compatibility-demo
           python -m mkdocs build --strict
           python -m build
           python -m twine check dist/*

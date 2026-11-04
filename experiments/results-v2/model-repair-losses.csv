@@ -1,4 +1,4 @@
-condition,fault,clean_mse,faulty_mse,repair_minus_faulty_mse,paired_lower95,paired_upper95,improved_cases,n
+condition,fault,clean_mse,faulty_mse,clean_minus_faulty_mse,paired_lower95,paired_upper95,improved_cases,n
 white_noise_locations,reverse_prediction_lags,0.7959924375102976,0.8070592492568628,-0.011066811746565194,-0.04494196347406525,0.022808339980934858,32,64
 white_noise_locations,stale_recursive_state,0.7959924375102976,0.810837701557701,-0.01484526404740327,-0.06005328434987266,0.030362756255066115,33,64
 white_noise_locations,omit_inverse_target_scaling,0.7959924375102976,18.66456642852865,-17.86857399101835,-19.417688980423925,-16.319459001612778,64,64

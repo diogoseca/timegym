@@ -98,8 +98,9 @@ The full research roadmap is deferred, rather than implied by this pilot.
 four implementation faults, six model conditions, calibration/evaluation seeds,
 and the permutation-invariant covariance null set. A contract violation aborts
 the model study. Corrected means the clean implementation refitted; comparisons
-are clean-minus-faulty, with no duplicate repaired arm. The `repair_*` loss field
-names and `model-repair-losses.csv` filename are retained for compatibility.
+are clean-minus-faulty, with no duplicate repaired arm. The paired loss fields
+are `clean_minus_faulty_mse` and `clean_minus_faulty_reference_mse`; the
+`model-repair-losses.csv` filename is retained for compatibility.
 
 ```bash
 .venv/bin/python -m experiments.run_supplement --output /tmp/timegym-supplement-repeat
@@ -141,3 +142,12 @@ branches; the separate historical timing includes the removed duplicate work.
 The migration can be replayed with `python -m experiments.migrate_frozen --root PATH`
 on a checkout containing the pre-migration records and the updated protocols.
 An already migrated record is rejected.
+
+The 3 November 2026 update renamed the supplement's paired loss fields
+`repair_minus_faulty_mse` and `repair_minus_faulty_reference_mse` to
+`clean_minus_faulty_mse` and `clean_minus_faulty_reference_mse`, in `results.json`
+and the `model-repair-losses.csv` header. No study was rerun and no value changed.
+`python -m experiments.migrate_frozen --root PATH --step loss-keys` applies the
+rename to a record matching its manifest, rewrites the CSVs and the manifest hash,
+and logs the original hash under `loss_key_migration`. An already renamed record
+is rejected.

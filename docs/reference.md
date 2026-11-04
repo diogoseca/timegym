@@ -23,6 +23,7 @@ Underscore-prefixed names and modules, including `_internal` and
 | `evaluate_forecast`, `covariance_dependence_check`, `exception_evidence` | `timegym.diagnostics` | Public |
 | `check_shift_equivariance` | `timegym.checks` | Public; opt-in model property |
 | `SklearnForecaster`, `fresh_model`, `is_sklearn_regressor` | `timegym.models` | Public; sklearn loaded when needed |
+| `REDUCTIONS` | `timegym.models` | Public |
 | `MUTATIONS`, `mutate_forecast` | `timegym.mutations` | Public controlled fixtures |
 | `plot_forecasts`, `plot_errors` | `timegym.plotting` | Public; requires plots extra |
 | `wilson_interval`, `paired_t_interval` | `timegym.statistics` | Public; independent cases |
@@ -30,14 +31,14 @@ Underscore-prefixed names and modules, including `_internal` and
 | `get_stock` | `timegym.data.real` | Public; provider data may change |
 | `add_lagged_target`, `cyclical_encoding`, `add_time_features`, `add_tsfel_features` | `timegym.features` | Public; TSFEL requires features extra |
 | `multioutput_target`, `onestep_target`, `step_ahead_target`, `fractional_weights`, `fractional_differencing`, `differencing` | `timegym.target` | Public |
+| `LogTransform`, `BoxCoxTransform`, `DifferenceTransform`, `ComposedTransform`, `transform_config`, `transform_from_config` | `timegym.target` | Public; replay rebuilds bundled transforms only |
 | `simple_moving_average`, `exponential_moving_average` | `timegym.smoothing` | Public |
 | `CORE_KINDS`, `scenario_label`, `MANIFEST_SCHEMA_VERSION` | `timegym.scenarios` | Public; manifest schema versioned separately |
 | `PROCESS_KINDS`, `resolve_process`, `process_label`, `generate_process` | `timegym.processes` | Public low-level generators |
-| `resolve_joint_process`, `generate_joint_process` | `timegym.joint_processes` | Public; resolver is a compatibility wrapper |
+| `generate_joint_process` | `timegym.joint_processes` | Public; takes `resolve_process` output |
 | `replay_case` | `timegym.pipeline` | Public; allowlisted models only |
 | `PIPELINE_CONFIG_SCHEMA_VERSION`, `pipeline_config`, `pipeline_from_config`, `runtime_provenance`, `diagnostic_settings` | `timegym.provenance` | Public; config schema versioned separately |
 | `REPORT_SCHEMA_VERSION` | `timegym.reporting` | Public; report schema versioned separately |
-| `alignment_demo`, `main` | `timegym.cli` | Public CLI entry points |
 
 ## Inputs and outputs
 
@@ -79,8 +80,7 @@ them. Their scalar manifests retain scalar values, accepting a one-target
 `Case` is defined in `timegym.contracts` and remains importable from `timegym` and
 `timegym.scenarios`. Direct `generate_process(...)` calls resolve raw parameters;
 `generate_joint_process(...)` accepts parameters already returned by
-`resolve_process(...)`. `resolve_joint_process(...)` is a compatibility wrapper
-with the same `context_length` and `n_targets` keywords.
+`resolve_process(...)`.
 
 `scenario.display_name` provides the same parameter-aware name used in plots.
 The identifiers above remain unchanged in configurations and reports.
@@ -216,12 +216,19 @@ At least two samples are required. A nonnegative integer seed repeats the draws;
 `seed=None` uses fresh randomness. Parameter-estimation uncertainty is omitted;
 this fitted model is not the known-parameter reference.
 
-`timegym.models.SklearnForecaster(steps, window_length=12)` fits a separate cloned
-sklearn pipeline per target. Each input flattens `window_length` consecutive rows
-across all targets, oldest row first; context must be longer than the window.
-Transforms fit only those training windows. Predictions append each full target
-vector to history for recursive forecasting and return point outputs only.
-`steps` must end in an sklearn regressor. `fresh_model(model)` uses
+`timegym.models.SklearnForecaster(steps, window_length=12, reduction="recursive",
+horizon=None)` reduces a cloned sklearn pipeline to multi-step forecasts. Each
+input flattens `window_length` consecutive rows across all targets, oldest row
+first; transforms fit only those training windows. `timegym.models.REDUCTIONS`
+is `("recursive", "direct", "multioutput")`. `recursive` fits one one-step
+regressor per target and appends each predicted target vector to the window.
+`direct` fits one regressor per horizon step and target, each predicting from
+the last observed window. `multioutput` fits one regressor per target for the
+whole horizon vector, wrapping the final step in `MultiOutputRegressor` when it
+lacks native multioutput support. `direct` and `multioutput` need a positive
+integer `horizon`, forecast at most that many steps, and need at least
+`window_length + horizon` context rows; `recursive` needs `window_length + 1`.
+All three return point outputs only. `steps` must end in an sklearn regressor. `fresh_model(model)` uses
 `clone_unfitted()` for native instances or sklearn's configuration clone;
 it rejects native instances without that protocol and clones returning the
 original object. `is_sklearn_regressor(model)` reads sklearn tags lazily after
@@ -254,10 +261,16 @@ strength and preconditions. This bypass is a specified repair, not repair discov
 
 ## Pipeline and reports
 
-`Pipeline(model=None, window_length=12, reduction="recursive", *, model_factory=None)`
-uses a last-value baseline by default. Native model classes/factories or the
-`clone_unfitted()` protocol ensure fresh fits. Optional sklearn steps can be added
-with `.add(estimator, **parameters)`. Only recursive reduction is implemented.
+`Pipeline(model=None, window_length=12, reduction="recursive", *, model_factory=None,
+target_transform=None)` uses a last-value baseline by default. Native model
+classes/factories or the `clone_unfitted()` protocol ensure fresh fits. Optional
+sklearn steps can be added with `.add(estimator, **parameters)`; `reduction`
+selects one of `REDUCTIONS` for them, with the case horizon as the reduction
+horizon, and does not change native models. `target_transform` is an instance
+implementing `clone_unfitted()`, `fit_transform(context)` and
+`inverse_transform(forecast)`. A fresh copy is fitted on each context before the
+model and inverts the forecast the model returns, so evaluation sees the
+original scale.
 
 `.predict(context, future_index)` returns the model's Forecast for inspection.
 `.test(scenarios=None, seeds=(0, 1, 2), *, check_dependence=False,
@@ -284,11 +297,13 @@ experiments. Each creates a fresh run. Use `run()` when multiple views must shar
 exactly the same predictions, especially for stochastic models.
 
 `.to_config()` describes the configured model and `.from_config(config)` can
-restore allowlisted built-in models. Factories, custom models and sklearn steps
-are explicitly marked non-replayable. A JSON report records model configuration,
+restore allowlisted built-in models with a bundled target transform or none.
+Factories, custom models, sklearn steps and other target transforms are
+explicitly marked non-replayable. A JSON report records model configuration,
 source fingerprint, dependency versions and diagnostic settings. Use
 `report.replay_case(case_index=0)` or `python examples/reproduce_report.py report.json`
-to reproduce a supported built-in case. The script delegates to `timegym replay`.
+to reproduce a supported built-in case. The script prints the comparison and exits
+with status 1 when the case is not reproduced.
 Replay accepts a `TestReport`; load dictionaries through `TestReport.from_dict`
 first. The `metadata["replay"]` result contains `reproduced` (metrics, diagnostics,
 and manifest agree) and `same_environment` (source, dependencies, and Python
@@ -326,9 +341,11 @@ adequate. A pass is always scoped to a check.
 ### Report schema
 
 `timegym.reporting.REPORT_SCHEMA_VERSION = "2.0"` identifies the report envelope.
-`timegym.provenance.PIPELINE_CONFIG_SCHEMA_VERSION = 2` identifies current
-pipeline configuration writes; schema 1 configurations with `strategy` remain
-readable and normalize to `reduction`. Scenario manifests use integer version 1,
+`timegym.provenance.PIPELINE_CONFIG_SCHEMA_VERSION = 3` identifies current
+pipeline configuration writes, which add `target_transform` (`null` or a
+`transform_config` description). Schema 2 configurations, written without that
+field, remain readable; schema 1 configurations, which used `strategy`, are no
+longer read. Scenario manifests use integer version 1,
 named by `timegym.scenarios.MANIFEST_SCHEMA_VERSION`. These are independent
 schemas: the historical report version is a string, while configuration and
 manifest versions are integers.
@@ -487,9 +504,10 @@ The functions below are public through `timegym.features`, `timegym.target`, and
 transformations, not automatic Pipeline stages. They never mutate the supplied
 object. Row offsets are positional, so a lag of one means the previous row even
 when timestamps are irregular. Apply transformations within each training split
-and keep future labels out of predictor matrices. The existing recursive model
-adapter constructs its own lag windows; these helpers support explicit notebook
-experiments and custom models.
+and keep future labels out of predictor matrices. `SklearnForecaster` constructs
+its own lag windows; these helpers support explicit notebook experiments and
+custom models. The reversible target transforms below are the exception: a
+`Pipeline` fits and inverts them on each case.
 
 ### Smoothing
 
@@ -541,13 +559,38 @@ requested; core imports do not require TSFEL or tqdm.
 Target constructors retain originals, reject duplicate or colliding columns, and
 return a new DataFrame. `dropna=True` removes any row with a missing original or
 future value; `False` retains the index and incomplete tail. Future columns are
-labels, never inputs available at the forecast origin. These constructors do
-not implement direct, DirRec or multioutput model adapters.
+labels, never inputs available at the forecast origin. These constructors are
+not model adapters; `SklearnForecaster` implements the direct and multioutput
+reductions.
 
 Differencing accepts a Series or DataFrame and preserves its type and labels on
 the retained rows. Orders must be finite and nonnegative, and lag must be a
 positive integer. Missing observations inside the series propagate; they are
 not filled with zero. `fractional_coefficients` is used only for noninteger
 orders in `differencing`. A finite fractional filter is an approximation, not
-an exact infinite-memory transform. Custom forecasters must reconstruct the
-original target scale before evaluation; no inverse transform is applied here.
+an exact infinite-memory transform. These functions apply no inverse; use
+`DifferenceTransform` below for differences that a pipeline undoes.
+
+### Reversible target transforms
+
+`LogTransform()`, `BoxCoxTransform()` and `DifferenceTransform(order=1, lag=1)`
+implement `fit_transform(context)`, `inverse_transform(forecast)` and
+`clone_unfitted()`. `ComposedTransform(transforms)` applies bundled members in
+order and inverts them in reverse order. Each transform is fitted on the context
+only. Log and Box-Cox require strictly positive finite targets; Box-Cox fits one
+lambda per target by maximum likelihood, bounded to `[-1, 2]`, and rejects a
+constant target and transformed forecasts without a preimage. Inversion
+requires a valid forecast with the fitted target names in the fitted order.
+
+- Samples and quantiles invert elementwise. Monotone transforms preserve
+  quantile order.
+- After a nonlinear inverse, the point is the mean of the inverted samples,
+  else the inverted 0.5 quantile, else the inverted point read as a median.
+- `DifferenceTransform` integrates points and samples exactly. It recomputes
+  quantiles from the integrated samples, or omits them when there are none,
+  and assumes the forecast rows immediately follow the context.
+
+`transform_config(transform)` describes exact bundled classes as `builtin` and
+any other object, including a subclass, as `external`.
+`transform_from_config(config)` rebuilds an unfitted bundled transform; replay
+rebuilds bundled transforms only.

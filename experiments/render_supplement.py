@@ -173,14 +173,14 @@ def render_tex(results, manifest):
     clean = rows[0]
     calibration_count = len(results["model"]["calibration_records"])
     losses = results["model"]["loss_summaries"]
-    improved = sum(row["repair_minus_faulty_mse"]["mean"] < 0 for row in losses)
-    intervals_below_zero = sum(row["repair_minus_faulty_mse"]["ci95"][1] < 0 for row in losses)
+    improved = sum(row["clean_minus_faulty_mse"]["mean"] < 0 for row in losses)
+    intervals_below_zero = sum(row["clean_minus_faulty_mse"]["ci95"][1] < 0 for row in losses)
     loss_comparisons = [row for row in results["model"]["condition_summaries"] if row["check"] == "loss"]
     loss_gained = sum(row["paired_alarm_gain"] for row in loss_comparisons)
     loss_lost = sum(row["paired_alarm_loss"] for row in loss_comparisons)
     repair_counterexamples = []
     for row in losses:
-        delta = row["repair_minus_faulty_mse"]
+        delta = row["clean_minus_faulty_mse"]
         if delta["ci95"][0] > 0:
             repair_counterexamples.append(
                 f"For {CONDITION_LABELS[row['condition']].lower()} with {SHORT_FAULTS[row['fault']].lower()}, "
@@ -327,7 +327,7 @@ def render_macros(results):
     from timegym.statistics import paired_t_interval
     differences = [clean[(row["condition"], row["seed"])]["realized_mse"] - row["realized_mse"] for row in faulty]
     delta = paired_t_interval(differences)
-    require_conclusion(close_statistics(delta, selected["repair_minus_faulty_mse"]), "caption interval agrees with paired raw losses")
+    require_conclusion(close_statistics(delta, selected["clean_minus_faulty_mse"]), "caption interval agrees with paired raw losses")
     improved = sum(value < 0 for value in differences)
     require_conclusion(improved == selected["cases_improved_by_repair"], "caption improvement count agrees with raw losses")
     counts = {sum(row["condition"] == condition for row in clean.values())

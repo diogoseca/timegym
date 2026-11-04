@@ -82,13 +82,6 @@
       ]
     },
     {
-      "notebook": "notebooks/13_command_line.ipynb",
-      "modules": [
-        "timegym/cli.py",
-        "timegym/__main__.py"
-      ]
-    },
-    {
       "notebook": "notebooks/14_controlled_processes.ipynb",
       "modules": [
         "timegym/processes.py",

@@ -204,8 +204,8 @@ def run_model_study(spec):
                 "condition": condition["id"], "fault": fault,
                 "clean_mse": mean_interval([row["clean"]["realized_mse"] for row in paired]),
                 "faulty_mse": mean_interval([row[fault]["realized_mse"] for row in paired]),
-                "repair_minus_faulty_mse": mean_interval([row["clean"]["realized_mse"]-row[fault]["realized_mse"] for row in paired]),
-                "repair_minus_faulty_reference_mse": mean_interval([row["clean"]["mean_reference_mse"]-row[fault]["mean_reference_mse"] for row in paired]),
+                "clean_minus_faulty_mse": mean_interval([row["clean"]["realized_mse"]-row[fault]["realized_mse"] for row in paired]),
+                "clean_minus_faulty_reference_mse": mean_interval([row["clean"]["mean_reference_mse"]-row[fault]["mean_reference_mse"] for row in paired]),
                 "cases_improved_by_repair": int(sum(row["clean"]["realized_mse"] < row[fault]["realized_mse"] for row in paired)),
                 "n": len(paired),
             })
@@ -312,9 +312,9 @@ def export_tables(results, output):
     write_csv(output / "model-repair-losses.csv", [{
         "condition": row["condition"], "fault": row["fault"],
         "clean_mse": row["clean_mse"]["mean"], "faulty_mse": row["faulty_mse"]["mean"],
-        "repair_minus_faulty_mse": row["repair_minus_faulty_mse"]["mean"],
-        "paired_lower95": row["repair_minus_faulty_mse"]["ci95"][0],
-        "paired_upper95": row["repair_minus_faulty_mse"]["ci95"][1],
+        "clean_minus_faulty_mse": row["clean_minus_faulty_mse"]["mean"],
+        "paired_lower95": row["clean_minus_faulty_mse"]["ci95"][0],
+        "paired_upper95": row["clean_minus_faulty_mse"]["ci95"][1],
         "improved_cases": row["cases_improved_by_repair"], "n": row["n"],
     } for row in results["model"]["loss_summaries"]])
     write_csv(output / "covariance-conditions.csv", [{

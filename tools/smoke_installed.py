@@ -1,6 +1,7 @@
 """Exercise the installed wheel, with optional imports deliberately unavailable.
 
 Run with `python -I tools/smoke_installed.py` after installing a built wheel.
+--report PATH also saves the replayed report for replay in a separate process.
 For an offline local check only, --dependency-path can expose scientific
 dependencies from another environment without executing its editable .pth hooks.
 """
@@ -17,6 +18,7 @@ from tempfile import TemporaryDirectory
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dependency-path", type=Path)
+    parser.add_argument("--report", type=Path, help="Also save the replayed report here")
     args = parser.parse_args()
     if args.dependency_path:
         sys.path.append(str(args.dependency_path.resolve()))
@@ -34,7 +36,6 @@ def main():
     import numpy as np
     import timegym
     from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, TestReport
-    from timegym.cli import alignment_demo
 
     installed_path = Path(timegym.__file__).resolve()
     repository = Path(__file__).resolve().parents[1]
@@ -54,16 +55,16 @@ def main():
     run = Pipeline(NaiveForecaster()).run([scenario], seeds=[0, 1, 2])
     run.report.assert_passed()
     assert len(run.cases) == 3
-    summary, faulty, repaired, comparison = alignment_demo()
-    assert summary["expected_behavior_verified"] and len(comparison.cases) == 2
-    assert faulty.summary["failed_cases"] == 1
+    from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
+    from timegym.mutations import mutate_forecast
+    shifted = evaluate_forecast(case, mutate_forecast(point, "index_shift"))
+    fault_codes = [d.evidence.get("code") for d in shifted.diagnostics if d.failed]
+    assert "index_mismatch" in fault_codes and shifted.metrics == {}
     with TemporaryDirectory(prefix="timegym-wheel-report-") as temporary:
-        report_path = Path(temporary) / "report.json"
-        repaired.to_json(report_path)
-        loaded = TestReport.read(report_path)
-        replay = loaded.replay_case(0)
+        report_path = args.report or Path(temporary) / "report.json"
+        run.report.to_json(report_path)
+        replay = TestReport.read(report_path).replay_case(0)
         assert replay.metadata["replay"]["reproduced"]
-    from timegym.diagnostics import covariance_dependence_check
     joint_processes = []
     for kind in ("composite", "merton_jump_diffusion", "garch", "markov_switching"):
         spec = Scenario(kind, context_length=24, horizon=3, n_targets=2,
@@ -89,7 +90,7 @@ def main():
     print(json.dumps({"imported_from": str(installed_path), "version": timegym.__version__,
                       "point_shape": list(point.point.shape),
                       "joint_sample_shape": list(joint.samples.shape),
-                      "retained_cases": len(run.cases), "demo": summary,
+                      "retained_cases": len(run.cases), "index_shift_fault_codes": fault_codes,
                       "joint_processes_verified": joint_processes,
                       "optional_import_attempts": attempts}, indent=2))
 

@@ -109,7 +109,7 @@ def test_replay_exposes_source_changes_instead_of_asserting_identical_environmen
     assert replayed.metadata["replay"]["metrics_match"] is True
 
 
-def test_report_replay_method_and_cli(tmp_path):
+def test_report_replay_method_and_example_script(tmp_path):
     report = Pipeline(NaiveForecaster("drift")).test([Scenario("trend")], seeds=[2])
     assert report.replay_case().metadata["replay"]["metrics_match"] is True
     saved, output = tmp_path / "report.json", tmp_path / "replayed.json"
@@ -120,6 +120,13 @@ def test_report_replay_method_and_cli(tmp_path):
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout)["diagnostics_match"] is True
     assert json.loads(output.read_text())["metadata"]["replay"]["metrics_match"] is True
+    moved = report.to_dict()
+    moved["metadata"]["source"]["digest"] = "different source"
+    TestReport.from_dict(moved).to_json(saved)
+    for gate, status in [([], 0), (["--require-same-environment"], 1)]:
+        completed = subprocess.run([sys.executable, str(script), str(saved), *gate],
+                                   text=True, capture_output=True, check=False)
+        assert completed.returncode == status, completed.stderr
 
 
 
@@ -138,28 +145,7 @@ def test_configuration_parser_does_not_construct_a_pipeline_and_preserves_subcla
     assert restored.to_config() == config
 
 
-def test_legacy_strategy_config_and_report_replay_normalize_to_reduction():
-    pipeline = Pipeline(NaiveForecaster("drift"), reduction="recursive")
-    config = pipeline.to_config()
-    assert config["schema_version"] == 2
-    assert config["reduction"] == "recursive"
-    assert config["model"]["parameters"]["strategy"] == "drift"
-    legacy = deepcopy(config)
-    legacy["schema_version"] = 1
-    legacy["strategy"] = legacy.pop("reduction")
-    restored = Pipeline.from_config(legacy)
-    assert restored.reduction == "recursive"
-    assert restored.to_config() == config
-    report = pipeline.test([Scenario("trend", context_length=12, horizon=3)], seeds=[4]).to_dict()
-    report["metadata"]["pipeline_config"] = legacy
-    report["metadata"]["strategy"] = report["metadata"].pop("reduction")
-    replayed = TestReport.from_dict(report).replay_case()
-    assert replayed.metadata["replay"]["metrics_match"]
-    assert replayed.metadata["replay"]["diagnostics_match"]
-    assert replayed.metadata["pipeline_config"] == config
-
-
-@pytest.mark.parametrize("version", [True, 1.0, 2.0, 3, None, "2"])
+@pytest.mark.parametrize("version", [True, 1, 1.0, 2.0, 4, None, "2"])
 def test_pipeline_config_requires_an_exact_supported_schema_version(version):
     config = Pipeline().to_config()
     config["schema_version"] = version
@@ -167,18 +153,16 @@ def test_pipeline_config_requires_an_exact_supported_schema_version(version):
         Pipeline.from_config(config)
 
 
-@pytest.mark.parametrize("version", [1, 2])
-def test_pipeline_config_rejects_ambiguous_reduction_fields(version):
+def test_pipeline_config_rejects_ambiguous_reduction_fields():
     config = Pipeline().to_config()
-    config["schema_version"] = version
     config["strategy"] = "recursive"
     with pytest.raises(ValueError, match="configuration schema"):
         Pipeline.from_config(config)
 
 
 def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options():
-    with pytest.raises(ValueError, match="reduction='recursive'"):
-        Pipeline(reduction="direct")
+    with pytest.raises(ValueError, match="'iterated'.*recursive.*direct.*multioutput"):
+        Pipeline(reduction="iterated")
     with pytest.raises(ValueError, match="unknown.*last.*mean.*seasonal.*drift"):
         NaiveForecaster(strategy="unknown")
 
@@ -205,13 +189,11 @@ def test_replay_uses_model_seed_validation(seed):
         Pipeline.from_config(config)
 
 
-@pytest.mark.parametrize('schema', [1, 2])
-def test_old_ar1_configs_restore_the_original_default_quantiles(schema):
+def test_old_ar1_configs_restore_the_original_default_quantiles():
     from timegym.contracts import DEFAULT_LEVELS
     config = Pipeline(GaussianAR1Forecaster()).to_config()
-    config['schema_version'] = schema
-    if schema == 1:
-        config['strategy'] = config.pop('reduction')
+    config['schema_version'] = 2
+    del config['target_transform']
     del config['model']['parameters']['levels']
     restored = Pipeline.from_config(config)
     assert restored.model.levels == DEFAULT_LEVELS
@@ -242,8 +224,6 @@ def test_replay_rejects_raw_dicts_instead_of_bypassing_report_validation():
 
 
 def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp_path):
-    from timegym.cli import main
-
     report = Pipeline(NaiveForecaster("seasonal", period=50)).test(
         [Scenario("ar1", context_length=16, horizon=3)], seeds=[0])
     diagnostic = report.cases[0].diagnostics[0]
@@ -258,8 +238,8 @@ def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp
     assert comparison["same_environment"]
     path = tmp_path / "error.json"
     report.to_json(path)
-    assert main(["replay", str(path)]) == 0
-    assert main(["replay", str(path), "--require-same-environment"]) == 0
+    loaded = TestReport.read(path).replay_case().metadata["replay"]
+    assert loaded["reproduced"] and loaded["same_environment"]
     diagnostic.evidence["exception_message"] = "a different failure"
     assert not report.replay_case().metadata["replay"]["reproduced"]
 
@@ -285,12 +265,12 @@ def test_replay_verdicts_distinguish_results_from_environment(field):
     assert comparison["same_environment"] is result_changed
 
 
-def test_schema_constants_describe_current_writes_and_legacy_config_reads():
+def test_schema_constants_describe_current_writes():
     from timegym.reporting import REPORT_SCHEMA_VERSION
     from timegym.provenance import PIPELINE_CONFIG_SCHEMA_VERSION
     from timegym.scenarios import MANIFEST_SCHEMA_VERSION
 
     report = Pipeline().test([Scenario("ar1", context_length=12, horizon=2)], seeds=[0])
     assert report.to_dict()["schema_version"] == REPORT_SCHEMA_VERSION == "2.0"
-    assert report.metadata["pipeline_config"]["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION == 2
+    assert report.metadata["pipeline_config"]["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION == 3
     assert report.cases[0].manifest["schema_version"] == MANIFEST_SCHEMA_VERSION == 1

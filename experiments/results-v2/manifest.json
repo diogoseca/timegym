@@ -1,4 +1,14 @@
 {
+  "loss_key_migration": {
+    "decision": "Owner decision, 3 November 2026",
+    "method": "Offline field rename; no study rerun and no numerical value changed.",
+    "migration_script_sha256": "25c02935e0fa8d79dd6d38d44d5774af959b6a7b1528a4f7ce17bb76c76ce4b6",
+    "original_results_sha256": "1b386768628dd09981ac08f1bf91bb567c678e41e483999a9ac300f7511971f7",
+    "renamed_fields": {
+      "repair_minus_faulty_mse": "clean_minus_faulty_mse",
+      "repair_minus_faulty_reference_mse": "clean_minus_faulty_reference_mse"
+    }
+  },
   "original_pilot_results_sha256": "cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014",
   "platform": "macOS-15.7.9-arm64-arm-64bit-Mach-O",
   "protocol": {
@@ -611,7 +621,7 @@
     },
     "original_results_sha256": "ba9b2e90145ca50d4049e469869ea575a95c34d6d80fd16d0946cb8ae9395bc7"
   },
-  "results_sha256": "1b386768628dd09981ac08f1bf91bb567c678e41e483999a9ac300f7511971f7",
+  "results_sha256": "13b1228e7124b95f30953c8ee23e5189087e4c45d34de12c509ae9433a90b5b5",
   "source_files": {
     "experiments/model_faults.py": "3449ed9b9d74cb150ccf2a341340ff9516036c0ec1e665f4f339ae04ae0a119d",
     "experiments/protocol-v2.json": "6de8628cc1e05d1c64dd087d3b4d22b5dfcda017bc7321f6ddfc1f5976dcb301",

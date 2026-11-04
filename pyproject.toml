@@ -21,9 +21,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 
-[project.scripts]
-timegym = "timegym.cli:main"
-
 [project.optional-dependencies]
 sklearn = ["scikit-learn>=1.4"]
 plots = ["matplotlib>=3.8"]
