@@ -58,7 +58,7 @@ modules; each module has exactly one owner. Notebook imports can use absolute
 appropriate. Generated source includes a relative link to its notebook and
 cell IDs, independent of the current directory and temporary build location.
 After nbdev export, the builder orders the module banner, imports, and one merged
-`__all__`, then formats the generated source with pinned Black 24.10.0. Formatting
+`__all__`, then formats the generated source with pinned Black 26.10.1. Formatting
 is part of both build and check mode; never format or edit generated files by hand.
 
 ## Shared internal helpers
