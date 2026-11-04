@@ -39,8 +39,8 @@ date; change it before tagging if publication happens on another day. Run:
 
 The citation renderer derives the README BibTeX/APA and historical paper citation
 from CFF. It fails on mismatched package/changelog versions or dates. The
-standalone manuscript uses the same version/date in its title block. “v2” in the
-manuscript title describes the research revision, not the package major version.
+standalone manuscript uses the same version/date in its title block; the
+manuscript title carries no version number of its own.
 Generated sources must be committed along with their inputs before tagging.
 
 ## One-time PyPI setup

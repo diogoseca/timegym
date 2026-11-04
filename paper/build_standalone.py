@@ -1,7 +1,7 @@
 """Build or check the single-file manuscript using only the standard library.
 
 Run from any directory: python paper/build_standalone.py
-Edit main.tex, references.bib, or the generators, not timegym-v2.tex.
+Edit main.tex, references.bib, or the generators, not timegym.tex.
 """
 
 import argparse
@@ -175,7 +175,7 @@ def main() -> int:
         standalone = build(paper_dir=PAPER_DIR)
     except (OSError, ValueError) as error:
         parser.exit(2, f"{error}\n")
-    output = PAPER_DIR / "timegym-v2.tex"
+    output = PAPER_DIR / "timegym.tex"
     if args.check:
         if not output.is_file() or output.read_bytes() != standalone.encode("utf-8"):
             print("Standalone manuscript is out of date. Run python paper/build_standalone.py")

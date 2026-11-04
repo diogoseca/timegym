@@ -5,7 +5,7 @@ marked implementation cells owned by `notebooks/source-map.json`. Edit the
 owning notebook, preserve cell IDs and `metadata.timegym.role`, save it, then
 run `.venv/bin/python tools/export_notebooks.py` and its `--check` mode. Never
 edit generated modules by hand. Read `tools/README.md` and `notebooks/README.md`
-before changing library code. Paper result fragments and `paper/timegym-v2.tex`
+before changing library code. Paper result fragments and `paper/timegym.tex`
 are generated too; edit their inputs and run their builders.
 
 Create the environment with `python3 -m venv .venv` and
@@ -53,8 +53,10 @@ push tags, never force-push. Before handoff run, with the venv interpreter,
 `paper/build_standalone.py --check`,
 `tools/sync_citation.py --check`, and `notebooks/check_notebooks.py` on every
 notebook you touched, with `--write` when outputs change, because the docs
-site renders saved outputs. Recount every stated count (source notebooks,
-generated modules, active notebooks, tests) when it changes. Commit messages
+site renders saved outputs. When the manuscript changes, also compile
+`paper/timegym.tex` with latexmk as `paper/README.md` describes. Recount
+every stated count (source notebooks, generated modules, active notebooks,
+tests) when it changes. Commit messages
 have an imperative subject and no trailers: no `Co-Authored-By`, no session
 links, no tool attribution of any kind. Delegate to subagents on Opus; the
 session's own model is for orchestration and review.

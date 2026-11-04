@@ -46,7 +46,7 @@ detection or validation on every supported platform.
 The manuscript packaging policy was updated on 30 October 2026: source archives
 retain `main.tex`, `references.bib`, generated result fragments, TikZ scenes,
 figure provenance, and the claim ledger. Regenerable SVG, PNG, and PDF figures
-and the derived `timegym-v2.tex` are excluded. The included standalone builder
+and the derived `timegym.tex` are excluded. The included standalone builder
 recreates that file from the retained inputs without rendering raster figures.
 
 The multivariate extension covers correlated composed processes, vector Merton
@@ -100,7 +100,7 @@ installed wheels on Linux/macOS/Windows, all notebooks, documentation, and both
 studies. These remote jobs have not been executed from this checkout. Local
 validation was on macOS; do not infer Windows or Linux results from it.
 
-Before publishing a first v2 release, run those jobs against the final immutable
+Before the first public release, run those jobs against the final immutable
 revision and complete author review of the manuscript, attribution, examples,
 and release metadata. No package release or manuscript submission was made.
 

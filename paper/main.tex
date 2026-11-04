@@ -23,7 +23,7 @@
 \PackageError{timegym}{Missing generated-macros.tex}{Run experiments.render_supplement before compiling.}}
 % END GENERATED MACROS
 
-\title{TimeGym v2: Contract-Based Verification and Diagnosis\newline for Forecasting Pipelines}
+\title{TimeGym: Contract-Based Verification and Diagnosis\newline for Forecasting Pipelines}
 \author{Diogo Seca}
 \date{Working manuscript; versioned identity in the standalone build}
 
@@ -32,7 +32,7 @@
 
 \begin{abstract}
 Forecast accuracy alone does not distinguish an implementation fault from
-a model limitation or future noise. TimeGym v2 makes that distinction
+a model limitation or future noise. TimeGym makes that distinction
 explicit through forecast contracts, conditional references, declared
 behavioral relations, and reproducible repair rechecks. The Python package
 supports point forecasts, marginal quantiles, and joint trajectory samples
@@ -102,7 +102,7 @@ distribution at every future coordinate but corrupts the pairing between
 coordinates; point and marginal uncertainty scores can remain unchanged.
 These failures require different evidence and different remedies.
 
-TimeGym v2 makes these distinctions explicit. Its intended use is to
+TimeGym makes these distinctions explicit. Its intended use is to
 test a forecasting pipeline before deployment and to reproduce a failure
 after one. Here verification means
 exercising specified runtime contracts, not formal proof of a program.
@@ -140,15 +140,15 @@ while revising its statistical specification. The original compared
 forecasts with a noise-free generator component using sMAPE, a measure
 whose treatment of positive and negative errors is itself
 asymmetric~\cite{goodwin1999asymmetry}, and described
-that component as an optimal forecast. In v2, the reference depends
+that component as an optimal forecast. In this revision, the reference depends
 explicitly on the requested functional, loss, and information set: a
 conditional mean is appropriate for squared loss, and future random
 structure must be integrated out rather than treated as known. Fresh
 synthetic samples do not remove adaptive selection or multiple-testing
 concerns. Finally, successful synthetic tests provide evidence about the
 tested mechanisms; they do not establish performance on real data. The
-v2 features and experiments belong to the current work and are not
-attributed retrospectively to 2021.
+features and experiments described here belong to the current work and
+are not attributed retrospectively to 2021.
 
 \section{Related work and positioning}
 
@@ -253,7 +253,7 @@ SimpleTimeBench & Foundation-model responses to simple temporal tasks & Elementa
 FinStressTS & Isolated and composed financial mechanisms & Mechanism-based financial capability evaluation is an existing approach. \\[0.4em]
 Forecasting metamorphic testing & Behavioral relations, real issues, and injected faults & Relations provide test oracles when exact outputs are unavailable. \\[0.4em]
 sktime conformance & Estimator interface and framework behavior & Interface tests are a necessary comparison class. \\[0.4em]
-TimeGym v2 & Forecast contracts, conditional references, and repair rechecks & Separates the meaning of a violation from the evidence needed to explain it. \\
+TimeGym (this work) & Forecast contracts, conditional references, and repair rechecks & Separates the meaning of a violation from the evidence needed to explain it. \\
 \bottomrule
 \end{tabular}
 \caption{Positioning by the object each work emphasizes. This is not a
@@ -1104,7 +1104,7 @@ by retaining test specifications, paired cases, misses, and false alarms.
 
 \section{Conclusion}
 
-TimeGym v2 connects forecast specifications to reproducible diagnostic
+TimeGym connects forecast specifications to reproducible diagnostic
 evidence. Its conditional references separate excess squared-error risk
 from future noise, while typed outputs and declared relations distinguish
 different kinds of failure. The selected implementation study shows that

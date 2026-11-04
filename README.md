@@ -141,7 +141,7 @@ The notebooks run on CPU with local data. `pip install -e '.[notebooks]'` and
 
 The method and two controlled studies are described in the manuscript kept in
 this repository: [`paper/main.tex`](paper/main.tex), built into a
-[single-file version](paper/timegym-v2.tex) with every figure and table
+[single-file version](paper/timegym.tex) with every figure and table
 generated from the recorded study results. The studies, their frozen records
 and the exact reproduction recipe are in [`experiments/`](experiments/README.md)
 and [`paper/README.md`](paper/README.md). The original 2021 prototype is on

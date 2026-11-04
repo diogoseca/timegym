@@ -1,1 +1,1 @@
-"""Reproducible CPU experiments for the TimeGym v2 manuscript."""
+"""Reproducible CPU experiments for the TimeGym manuscript."""
