@@ -52,7 +52,7 @@ def on_config(config):
     atexit.register(temporary.cleanup)
     stage = Path(temporary.name)
     pending = [root / "README.md", *[path for path in [root / "CHANGELOG.md"] if path.exists()],
-               *sorted((root / "docs").rglob("*.md")),
+               *sorted((root / "docs").rglob("*.md")), *sorted((root / "docs").rglob("*.css")),
                *sorted((root / "notebooks").glob("00_*.ipynb")), *sorted((root / "notebooks").glob("2[0-9]_*.ipynb")),
                *sorted((root / "notebooks").glob("3[0-9]_*.ipynb"))]
     copied = set()

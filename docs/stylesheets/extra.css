@@ -1,0 +1,15 @@
+/* The left sidebar holds the whole site tree: Home, Tutorials, Concepts,
+   API reference and Project. */
+
+/* The header already shows the site name, so on wide screens the tree starts
+   at Home. Narrow screens keep the title, which heads the navigation drawer. */
+@media screen and (min-width: 76.25em) {
+  .md-nav--primary > .md-nav__title {
+    display: none;
+  }
+}
+
+/* Top-level entries read as the headings of the tree. */
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {
+  font-weight: 700;
+}
