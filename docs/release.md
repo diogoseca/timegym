@@ -26,8 +26,8 @@ Y does not reset. Only Diogo Seca chooses major-version changes. The root
 `AGENTS.md` records these rules for future contributors.
 
 Set `CITATION.cff`'s version and `date-released` and the leading changelog heading
-to the intended release identity. The date here is 2026-11-03, the preparation
-date; change it before tagging if publication happens on another day. Run:
+to the intended release identity. The date here is 2026-11-05, the intended
+publication date; change it before tagging if publication happens on another day. Run:
 
 ```bash
 .venv/bin/python tools/export_notebooks.py
@@ -45,16 +45,26 @@ Generated sources must be committed along with their inputs before tagging.
 
 ## One-time PyPI setup
 
-1. Sign in to PyPI as an owner of `timegym`. Open the project's **Manage →
-   Publishing** page. If the project has not been registered, use **Your account
-   → Publishing → Add a new pending publisher** with project name `timegym`.
-2. Add a **GitHub** trusted publisher with owner `diogoseca`, repository
-   `timegym`, workflow filename `release.yml`, and environment name `pypi`.
-   The filename is not `.github/workflows/release.yml`. No API token is needed.
-3. In the GitHub repository, open **Settings → Environments → New environment**,
-   name it `pypi`, allow deployment from version tags `v*`, and configure the
-   author's required review. The workflow's publish job uses this environment
-   and requests `id-token: write` for OIDC authentication.
+Nothing reaches PyPI until a `v*` tag is pushed: `release.yml` is the only
+publishing path, and branch pushes and merges never run it. The package uses
+[trusted publishing](https://docs.pypi.org/trusted-publishers/), so no API token
+or repository secret is involved; an account-wide `twine` token is not needed.
+
+1. Sign in to PyPI. While `timegym` has never been published, open
+   [Your account → Publishing](https://pypi.org/manage/account/publishing/) and
+   add a pending publisher with PyPI project name `timegym`. Once the project
+   exists, the publisher lives on the project's **Manage → Publishing** page. A
+   pending publisher does not reserve the name; the first successful upload does.
+2. Choose the **GitHub** publisher with owner `diogoseca`, repository
+   `timegym`, workflow name `release.yml`, and environment name `pypi`.
+   The filename is not `.github/workflows/release.yml`.
+3. In the GitHub repository, open [Settings → Environments → New
+   environment](https://github.com/diogoseca/timegym/settings/environments/new),
+   name it `pypi`, and save. Under **Deployment protection rules** tick
+   **Required reviewers** and add the author. Under **Deployment branches and
+   tags** choose **Selected branches and tags** and add a rule of type **Tag**
+   with pattern `v*`. The workflow's publish job uses this environment and
+   requests `id-token: write` for OIDC authentication.
 4. Under **Settings → Actions → General**, allow the actions used by these
    workflows and enable **Allow GitHub Actions to create and approve pull
    requests** for the compatibility bot. Workflows declare their own minimal
