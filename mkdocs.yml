@@ -8,8 +8,7 @@ site_url: https://diogoseca.github.io/timegym/
 theme:
   name: material
   features:
-    - navigation.tabs
-    - navigation.sections
+    - navigation.path
     - navigation.top
     - navigation.footer
     - content.code.copy
@@ -34,6 +33,8 @@ theme:
   font:
     text: IBM Plex Sans
     code: IBM Plex Mono
+extra_css:
+  - docs/stylesheets/extra.css
 hooks:
   - tools/docs_hooks.py
 plugins:
