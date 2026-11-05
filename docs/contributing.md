@@ -76,6 +76,16 @@ GitHub for files the site does not render. The tutorial groups are listed in
 `mkdocs.yml`, the README and the [notebook guide](../notebooks/README.md);
 `tests/test_docs_navigation.py` keeps the three in step.
 
+Each API page ends with a Signatures section that mkdocstrings generates from
+the docstrings. The docstrings live in the source notebooks, so edit the owning
+notebook and export it; never edit `timegym/*.py`. Members without a docstring
+are left out of the page, so `tests/test_docs_signatures.py` fails when a public
+class, method, property or function lacks one, or when a public name in the
+[API overview](reference.md) has no `:::` directive on the page its row links
+to. The [capability map](concepts/capability-map.md) is checked by
+`tests/test_docs_catalogue.py` against the scenario families, the diagnostics
+catalogue and the tutorials it links.
+
 ## Preserve the scientific contract
 
 New scenarios require explicit conditioning assumptions and independent

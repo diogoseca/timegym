@@ -282,6 +282,7 @@ class LogTransform(_TargetTransform):
     """
 
     def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
+        """Record the target names and return the log of a strictly positive context."""
         values = _positive_values(context, "LogTransform")
         self._fitted_on(context)
         return pd.DataFrame(
@@ -289,6 +290,7 @@ class LogTransform(_TargetTransform):
         )
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
+        """Return a forecast that meets its contract on the original scale."""
         self._check_forecast(forecast)
         return _invert_elementwise(forecast, lambda values, axis: np.exp(values))
 
@@ -315,6 +317,7 @@ class BoxCoxTransform(_TargetTransform):
     """
 
     def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
+        """Fit one lambda per target on this context and return the transformed context."""
         values = _positive_values(context, "BoxCoxTransform")
         constant = np.ptp(values, axis=0) == 0
         if constant.any():
@@ -331,6 +334,10 @@ class BoxCoxTransform(_TargetTransform):
         )
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
+        """Return a forecast that meets its contract on the original scale.
+
+        Raises when a value has no Box-Cox preimage.
+        """
         self._check_forecast(forecast)
         return _invert_elementwise(forecast, self._inverse)
 
@@ -362,9 +369,11 @@ class DifferenceTransform(_TargetTransform):
         self.lag = positive_int(lag, "lag")
 
     def params(self) -> dict:
+        """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return {"order": self.order, "lag": self.lag}
 
     def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
+        """Keep the context tail needed for inversion and return the differenced context."""
         _context_values(context)
         span = self.order * self.lag
         if len(context) <= span:
@@ -382,6 +391,11 @@ class DifferenceTransform(_TargetTransform):
         return differencing(context, self.order, lag=self.lag)
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
+        """Integrate a forecast that meets its contract back to levels.
+
+        Quantiles are recomputed from the integrated samples, or omitted
+        without samples.
+        """
         self._check_forecast(forecast)
         point = (
             None
@@ -453,9 +467,11 @@ class ComposedTransform(_TargetTransform):
         self.transforms = tuple(transform.clone_unfitted() for transform in transforms)
 
     def params(self) -> dict:
+        """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return {"transforms": self.transforms}
 
     def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
+        """Fit and apply each member in order, each on the previous member's output."""
         _context_values(context)
         self._fitted_on(context)
         for transform in self.transforms:
@@ -463,6 +479,7 @@ class ComposedTransform(_TargetTransform):
         return context
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
+        """Invert the members in reverse order."""
         self._check_forecast(forecast)
         for transform in reversed(self.transforms):
             forecast = transform.inverse_transform(forecast)

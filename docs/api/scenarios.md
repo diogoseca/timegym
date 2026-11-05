@@ -67,3 +67,17 @@ the scenario defaults. `timegym.data.synthetic.default_scenarios(context_length=
 horizon=12, *, n_targets=1, seed=0)` creates fresh specifications for those families.
 `Pipeline.run()` uses that helper; `Pipeline.plot_tests()` requests the same families
 with a context length of 240 and horizon of 80.
+
+## Signatures
+
+Generated from the docstrings in the code.
+
+::: timegym.Scenario
+
+::: timegym.Case
+
+::: timegym.Reference
+
+::: timegym.SimulationReference
+
+::: timegym.scenarios.scenario_label

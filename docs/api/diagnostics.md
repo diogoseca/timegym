@@ -221,3 +221,37 @@ observations and returns `count`, `n`, `rate`, and the Wilson `ci95` bounds.
 case-level differences and returns `mean`, `n`, and Student t `ci95` bounds.
 Cases must be independent; horizons and targets within a case are not replications.
 The t interval is for continuous score differences, not differences in alarm rates.
+
+## Signatures
+
+Generated from the docstrings in the code.
+
+::: timegym.metrics.mse
+
+::: timegym.metrics.mae
+
+::: timegym.metrics.mase
+
+::: timegym.metrics.mean_reference_mse
+
+::: timegym.metrics.pinball
+
+::: timegym.metrics.crps
+
+::: timegym.metrics.energy_score
+
+::: timegym.metrics.variogram_score
+
+::: timegym.metrics.UndefinedMetricError
+
+::: timegym.diagnostics.evaluate_forecast
+
+::: timegym.diagnostics.covariance_dependence_check
+
+::: timegym.diagnostics.exception_evidence
+
+::: timegym.checks.check_shift_equivariance
+
+::: timegym.statistics.wilson_interval
+
+::: timegym.statistics.paired_t_interval

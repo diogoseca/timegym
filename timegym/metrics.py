@@ -83,7 +83,7 @@ def mase(observed, predicted, context, seasonality=1):
     """MASE, scaling each target by its in-context seasonal naive MAE.
 
     Time is axis zero. A constant target or insufficient history makes the
-    aggregate undefined and raises :class:`UndefinedMetricError`; no epsilon
+    aggregate undefined and raises ``UndefinedMetricError``; no epsilon
     denominator or omission of constant targets is silently introduced.
     """
     observed, predicted = _pair(observed, predicted)

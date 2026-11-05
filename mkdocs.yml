@@ -44,8 +44,31 @@ plugins:
       execute: false
       include_source: true
       ignore_h1_titles: true
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            heading_level: 3
+            show_root_heading: true
+            show_root_full_path: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            show_source: false
+            show_bases: false
+            show_if_no_docstring: false
+            show_signature_annotations: true
+            separate_signature: true
+            line_length: 88
+            merge_init_into_class: true
+            members_order: source
+            filters: ["!^_"]
+            summary: false
 markdown_extensions:
   - admonition
+  - md_in_html
   - tables
   - toc:
       permalink: true
@@ -91,6 +114,7 @@ nav:
           - Joint financial uncertainty: notebooks/27_joint_financial_uncertainty.ipynb
   - Concepts:
       - How TimeGym decides: docs/concepts/how-timegym-decides.md
+      - Capability map: docs/concepts/capability-map.md
       - Synthetic scenarios: docs/stress-cases.md
   - API reference:
       - Overview: docs/reference.md
