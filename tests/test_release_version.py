@@ -44,7 +44,10 @@ def test_apply_updates_notebook_citation_and_changelog_consistently(tmp_path):
     for name in ('notebooks/12_package.ipynb', 'CITATION.cff', 'CHANGELOG.md'):
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / name, tmp_path / name)
-    ids = [cell['id'] for cell in json.loads((tmp_path / 'notebooks/12_package.ipynb').read_text())['cells']]
+    # Pending notes under "## Unreleased" would replace the PR title checked below.
+    unreleased = tmp_path / 'CHANGELOG.md'
+    unreleased.write_text(release_notes(unreleased.read_text(), [])[0])
+    ids =[cell['id'] for cell in json.loads((tmp_path / 'notebooks/12_package.ipynb').read_text())['cells']]
     citation = tmp_path / 'CITATION.cff'
     citation.write_text(citation.read_text() + 'doi: 10.5281/zenodo.1234567\n')
     current = package_version(tmp_path)
