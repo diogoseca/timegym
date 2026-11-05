@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0 — 2026-11-03
+## 1.1.0 — 2026-11-05
 
 - Added reversible target transforms to `timegym.target`: `LogTransform`,
   `BoxCoxTransform`, `DifferenceTransform` and `ComposedTransform`, with
