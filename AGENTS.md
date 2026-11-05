@@ -17,18 +17,22 @@ Use the venv interpreter for each command.
 
 ## Version policy
 
-The three integers in `M.X.Y` are independent counters, not a decimal number.
-The leading zero in the former `0.X.Y` was the major version; this round starts
-`1.0.0`. An implemented feature increments X; a fix increments Y. Increasing X
-must not reset Y: for example, a feature after `1.2.7` becomes `1.3.7`, and a fix
-then becomes `1.3.8`. Only Diogo Seca decides when to change the major version.
-Do not infer a major bump from another project's versioning convention.
+The version is `major.features.fixes`: three independent counters, not a
+decimal number. The leading zero in the former `0.X.Y` was the major version;
+this round starts `1.0.0`. Each merged pull request labelled `feature` adds one
+to X and each labelled `fix` adds one to Y. Increasing X must not reset Y: for
+example, a feature after `1.2.7` becomes `1.3.7`, and a fix then becomes `1.3.8`.
+Only Diogo Seca decides when to change the major version. Do not infer a major
+bump from another project's versioning convention.
 
 The authoritative version string is `__version__` in notebook 12's package cell,
-exported to `timegym/__init__.py`; flit reads it dynamically. Update the matching
-CITATION.cff version/date and the leading CHANGELOG heading, run
-`tools/sync_citation.py`, then regenerate the standalone manuscript. Never
-invent a DOI. Follow `docs/release.md` for DOI registration and publication.
+exported to `timegym/__init__.py`; flit reads it dynamically. Do not edit it,
+the CITATION.cff version/date or the leading CHANGELOG heading in a pull
+request: `tag-release.yml` writes them when it releases. Label every pull
+request you open `feature` or `fix` when it changes the package, or leave it
+unlabelled for documentation, paper and tooling work. Put user-facing notes
+under `## Unreleased` at the top of CHANGELOG.md. Never invent a DOI. Follow
+`docs/release.md` for DOI registration and publication.
 
 ## Compatibility policy
 
@@ -41,8 +45,9 @@ and documentation updates and tests them before opening a pull request. Keep
 the historical study lock and its Python version separate from current support.
 A successful local check is not evidence that another OS or Python version passed.
 
-Publication is tag-driven after owner review. Do not publish, push tags, or
-change external PyPI/Zenodo settings as part of ordinary implementation work.
+Publication follows merges: the release workflow versions, tags and publishes
+labelled pull requests after the owner merges them. Do not publish, push tags,
+or change external PyPI/Zenodo settings as part of ordinary implementation work.
 
 ## Working agreements
 

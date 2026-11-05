@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date
 import json
 from pathlib import Path
 import re
@@ -37,7 +36,8 @@ def supported_versions(downloads: str, pandas: dict) -> list[str]:
     return [str(v) for v in versions]
 
 
-def update(root: Path, versions: list[str], *, released: date) -> bool:
+def update(root: Path, versions: list[str]) -> bool:
+    """Rewrite the supported range; the merge workflow versions the change as a fix."""
     if not versions:
         return False
     project_path = root / 'pyproject.toml'
@@ -74,35 +74,6 @@ def update(root: Path, versions: list[str], *, released: date) -> bool:
         before, rest = text.split(start)
         _, after = rest.split(end)
         path.write_text(before + start + f'\nPython {oldest}–{latest} (`{requirement}`), following pandas support.\n' + end + after)
-    # Compatibility maintenance is a fix: increment Y without resetting X.
-    notebook = root / 'notebooks/12_package.ipynb'
-    data = json.loads(notebook.read_text())
-    found = 0
-    for cell in data['cells']:
-        if cell['cell_type'] != 'code':
-            continue
-        text = ''.join(cell['source'])
-        match = re.search(r'__version__ = "(\d+)\.(\d+)\.(\d+)"', text)
-        if match:
-            major, feature, fix = map(int, match.groups())
-            version = f'{major}.{feature}.{fix + 1}'
-            cell['source'] = text.replace(match[0], f'__version__ = "{version}"').splitlines(keepends=True)
-            found += 1
-    if found != 1:
-        raise ValueError('Expected one notebook-owned package version')
-    notebook.write_text(json.dumps(data, ensure_ascii=False, indent=1) + '\n')
-    citation = root / 'CITATION.cff'
-    text = re.sub(r'^version: .*$', f'version: {version}', citation.read_text(), flags=re.M)
-    text = re.sub(r'^date-released: .*$', f'date-released: {released.isoformat()}', text, flags=re.M)
-    # A prior release DOI cannot identify this new version.
-    text = re.sub(r'^doi: .*\n', '', text, flags=re.M)
-    citation.write_text(text)
-    changelog = root / 'CHANGELOG.md'
-    text = changelog.read_text().replace('# Changelog\n',
-        f'# Changelog\n\n## {version} — {released.isoformat()}\n\n'
-        f'- Update Python support to {oldest}–{latest}, following pandas; synchronize\n'
-        '  package metadata, CI, the development image and documentation.\n', 1)
-    changelog.write_text(text)
     return True
 
 
@@ -116,7 +87,7 @@ def main() -> int:
     with urlopen('https://pypi.org/pypi/pandas/json', timeout=30) as response:
         pandas = json.load(response)
     versions = supported_versions(downloads, pandas)
-    changed = update(ROOT, versions, released=date.today()) if args.apply else False
+    changed = update(ROOT, versions) if args.apply else False
     print(json.dumps({'versions': versions, 'changed': changed, 'pandas': pandas['info']['version']}))
     if args.github_output:
         with args.github_output.open('a') as output:
