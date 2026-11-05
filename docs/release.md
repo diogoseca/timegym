@@ -20,19 +20,22 @@ than raising every dependency floor to the study lock.
 ## Version identity
 
 `__version__` in notebook 12 is the sole package version source; flit reads its
-export in `timegym/__init__.py`. The initial release preparation is 1.0.0. In `M.X.Y`,
-features increment X and fixes increment Y. A feature after 1.2.7 is 1.3.7;
-Y does not reset. Only Diogo Seca chooses major-version changes. The root
-`AGENTS.md` records these rules for future contributors.
+export in `timegym/__init__.py`. Versions are `major.features.fixes`: the second
+and third numbers count merged pull requests labelled `feature` and `fix`.
+Neither counter resets the other, so a feature after 1.2.7 gives 1.3.7 and a fix
+after that gives 1.3.8. Only Diogo Seca starts a new major version, which
+restarts both counters at 0. The root `AGENTS.md` records these rules for future
+contributors.
 
-Set `CITATION.cff`'s version and `date-released` and the leading changelog heading
-to the intended release identity. The date here is 2026-11-05, the intended
-publication date; change it before tagging if publication happens on another day. Run:
+Pull requests do not edit the version, `CITATION.cff` or the changelog heading;
+the release workflow writes them. Label a pull request `feature` or `fix` when it
+should produce a release, and leave documentation, paper and tooling changes
+unlabelled. A pull request may add user-facing notes under a `## Unreleased`
+heading at the top of `CHANGELOG.md`. When that section has text it becomes the
+release notes; otherwise the notes list the labelled pull request titles. To
+check the release metadata by hand:
 
 ```bash
-.venv/bin/python tools/export_notebooks.py
-.venv/bin/python tools/sync_citation.py
-.venv/bin/python paper/build_standalone.py
 .venv/bin/python tools/sync_citation.py --check --tag v1.1.0
 .venv/bin/python paper/build_standalone.py --check
 ```
@@ -41,7 +44,7 @@ The citation renderer derives the README BibTeX/APA and historical paper citatio
 from CFF. It fails on mismatched package/changelog versions or dates. The
 standalone manuscript uses the same version/date in its title block; the
 manuscript title carries no version number of its own.
-Generated sources must be committed along with their inputs before tagging.
+The release workflow commits generated sources along with their inputs before tagging.
 
 ## One-time PyPI setup
 
@@ -68,7 +71,12 @@ or repository secret is involved; an account-wide `twine` token is not needed.
 4. Under **Settings → Actions → General**, allow the actions used by these
    workflows and enable **Allow GitHub Actions to create and approve pull
    requests** for the compatibility bot. Workflows declare their own minimal
-   permissions. Create a `python-compatibility` issue label for its PRs.
+   permissions. The `feature`, `fix` and `python-compatibility` labels are
+   created the first time a pull request uses them.
+5. `tag-release.yml` pushes its version commit straight to `main`. If a branch
+   protection rule or ruleset on `main` requires pull requests or status checks,
+   GitHub rejects that push and the job stops before anything is tagged. Let
+   the workflow through by removing those requirements or giving it a bypass.
 
 These fields must match the [PyPI trusted publisher configuration](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
 For a new project, follow [PyPI's pending publisher setup](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
@@ -108,16 +116,25 @@ a second archive through the GitHub integration. Do not fabricate an identifier.
 Replace the arXiv manuscript manually at substantive milestones; this workflow
 does not submit or replace arXiv papers.
 
-## Publish an approved version
+## Automatic releases
 
-Review the final manuscript, metadata and check results. Run the exporter,
-full tests, strict docs, citation check, source build and `twine check` locally.
-The tag must exactly match `v` plus `__version__`. For this preparation:
+Nobody tags by hand. Merging a pull request into `main` runs `tag-release.yml`.
+It finds the latest `v*` tag and counts the pull requests labelled `feature` or
+`fix` merged since then. When there is at least one, `tools/release_version.py`
+writes the next version into notebook 12, `CITATION.cff` (dated the day of the
+run) and `CHANGELOG.md`. The job regenerates the package module, README
+citation and standalone manuscript, runs the release-metadata checks, commits
+`Release X.Y.Z` to `main` with the annotated tag `vX.Y.Z`, and dispatches
+`release.yml` for that tag, because a tag pushed with `GITHUB_TOKEN` starts no
+workflow by itself. Unlabelled merges release nothing; their changes ship with
+the next labelled one.
 
-```bash
-git tag -a v1.1.0 -m 'TimeGym 1.1.0'
-git push origin v1.1.0
-```
+To release pending changes without a new merge, or to start a major version,
+open **Actions → Version and tag merged changes → Run workflow** and tick
+**major** for a major version. The job refuses to run when `__version__` on
+`main` differs from the latest tag, which catches hand-edited versions. Several
+quick merges queue behind each other; each run counts everything since the
+latest tag, so later runs find nothing left and stop.
 
 `release.yml` runs the complete reusable `checks.yml` workflow against the tag,
 checks the version identity, builds sdist/wheel, and compiles the standalone
@@ -141,9 +158,9 @@ checks stable releases listed by [Python.org](https://www.python.org/downloads/)
 and the latest pandas release's Python classifiers, requirement and CPython
 wheel availability. Prereleases and a new Python minor without pandas wheels
 are deferred. A changed supported range updates classifiers, `requires-python`,
-CI, the Docker base and the marked documentation ranges. Compatibility maintenance
-increments the fix counter Y, updates citation/changelog dates, exports notebook
-12 and regenerates the citation block and manuscript. The study lock is retained.
+CI, the Docker base and the marked documentation ranges. The proposal leaves
+the version alone and is labelled `fix`, so merging it releases the next fix
+version through `tag-release.yml`. The study lock is retained.
 
 The proposal runs tests, notebooks, examples, replay, export/citation/paper
 checks, strict docs, distribution validation, and the pinned development image
@@ -152,9 +169,5 @@ or check leaves the scheduled run red for inspection and opens no passing PR.
 A bot-created PR may not trigger another workflow using the default token;
 validation therefore runs in the scheduled job itself.
 
-Merging the labeled, same-repository `automation/python-compatibility` branch
-into the default branch authorizes `compatibility-release.yml` to run the full
-check matrix on that merge commit, create its new version tag, and dispatch
-`release.yml`. An existing tag is left alone. Dispatch is explicit because a tag
-created with `GITHUB_TOKEN` does not itself trigger a push workflow. Normal PR
-merges do not publish, and the PyPI environment review still applies.
+Merging the proposal publishes like any other `fix` pull request, and the PyPI
+environment review still applies.

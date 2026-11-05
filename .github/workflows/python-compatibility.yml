@@ -56,9 +56,9 @@ jobs:
           branch: automation/python-compatibility
           title: Update Python support following pandas
           commit-message: Update Python support following pandas
-          labels: python-compatibility
+          labels: python-compatibility,fix
           body: |
             Update the supported CPython range after a stable Python release and pandas wheel support.
-            Synchronizes classifiers, requires-python, CI, Docker and documentation; increments the fix counter.
+            Synchronizes classifiers, requires-python, CI, Docker and documentation. It is labelled `fix`, so merging it releases the next fix version.
             The proposal passed tests, notebooks, export/citation checks, strict docs, distributions and the development image on the newest Python.
-            Merging runs the complete check matrix, then tags and dispatches the release when this version is unpublished.
+            Merging lets tag-release.yml add one to the fix counter, tag the release and dispatch release.yml.
