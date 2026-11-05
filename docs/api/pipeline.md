@@ -93,3 +93,37 @@ longer read. Scenario manifests use integer version 1,
 named by `timegym.scenarios.MANIFEST_SCHEMA_VERSION`. These are independent
 schemas: the historical report version is a string, while configuration and
 manifest versions are integers.
+
+## Signatures
+
+Generated from the docstrings in the code.
+
+::: timegym.Pipeline
+
+::: timegym.ForecastRun
+
+::: timegym.EvaluatedCase
+
+::: timegym.TestReport
+
+::: timegym.CaseResult
+
+::: timegym.DiagnosticResult
+
+::: timegym.DiagnosticStatus
+
+::: timegym.DiagnosticCategory
+
+::: timegym.pipeline.replay_case
+
+::: timegym.provenance.pipeline_config
+
+::: timegym.provenance.pipeline_from_config
+
+::: timegym.provenance.runtime_provenance
+
+::: timegym.provenance.diagnostic_settings
+
+::: timegym.plotting.plot_forecasts
+
+::: timegym.plotting.plot_errors

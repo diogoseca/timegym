@@ -24,6 +24,13 @@ __all__ = [
 
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-07
 class DiagnosticStatus(str, Enum):
+    """The five outcomes a diagnostic can report.
+
+    ``PASS`` and ``FAIL`` are verdicts of an implemented check. ``INCONCLUSIVE``
+    marks evidence without a verdict, ``UNSUPPORTED`` a check that does not
+    apply and ``ERROR`` an execution failure. Members equal their string values.
+    """
+
     PASS = "PASS"
     FAIL = "FAIL"
     INCONCLUSIVE = "INCONCLUSIVE"
@@ -32,6 +39,14 @@ class DiagnosticStatus(str, Enum):
 
 
 class DiagnosticCategory(str, Enum):
+    """The kind of evidence a diagnostic records; members equal their string values.
+
+    ``correctness`` is a forecast contract, ``evaluation`` the evaluator's own
+    inputs, ``capability`` and ``uncertainty`` descriptive scores,
+    ``distribution`` a statistical check against a reference law,
+    ``metamorphic`` a declared relation and ``execution`` a model exception.
+    """
+
     CORRECTNESS = "correctness"
     EVALUATION = "evaluation"
     CAPABILITY = "capability"
@@ -47,6 +62,13 @@ REPORT_SCHEMA_VERSION = "2.0"
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-11
 @dataclass
 class DiagnosticResult:
+    """One named finding: its status, category, message and evidence.
+
+    ``status`` and ``category`` are checked against ``DiagnosticStatus`` and
+    ``DiagnosticCategory`` and stored as strings. ``evidence`` is copied into
+    JSON-safe values.
+    """
+
     name: str
     status: str
     category: str
@@ -75,6 +97,7 @@ class DiagnosticResult:
         return self.status in (DiagnosticStatus.FAIL, DiagnosticStatus.ERROR)
 
     def to_dict(self):
+        """Revalidate the finding and return it as a JSON-safe dictionary."""
         self.__post_init__()
         return _json_safe(self)
 
@@ -82,6 +105,13 @@ class DiagnosticResult:
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-13
 @dataclass
 class CaseResult:
+    """The diagnostics and scores recorded for one case.
+
+    ``scenario`` labels the case and ``seed`` is its generator seed.
+    ``metrics`` maps score names to finite numbers, and ``manifest`` is the
+    case manifest that replay rebuilds a generated scenario from.
+    """
+
     scenario: str
     seed: int | None
     diagnostics: list[DiagnosticResult] = field(default_factory=list)
@@ -117,6 +147,7 @@ class CaseResult:
         self.manifest = _json_safe(self.manifest)
 
     def to_dict(self):
+        """Revalidate the case and return it as a JSON-safe dictionary."""
         self.__post_init__()
         return _json_safe(self)
 
@@ -182,6 +213,10 @@ class TestReport:
 
     @property
     def summary(self):
+        """Count cases, diagnostics by status, and failed cases.
+
+        A case fails when any of its diagnostics is ``FAIL`` or ``ERROR``.
+        """
         counts = Counter(
             diagnostic.status for case in self.cases for diagnostic in case.diagnostics
         )
@@ -197,6 +232,7 @@ class TestReport:
         }
 
     def to_dict(self):
+        """Revalidate the report and return it with its schema version and summary."""
         self.__post_init__()
         return {
             "schema_version": REPORT_SCHEMA_VERSION,
@@ -206,6 +242,7 @@ class TestReport:
         }
 
     def to_json(self, path=None):
+        """Return the report as indented JSON, also writing it to ``path`` when given."""
         serialized = json.dumps(
             self.to_dict(), indent=2, sort_keys=True, allow_nan=False
         )

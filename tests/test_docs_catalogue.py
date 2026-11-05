@@ -1,5 +1,6 @@
 """Keep the diagnostics catalogue in step with the diagnostics the package emits."""
 import ast
+import json
 from pathlib import Path
 import re
 
@@ -95,3 +96,125 @@ def test_catalogue_statuses_and_categories_match_the_code():
     differing = {name: {"code": code[name], "catalogue": documented[name]}
                  for name in sorted(code.keys() & documented.keys()) if code[name] != documented[name]}
     assert not differing, f"Catalogue statuses or categories differ from the code: {differing}"
+
+
+# The capability map crosses capabilities with the oracle types of the catalogue.
+CAPABILITY_MAP = ROOT / "docs" / "concepts" / "capability-map.md"
+# A tutorial shows a diagnostic by name, or through a score or call its catalogue entry names.
+SHOWN_BY = {
+    "point_accuracy": {"mean_reference_mse"},
+    "quantile_accuracy": {"pinball"},
+    "sample_scores": {"crps", "energy_score", "variogram_score"},
+    "reference_covariance": {"covariance_dependence_check", "check_dependence=True"},
+    "shift_equivariance": {"check_shift_equivariance"},
+}
+
+
+def _table(path, heading):
+    """The first Markdown table under a level-two heading, as lists of cells."""
+    section = path.read_text(encoding="utf-8").split(f"\n## {heading}\n")[1].split("\n## ")[0]
+    rows = [[cell.strip() for cell in line.strip().strip("|").split("|")]
+            for line in section.splitlines() if line.startswith("|")]
+    return rows[0], rows[2:]
+
+
+def _key(name):
+    return re.sub(r"<[^>]+>", DYNAMIC, name)
+
+
+def catalogue_entries():
+    """Map each catalogue name to its raw name, oracle type and detail section."""
+    header, body = _table(CATALOGUE, "Diagnostics catalogue")
+    name, oracle = header.index("Diagnostic"), header.index("Oracle type")
+    text = CATALOGUE.read_text(encoding="utf-8")
+    entries = {}
+    for row in body:
+        raw = row[name].strip("`")
+        detail = text.split(f"\n### `{raw}`\n")[1].split("\n#")[0]
+        entries[_key(raw)] = {"raw": raw, "oracle": row[oracle], "detail": detail}
+    return entries
+
+
+def _catalogue_key(name, entries):
+    matches = [key for key in entries
+               if re.fullmatch(re.escape(key).replace(re.escape(DYNAMIC), "[a-z_]+"), name)]
+    assert len(matches) == 1, f"capability map names {name!r}, which the catalogue does not list"
+    return matches[0]
+
+
+def evidence_columns():
+    """Map each evidence column of the capability map to its oracle type and diagnostics."""
+    header, body = _table(CAPABILITY_MAP, "The four kinds of evidence")
+    column, oracle, names = (header.index(h) for h in ("Column", "Oracle type", "Diagnostics"))
+    return {row[column]: (row[oracle], {_key(n) for n in re.findall(r"`([^`]+)`", row[names])})
+            for row in body}
+
+
+def scenario_kinds():
+    from timegym.processes import PROCESS_KINDS
+    from timegym.scenarios import CORE_KINDS
+    return set(CORE_KINDS) | set(PROCESS_KINDS)
+
+
+def test_capability_map_columns_follow_the_catalogue_oracle_types():
+    entries, columns = catalogue_entries(), evidence_columns()
+    for column, (oracle, names) in columns.items():
+        expected = {key for key, entry in entries.items() if entry["oracle"] == oracle}
+        assert expected, f"{column!r}: no catalogue diagnostic has oracle type {oracle!r}"
+        assert names == expected, (f"{column!r} lists {sorted(names)}; the catalogue gives "
+                                   f"{sorted(expected)} the oracle type {oracle!r}")
+    for key, token in ((key, token) for key, tokens in SHOWN_BY.items() for token in tokens):
+        assert f"`{token}`" in entries[key]["detail"], (
+            f"SHOWN_BY lets {token!r} show {key!r}, but its catalogue entry does not name it")
+
+
+def test_capability_map_rows_cover_every_scenario_family():
+    header, body = _table(CAPABILITY_MAP, "The map")
+    assert header[0] == "Capability and scenario families"
+    assert header[1:] == list(evidence_columns()), "map columns differ from the evidence table"
+    listed = {name for row in body for name in re.findall(r"`([^`]+)`", row[0])} - {"n_targets"}
+    kinds = scenario_kinds()
+    assert listed <= kinds, f"capability map lists unknown scenario families {sorted(listed - kinds)}"
+    assert listed == kinds, f"no capability row lists {sorted(kinds - listed)}"
+
+
+def _tutorial_text(path):
+    cells = json.loads(path.read_text(encoding="utf-8"))["cells"]
+    code = "\n".join("".join(cell["source"]) for cell in cells if cell["cell_type"] == "code")
+    shown = "\n".join(
+        "".join(cell["source"]) + "".join(
+            "".join(output.get("text", "")) + "".join(output.get("data", {}).get("text/plain", ""))
+            for output in cell.get("outputs", []))
+        for cell in cells)
+    return code, shown
+
+
+def test_capability_map_cells_link_real_pairs():
+    entries, columns = catalogue_entries(), evidence_columns()
+    header, body = _table(CAPABILITY_MAP, "The map")
+    kinds, filled = scenario_kinds(), 0
+    for row in body:
+        capability = re.match(r"\*\*(.+?)\*\*<br>", row[0])[1]
+        for column, cell in zip(header[1:], row[1:]):
+            for entry in filter(None, cell.split("<br>")):
+                filled += 1
+                families, diagnostic, tutorial = entry.split(" · ")
+                families = re.findall(r"`([^`]+)`", families)
+                name, anchor = re.fullmatch(
+                    r"\[`([^`]+)`\]\(\.\./api/diagnostics\.md#([a-z_]+)\)", diagnostic).groups()
+                number, notebook = re.fullmatch(
+                    r"\[(\d\d)\]\(\.\./\.\./notebooks/(\d\d_[a-z0-9_]+\.ipynb)\)", tutorial).groups()
+                where = f"{capability} × {column}: {entry}"
+                assert families and set(families) <= kinds, f"{where}: unknown family"
+                key = _catalogue_key(name, entries)
+                assert entries[key]["oracle"] == columns[column][0], f"{where}: wrong column"
+                assert anchor == re.sub(r"[<>]", "", entries[key]["raw"]), f"{where}: wrong anchor"
+                path = ROOT / "notebooks" / notebook
+                assert notebook.startswith(number) and path.exists(), f"{where}: no such tutorial"
+                code, shown = _tutorial_text(path)
+                for family in families:
+                    assert re.search(rf"""['"]{family}['"]""", code), (
+                        f"{where}: tutorial {number} does not generate {family!r}")
+                assert any(token in shown for token in {name} | SHOWN_BY.get(key, set())), (
+                    f"{where}: tutorial {number} does not show {name!r}")
+    assert filled, "the capability map has no filled cells"

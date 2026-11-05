@@ -32,7 +32,9 @@ records its assumptions in the report.
 | Statistical metamorphic test | Reference-covariance rank check; calibrated loss alarm | `reference_covariance` diagnostic; the loss alarm is study only |
 
 The [diagnostics catalogue](../api/diagnostics.md#diagnostics-catalogue) gives
-the oracle type of every diagnostic the package emits.
+the oracle type of every diagnostic the package emits. The
+[capability map](capability-map.md) crosses these oracle types with the
+behaviours a forecaster needs, and shows which tutorial covers each pair.
 
 ## From case to verdict
 

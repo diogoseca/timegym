@@ -21,3 +21,11 @@ Call `forecast.validate(task)` to obtain stable code/message dictionaries.
 At least one output is required. Missing output types receive `UNSUPPORTED` when
 an evaluation needs them. Shapes, finite values, index alignment, target order and
 quantile monotonicity are checked before any score is calculated.
+
+## Signatures
+
+Generated from the docstrings in the code.
+
+::: timegym.ForecastTask
+
+::: timegym.Forecast

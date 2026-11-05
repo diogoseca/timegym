@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- The API reference pages end with signatures and docstrings generated from the
+  code by mkdocstrings; the `docs` extra adds `mkdocstrings` and
+  `mkdocstrings-python`. Every public class, method and property now has a
+  docstring.
+- Added a capability map to the Concepts pages. It crosses the behaviours a
+  forecaster needs with the four kinds of evidence, and links the scenario
+  family, diagnostic and tutorial for each pair that a tutorial covers.
+
 ## 1.1.0 — 2026-11-05
 
 - Added reversible target transforms to `timegym.target`: `LogTransform`,

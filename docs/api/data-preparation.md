@@ -98,3 +98,43 @@ requires a valid forecast with the fitted target names in the fitted order.
 any other object, including a subclass, as `external`.
 `transform_from_config(config)` rebuilds an unfitted bundled transform; replay
 rebuilds bundled transforms only.
+
+## Signatures
+
+Generated from the docstrings in the code.
+
+::: timegym.smoothing.simple_moving_average
+
+::: timegym.smoothing.exponential_moving_average
+
+::: timegym.features.add_lagged_target
+
+::: timegym.features.cyclical_encoding
+
+::: timegym.features.add_time_features
+
+::: timegym.features.add_tsfel_features
+
+::: timegym.target.multioutput_target
+
+::: timegym.target.onestep_target
+
+::: timegym.target.step_ahead_target
+
+::: timegym.target.fractional_weights
+
+::: timegym.target.fractional_differencing
+
+::: timegym.target.differencing
+
+::: timegym.target.LogTransform
+
+::: timegym.target.BoxCoxTransform
+
+::: timegym.target.DifferenceTransform
+
+::: timegym.target.ComposedTransform
+
+::: timegym.target.transform_config
+
+::: timegym.target.transform_from_config

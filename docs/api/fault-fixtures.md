@@ -26,3 +26,9 @@ truncation can also produce output-shape violations.
 fixtures ignore these controls after validation. `enabled=False` returns the
 prepared copy without applying the fault, but still validates the name, seed,
 strength and preconditions. This bypass is a specified repair, not repair discovery.
+
+## Signatures
+
+Generated from the docstrings in the code.
+
+::: timegym.mutations.mutate_forecast

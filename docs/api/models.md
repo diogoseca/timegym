@@ -40,3 +40,17 @@ All three return point outputs only. `steps` must end in an sklearn regressor. `
 it rejects native instances without that protocol and clones returning the
 original object. `is_sklearn_regressor(model)` reads sklearn tags lazily after
 checking for `get_params`. Install `timegym[sklearn]` when using sklearn objects.
+
+## Signatures
+
+Generated from the docstrings in the code.
+
+::: timegym.NaiveForecaster
+
+::: timegym.GaussianAR1Forecaster
+
+::: timegym.models.SklearnForecaster
+
+::: timegym.models.fresh_model
+
+::: timegym.models.is_sklearn_regressor

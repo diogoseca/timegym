@@ -142,3 +142,15 @@ target is fixed independently of the forecast/null ensembles, and both receive
 the identical statistic. This is a conditional-law diagnostic, not an assertion
 that the estimated covariance is exact. A covariance check also cannot detect
 all higher-order dependence.
+
+## Signatures
+
+Generated from the docstrings in the code.
+
+::: timegym.processes.resolve_process
+
+::: timegym.processes.generate_process
+
+::: timegym.processes.process_label
+
+::: timegym.joint_processes.generate_joint_process

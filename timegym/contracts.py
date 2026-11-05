@@ -116,6 +116,7 @@ class ForecastTask:
 
     @property
     def target_names(self) -> tuple:
+        """The context's target column names, in order."""
         return tuple(self.context.columns)
 
 
@@ -125,7 +126,7 @@ class Forecast:
     """A model output, including malformed outputs that need diagnosis.
 
     Construction intentionally does not validate or repair data. Call
-    :meth:`validate` to obtain stable diagnostic codes before scoring it.
+    ``validate`` to obtain stable diagnostic codes before scoring it.
     A point forecast denotes a predictive mean, not an arbitrary quantile.
     """
 
@@ -137,6 +138,12 @@ class Forecast:
     target_names: tuple = ("y",)
 
     def validate(self, task: ForecastTask | None = None) -> list[dict[str, str]]:
+        """Return one ``{"code", "message"}`` finding per contract violation.
+
+        An empty list means the output meets its contract. With a ``task``, the
+        index and target names must also match the task's future index and
+        targets. Each code is reported as the diagnostic ``contract_<code>``.
+        """
         findings: list[dict[str, str]] = []
 
         def add(code: str, message: str) -> None:
@@ -450,7 +457,7 @@ class Reference:
 class SimulationReference(Reference):
     """Conditional moments with an explicit joint future simulator.
 
-    Unlike :class:`Reference`, this class never infers a Gaussian law from
+    Unlike ``Reference``, this class never infers a Gaussian law from
     moments. ``sampler(n_samples, seed)`` must return independent conditional
     trajectories in ``S,H,D`` order, using its supplied seed without global
     random state. Exactness is a declared generator capability, not something

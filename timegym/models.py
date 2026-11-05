@@ -120,9 +120,11 @@ class NaiveForecaster(_ConfiguredForecaster):
         self.strategy, self.period = strategy, period
 
     def params(self) -> dict:
+        """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return dict(strategy=self.strategy, period=self.period)
 
     def fit(self, context):
+        """Keep a copy of the context; raise when it is too short for the strategy."""
         self.context_ = context.copy(deep=True)
         minimum = (
             self.period
@@ -134,6 +136,7 @@ class NaiveForecaster(_ConfiguredForecaster):
         return self
 
     def predict(self, future_index):
+        """Return a point forecast for labels that continue the context's grid."""
         _require_regular_future(self.context_.index, future_index)
         y = self.context_.to_numpy(dtype=float)
         h = len(future_index)
@@ -181,9 +184,14 @@ class GaussianAR1Forecaster(_ConfiguredForecaster):
         self.levels = tuple(float(value) for value in probabilities)
 
     def params(self) -> dict:
+        """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return dict(n_samples=self.n_samples, seed=self.seed, levels=self.levels)
 
     def fit(self, context):
+        """Fit each target's intercept and AR(1) coefficient, and the shared innovation covariance.
+
+        Needs at least five context rows.
+        """
         y = context.to_numpy(dtype=float)
         if len(y) < 5:
             raise ValueError("AR(1) requires at least five context observations")
@@ -202,6 +210,7 @@ class GaussianAR1Forecaster(_ConfiguredForecaster):
         return self
 
     def predict(self, future_index):
+        """Return the iterated mean, seeded joint samples and their marginal quantiles."""
         _require_regular_future(self.index_, future_index)
         h, d = len(future_index), len(self.names_)
         point, samples = np.empty((h, d)), np.empty((self.n_samples, h, d))
@@ -297,6 +306,7 @@ class SklearnForecaster(_ConfiguredForecaster):
         self.reduction, self.horizon = reduction, horizon
 
     def params(self) -> dict:
+        """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return dict(
             steps=self.steps,
             window_length=self.window_length,
@@ -319,6 +329,11 @@ class SklearnForecaster(_ConfiguredForecaster):
         return SkPipeline([(f"step_{i}", step) for i, step in enumerate(steps)])
 
     def fit(self, context):
+        """Fit fresh copies of the steps on lag windows of the context.
+
+        ``recursive`` needs ``window_length + 1`` context rows; ``direct`` and
+        ``multioutput`` need ``window_length + horizon``.
+        """
         y = context.to_numpy(dtype=float)
         steps = 1 if self.reduction == "recursive" else self.horizon
         if len(y) < self.window_length + steps:
@@ -350,6 +365,11 @@ class SklearnForecaster(_ConfiguredForecaster):
         return self
 
     def predict(self, future_index):
+        """Return a point forecast from the last context window.
+
+        The labels must continue the context's grid; with a ``horizon``, there
+        can be at most that many.
+        """
         _require_regular_future(self.index_, future_index)
         h = len(future_index)
         if self.horizon is not None and h > self.horizon:
