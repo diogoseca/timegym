@@ -98,8 +98,9 @@ Timing is recorded separately and is not a benchmark claim.
 CI covers the [declared Python range](../README.md#install), the older compatibility stack,
 installed wheels on Linux/macOS/Windows, all notebooks, documentation, and both
 studies. `release.yml` ran these jobs on the v1.1.0 tag before publishing; the
-`research-smoke` job only warns on a hash mismatch, so it gives no Linux
-repeatability result. Local validation was on macOS; do not infer Windows or Linux results from it.
+`research-smoke` job only warns on a hash mismatch, so a green run does not
+show Linux repeatability; the observed hashes are in its `research-linux-hashes`
+artifact. Local validation was on macOS; do not infer Windows or Linux results from it.
 
 1.1.0 was published to PyPI on 5 November 2026 by the release workflow. No
 manuscript has been submitted.

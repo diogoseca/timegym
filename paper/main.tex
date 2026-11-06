@@ -402,7 +402,7 @@ simulations and tests boundary cases such as zero noise and correlation
 validity. Simulation agreement is an implementation check; it is not an
 independent proof when simulator and reference share code. Algebraic
 checks and explicit small cases are therefore also needed. Every
-condition in both studies comes from these five families.
+synthetic condition in both studies comes from these five families.
 Appendix~\ref{app:extended} describes the composed, financial, and joint
 scenarios in the software catalog, which neither study uses. Missingness,
 exogenous covariates, and irregular sampling are outside the implemented
@@ -793,7 +793,7 @@ regressions (RQ4) and covariance checks under multiplicity (RQ5).
 Top: alarm counts from four internal lag-Ridge regressions, using the same
 six conditions and \CasesPerCondition{} cases per condition
 (\CasesPerRow{} per row). Darker cells mean
-more alarms, including false alarms in the clean row.
+more alarms, including false alarms in the correct-implementation row.
 All four regressions satisfy output contracts. Asterisks mark experiment-only
 comparators; this is not a universal ranking of the public toolkit's checks.
 Bottom: correcting stale recursion on the random-walk condition with drift restores
@@ -823,6 +823,12 @@ including its false alarms. Because the six output corruptions are direct
 contract violations, this shows that the checks implement their
 contracts, not that they find subtle faults.
 
+For probabilistic forecasts (RQ3), marginal-preserving permutations isolate a
+blind spot without relying on a noisy difference in marginal quality.
+The factorized negative control is equally important: shuffling samples
+is not itself evidence of a fault when the intended law has independent
+coordinates.
+
 For RQ4, the implementation results (Figure~\ref{fig:diagnostic-evidence}
 and Table~\ref{tab:supplement-complete}) make the diagnostic distinction
 concrete. Reversing lags and retaining stale
@@ -841,11 +847,7 @@ variant's realized loss. A score can therefore reward a specification
 violation, just as a conforming model can forecast poorly. A useful report
 retains both observations rather than relabeling one as the other.
 
-For probabilistic forecasts (RQ3), marginal-preserving permutations isolate a
-blind spot without relying on a noisy difference in marginal quality.
-The factorized negative control is equally important: shuffling samples
-is not itself evidence of a fault when the intended law has independent
-coordinates. For RQ5, the covariance results (Tables~\ref{tab:supplement-familywise}
+For RQ5, the covariance results (Tables~\ref{tab:supplement-familywise}
 and~\ref{tab:supplement-covariance}) also show why per-check rejection and
 suite-level false alarms must be reported separately, together with the
 power lost after multiplicity adjustment.
@@ -1011,8 +1013,8 @@ The evaluator knows the change schedule; an ordinary fitted model does not.
 
 Figure~\ref{fig:financial-stresses} illustrates the financial families,
 which isolate established stochastic mechanisms and selected interactions.
-They forecast price, log price, or log return; these are different targets
-with different conditional means.
+Their targets are price, log price, or log return, which have different
+conditional means.
 
 For \code{merton\_jump\_diffusion}, let $J_i\sim\mathcal N(a,b_J^2)$,
 $N\sim\operatorname{Poisson}(\lambda\Delta t)$, and
