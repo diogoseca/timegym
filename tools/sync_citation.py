@@ -67,7 +67,7 @@ def render(metadata: dict) -> str:
              f"(Version {metadata['version']}) [Computer software]. {url}", '']
     for index, reference in enumerate(metadata.get('references', [])):
         key = f"{reference['authors'][0]['family-names'].lower()}{reference['year']}timegym"
-        lines.extend(['The earlier manuscript:', '', '```bibtex',
+        lines.extend(['The 2021 preprint (arXiv version 1, the original prototype):', '', '```bibtex',
                       bibtex(reference, key if index == 0 else f'{key}{index}', 'article'), '```', ''])
     return '\n'.join([*lines, END])
 
