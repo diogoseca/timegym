@@ -26,7 +26,7 @@ Swapped recursive targets & 0 & 0 & 384 & 384 & 382 \\
 
 \bottomrule\end{tabular}\end{table}
 
-The complete table retains the blind spots and false alarms of every comparison. These results concern these specifications and selected implementations, rather than the sensitivity of arbitrary metamorphic tests. In Study 2, corrected means the clean implementation refitted; the paired comparison is clean-minus-faulty, with no separate repaired arm. Any output-contract violation terminates the study.
+The complete table retains the blind spots and false alarms of every comparison. These results concern these specifications and selected implementations, rather than the sensitivity of arbitrary metamorphic tests. In the supplement, corrected means the clean implementation refitted; the paired comparison is clean-minus-faulty, with no separate repaired arm. Any output-contract violation terminates the study.
 
 Across the fixed condition--fault pairs, the calibrated loss alarm changed from no alarm to alarm in 861 paired comparisons and from alarm to no alarm in 11. The same clean case appears once per fault in these descriptive paired counts; they are not independent replicates of a pooled statistical test.
 
@@ -120,7 +120,7 @@ Random walk with drift & Clean & 0 & 0 & 0 & 0 & 5 \\
 
 \subsection{Negative controls and multiple covariance checks}
 
-A second supplement evaluates 64 independent suites, each containing four conditional-reference covariance checks with 64 predictive trajectories, 199 calibration ensembles, and nominal level 0.05. The fixed variants are exact-reference samples, partial dependence permutation (strength 0.5), and spread multiplied by 0.75. Raw and Holm decisions are reported for the declared four-check families. Shuffled factorized white noise remains a negative control.
+The supplement's covariance study evaluates 64 independent suites, each containing four conditional-reference covariance checks with 64 predictive trajectories, 199 calibration ensembles, and nominal level 0.05. The fixed variants are exact-reference samples, partial dependence permutation (strength 0.5), and spread multiplied by 0.75. Raw and Holm decisions are reported for the declared four-check families. Shuffled factorized white noise remains a negative control.
 
 For clean suites, any false alarm occurred in 14/64 raw suites versus 3/64 after Holm correction. For reduced-spread suites, detection of at least one altered condition fell from 63/64 to 30/64. The correction thus reduces family-wise false alarms at a substantial power cost in this setting.
 
@@ -168,4 +168,4 @@ Coordinate-wise sorted sample arrays were identical before and after every parti
 
 \paragraph{Cost and reproducibility.}
 
-The retained study design requires 8,448 sklearn fits, 384 independent NumPy solves, and 768 covariance checks containing 152,832 calibration ensembles. Raw case records, protocol and source fingerprints, paired examples, and CSV tables are saved under \code{experiments/results-v2/}; the original pilot artefacts remain separate.
+The retained study design requires 8,448 sklearn fits, 384 independent NumPy solves, and 768 covariance checks containing 152,832 calibration ensembles. Raw case records, protocol and source fingerprints, paired examples, and CSV tables are saved under \code{experiments/results-v2/}; the original pilot artifacts remain separate.

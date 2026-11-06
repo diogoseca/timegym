@@ -102,9 +102,8 @@ saved implementation cells and ignores these development-only bindings.
 The exporter uses the installed nbdev exporter; it does not execute notebook
 cells or import generated modules. Every exported path must match its declared
 owner. All exports and Python syntax checks complete before any package file
-is changed. Each replacement is atomic; the command does not claim a single
-filesystem transaction across multiple files if an OS error interrupts the
-replacement phase.
+is changed. Each file is replaced atomically, but not all files together: an
+OS error midway can leave some modules updated.
 
 Syntax-valid code can still be wrong at runtime. Package tests check the
 generated library, and fresh-kernel notebook execution checks the examples.
@@ -148,6 +147,5 @@ detection, validated report loading, and replay while deliberately blocking
 optional plotting, sklearn, and notebook imports. `--report PATH` also saves the
 replayed report, which CI replays again in a new process with
 `examples/reproduce_report.py`. CI runs the installed-wheel check on Linux,
-macOS, and Windows; these jobs must actually pass before claiming support
-from those runs. The broader test matrix also includes an older compatible
+macOS, and Windows. The broader test matrix also includes an older compatible
 scientific stack on Python 3.12. Building artifacts does not publish a release.

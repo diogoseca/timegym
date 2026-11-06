@@ -33,9 +33,9 @@ class EvaluatedCase:
 class ForecastRun:
     """Retain the evidence needed to inspect a run without fitting again.
 
-    Arrays remain in memory; ``report`` uses the existing JSON report schema
-    and does not embed contexts, observations, or forecast arrays. Plotting
-    requires the optional ``timegym[plots]`` dependencies, loaded on demand.
+    Arrays remain in memory; ``report`` uses the JSON report schema and does
+    not embed contexts, observations, or forecast arrays. Plotting requires
+    the optional ``timegym[plots]`` dependencies, loaded on demand.
     """
 
     cases: list[EvaluatedCase]

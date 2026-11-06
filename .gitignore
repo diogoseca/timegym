@@ -134,3 +134,6 @@ paper/build/
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Browser automation scratch output
+.playwright-mcp/

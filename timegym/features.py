@@ -60,7 +60,7 @@ def cyclical_encoding(
     """Return cosine/sine features using a fixed cycle and phase origin.
 
     Prefer period=7, min_value=0 for weekdays and period=24 for hours.
-    Legacy explicit bounds denote inclusive discrete labels, so bounds 0..6
+    Explicit bounds denote inclusive discrete labels, so bounds 0..6
     imply period 7. The period is never estimated from the observed sample.
     With scaled=True, values already express fractions of a full cycle.
     """

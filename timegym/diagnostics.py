@@ -16,7 +16,7 @@ __all__ = ["exception_evidence", "covariance_dependence_check", "evaluate_foreca
 
 # %% ../notebooks/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-34
 def exception_evidence(exc):
-    """Keep errors inspectable in a report instead of counting them as passes."""
+    """Return an exception's type, message and traceback as report evidence."""
     return _exception_evidence(exc)
 
 

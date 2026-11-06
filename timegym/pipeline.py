@@ -187,7 +187,7 @@ class Pipeline:
     ):
         """Evaluate once per case and retain the data, forecast, and diagnostics.
 
-        ``run.report`` provides the unchanged serializable report interface;
+        ``run.report`` is the usual serializable ``TestReport``;
         ``run.plot_forecasts()`` and ``run.plot_errors()`` inspect these exact
         outputs without additional fitting or predictive sampling.
         """
@@ -270,7 +270,7 @@ class Pipeline:
         alpha=0.05,
         dependence_seed_offset=100_000,
     ):
-        """Return a machine-readable TestReport; statistical uncertainty is explicit."""
+        """Evaluate each scenario at each seed and return a TestReport."""
         return self.run(
             scenarios,
             seeds=seeds,
@@ -292,8 +292,9 @@ class Pipeline:
         """Fit a display suite and return its forecast matrix Figure.
 
         Display defaults use 240 context observations and 80 forecast steps;
-        ``test`` and ``run`` retain their existing scenario defaults. To make
-        several figures from the same fits, use ``run`` and its plot methods.
+        ``test`` and ``run`` keep their defaults of 120 context rows and 12
+        steps. To make several figures from the same fits, use ``run`` and its
+        plot methods.
         """
         if scenarios is None:
             scenarios = default_scenarios(context_length=240, horizon=80)

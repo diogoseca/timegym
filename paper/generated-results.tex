@@ -36,7 +36,7 @@ Dependence shuffle & 5/64 [3.4, 17.0] & 0/64 [0.0, 5.7] & 64/64 [94.3, 100.0] \\
 
 The clean covariance check rejected 6/64 cases (9.4\%; Wilson interval [4.4, 19.0]\%). The observed rate is above the nominal 5\% per-check level, with an interval that includes 5\%. No threshold was changed to remove these false alarms. The selected run does not establish precise calibration or a family-wise error rate.
 
-The point-MSE cutoff was 4.1853, the empirical 95th percentile from 16 development cases. It alarmed on 5/64 clean cases. It detects invalid point arrays, but ignores index labels, target names, quantiles, and trajectory samples. Where a mutation leaves the point values unchanged, its alarms are identical to the clean alarms and supply no mutation-specific evidence. This comparison demonstrates the scope of a numerical-only check, not superiority over a fully validated evaluation framework.
+The point-MSE cutoff was 4.1853, the empirical 95th percentile from 16 development cases. It alarmed on 5/64 clean cases. It detects invalid point arrays, but ignores index labels, target names, quantiles, and trajectory samples. Where a mutation leaves the point values unchanged, its alarms are identical to the clean alarms and supply no mutation-specific evidence.
 
 Disabling an output mutation restored the exact clean output, including its sample array. Repaired outputs had zero contract violations and the same 6/64 covariance alarms as the clean control. These paired rechecks confirm removal of the selected corruption; they do not imply that every repaired case receives a statistical pass or that the framework discovered the repair.
 
@@ -94,7 +94,7 @@ Random walk without drift & 0.0000 & 7.6919 & 0.6645 \\
 
 \subsection{An implemented inverse-scaling repair}
 
-A separate predictor standardises its training context and forecasts the mean in standardised units. The fault omits the inverse transform; the repair applies the training mean and scale. The historical-mean predictor is shift equivariant, so this particular metamorphic relation is a valid declared contract. On white-noise cases with mean 5 and innovation scale 2, the relation failed for 64/64 faulty fits (Wilson 95\% interval [94.3, 100.0]\%) and 0/64 repaired fits ([0.0, 5.7]\%). The paired repaired-minus-faulty MAE difference was -3.4711 [-3.6333, -3.3090] (95\% t interval).
+A separate predictor standardizes its training context and forecasts the mean in standardized units. The fault omits the inverse transform; the repair applies the training mean and scale. The historical-mean predictor is shift equivariant, so this particular metamorphic relation is a valid declared contract. On white-noise cases with mean 5 and innovation scale 2, the relation failed for 64/64 faulty fits (Wilson 95\% interval [94.3, 100.0]\%) and 0/64 repaired fits ([0.0, 5.7]\%). The paired repaired-minus-faulty MAE difference was -3.4711 [-3.6333, -3.3090] (95\% t interval).
 
 We then apply the same known omission and repair to AirPassengers, the monthly 1949--1960 international-airline passenger series in thousands~\cite{rAirPassengers}. All scaling statistics are fitted on each training prefix. The four ordered origins each forecast the next 12 months; their results are reported separately because they are not independent series replicates.
 
@@ -122,4 +122,4 @@ Repair improves MAE at every displayed origin, but the repaired historical mean 
 
 \paragraph{Recorded environment.}
 
-The run used Python 3.13.2, NumPy 2.5.4, pandas 3.1.0, and SciPy 1.18.1. The protocol, raw case records, paired score records, and source/data SHA-256 fingerprints are retained with the experiment artefacts. All tables in this section are generated from the saved JSON results.
+The run used Python 3.13.2, NumPy 2.5.4, pandas 3.1.0, and SciPy 1.18.1. The protocol, raw case records, paired score records, and source/data SHA-256 fingerprints are retained with the experiment artifacts. All tables in this section are generated from the saved JSON results.

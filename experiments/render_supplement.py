@@ -8,7 +8,6 @@ results and their protocol are checked against the recorded manifest first.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -23,7 +22,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.ticker import PercentFormatter
 import numpy as np
 
-from .common import MISSING, close_statistics, interval_cell, require_conclusion
+from .common import close_statistics, interval_cell, rate_cell, require_conclusion, scientific_tex, sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,7 +55,7 @@ SHORT_FAULTS = {"reverse_prediction_lags": "Reversed lags", "stale_recursive_sta
 
 
 def validate_recorded_results(results_path, results, manifest):
-    digest = hashlib.sha256(results_path.read_bytes()).hexdigest()
+    digest = sha256(results_path)
     if manifest["results_sha256"] != digest:
         raise ValueError("Recorded results do not match their manifest fingerprint")
     if results["protocol_sha256"] != manifest["protocol_sha256"]:
@@ -152,20 +151,6 @@ def plot_covariance(results, protocol, directory):
     save_figure(fig, directory, "supplement-covariance-holm")
 
 
-def rate_cell(stat):
-    if stat is None:
-        return MISSING
-    lo, hi = stat["ci95"]
-    return f"{stat['count']}/{stat['n']} [{100*lo:.1f}, {100*hi:.1f}]"
-
-
-def scientific_tex(value):
-    if value == 0:
-        return "$0$"
-    mantissa, exponent = f"{value:.2e}".split("e")
-    return "$" + mantissa + r"\times10^{" + str(int(exponent)) + "}$"
-
-
 def render_tex(results, manifest):
     protocol = manifest["protocol"]
     model, covariance = protocol["model_study"], protocol["covariance_study"]
@@ -225,7 +210,7 @@ def render_tex(results, manifest):
         r"\bottomrule\end{tabular}\end{table}",
         "The complete table retains the blind spots and false alarms of every comparison. These results "
         "concern these specifications and selected implementations, rather than the sensitivity of arbitrary "
-        "metamorphic tests. In Study 2, corrected means the clean implementation refitted; "
+        "metamorphic tests. In the supplement, corrected means the clean implementation refitted; "
         "the paired comparison is clean-minus-faulty, with no separate repaired arm. "
         "Any output-contract violation terminates the study.",
         f"Across the fixed condition--fault pairs, the calibrated loss alarm changed from no alarm to alarm "
@@ -258,7 +243,7 @@ def render_tex(results, manifest):
     lines.extend([
         r"\bottomrule\end{tabular}\end{table}",
         r"\subsection{Negative controls and multiple covariance checks}",
-        f"A second supplement evaluates {covariance['independent_suites']} independent suites, each containing "
+        f"The supplement's covariance study evaluates {covariance['independent_suites']} independent suites, each containing "
         f"four conditional-reference covariance checks with {covariance['n_samples']} predictive trajectories, "
         f"{covariance['n_calibration']} calibration ensembles, and nominal level {covariance['alpha']:g}. "
         "The fixed variants are exact-reference samples, partial dependence permutation "
@@ -313,7 +298,7 @@ def render_tex(results, manifest):
         f"{results['covariance']['cost_counts']['covariance_checks']:,} covariance checks containing "
         f"{results['covariance']['cost_counts']['calibration_ensembles']:,} calibration ensembles. "
         "Raw case records, protocol and source fingerprints, paired examples, and CSV tables are saved "
-        r"under \code{experiments/results-v2/}; the original pilot artefacts remain separate.",
+        r"under \code{experiments/results-v2/}; the original pilot artifacts remain separate.",
     ])
     return "\n\n".join(lines) + "\n"
 

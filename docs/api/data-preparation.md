@@ -19,8 +19,6 @@ custom models. The reversible target transforms below are the exception: a
 `exponential_moving_average(df, exponential_alpha=None, statistic="mean", *,
 min_periods=1)` both return the same Series/DataFrame type, index, column order
 and labels as the input, containing only smoothed values for **every column**.
-SMA previously appended one renamed column using only the first input column;
-callers should now plot or concatenate the original data explicitly if needed.
 
 Both means use the current and earlier rows. Shift the result by one row to use
 it for predicting the current observation. SMA uses a trailing `window_length`

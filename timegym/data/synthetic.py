@@ -10,10 +10,11 @@ __all__ = ["default_scenarios", "Case", "Reference", "Scenario"]
 
 # %% ../../notebooks/01_synthetic_data.ipynb #01_synthetic_data-18
 def default_scenarios(context_length=120, horizon=12, *, n_targets=1, seed=0):
-    """Return five fresh scenario specifications; generation is always explicit.
+    """Return fresh specifications for the five core families.
 
-    The same supplied seed is recorded in each specification. Use independent
-    replicate seeds when aggregating experimental results.
+    Call ``generate`` on each specification to draw a case. The same supplied
+    seed is recorded in each specification. Use independent replicate seeds
+    when aggregating experimental results.
     """
     return [
         Scenario(

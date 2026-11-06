@@ -13,8 +13,8 @@ forecaster has no exact expected output, so it is what
 [Weyuker (1982)](https://doi.org/10.1093/comjnl/25.4.465) called a non-testable
 program. Weyuker listed the remedies that remain: a partial oracle, tests on
 simplified data with known results, and known properties of the output.
-[Davis and Weyuker (1981)](https://doi.org/10.1145/800175.809889) added the
-pseudo-oracle, an independent implementation of the same specification whose
+[Davis and Weyuker (1981)](https://doi.org/10.1145/800175.809889) had
+already proposed the pseudo-oracle, an independent implementation of the same specification whose
 outputs are compared within a tolerance.
 [Guderlei and Mayer (2007)](https://doi.org/10.1109/QSIC.2007.4385527) extended
 metamorphic relations to programs with random output by comparing output
@@ -103,7 +103,7 @@ relation on a declared model.
 
 ## Testing the instrument
 
-A check is trusted only after it catches a known fault. The output fault
+A check earns trust by catching a known fault. The output fault
 fixtures in `timegym.mutations` inject known faults into otherwise valid
 forecasts, and a repair should clear the diagnostic they trigger. This follows
 the use of injected faults to evaluate a test instrument

@@ -28,7 +28,6 @@ Evidence reviewed 28 October 2026; citation identifiers and the financial-source
 - General repair effectiveness based on reverting a known injected corruption.
 - Treating agreement with the independent lag-Ridge implementation as proof of optimal forecasting, or treating a loss decrease as proof of a correct implementation.
 - Treating experimental NumPy-agreement and target-specific-shift comparators as implemented public diagnostics.
-- Improved AI indexing or citations because the project has a 2021 arXiv identifier.
 
 ## Literature evidence checked from primary sources
 
@@ -74,7 +73,7 @@ record are retained where neither applies.
 | `jahangirova2020empirical` | https://doi.org/10.1109/ICST46399.2020.00018 | Abstract-level support (full text not retrieved) that mutant killing for trained models needs a stochastic definition because retraining alone moves accuracy. |
 | `arcuri2011practical` | https://doi.org/10.1145/1985793.1985795 | Guidance to assess randomized procedures over repeated independent runs with statistical tests and effect sizes. Supports the reporting convention; the paper's intervals follow its own stated conventions. |
 | `breck2017test` | https://doi.org/10.1109/BigData.2017.8258038 | Twenty-eight production-readiness tests for ML systems written as assertions and scored. Context for related work; no comparison with the rubric is claimed. |
-| `amershi2019software` | https://doi.org/10.1109/ICSE-SEIP.2019.00042 | Nine-stage ML workflow and three ML-specific engineering differences. Places TimeGym at the model evaluation and debugging stages. |
+| `amershi2019software` | https://doi.org/10.1109/ICSE-SEIP.2019.00042 | Nine-stage ML workflow and three ML-specific engineering differences. Places TimeGym at the model evaluation stage. |
 | `gneiting2011quantiles` | https://doi.org/10.1016/j.ijforecast.2009.12.015 | The mean is optimal under quadratic loss, any median under absolute loss, and a quantile under generalized piecewise-linear loss. Supports the estimand sentences in “Statistical foundations” and “Information and estimands”. |
 | `gneiting2007probabilistic` | https://doi.org/10.1111/j.1467-9868.2007.00587.x | Maximizing sharpness subject to calibration; calibration is a joint property of forecasts and observations, sharpness of forecasts alone; PIT uniformity is necessary but not sufficient. |
 | `gneiting2014probabilistic` | https://doi.org/10.1146/annurev-statistics-062713-085831 | Review restating the paradigm and that point scoring functions must be consistent for the functional. |
@@ -103,7 +102,7 @@ alter experimental records or silently select replacement seeds.
 
 ## Controlled process extension
 
-The package now adds four scalar and joint kinds (`composite`,
+The package adds four scalar and joint kinds (`composite`,
 `merton_jump_diffusion`, `garch`, `markov_switching`) through the same Scenario
 API. This software capability is supported by formula-based, limiting-case,
 conditional simulation, regime-path enumeration, information-boundary, and

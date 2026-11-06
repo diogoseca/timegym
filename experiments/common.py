@@ -30,6 +30,20 @@ def interval_cell(stat: dict | None, precision: int = 4, signed: bool = True, ma
     return f"${text}$" if math else text
 
 
+def rate_cell(stat: dict | None) -> str:
+    if stat is None:
+        return MISSING
+    lo, hi = stat["ci95"]
+    return f"{stat['count']}/{stat['n']} [{100*lo:.1f}, {100*hi:.1f}]"
+
+
+def scientific_tex(value: float) -> str:
+    if value == 0:
+        return "$0$"
+    mantissa, exponent = f"{value:.2e}".split("e")
+    return "$" + mantissa + r"\times10^{" + str(int(exponent)) + "}$"
+
+
 def require_conclusion(predicate: bool, statement: str) -> None:
     if not predicate:
         raise ValueError(f"Recorded evidence does not support: {statement}")

@@ -77,8 +77,6 @@ or a deterministic reference yield `UNSUPPORTED`. Both this check and
 `evaluate_forecast` require explicit nonnegative integer dependence seeds.
 Invalid seeds, calibration counts, alpha, or dependence flags are caller errors
 and raise before evaluation, including when dependence checking is disabled.
-The evaluator's `mase` scales by the lag-1 in-context naive MAE regardless of
-scenario period; `point_accuracy` evidence records `mase_seasonality: 1`.
 Point, quantile, and sample accuracy diagnostics include their available scores
 in evidence, with reference capabilities when a simulation reference supplies them.
 
@@ -86,11 +84,6 @@ in evidence, with reference capabilities when a simulation reference supplies th
 shift=10.0, atol=1e-8, rtol=1e-7)` tests
 f(y+c)=f(y)+c. Use it only when this property is part of the model's intended
 contract; many legitimate models are not location equivariant.
-
-The evaluator records accuracy, interval coverage, and proper scores as
-measurements. It does not turn arbitrary tolerances into diagnoses of software
-bugs. Failure provenance identifies the violated check; causal root-cause
-localization still requires inspection or a controlled intervention.
 
 ## Diagnostics catalogue
 

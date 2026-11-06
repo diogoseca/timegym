@@ -78,8 +78,8 @@ and compare `results.json`. There are no timestamps or runtime values in numeric
 results. A platform-dependent tolerance may be needed on other BLAS/NumPy versions.
 The CI `research-smoke` job compares both rerun hashes to their frozen manifests,
 warns on platform differences, and uploads the observed Linux hashes as
-`research-linux-hashes`. A configured job is not evidence that it has passed; see
-[the validation record](../paper/validation.md). Local comparisons fail on a mismatch
+`research-linux-hashes`; see [the validation record](../paper/validation.md).
+Local comparisons fail on a mismatch
 unless `--warn` is explicit.
 
 To reproduce one selected controlled counterexample without running the full
@@ -90,7 +90,6 @@ exit means reproduction matched, even when the forecast correctly receives FAIL.
 
 Scope limits: no held-out generator families, representative real-bug corpus,
 foundation models, sktime-conformance comparator, or broad real-data transfer study.
-The full research roadmap is deferred, rather than implied by this pilot.
 
 ## Study 2: implementation and covariance supplement
 

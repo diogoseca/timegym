@@ -3,8 +3,7 @@
 TimeGym separates the **process generating a test case** from the **forecasting
 model being tested**. A generator supplies controlled observations and conditional
 references; the same `Pipeline` can test a statistical, econometric, or machine
-learning forecaster against them. The additional generators below do not install
-or train new forecasting models.
+learning forecaster against them.
 
 ## Seasonality, drift, and changing mechanisms
 
@@ -24,8 +23,8 @@ changes** separately.
 
 ## Available mechanisms
 
-Use these `Scenario` kinds through the existing `Pipeline.run` and
-`Pipeline.test` entry points. All four extensions support `n_targets > 1`, alongside the original five
+Use these `Scenario` kinds through the `Pipeline.run` and
+`Pipeline.test` entry points. All four extensions support `n_targets > 1`, alongside the five core
 Gaussian families. Joint draws retain `(sample, horizon, target)` order.
 
 | Kind | Controlled mechanism | Output and interpretation |
@@ -35,11 +34,10 @@ Gaussian families. Joint draws retain `(sample, horizon, target)` order.
 | `garch` | Gaussian GARCH(1,1) innovations with recursive conditional variance | `log_return` or `log_price`; no price output |
 | `markov_switching` | Hidden regimes with state-dependent return distributions and optional regime-dependent jumps | `price`, `log_price`, or `log_return`; the reference filters the hidden regime |
 
-[Merton (1976)](https://www.cmat.edu.uy/~mordecki/hk2010/merton76.pdf) motivates
+[Merton (1976)](https://doi.org/10.1016/0304-405X(76)90022-2) motivates
 discontinuous price dynamics; [Bollerslev (1986)](https://public.econ.duke.edu/~boller/Published_Papers/joe_86.pdf)
 motivates conditional volatility; [Hamilton (1989)](https://doi.org/10.2307/1912559)
-motivates hidden regime switching. They are established generating mechanisms,
-not a claim that these models win every stock-forecasting task.
+motivates hidden regime switching. They are established generating mechanisms.
 
 The composite change schedule is known to the evaluator. It does not demonstrate
 that a fitted model could anticipate an unannounced future break. Adding a cycle
@@ -67,7 +65,7 @@ its declared assumptions; it does not establish real-market accuracy or profits.
 mechanism-based financial forecasting benchmarks. TimeGym additionally emphasizes
 implementation contracts, controlled faults, and repair verification.
 
-## Match the model and diagnostic to the target
+## Match the model class to the target
 
 | Forecast target | Useful model classes to test |
 | --- | --- |

@@ -100,9 +100,8 @@ installed wheels on Linux/macOS/Windows, all notebooks, documentation, and both
 studies. These remote jobs have not been executed from this checkout. Local
 validation was on macOS; do not infer Windows or Linux results from it.
 
-Before the first public release, run those jobs against the final immutable
-revision and complete author review of the manuscript, attribution, examples,
-and release metadata. No package release or manuscript submission was made.
+1.1.0 was published to PyPI on 5 November 2026 by the release workflow. No
+manuscript has been submitted.
 
 For a stronger empirical paper, the next evidence should come from independently
 selected defects in other forecasting implementations and additional real tasks.

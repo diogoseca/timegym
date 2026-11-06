@@ -25,7 +25,7 @@ from matplotlib.ticker import PercentFormatter
 import numpy as np
 from timegym.statistics import paired_t_interval
 from timegym import Scenario
-from .common import MISSING, interval_cell, require_conclusion, sha256
+from .common import interval_cell, rate_cell, require_conclusion, scientific_tex, sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,23 +48,6 @@ MODEL_LABELS = {
 SCENARIO_LABELS = {kind: Scenario(kind).display_name
                    for kind in ("white_noise", "trend", "seasonal", "ar1", "random_walk")}
 COLORS = ["#087e8b", "#c45b35", "#493b88"]
-
-
-def rate_cell(stat):
-    if stat is None:
-        return MISSING
-    lo, hi = stat["ci95"]
-    return f"{stat['count']}/{stat['n']} [{100*lo:.1f}, {100*hi:.1f}]"
-
-
-def scientific_tex(value):
-    if value == 0:
-        return "$0$"
-    mantissa, exponent = f"{value:.2e}".split("e")
-    return "$" + mantissa + r"\times10^{" + str(int(exponent)) + "}$"
-
-
-delta_cell = interval_cell
 
 
 def save(fig, directory, name):
@@ -252,9 +235,7 @@ def render_tex(results, manifest, summary):
         f"It alarmed on {clean['mse']['count']}/{clean['mse']['n']} clean cases. It detects invalid point "
         "arrays, but ignores index labels, target names, quantiles, and trajectory samples. "
         "Where a mutation leaves the point values unchanged, its alarms are identical to "
-        "the clean alarms and supply no mutation-specific evidence. This comparison "
-        "demonstrates the scope of a numerical-only check, not superiority over a "
-        "fully validated evaluation framework.",
+        "the clean alarms and supply no mutation-specific evidence.",
         "Disabling an output mutation restored the exact clean output, including its "
         f"sample array. Repaired outputs had zero contract violations and the same "
         f"{repair['count']}/{repair['n']} covariance alarms as the clean control. "
@@ -277,7 +258,7 @@ def render_tex(results, manifest, summary):
     ])
     for strength in protocol["dependence_strengths"]:
         row = results["dependence_summary"][str(float(strength))]
-        lines.append(f"{strength:.2f} & {scientific_tex(row['crps']['mean'])} & {delta_cell(row['energy'])} & {delta_cell(row['variogram'])}" + r" \\")
+        lines.append(f"{strength:.2f} & {scientific_tex(row['crps']['mean'])} & {interval_cell(row['energy'])} & {interval_cell(row['variogram'])}" + r" \\")
     lines.extend([
         r"\bottomrule\end{tabular}\end{table}",
         r"\subsection{Capability profiles}",
@@ -302,8 +283,8 @@ def render_tex(results, manifest, summary):
     lines.extend([
         r"\bottomrule\end{tabular}\end{table}",
         r"\subsection{An implemented inverse-scaling repair}",
-        "A separate predictor standardises its training context and forecasts the "
-        "mean in standardised units. The fault omits the inverse transform; the "
+        "A separate predictor standardizes its training context and forecasts the "
+        "mean in standardized units. The fault omits the inverse transform; the "
         "repair applies the training mean and scale. The historical-mean predictor "
         "is shift equivariant, so this particular metamorphic relation is a valid "
         "declared contract. On white-noise cases with mean 5 and innovation scale 2, "
@@ -313,7 +294,7 @@ def render_tex(results, manifest, summary):
         f"and {inverse['synthetic_repair_failure']['count']}/{inverse['synthetic_repair_failure']['n']} repaired fits "
         f"([{100*inverse['synthetic_repair_failure']['ci95'][0]:.1f}, {100*inverse['synthetic_repair_failure']['ci95'][1]:.1f}]\\%). "
         "The paired repaired-minus-faulty MAE difference was "
-        f"{delta_cell(inverse['synthetic_paired_mae_delta'])} (95\\% t interval).",
+        f"{interval_cell(inverse['synthetic_paired_mae_delta'])} (95\\% t interval).",
         "We then apply the same known omission and repair to AirPassengers, the "
         "monthly 1949--1960 international-airline passenger series in thousands~\\cite{rAirPassengers}. "
         "All scaling statistics are fitted on each training prefix. The four "
@@ -337,7 +318,7 @@ def render_tex(results, manifest, summary):
         f"The run used Python {manifest['python']}, NumPy {manifest['versions']['numpy']}, "
         f"pandas {manifest['versions']['pandas']}, and SciPy {manifest['versions']['scipy']}. "
         "The protocol, raw case records, paired score records, and source/data "
-        "SHA-256 fingerprints are retained with the experiment artefacts. "
+        "SHA-256 fingerprints are retained with the experiment artifacts. "
         "All tables in this section are generated from the saved JSON results.",
     ])
     return "\n\n".join(lines) + "\n"
