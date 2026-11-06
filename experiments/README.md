@@ -1,6 +1,7 @@
 # Reproduce the controlled studies
 
-From the repository root, create the development environment once:
+From the repository root, with Python 3.13 (the version the lock records),
+create the environment once:
 
 ```bash
 python3 -m venv .venv
@@ -31,10 +32,8 @@ use a new output directory. Both runners enforce one numerical thread with
 .venv/bin/python -m experiments.compare_results --results /tmp/timegym-pilot-repeat/results.json --manifest experiments/results/manifest.json
 ```
 
-The exact environment lock records the tested Python 3.13 environment; supported
-Python versions can instead install `pip install -e '.[dev]'`. Packages and the
-public dataset are available locally after setup; the experiment itself uses no
-network services or paid compute.
+Packages and the public dataset are available locally after setup; the
+experiment itself uses no network services or paid compute.
 
 `protocol.json` version 1.1 makes the original capability task and inverse-transform
 dimensions explicit, with unchanged values. The runner validates the protocol
@@ -54,7 +53,7 @@ intervals are retained in the paper. The MSE alarm ignores index labels and non-
 outputs; this illustrates a restricted numerical comparator, not superiority to
 properly validated evaluation frameworks.
 
-The separate model-level fault omits inverse standardisation in a historical-mean
+The separate model-level fault omits inverse standardization in a historical-mean
 forecast. Its repair applies the training location and scale exactly once. The
 location-equivariance relation is explicitly declared for this model. The same
 repair is illustrated at four ordered AirPassengers origins, without treating
@@ -73,9 +72,8 @@ Outputs:
 - `../paper/figures/*.png` and `../paper/figures/*.pdf`: figures rendered from the recorded results.
 - `../paper/generated-results.tex`: manuscript tables derived from the same JSON.
 
-For a numerical repeat, run `python -m experiments.run_study --output /tmp/timegym-repeat`
-and compare `results.json`. There are no timestamps or runtime values in numerical
-results. A platform-dependent tolerance may be needed on other BLAS/NumPy versions.
+There are no timestamps or runtime values in numerical results. A
+platform-dependent tolerance may be needed on other BLAS/NumPy versions.
 The CI `research-smoke` job compares both rerun hashes to their frozen manifests,
 warns on platform differences, and uploads the observed Linux hashes as
 `research-linux-hashes`; see [the validation record](../paper/validation.md).

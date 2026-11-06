@@ -1,10 +1,8 @@
 # How TimeGym decides
 
-TimeGym is for testing a forecasting pipeline before deployment and for
-reproducing a failure after one. Here verification means exercising specified
-runtime contracts, not formal proof of a program. This page explains where each
-verdict in a report comes from, using the terms of the
-[TimeGym manuscript](../../paper/README.md).
+In TimeGym, verification means exercising specified runtime contracts, not
+formal proof of a program. This page explains where each verdict in a report
+comes from, using the terms of the [TimeGym manuscript](../../paper/README.md).
 
 ## Why forecasts need other oracles
 
@@ -34,7 +32,7 @@ records its assumptions in the report.
 The [diagnostics catalogue](../api/diagnostics.md#diagnostics-catalogue) gives
 the oracle type of every diagnostic the package emits. The
 [capability map](capability-map.md) crosses these oracle types with the
-behaviours a forecaster needs, and shows which tutorial covers each pair.
+behaviors a forecaster needs, and shows which tutorial covers each pair.
 
 ## From case to verdict
 
@@ -53,7 +51,7 @@ flowchart LR
 
 Each case starts at a fixed forecast origin, and the model is refit from scratch
 for every case. A forecast that breaks its contract is reported as `FAIL` and is
-not scored, so a malformed output can never look accurate.
+not scored.
 
 ## What the five outcomes mean
 
@@ -65,8 +63,10 @@ not scored, so a malformed output can never look accurate.
 | `UNSUPPORTED` | The check does not apply, for example a quantile score for a point-only model. |
 | `ERROR` | Execution failed. A model exception is not silently converted into a numerical loss. |
 
-A report with no `FAIL` and no `ERROR` means every check that applied was
-satisfied. It does not mean the forecasts are accurate. Capability scores are
+A report with no `FAIL` and no `ERROR` means every forecast met its contract,
+every fit and prediction ran without an exception, and, with
+`check_dependence=True`, no sample covariance was rejected against its reference
+law. It does not mean the forecasts are accurate. Capability scores are
 descriptive because the package imposes no universal acceptance tolerance, and a
 large score can reflect estimation noise, a limited model class or an
 implementation fault.
@@ -117,12 +117,6 @@ because they perturb forecasts, not code. See
 
 ## Scores
 
-A point score has to match what the point denotes. Squared error is minimized by
-the mean and pinball loss by the corresponding quantile
-([Gneiting 2011](https://doi.org/10.1016/j.ijforecast.2009.12.015)), and
-`Forecast.point` denotes a predictive mean. Uncertainty is judged by calibration
-and sharpness
-([Gneiting, Balabdaoui and Raftery 2007](https://doi.org/10.1111/j.1467-9868.2007.00587.x)).
 [Scores and diagnostics](../api/diagnostics.md) lists which functional each
 metric targets.
 

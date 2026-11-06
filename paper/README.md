@@ -37,29 +37,30 @@ The builder uses only the Python standard library. It reads the version and
 date from the root `CITATION.cff` and stamps them into the standalone title
 block; keep that file beside `paper/` when building an extracted source archive.
 See the [release guide](../docs/release.md) for tag-driven PDF publication and
-Zenodo setup. Its bibliography renderer
+Zenodo setup. The builder's bibliography renderer
 accepts the braced, one-field-per-line entries in `references.bib`, sorts by
 author and title like `plain`, and links titles to their canonical identifiers.
 Unsupported bibliography syntax or missing cited entries fails the build.
 
-For new CPU runs in separate output directories and SHA256 comparisons, follow [the study guide](../experiments/README.md). Both runners limit numerical thread pools to one thread and refuse existing artifacts unless `--force` is explicit.
+For new CPU runs in separate output directories and SHA256 comparisons, follow [the study guide](../experiments/README.md).
 
-Both studies run locally on CPU. The original protocol and records remain in `experiments/protocol.json` and `experiments/results/`. The implementation-regression and covariance supplement has its own `experiments/protocol-v2.json` and `experiments/results-v2/`, including case records, summary CSVs, a source/environment manifest, and separate wall-time metadata. Rendering consumes saved records; it does not rerun experiments. The standalone output, `timegym.tex`, includes the generated tables and bibliography, so the single-file standalone build needs no additional source files or BibTeX pass. Compile `main.tex` from this directory using LaTeX, BibTeX, and two further LaTeX passes (`plain` bibliography style).
+Both studies run locally on CPU. The Study 1 protocol and records are in `experiments/protocol.json` and `experiments/results/`. Study 2 has its own `experiments/protocol-v2.json` and `experiments/results-v2/`, including case records, summary CSVs, a source/environment manifest, and separate wall-time metadata. Rendering consumes saved records; it does not rerun experiments. The standalone output, `timegym.tex`, includes the generated tables and bibliography, so the single-file standalone build needs no additional source files or BibTeX pass. Compile `main.tex` from this directory using LaTeX, BibTeX, and two further LaTeX passes (`plain` bibliography style).
 
 To compile the standalone PDF, run `latexmk -pdf -outdir=build timegym.tex` from this directory. It needs latexmk, the standard LaTeX and TikZ packages, and the cm-super fonts; MacTeX includes them all, and on Debian or Ubuntu they are `apt-get install latexmk texlive-latex-recommended texlive-pictures texlive-fonts-recommended cm-super`. Without cm-super the T1-encoded fonts fall back to Metafont bitmaps, which can fail to build. The `paper` job in the checks workflow compiles the same file on every push and uploads `timegym.pdf` as the `paper-pdf` artifact.
 
-The original pilot exports three scientific figures in both PNG and vector PDF under `figures/`:
+Study 1 exports three scientific figures in both PNG and vector PDF under `figures/`:
 
 - `fault-alarm-matrix`: observed alarms for each selected fixture, with unsupported covariance cells visibly masked. The clean row shows false alarms.
 - `dependence-score-deltas`: paired score changes against permutation strength, with 95% t intervals across independent seeds. Panels have different scales; marginal CRPS differences are numerical roundoff.
 - `capability-curves`: mean-reference MSE across three innovation scales, five scenario families, and three unmodified models. Curves are descriptive means over 16 cases; panel scales differ. `capability-summary.csv` includes the means and seed-level intervals.
 
-The supplement adds `supplement-implementation-ablation` (complementary checks on the selected implementation regressions) and `supplement-covariance-holm` (raw versus Holm-adjusted suite rejection rates), also in PNG and PDF. The generated tables retain per-condition counts so the aggregate ablation cannot conceal differences among conditions.
+Study 2 adds `supplement-implementation-ablation` (complementary checks on the selected implementation regressions) and `supplement-covariance-holm` (raw versus Holm-adjusted suite rejection rates), also in PNG and PDF. The generated tables retain per-condition counts so the aggregate ablation cannot conceal differences among conditions.
 
-The manuscript now embeds five primary vector figures, designed at print width:
+The manuscript embeds five vector figures, designed at print width; figures 4
+and 5 are in Appendix A:
 
 1. [Forecast matrix (SVG)](figures/paper-forecast-matrix.svg): six configurations from five families by three fixed seeds, using gray observation dots, unconnected blue forecast crosses, and thin conditional references. It uses the quick-start model and settings, with paired random walks without drift and with drift (0.03 per step) sharing identical innovations. To remain readable, it shows the final 72 context values and first 48 predictions from each complete 300-context/100-horizon run.
-2. [Marginal versus joint dependence (SVG)](figures/paper-dependence.svg): the first predefined pilot case, identical empirical marginals, different joint sample clouds, and saved paired score changes over all 64 evaluation cases.
+2. [Marginal versus joint dependence (SVG)](figures/paper-dependence.svg): the first predefined Study 1 case, identical empirical marginals, different joint sample clouds, and saved paired score changes over all 64 evaluation cases.
 3. [Diagnostic evidence (SVG)](figures/paper-diagnostic-evidence.svg): the implementation ablation with clean controls and the random-walk-with-drift counterexample where correcting an algorithm worsens forecast loss.
 
 4. [Financial stress matrix (SVG)](figures/paper-financial-stresses.svg): six univariate configurations from application notebook 26, showing diffusion, jumps, GARCH, hidden regimes, and combined regimes/jumps. Filter approximation and output units are explicit. These are illustrative software cases; neither Gaussian fault-study protocol is expanded.
@@ -79,12 +80,12 @@ The single-file standalone build therefore needs no external images, raster
 fallbacks, or SVG conversion tools. Edit the inputs and rerun the builder;
 changes made directly to the generated file are overwritten.
 The SVG files are separate reusable assets for websites, slides, and submission
-workflows. Their text remains editable. The earlier five research figures remain
+workflows. Their text remains editable. The five study figures listed above are
 supplementary assets, including the full three-scale capability plot and Holm
 comparison. The text-only workflow schematic is a table rather than a numbered
 main figure.
 
-The studies retain clean false alarms, missed defects, negative controls, and paired repair effects. The first pilot reverses selected output corruptions. The supplement changes implementation branches inside a fitted recursive model and compares complementary diagnostic rules. Repairs are specified by the experimenter; automatic cause identification and repair discovery are outside the claim. The covariance supplement reports a declared four-check Holm family; other exploratory comparisons are not covered by that guarantee. See [the claim ledger](claims.md) and [publication strategy](publication-strategy.md).
+The studies retain clean false alarms, missed defects, negative controls, and paired repair effects. Study 1 reverses selected output corruptions. Study 2 changes implementation branches inside a fitted recursive model and compares complementary diagnostic rules. Repairs are specified by the experimenter; automatic cause identification and repair discovery are outside the claim. For its covariance conditions, Study 2 reports a declared four-check Holm family; other exploratory comparisons are not covered by that guarantee. See [the claim ledger](claims.md) and [publication strategy](publication-strategy.md).
 
 The [notebook collection](../notebooks/README.md) contains executable source
 notebooks that export the package and application notebooks that explain its

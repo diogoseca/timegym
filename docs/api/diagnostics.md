@@ -30,6 +30,9 @@ distribution, so it has to match what the point denotes
 `mase` raises `UndefinedMetricError` when a target's naive-error scale is zero,
 as for a constant target, or when the context is no longer than `seasonality`;
 it adds no epsilon to the denominator and does not drop constant targets.
+`evaluate_forecast` always calls `mase` with `seasonality=1`, so the evaluator
+scales each target by its lag-1 naive in-context MAE whatever the scenario's
+seasonal period; `point_accuracy` evidence records `mase_seasonality: 1`.
 `mean_reference_mse` is not a reference for other losses.
 
 ### Uncertainty scores
@@ -91,8 +94,7 @@ Each row is one diagnostic `name` in a report, with the statuses it can return,
 the tolerance that separates its outcomes and its oracle type. The entries
 below the table add its evidence keys, the function that emits it and what a
 failure usually means; `<name>` and `<code>` stand for parts filled in at run
-time. A row without a threshold is descriptive and returns `INCONCLUSIVE`, which
-keeps a tolerance choice from being reported as a verdict.
+time. A row without a threshold is descriptive and returns `INCONCLUSIVE`.
 
 | Diagnostic | Category | Statuses it can return | Tolerance | Oracle type |
 | --- | --- | --- | --- | --- |

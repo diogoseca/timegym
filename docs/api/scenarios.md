@@ -6,9 +6,6 @@ Synthetic cases and their known conditional references: `Scenario`, `Case` and
 
 `Scenario(kind, context_length=120, horizon=12, parameters=<factory>, n_targets=1,
 seed=0).generate(seed=None)` returns a `Case(task, observed, reference, manifest)`.
-`parameters` uses `dataclasses.field(default_factory=dict)`, so each instance
-gets its own dictionary. The constructor accepts positional fields;
-`.generate(seed=None)` also accepts a positional seed override.
 Core kinds: `white_noise`, `trend`, `seasonal`, `ar1`, `random_walk`. Additional
 joint-capable kinds: `composite`, `merton_jump_diffusion`, `garch`,
 `markov_switching`. Parameters are
@@ -18,13 +15,13 @@ resolve their parameters once at construction; create a new `Scenario` to change
 them. Their scalar manifests retain scalar values, accepting a one-target
 `correlation` without adding dependence fields. All random draws use local generators.
 
-`Case` is defined in `timegym.contracts` and remains importable from `timegym` and
+`Case` is defined in `timegym.contracts` and is also importable from `timegym` and
 `timegym.scenarios`. Direct `generate_process(...)` calls resolve raw parameters;
 `generate_joint_process(...)` accepts parameters already returned by
 `resolve_process(...)`.
 
 `scenario.display_name` provides the same parameter-aware name used in plots.
-The identifiers above remain unchanged in configurations and reports.
+Configurations and reports record the identifiers, not the display names.
 
 | Identifier | Display name | What a shock does |
 | --- | --- | --- |

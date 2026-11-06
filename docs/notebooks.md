@@ -19,17 +19,9 @@ what you want to check.
 
 ## What a clean report covers
 
-A report with no `FAIL` and no `ERROR` tells you three things:
-
-- every forecast met its contract: shape, index, finiteness and quantile order;
-- every fit and prediction ran without an exception;
-- with `check_dependence=True`, no sample covariance was rejected against its
-  reference law.
-
-It does not tell you the forecasts are accurate: capability scores are
-descriptive and return `INCONCLUSIVE`. A declared relation such as shift
-equivariance runs separately with `check_shift_equivariance`. See
-[How TimeGym decides](concepts/how-timegym-decides.md).
+A report with no `FAIL` and no `ERROR` does not say the forecasts are accurate;
+[How TimeGym decides](concepts/how-timegym-decides.md) lists what it does
+establish.
 
 ## The tutorials in order
 
@@ -63,16 +55,8 @@ python -m jupyterlab notebooks
 
 Select the Python kernel belonging to that environment and use **Restart Kernel
 and Run All Cells**. Each notebook runs in its own kernel. The real-data
-notebook reads the included AirPassengers CSV.
-`timegym.data.real.get_stock` is a separate opt-in network helper for Yahoo
-Finance, requiring `timegym[market-data]` for a fetch. It is not called by the
-notebooks. Its local snapshot cache supports offline reuse; see the
-[market-data contract](api/market-data.md).
-
-The plots distinguish point means at discrete horizons from uncertainty bands
-and joint sample paths. Marginal intervals are not simultaneous prediction
-regions. Independent synthetic cases supply replications; horizons and targets
-within a forecast do not become additional independent cases.
+notebook reads the included AirPassengers CSV; no notebook uses the network
+([Market data](api/market-data.md) covers the optional fetch helper).
 
 The 14 source notebooks that generate the package, and the checks that execute
 every notebook, are described in [Contributing](contributing.md) and the

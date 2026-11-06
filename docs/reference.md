@@ -4,8 +4,6 @@ The top-level package keeps the main workflow small. Scores, checks, preprocessi
 and other helpers are public through their modules; for example,
 `from timegym.metrics import mase` and
 `from timegym.checks import check_shift_equivariance`.
-The import column names the module to import each listed name from.
-The page column links to the pages that document each row.
 “Public” means supported in this release; consult the changelog when upgrading.
 Schema constants describe stored formats independently of the package version.
 Underscore-prefixed names and modules, including `_internal` and

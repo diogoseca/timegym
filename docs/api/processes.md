@@ -24,8 +24,6 @@ The `changes` dictionary may change `intercept`, `slope`, `amplitude`, `period`,
 `phase`, or `sigma` from `change_point` onward. Mean parameters apply to absolute
 time, so a slope change can also create a level jump. The schedule is known to
 the evaluator; the model receives only its ordinary history and future index.
-Fixed seasonality, changing conditional volatility, and switching hidden states
-are distinct from changing the process parameters.
 
 For Merton and Markov families, `dt` is the observation-step length in a
 chosen base time unit and defaults to `1/252`. Growth and jump intensity
@@ -117,8 +115,7 @@ assert case.reference.covariance.shape == (24, 24)
 
 The covariance flattens `(horizon,target)` in C order. Joint `composite` and
 Merton moments are analytic. Joint Markov moments are analytic conditional on
-the filtered state distribution; a jump-mixture posterior is approximate, so
-its exact-reference covariance diagnostic stays `UNSUPPORTED`.
+the filtered state distribution.
 
 CCC-GARCH has exact conditional sampling, analytical means and marginal
 variances, and zero cross-time return covariance. Its future contemporaneous
