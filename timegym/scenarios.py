@@ -92,7 +92,7 @@ class Scenario:
     (zero by default). Its variance grows with the forecast horizon. Targets
     may have correlated contemporaneous innovations in every family. Zero
     ``sigma`` gives a degenerate deterministic component. Parameters are exposed
-    to the evaluator only; a model receives just ``case.task``. The additional
+    to the evaluator only; a model receives just ``case.task``. The
     composite, Merton, GARCH and hidden-regime processes also support joint
     targets, with explicit dependence laws and reference capabilities. These
     four controlled families snapshot resolved parameters at construction;

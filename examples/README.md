@@ -1,12 +1,12 @@
 # Python examples
 
-The Jupyter collection now lives in [`notebooks/`](../notebooks/README.md),
+The Jupyter notebooks are in [`notebooks/`](../notebooks/README.md),
 alongside the package's source notebooks. Start with
 [00 · Quick start](../notebooks/00_quick_start.ipynb) for visual forecast matrices
 and error distributions. See the [notebook guide](../notebooks/README.md) for
 univariate and multivariate uncertainty, real data, diagnosis, and development.
 
-Two small terminal examples remain here:
+This folder has two terminal examples:
 
 - [`quickstart.py`](quickstart.py): generate controlled cases and inspect a
   diagnostic report.

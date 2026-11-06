@@ -193,7 +193,10 @@ def _report_text(value, path, *, allow_empty=False):
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-15
 @dataclass
 class TestReport:
-    """A PASS is scoped to a check; unsupported checks do not establish success."""
+    """Diagnostics and scores for every case of one run, with run metadata.
+
+    A PASS is scoped to a check; unsupported checks do not establish success.
+    """
 
     __test__ = False  # Prevent pytest from trying to collect the dataclass.
 

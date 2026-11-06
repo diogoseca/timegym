@@ -92,6 +92,6 @@ forecasting pipelines, with a new manuscript and bounded controlled studies.
 - Strict documentation and distribution checks, citation metadata, and CI jobs
   that exercise an installed wheel outside the checkout.
 
-The 2021 API and dependency assumptions changed substantially. Follow the
-migration guide. Direct/multioutput forecasting strategies,
-automatic repair discovery, and universal fault detection are not claimed.
+The 2021 API and dependency assumptions changed substantially.
+Direct/multioutput forecasting strategies, automatic repair discovery, and
+universal fault detection are not claimed.

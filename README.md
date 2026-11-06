@@ -7,9 +7,10 @@
 [![PyPI](https://img.shields.io/pypi/v/timegym)](https://pypi.org/project/timegym/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-A forecast can have the same numerical error and still be on the wrong dates,
-the wrong targets, or the wrong scale. TimeGym catches that. It generates
-synthetic forecasting cases whose true conditional distribution is known, runs
+A forecast can have the same numerical error and still be on the wrong dates
+or the wrong targets. TimeGym's forecast contract catches that before scoring,
+and its reference scores show a wrong scale. TimeGym generates synthetic
+forecasting cases whose true conditional distribution is known, runs
 your model on them, checks the output against an explicit contract, scores it
 against the known reference, and writes down why anything failed.
 
@@ -33,8 +34,8 @@ pip install "timegym[plots]"      # plus Matplotlib for the figures
 pip install "timegym[sklearn]"    # plus the scikit-learn adapter
 ```
 
-From a clone, `pip install -e '.[dev]'` installs everything needed to run the
-tests and notebooks.
+From a clone, `pip install -e '.[dev]'` installs what the tests need;
+`.[notebooks]` adds Jupyter to run the notebooks.
 
 ## Sixty seconds
 
@@ -53,7 +54,8 @@ report.to_json("report.json")
 
 Every case in the report carries the scenario, the seed, the model's
 parameters, each diagnostic with its status and evidence, and the versions of
-everything involved, so a failure can be reproduced later from the file alone.
+everything involved, so a failure with a built-in model can be replayed from
+the file alone; a custom model also needs its source.
 
 To look at the forecasts instead of the numbers, keep the run:
 
@@ -79,10 +81,11 @@ Scores against the reference (mean-reference MSE, CRPS, energy and variogram
 scores) measure distance to the truth, not to one noisy realisation.
 
 **Diagnostics with evidence.** Optional Monte Carlo covariance checks compare an
-ensemble to the known law at a stated significance level; equivariance checks
-verify what a model claims; eight output-fault fixtures with paired repairs
-show what each check catches. Accuracy stays `INCONCLUSIVE` until you supply
-an acceptance rule: TimeGym never invents a threshold.
+ensemble to the known law at a stated significance level; a shift-equivariance
+check tests a property the model declares; eight output-fault fixtures with
+paired repairs show what each check catches. Accuracy scores stay
+`INCONCLUSIVE`: TimeGym sets no accuracy threshold, so apply your own rule to
+the recorded metrics.
 
 **Scenarios.** White noise, trend, seasonality, AR(1) and random walks with or
 without drift; multiple correlated targets; composed trend, seasonality and
@@ -144,7 +147,7 @@ this repository: [`paper/main.tex`](paper/main.tex), built into a
 [single-file version](paper/timegym.tex) with every figure and table
 generated from the recorded study results. The studies, their frozen records
 and the exact reproduction recipe are in [`experiments/`](experiments/README.md)
-and [`paper/README.md`](paper/README.md). The original 2021 prototype is on
+and [`paper/README.md`](paper/README.md). The 2021 manuscript is on
 arXiv as [2105.01404](https://arxiv.org/abs/2105.01404v1).
 
 ## Development
@@ -167,7 +170,7 @@ becomes a PyPI release with an archived DOI.
 TimeGym does not locate the root cause of a bug, repair models, detect general
 leakage, infer conditional references for arbitrary generators, or handle
 panels, hierarchies, missing or irregular observations. Unsupported checks are
-reported as unsupported, never silently skipped or fabricated.
+reported as unsupported, never silently skipped.
 
 ## Cite
 

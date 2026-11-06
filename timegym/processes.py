@@ -524,8 +524,7 @@ def _generate_resolved_process(
 def generate_process(kind, parameters, context_length, horizon, n_targets=1, seed=0):
     """Resolve a controlled mechanism and generate a history-conditioned case.
 
-    Financial families are controlled stresses, not evidence of stock-prediction
-    skill. Hidden states, future shocks and schedules remain evaluator-only.
+    Hidden states, future shocks and schedules remain evaluator-only.
     Scenario uses the same builders with its already-resolved parameters.
     """
     resolved = resolve_process(

@@ -80,8 +80,7 @@ refer to the state before the first return; each return follows one transition.
 
 ## Joint composed and financial processes
 
-The four additional kinds accept `n_targets > 1`. Their scalar implementations
-retain existing seeds and output values. Joint cases use separate random-stream
+The four additional kinds accept `n_targets > 1`. Joint cases use separate random-stream
 namespaces for observations, conditional reference draws, and numerical moments.
 
 | Parameter | Multivariate meaning |

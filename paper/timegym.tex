@@ -47,7 +47,7 @@ over five core Gaussian families and univariate and multivariate composed
 and financial stresses, including jumps, conditional volatility, and hidden regimes.
 Reference capabilities and approximation status are explicit. References
 condition on observed history and generator parameters; ordinary forecasters receive only the
-history and forecast indices. Local CPU studies evaluate selected output
+history and forecast indices. Two controlled studies evaluate selected output
 corruptions and four internal regressions in a fitted recursive lag-Ridge
 pipeline across six conditions. All four internal regressions preserve the
 output contract. Scalar translation detects one, target-specific
@@ -1978,7 +1978,7 @@ references; probabilistic verification; mutation testing; reproducibility.
 
 % END VECTOR FIGURE paper-forecast-matrix
 \caption{\textbf{A forecasting test suite at a glance.} The quick-start recursive
-lag-Ridge pipeline (24 lags, ridge penalty 1, standardized targets) is fitted
+lag-Ridge pipeline (24 lags, ridge penalty 1, standardized lag inputs) is fitted
 afresh to six configurations from five families,
 each at three fixed seeds (11, 22, 33). The two random-walk rows share the same
 innovations within each seed: one has zero drift and the other adds 0.03 per
@@ -1988,9 +1988,7 @@ blue crosses are unconnected point
 forecasts; thin gray curves are the privileged conditional means. Dashed
 vertical lines mark the forecast origin. Every model is fitted on 300 values
 and predicts 100 steps; for print readability, panels show the final 72
-context values and first 48 forecasts. Value scales vary by panel. These
-illustrative quick-start cases expose capability differences; a gap from a
-conditional reference alone is not a software-fault decision.}
+context values and first 48 forecasts. Value scales vary by panel.}
 \label{fig:forecast-matrix}
 \end{figure}
 
@@ -2024,23 +2022,23 @@ Diagnostics record the violated contract or the observed capability gap,
 together with the case configuration and seed. Known mutations and their
 repairs provide a way to test the diagnostic instrument itself.
 
-The contribution is an executable specification of what a forecasting
-test can establish. It connects three kinds of evidence: output contracts,
+The contribution is an executable diagnostic workflow for forecasting
+tests. It connects three kinds of evidence: output contracts,
 consistency with a known conditional reference, and declared relations
 between transformed tasks. The implementation makes their assumptions,
 outcomes, and counterexamples inspectable. Five Gaussian scenario families
 provide the transparent references used in the controlled studies; additional
 composed and financial mechanisms extend the software catalog. Paired
 clean, faulty, and repaired runs evaluate the diagnostic instrument itself. A marginal-preserving
-trajectory mutation gives a particularly useful example: identical
-marginal forecasts can conceal different joint forecasts.
+trajectory mutation shows that identical marginal forecasts can conceal
+different joint forecasts.
 
 This design supports a practical debugging sequence: reproduce a failing
 property, inspect a candidate cause, change the implementation, and rerun
 the same case and its clean controls. The report identifies the failed
 property; the intervention supplies evidence about the candidate cause.
-Neither a capability gap nor one successful repair uniquely identifies
-all faults in a pipeline.
+Neither a capability gap nor one successful repair identifies every
+fault in a pipeline.
 
 \subsection{Relationship to the original TimeGym proposal}
 
@@ -2069,7 +2067,7 @@ Weyuker called a program non-testable when no oracle exists or the oracle
 is too costly to use, and listed the remedies that remain available: a
 partial oracle, tests on simplified data with known results, and known
 properties of the output~\cite{weyuker1982testing}. Davis and Weyuker
-added the pseudo-oracle, an independently produced implementation of the
+had already proposed the pseudo-oracle, an independently produced implementation of the
 same specification whose outputs are compared with those of the program
 under test, within a tolerance for numerical programs~\cite{davis1981pseudo}.
 Guderlei and Mayer extended metamorphic relations to programs with random
@@ -2080,7 +2078,7 @@ maps the evidence used in this paper onto these oracle types. None of the
 types is new; the contribution is to make each one executable for
 forecasts, with its assumptions recorded.
 
-Cross-implementation comparison is now a standard oracle for
+CRADLE uses cross-implementation comparison as an oracle for
 deep-learning libraries~\cite{pham2019cradle}. Tolerance-based assertions
 are common in their test suites and a recurring source of flaky
 tests~\cite{nejadgholi2019study,dutta2020detecting}; the explicit
@@ -2120,7 +2118,7 @@ models~\cite{ghoroghchian2026simpletimebench}; its October 2026 version is
 a preprint. Synthetic challenges and known-generator references alone
 therefore do not distinguish the present contribution.
 
-FinStressTS is a particularly close financial precedent: it evaluates
+FinStressTS is the closest financial precedent: it evaluates
 isolated and composed synthetic mechanisms, including conditional volatility,
 heavy tails, regimes, and jumps~\cite{sun2026finstressts}. Financial stress
 composition alone is therefore not a novelty claim here. TimeGym emphasizes
@@ -2149,8 +2147,8 @@ a declared relation. We do not measure comparative detection power
 against these frameworks or benchmark their forecasting models.
 Production checklists for machine-learning systems are written as
 assertions and scored~\cite{breck2017test}; TimeGym supplies
-forecasting-specific assertions for the model evaluation and debugging
-stages of that workflow~\cite{amershi2019software}.
+forecasting-specific assertions for the model evaluation stage of that
+workflow~\cite{amershi2019software}.
 
 \begin{table}[t]
 \centering\small
@@ -2173,7 +2171,7 @@ feature-completeness matrix or a performance ranking.}
 
 \subsection{Statistical foundations}
 
-The statistical foundations are established. Point forecasts must be
+Point forecasts must be
 evaluated using a loss consistent with the requested
 functional~\cite{gneiting2011point}: the mean is optimal under squared
 error, any median under absolute error, and a quantile under the
@@ -2235,15 +2233,13 @@ For level $q\in(0,1)$, the reference is instead the marginal conditional
 quantile $F_{\theta,hd}^{-1}(q)$, evaluated using pinball loss. A median
 forecast corresponds to absolute error. Conditional means and medians
 coincide in the five core Gaussian families. They generally differ in the
-new asymmetric price and jump distributions; the requested functional must
+asymmetric price and jump distributions; the requested functional must
 remain explicit.
 Marginal quantiles do not determine the joint distribution of trajectories.
 
 \subsection{Core Gaussian scenario families}
 
 Figure~\ref{fig:forecast-matrix} shows these mechanisms as a visual test suite.
-The shared plotting convention keeps noisy observations and point forecasts
-as individual marks; only the known conditional reference is connected.
 
 
 Let $\epsilon_t\stackrel{\mathrm{iid}}{\sim}\mathcal{N}(0,\Omega)$, where
@@ -2277,12 +2273,7 @@ $Y_t=Y_0+ct+\sum_{s=1}^{t}\epsilon_s$: shocks persist in its level. Its
 centered increments $Y_t-Y_{t-1}-c$, rather than its levels, are white noise.
 The parameter $c$ is the optional \emph{drift}, an expected change per step;
 $c=0$ does not prevent an individual path from wandering upward or downward.
-The package keeps the stable identifier \texttt{random\_walk} and labels plots
-``Random walk without drift'' or ``Random walk with drift'' from its actual
-parameters (separately by target). It distinguishes \texttt{white\_noise}
-(``Gaussian white noise (fixed mean)'') from \texttt{trend}
-(``Linear trend + white noise''), and labels \texttt{seasonal}
-``Seasonality + white noise''. With known parameters and scalar innovation
+With known parameters and scalar innovation
 variance $\sigma^2$, the random walk's conditional variance is $h\sigma^2$
 at horizon $h$; the three deterministic-mean, fresh-noise processes retain
 $\sigma^2$. Thus the difference concerns shock persistence and uncertainty,
@@ -2332,15 +2323,12 @@ or noise scale at an explicit index. The before/after mean uses absolute
 $t$, so changing the slope need not preserve level continuity. These are
 additive level constructions, not multiplicative financial price models.
 The evaluator knows the change schedule; an ordinary fitted model does not.
-An error after an unannounced future break therefore does not prove that
-an implementation is faulty.
 
 \subsection{Financial stress mechanisms and non-Gaussian references}
 
 Figure~\ref{fig:financial-stresses} illustrates the financial extensions.
 The additional financial families isolate established stochastic mechanisms
-and selected interactions; they are not claims of state-of-the-art stock
-forecasting. Price, log price, log return, and volatility are different
+and selected interactions. Price, log price, log return, and volatility are different
 forecast targets. Both the core Gaussian families and these extensions
 support multivariate targets under explicit dependence laws. The existing
 \code{Scenario} and \code{Pipeline} interfaces apply to both groups.
@@ -3453,9 +3441,7 @@ Gray dots are observations and blue crosses are separate point forecasts;
 thin curves show evaluator conditional means. The last two rows use an
 approximate numerically filtered regime posterior, visibly labeled. Each
 model observes 240 values and predicts 24; only the final 72 context values
-are displayed. Units and vertical scales vary by row and panel. These are
-software demonstrations, not additions to the original fault-study sample
-or evidence of financial forecasting superiority.}
+are displayed. Units and vertical scales vary by row and panel.}
 \label{fig:financial-stresses}
 \end{figure}
 
@@ -3544,8 +3530,6 @@ matrices, while the other joint families also support singular correlations.
 Figure~\ref{fig:joint-stresses} shows a targeted pairing fault: permuting one
 target's entire sample trajectories preserves its marginal distributions and
 within-target temporal paths, while changing dependence between targets.
-This extension demonstration and its numerical checks are separate from the
-recorded Gaussian fault studies.
 
 \begin{figure}[p]
 \centering
@@ -4123,9 +4107,8 @@ deviations use all 768 draws; matrix coordinates alternate targets within
 each horizon. The aggregate is the equal-weight average of
 the two standardized forecast errors, not a portfolio-return estimate.
 Every empirical per-target marginal and temporal path is preserved; marginal
-CRPS is unchanged up to floating-point roundoff. These selected reference
-ensembles illustrate a controlled dependence fault, not fitted forecasting
-performance or an extension of the empirical fault-study sample.}
+CRPS is unchanged up to floating-point roundoff. These reference ensembles
+illustrate a controlled dependence fault.}
 \label{fig:joint-stresses}
 \end{figure}
 
@@ -4457,7 +4440,7 @@ are unconnected and score panels use different scales. CRPS changes are
 floating-point roundoff; joint-score changes expose this selected dependence
 alteration. Intervals are exploratory and unadjusted. The illustration does
 not imply that shuffling every law is a fault: factorized white noise is a
-negative control in the supplementary study.}
+negative control in the supplement.}
 \label{fig:dependence}
 \end{figure}
 
@@ -4521,7 +4504,8 @@ do not create the same population dependence defect.
 
 \subsection{Questions and experimental units}
 
-The default study uses 64 evaluation seeds (10000--10063), disjoint from
+The pilot (Study 1 in the experiments guide) uses 64 evaluation seeds
+(10000--10063), disjoint from
 development seeds 0--15. Its joint-sample task has a context of 120
 observations, $H=8$, $D=2$, and $S=128$. The AR(1) coefficient is 0.8
 and the innovation correlation is 0.7. The executable configuration and
@@ -4605,8 +4589,8 @@ relative performance of learned probabilistic models.
 \subsection{Implementation regressions and calibrated loss alarms}
 \label{sec:implementation-study}
 
-A second, separately recorded protocol moves the injected faults inside a
-fitted forecasting pipeline. A separate six-lag recursive lag-Ridge predictor
+The supplement (Study 2), a separately recorded protocol, moves the
+injected faults inside a fitted forecasting pipeline. A separate six-lag recursive lag-Ridge predictor
 uses an unpenalized intercept, penalty 1, and standardized targets.
 Four branches reverse the prediction-time lag order, retain stale
 recursive state, omit inverse target scaling, or silently swap the two
@@ -4661,7 +4645,7 @@ loss on every noisy future.
 
 \subsection{Covariance conditions and multiplicity}
 
-The second protocol also evaluates 64 independent four-task suites. Each
+The supplement also evaluates 64 independent four-task suites. Each
 suite contains factorized white noise, correlated white noise, negative
 AR(1), and a correlated random walk with drift, with $H=6$, $D=2$, $S=64$, and
 $B=199$ null ensembles per check. Clean reference samples are paired with
@@ -4863,7 +4847,7 @@ Dependence shuffle & 5/64 [3.4, 17.0] & 0/64 [0.0, 5.7] & 64/64 [94.3, 100.0] \\
 
 The clean covariance check rejected 6/64 cases (9.4\%; Wilson interval [4.4, 19.0]\%). The observed rate is above the nominal 5\% per-check level, with an interval that includes 5\%. No threshold was changed to remove these false alarms. The selected run does not establish precise calibration or a family-wise error rate.
 
-The point-MSE cutoff was 4.1853, the empirical 95th percentile from 16 development cases. It alarmed on 5/64 clean cases. It detects invalid point arrays, but ignores index labels, target names, quantiles, and trajectory samples. Where a mutation leaves the point values unchanged, its alarms are identical to the clean alarms and supply no mutation-specific evidence. This comparison demonstrates the scope of a numerical-only check, not superiority over a fully validated evaluation framework.
+The point-MSE cutoff was 4.1853, the empirical 95th percentile from 16 development cases. It alarmed on 5/64 clean cases. It detects invalid point arrays, but ignores index labels, target names, quantiles, and trajectory samples. Where a mutation leaves the point values unchanged, its alarms are identical to the clean alarms and supply no mutation-specific evidence.
 
 Disabling an output mutation restored the exact clean output, including its sample array. Repaired outputs had zero contract violations and the same 6/64 covariance alarms as the clean control. These paired rechecks confirm removal of the selected corruption; they do not imply that every repaired case receives a statistical pass or that the framework discovered the repair.
 
@@ -4921,7 +4905,7 @@ Random walk without drift & 0.0000 & 7.6919 & 0.6645 \\
 
 \subsection{An implemented inverse-scaling repair}
 
-A separate predictor standardises its training context and forecasts the mean in standardised units. The fault omits the inverse transform; the repair applies the training mean and scale. The historical-mean predictor is shift equivariant, so this particular metamorphic relation is a valid declared contract. On white-noise cases with mean 5 and innovation scale 2, the relation failed for 64/64 faulty fits (Wilson 95\% interval [94.3, 100.0]\%) and 0/64 repaired fits ([0.0, 5.7]\%). The paired repaired-minus-faulty MAE difference was -3.4711 [-3.6333, -3.3090] (95\% t interval).
+A separate predictor standardizes its training context and forecasts the mean in standardized units. The fault omits the inverse transform; the repair applies the training mean and scale. The historical-mean predictor is shift equivariant, so this particular metamorphic relation is a valid declared contract. On white-noise cases with mean 5 and innovation scale 2, the relation failed for 64/64 faulty fits (Wilson 95\% interval [94.3, 100.0]\%) and 0/64 repaired fits ([0.0, 5.7]\%). The paired repaired-minus-faulty MAE difference was -3.4711 [-3.6333, -3.3090] (95\% t interval).
 
 We then apply the same known omission and repair to AirPassengers, the monthly 1949--1960 international-airline passenger series in thousands~\cite{rAirPassengers}. All scaling statistics are fitted on each training prefix. The four ordered origins each forecast the next 12 months; their results are reported separately because they are not independent series replicates.
 
@@ -4949,7 +4933,7 @@ Repair improves MAE at every displayed origin, but the repaired historical mean 
 
 \paragraph{Recorded environment.}
 
-The run used Python 3.13.2, NumPy 2.5.4, pandas 3.1.0, and SciPy 1.18.1. The protocol, raw case records, paired score records, and source/data SHA-256 fingerprints are retained with the experiment artefacts. All tables in this section are generated from the saved JSON results.
+The run used Python 3.13.2, NumPy 2.5.4, pandas 3.1.0, and SciPy 1.18.1. The protocol, raw case records, paired score records, and source/data SHA-256 fingerprints are retained with the experiment artifacts. All tables in this section are generated from the saved JSON results.
 
 % END GENERATED RESULTS
 
@@ -4982,7 +4966,7 @@ Swapped recursive targets & 0 & 0 & 384 & 384 & 382 \\
 
 \bottomrule\end{tabular}\end{table}
 
-The complete table retains the blind spots and false alarms of every comparison. These results concern these specifications and selected implementations, rather than the sensitivity of arbitrary metamorphic tests. In Study 2, corrected means the clean implementation refitted; the paired comparison is clean-minus-faulty, with no separate repaired arm. Any output-contract violation terminates the study.
+The complete table retains the blind spots and false alarms of every comparison. These results concern these specifications and selected implementations, rather than the sensitivity of arbitrary metamorphic tests. In the supplement, corrected means the clean implementation refitted; the paired comparison is clean-minus-faulty, with no separate repaired arm. Any output-contract violation terminates the study.
 
 Across the fixed condition--fault pairs, the calibrated loss alarm changed from no alarm to alarm in 861 paired comparisons and from alarm to no alarm in 11. The same clean case appears once per fault in these descriptive paired counts; they are not independent replicates of a pooled statistical test.
 
@@ -5076,7 +5060,7 @@ Random walk with drift & Clean & 0 & 0 & 0 & 0 & 5 \\
 
 \subsection{Negative controls and multiple covariance checks}
 
-A second supplement evaluates 64 independent suites, each containing four conditional-reference covariance checks with 64 predictive trajectories, 199 calibration ensembles, and nominal level 0.05. The fixed variants are exact-reference samples, partial dependence permutation (strength 0.5), and spread multiplied by 0.75. Raw and Holm decisions are reported for the declared four-check families. Shuffled factorized white noise remains a negative control.
+The supplement's covariance study evaluates 64 independent suites, each containing four conditional-reference covariance checks with 64 predictive trajectories, 199 calibration ensembles, and nominal level 0.05. The fixed variants are exact-reference samples, partial dependence permutation (strength 0.5), and spread multiplied by 0.75. Raw and Holm decisions are reported for the declared four-check families. Shuffled factorized white noise remains a negative control.
 
 For clean suites, any false alarm occurred in 14/64 raw suites versus 3/64 after Holm correction. For reduced-spread suites, detection of at least one altered condition fell from 63/64 to 30/64. The correction thus reduces family-wise false alarms at a substantial power cost in this setting.
 
@@ -5124,7 +5108,7 @@ Coordinate-wise sorted sample arrays were identical before and after every parti
 
 \paragraph{Cost and reproducibility.}
 
-The retained study design requires 8,448 sklearn fits, 384 independent NumPy solves, and 768 covariance checks containing 152,832 calibration ensembles. Raw case records, protocol and source fingerprints, paired examples, and CSV tables are saved under \code{experiments/results-v2/}; the original pilot artefacts remain separate.
+The retained study design requires 8,448 sklearn fits, 384 independent NumPy solves, and 768 covariance checks containing 152,832 calibration ensembles. Raw case records, protocol and source fingerprints, paired examples, and CSV tables are saved under \code{experiments/results-v2/}; the original pilot artifacts remain separate.
 
 % END GENERATED SUPPLEMENT
 
@@ -5231,19 +5215,16 @@ Application notebooks cover univariate
 and multivariate forecasts, marginal and joint uncertainty, fault diagnosis,
 repair checks, replay, real-data integration, and capability sweeps. A
 separate checker executes every active notebook in a fresh kernel; these teaching
-examples are distinct from the controlled pilot reported here. Forecast
-matrices retain scenario, target, and seed facets, displaying stochastic
-observations and predicted means as discrete points. Plotting reuses stored
-case predictions rather than refitting. The original notebooks remain in a
-separate historical archive. The
+examples are distinct from the two controlled studies reported here. The
 generated result fragments record the run configurations, following the
 reporting recommendations for forecasting research: a well-defined
 data-generating process with its seeds, described methods and
 parameterization, software versions, and defined
 measures~\cite{makridakis2018objectivity}. Results correspond
 to the pilot source digest \texttt{dece174f629b2647} and supplement result
-digest \texttt{ba9b2e90145ca50d}; their complete SHA-256 values are recorded
-in the respective experiment manifests.
+digest \texttt{13b1228e7124b95f}, which was \texttt{ba9b2e90145ca50d} before
+two offline record migrations that changed no value; their complete SHA-256
+values are recorded in the respective experiment manifests.
 
 % The standalone builder renders references.bib into a BibTeX-free inline list.
 % BEGIN GENERATED BIBLIOGRAPHY

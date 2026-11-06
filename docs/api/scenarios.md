@@ -40,8 +40,9 @@ innovations: `Y[t] = Y[t-1] + drift + epsilon[t]`. Its increments, after
 subtracting the drift, are white noise. By contrast, the `trend` scenario is
 `Y[t] = intercept + slope*t + epsilon[t]`: only its deterministic mean trends;
 the noise does not accumulate. With known parameters, a scalar random walk's
-conditional variance at horizon `h` is `h*sigma**2`, whereas white noise and
-linear trend plus white noise, and fixed seasonality plus white noise have variance `sigma**2` at each horizon.
+conditional variance at horizon `h` is `h*sigma**2`, whereas white noise,
+linear trend plus white noise and fixed seasonality plus white noise all have
+variance `sigma**2` at each horizon.
 A walk with zero drift can still appear to trend in one realization.
 
 `drift` defaults to zero and can differ across targets. Plot facets label each

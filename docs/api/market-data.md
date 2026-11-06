@@ -15,8 +15,7 @@ columns, and duplicate or unordered dates raise `ValueError`.
 `auto_adjust=True`, the default, requests adjusted OHLC including `Close`, so
 splits and dividends do not appear as jumps; `False` keeps the provider's
 unadjusted fields. Choose and record this setting before defining the
-forecasting target. Selecting `"Close"` used to
-return a Series; callers that need one can now select `result["Close"]`.
+forecasting target. Select `result["Close"]` for a Series.
 
 `cache_path` names a JSON snapshot file containing full history, ticker and
 adjustment metadata. A matching existing snapshot is read without importing

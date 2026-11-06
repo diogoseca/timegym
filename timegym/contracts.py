@@ -465,8 +465,9 @@ class SimulationReference(Reference):
     descriptively but cannot calibrate an exact-reference diagnostic.
 
     Marginal quantiles are deterministic Monte Carlo estimates from a separate
-    declared seed and sample count. They are not analytical quantiles. Means are analytical. Covariance may be analytical or explicitly marked
-    as a reproducible Monte Carlo estimate with its own sample count and seed.
+    declared seed and sample count. They are not analytical quantiles. Means
+    are analytical. Covariance may be analytical or explicitly marked as a
+    reproducible Monte Carlo estimate with its own sample count and seed.
     """
 
     kind: str = "analytic_moments_simulation"
