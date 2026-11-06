@@ -24,8 +24,8 @@ changes** separately.
 ## Available mechanisms
 
 Use these `Scenario` kinds through the `Pipeline.run` and
-`Pipeline.test` entry points. All four extensions support `n_targets > 1`, alongside the five core
-Gaussian families. Joint draws retain `(sample, horizon, target)` order.
+`Pipeline.test` entry points. All four kinds, like the five core Gaussian
+families, support `n_targets > 1`. Joint draws retain `(sample, horizon, target)` order.
 
 | Kind | Controlled mechanism | Output and interpretation |
 | --- | --- | --- |
@@ -35,9 +35,9 @@ Gaussian families. Joint draws retain `(sample, horizon, target)` order.
 | `markov_switching` | Hidden regimes with state-dependent return distributions and optional regime-dependent jumps | `price`, `log_price`, or `log_return`; the reference filters the hidden regime |
 
 [Merton (1976)](https://doi.org/10.1016/0304-405X(76)90022-2) motivates
-discontinuous price dynamics; [Bollerslev (1986)](https://public.econ.duke.edu/~boller/Published_Papers/joe_86.pdf)
+discontinuous price dynamics; [Bollerslev (1986)](https://doi.org/10.1016/0304-4076(86)90063-1)
 motivates conditional volatility; [Hamilton (1989)](https://doi.org/10.2307/1912559)
-motivates hidden regime switching. They are established generating mechanisms.
+motivates hidden regime switching.
 
 The composite change schedule is known to the evaluator. It does not demonstrate
 that a fitted model could anticipate an unannounced future break. Adding a cycle
@@ -61,7 +61,7 @@ forecast target before composing mechanisms.
 
 A synthetic suite can itself be overfit. Passing it establishes behavior under
 its declared assumptions; it does not establish real-market accuracy or profits.
-[FinStressTS (2026)](https://arxiv.org/abs/2606.03184) provides closely related
+[FinStressTS (2026)](https://doi.org/10.1145/3770855.3817578) provides closely related
 mechanism-based financial forecasting benchmarks. TimeGym additionally emphasizes
 implementation contracts, controlled faults, and repair verification.
 
@@ -76,7 +76,7 @@ implementation contracts, controlled faults, and repair verification.
 | General forecasting transfer | Time-series foundation models with explicit input/output contracts |
 
 These are candidate classes, not rankings. Financial evaluation depends on the
-target and loss; [FinTSB (2026)](https://arxiv.org/abs/2502.18834v3) emphasizes
+target and loss; [FinTSB (2026)](https://doi.org/10.1007/s11704-026-51064-5) emphasizes
 task-specific evaluation and realistic market constraints. Price, log price, returns, and
 volatility are different prediction problems.
 
@@ -104,18 +104,11 @@ matrix. Target-specific parameters accept vectors. The joint mechanisms are:
   `jump_correlation` controls jump-size dependence. A shared clock can induce
   dependence even when Gaussian shocks and jump marks have zero correlation.
 - CCC-GARCH has one variance recursion per target and constant conditional
-  innovation correlation. This follows [Bollerslev (1990)](https://public.econ.duke.edu/~boller/Published_Papers/restat_90.pdf).
+  innovation correlation. This follows [Bollerslev (1990)](https://doi.org/10.2307/2109358).
   It is not a dynamic-conditional-correlation or cross-lag spillover model.
 - Markov targets share one hidden chain. The evaluator filters it using all
   observed targets; optional `regime_correlation` matrices change dependence
   between states. Jump arrivals can also depend on the shared state.
-
-CCC-GARCH's exact conditional simulator recursively updates every target on
-each future path. General future cross-series covariance is numerically
-integrated using an independent Monte Carlo stream, with count and seed recorded.
-Means and marginal variances remain analytic. Rank calibration holds the same
-estimated covariance matrix fixed for the forecast and every null ensemble.
-This does not make that matrix an exact population moment.
 
 The [joint uncertainty notebook](../notebooks/27_joint_financial_uncertainty.ipynb)
 compares paired futures with deliberately mismatched target trajectories. The

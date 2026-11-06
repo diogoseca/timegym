@@ -188,31 +188,17 @@ def render_tex(results, manifest):
 
     lines = [
         "% Generated from experiments/results-v2; do not edit numerical statements manually.",
-        r"\subsection{A separately versioned implementation supplement}",
-        f"Protocol {protocol['protocol_version']} evaluates {len(model['faults'])} selected implementation defects "
+        r"\subsection{Study 2: implementation regressions}",
+        f"Study 2 evaluates {len(model['faults'])} selected implementation regressions "
         f"under {len(model['conditions'])} fixed conditions, with {model['calibration_cases']} independent clean calibration cases and "
         f"{model['evaluation_cases']} disjoint evaluation cases each ({calibration_count} calibration and "
         f"{clean['n']} evaluation cases in total). The ridge penalty is {model['ridge_alpha']:g} and "
-        f"the lag window is {model['window']}. The comparison specifications and calibration assumptions "
-        "are defined above; target-specific translation, NumPy agreement, and calibrated loss are "
-        "experiment-only comparators. These selected fixtures are not an independent historical bug corpus.",
-        r"\begin{table}[htbp]\centering\small",
-        r"\caption{Selected implementation ablation: alarm counts over the same fixed conditions, "
-        f"{clean['n']} cases per row. These pooled counts are descriptive; full condition-specific counts "
-        "follow. All three rightmost comparators are experiment-only.}",
-        r"\label{tab:supplement-ablation}",
-        r"\begin{tabular}{@{}lrrrrr@{}}\toprule",
-        r"Implementation & Contract & Scalar & Target & NumPy & MSE \\ \midrule",
-    ]
-    for row in rows:
-        lines.append(FAULT_LABELS[row["branch"]] + " & " + " & ".join(str(v) for v in row["counts"]) + r" \\")
-    lines.extend([
-        r"\bottomrule\end{tabular}\end{table}",
-        "The complete table retains the blind spots and false alarms of every comparison. These results "
-        "concern these specifications and selected implementations, rather than the sensitivity of arbitrary "
-        "metamorphic tests. In the supplement, corrected means the clean implementation refitted; "
-        "the paired comparison is clean-minus-faulty, with no separate repaired arm. "
+        f"the lag window is {model['window']}. Figure~\\ref{{fig:diagnostic-evidence}} gives the pooled "
+        "alarm counts, and Table~\\ref{tab:supplement-complete} gives them for each condition. "
+        "The paired comparison is clean-minus-faulty, with no separate repaired arm. "
         "Any output-contract violation terminates the study.",
+    ]
+    lines.extend([
         f"Across the fixed condition--fault pairs, the calibrated loss alarm changed from no alarm to alarm "
         f"in {loss_gained} paired comparisons and from alarm to no alarm in {loss_lost}. "
         "The same clean case appears once per fault in these descriptive paired counts; they are not "
@@ -220,8 +206,7 @@ def render_tex(results, manifest):
         f"The clean implementation reduced mean realized MSE in {improved}/{len(losses)} condition--fault pairs; "
         f"{intervals_below_zero}/{len(losses)} paired 95\\% t intervals were wholly below zero. "
         "The full paired loss differences, intervals, and numbers of individually improved cases are retained "
-        r"in \code{model-repair-losses.csv}. These exploratory intervals are not adjusted across comparisons. "
-        "Restoring implementation agreement need not improve every noisy realized forecast.",
+        r"in \code{model-repair-losses.csv}. These exploratory intervals are not adjusted across comparisons.",
         *repair_counterexamples,
         r"\begin{table}[p]\centering\scriptsize",
         r"\caption{Complete condition-specific implementation alarm counts. Each entry is out of "
@@ -242,14 +227,7 @@ def render_tex(results, manifest):
         lines.append(r"\addlinespace")
     lines.extend([
         r"\bottomrule\end{tabular}\end{table}",
-        r"\subsection{Negative controls and multiple covariance checks}",
-        f"The supplement's covariance study evaluates {covariance['independent_suites']} independent suites, each containing "
-        f"four conditional-reference covariance checks with {covariance['n_samples']} predictive trajectories, "
-        f"{covariance['n_calibration']} calibration ensembles, and nominal level {covariance['alpha']:g}. "
-        "The fixed variants are exact-reference samples, partial dependence permutation "
-        f"(strength {covariance['shuffle_strength']:g}), and spread multiplied by {covariance['spread_multiplier']:g}. "
-        "Raw and Holm decisions are reported for the declared four-check families. Shuffled factorized "
-        "white noise remains a negative control.",
+        r"\subsection{Study 2: covariance checks under multiplicity}",
         f"For clean suites, any false alarm occurred in {suites['clean']['raw_any_false_alarm']['count']}/"
         f"{suites['clean']['raw_any_false_alarm']['n']} raw suites versus "
         f"{suites['clean']['holm_any_false_alarm']['count']}/{suites['clean']['holm_any_false_alarm']['n']} "
@@ -289,21 +267,12 @@ def render_tex(results, manifest):
         r"\bottomrule\end{tabular}\end{table}",
         f"Coordinate-wise sorted sample arrays were identical before and after every partial permutation. "
         f"The largest absolute marginal CRPS change was {scientific_tex(max_crps)}. Paired energy and variogram "
-        "score differences are retained for every condition. Correction can reduce power; every miss is "
-        "reported. The covariance null remains IID trajectory sampling from the specified exact conditional "
-        "reference, not general multivariate calibration of an arbitrary fitted model.",
-        r"\paragraph{Cost and reproducibility.}",
-        f"The retained study design requires {results['model']['cost_counts']['sklearn_fits']:,} sklearn fits, "
-        f"{results['model']['cost_counts']['independent_ridge_solves']:,} independent NumPy solves, and "
-        f"{results['covariance']['cost_counts']['covariance_checks']:,} covariance checks containing "
-        f"{results['covariance']['cost_counts']['calibration_ensembles']:,} calibration ensembles. "
-        "Raw case records, protocol and source fingerprints, paired examples, and CSV tables are saved "
-        r"under \code{experiments/results-v2/}; the original pilot artifacts remain separate.",
+        "score differences are retained for every condition.",
     ])
     return "\n\n".join(lines) + "\n"
 
 
-def render_macros(results):
+def render_macros(results, manifest, pilot_manifest):
     selected = next(row for row in results["model"]["loss_summaries"]
                     if row["condition"] == "random_walk_drifts" and row["fault"] == "stale_recursive_state")
     records = results["model"]["records"]
@@ -318,9 +287,21 @@ def render_macros(results):
     counts = {sum(row["condition"] == condition for row in clean.values())
               for condition in {row["condition"] for row in clean.values()}}
     require_conclusion(counts == {selected["n"]}, "caption has a common case count per condition")
+    shared = ("numpy", "pandas", "scipy")
+    require_conclusion(pilot_manifest["python"] == manifest["python"]
+                       and all(pilot_manifest["versions"][name] == manifest["versions"][name] for name in shared),
+                       "both studies ran with the same Python, NumPy, pandas and SciPy versions")
+    costs = {**results["model"]["cost_counts"], **results["covariance"]["cost_counts"]}
     values = {"RepairDeltaMean": f"{delta['mean']:.3f}", "RepairDeltaLow": f"{delta['ci95'][0]:.3f}",
               "RepairDeltaHigh": f"{delta['ci95'][1]:.3f}", "RepairImproved": improved,
-              "CasesPerCondition": selected["n"], "CasesPerRow": len(clean)}
+              "CasesPerCondition": selected["n"], "CasesPerRow": len(clean),
+              "StudyPython": manifest["python"], "StudyNumPy": manifest["versions"]["numpy"],
+              "StudyPandas": manifest["versions"]["pandas"], "StudySciPy": manifest["versions"]["scipy"],
+              "StudySklearn": manifest["versions"]["scikit-learn"],
+              "StudySklearnFits": f"{costs['sklearn_fits']:,}",
+              "StudyNumPySolves": f"{costs['independent_ridge_solves']:,}",
+              "StudyCovarianceChecks": f"{costs['covariance_checks']:,}",
+              "StudyCalibrationEnsembles": f"{costs['calibration_ensembles']:,}"}
     return "% Generated from frozen supplement records; do not edit.\n" + "".join(
         f"\\newcommand{{\\{name}}}{{{value}}}\n" for name, value in values.items())
 
@@ -343,7 +324,8 @@ def main():
     plot_covariance(results, manifest["protocol"], directory)
     fragment = args.paper_dir / "generated-supplement.tex"
     fragment.write_text(render_tex(results, manifest))
-    (args.paper_dir / "generated-macros.tex").write_text(render_macros(results))
+    pilot_manifest = json.loads((ROOT / "experiments/results/manifest.json").read_text())
+    (args.paper_dir / "generated-macros.tex").write_text(render_macros(results, manifest, pilot_manifest))
     print(json.dumps({"tables": str(fragment), "figures": str(directory)}))
 
 

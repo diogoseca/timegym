@@ -39,18 +39,6 @@ explicit seeds. Installing the wheel alone does not install these notebook files
 | | [26 · Composed and financial stresses](26_composed_and_financial_stresses.ipynb) | Controlled combinations, jumps, GARCH, hidden regimes, price means, and replay |
 | | [27 · Joint financial uncertainty](27_joint_financial_uncertainty.ipynb) | Multi-target mechanisms, joint paths, dependence faults, aggregate uncertainty, and repair |
 
-For multiple plots of the same fitted outputs, retain the run:
-
-```python
-run = pipeline.run(seeds=[0, 1, 2])
-run.plot_forecasts()
-run.plot_errors(metric="mean_reference_mse")
-report = run.report
-```
-
-The plot methods reuse `run.cases`; they do not refit. Calling
-`pipeline.plot_tests(...)` or `pipeline.plot_errors(...)` creates a separate run.
-
 ## Develop the package here
 
 The source notebooks combine reasoning, editable implementation cells, examples,
@@ -75,9 +63,8 @@ one notebook owner.
 | [14 · Controlled processes](14_controlled_processes.ipynb) | Compositions, parameter changes, Merton/GARCH/regime simulation and references |
 | [15 · Joint controlled processes](15_joint_processes.ipynb) | Correlated innovations, shared jumps and regimes, CCC-GARCH, and joint reference laws |
 
-The original `%%runwrite` workflow developed code and explanations together.
-The current workflow keeps that notebook-first approach with nbdev 3.3.26's
-modular exporter. Save notebook edits, then build explicitly:
+The package is exported with nbdev 3.3.26's modular exporter. Save notebook
+edits, then build explicitly:
 
 ```bash
 python tools/export_notebooks.py
@@ -89,12 +76,6 @@ Export reads selected source cells; it does not execute them or include ordinary
 demonstration cells. Normal notebook execution does not write package files.
 Generated modules should be changed through their source notebooks. See
 [contributing](../docs/contributing.md) and the [build guide](../tools/README.md).
-
-After editing an implementation cell, restart and Run All to refresh the chapter's
-development bindings and its nearby experiments.
-For changes used by another chapter, save, export, and restart the dependent
-kernel so it imports the updated package. Export uses saved source, not the
-current kernel state or notebook outputs.
 
 ## Execute and review
 
@@ -126,6 +107,6 @@ to the checker while developing it.
   reject a clean ensemble, and accuracy remains descriptive without a justified
   acceptance rule.
 
-These examples complement the [paper's controlled study](../experiments/README.md);
-they do not broaden its empirical claims. Historical themes that remain
+These examples complement the [paper's controlled studies](../experiments/README.md);
+they do not broaden their empirical claims. Historical themes that remain
 unfinished are identified in the [archive guide](archive/README.md).

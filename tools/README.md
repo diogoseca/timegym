@@ -133,7 +133,7 @@ compares the block without writing and verifies the package/changelog identity.
 `update_python_support.py` reports stable CPython/pandas compatibility; `--apply`
 prepares the coordinated update. The scheduled workflow exports changed
 notebooks, rebuilds citation/manuscript outputs, tests, and opens a PR. See
-[release setup](../docs/release.md) before enabling publication.
+[releasing](../docs/release.md).
 
 After installing the wheel in a separate environment, run its interpreter with
 `-I` to exclude checkout imports:

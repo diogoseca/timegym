@@ -10,8 +10,8 @@ Evidence reviewed 28 October 2026; citation identifiers and the financial-source
 | Different relations expose different implementation defects. | `experiments/model_faults.py`, `tests/test_research_supplement.py`, and `experiments/results-v2/model-ablation.csv`: all four internal regressions preserve the output contract; scalar translation detects one branch, per-target translation two, and independent NumPy agreement all four on the specified cases. The last two comparators are experiment-only. | Complementary evidence, not a universal ranking or a claim that the public package automatically identifies every defect. |
 | A capability failure does not establish a software fault. | Last-value, seasonal-naive, and fitted Gaussian AR(1) baselines run on the same mechanisms in `experiments/results/results.json`. Misspecified but well-formed predictions remain possible. | Explicit interpretation of capability scores. |
 | Marginal sample scores cannot identify every dependence defect. | Coordinate-wise sample permutations preserve empirical marginal measures. The manuscript proves the finite-sample identity; `tests/test_metrics.py` and paired study records check its numerical consequences. This identity is elementary, not a new probability theorem. | Algebraic negative control plus finite-sample experiment. |
-| A repair can restore the intended algorithm without improving forecast loss. | `experiments/results-v2/model-repair-losses.csv`: the corrected stale-state branch worsens average realised MSE for the random-walk condition with drift while restoring implementation agreement. The generated manuscript retains the paired effect and interval, not only the improved cases. | Verification and predictive model selection are distinct objectives. Repairs are specified, not discovered. |
-| Marginal and family-wise error rates answer different questions. | `experiments/results-v2/covariance-conditions.csv` and suite records: clean, partial-shuffle, and reduced-spread variants retain raw and Holm decisions. Factorised white noise under permutation remains a true null. The declared family contains four checks within one suite and variant. | Theoretical control relies on valid null p-values; observed counts and Wilson intervals do not prove calibration. Power losses after adjustment remain visible. |
+| A repair can restore the intended algorithm without improving forecast loss. | `experiments/results-v2/model-repair-losses.csv`: the corrected stale-state branch worsens average realized MSE for the random-walk condition with drift while restoring implementation agreement. The generated manuscript retains the paired effect and interval, not only the improved cases. | Verification and predictive model selection are distinct objectives. Repairs are specified, not discovered. |
+| Marginal and family-wise error rates answer different questions. | `experiments/results-v2/covariance-conditions.csv` and suite records: clean, partial-shuffle, and reduced-spread variants retain raw and Holm decisions. Factorized white noise under permutation remains a true null. The declared family contains four checks within one suite and variant. | Theoretical control relies on valid null p-values; observed counts and Wilson intervals do not prove calibration. Power losses after adjustment remain visible. |
 | Reports and experiments support replay and inspection. | Scenario specifications, model identifiers, dimensions, seeds, settings, and outcomes are recorded. `tests/test_replay.py` checks scenario reconstruction; experiment manifests record the code/environment and generated artifacts. Reproducing arbitrary external training requires that model's own source and environment. | Reproducibility of the specified case and controlled studies; no blanket determinism claim. |
 | The 2021 manuscript is corrected and extended. | Original source available from [arXiv:2105.01404v1](https://arxiv.org/abs/2105.01404v1); current manuscript gives corrected conditioning, metrics, uncertainty and scope. | Explicit historical relationship. |
 
@@ -42,21 +42,21 @@ record are retained where neither applies.
 | `ghoroghchian2026simpletimebench` | https://arxiv.org/abs/2610.02058v1 | SimpleTimeBench already frames elementary forecasting tasks as diagnostic unit tests; cited as a preprint. |
 | `dwarakanath2019metamorphic` | https://doi.org/10.1109/MET.2019.00014 | Forecasting metamorphic tests, eight reported application issues, and mutation evaluation predate TimeGym; this predecessor has real-issue evidence absent here. |
 | `sktimeConformance` | https://www.sktime.net/docs/api-reference/sktimeutilsestimator-checkscheck-estimator/ | Framework-specific estimator conformance checks are an existing comparison class; no head-to-head evaluation is claimed. |
-| `qiu2024tfb` | https://doi.org/10.14778/3665844.3665863 | Standardised forecasting evaluation pipelines address a related implementation problem. The checked publication is PVLDB 17(9), 2024. |
+| `qiu2024tfb` | https://doi.org/10.14778/3665844.3665863 | Standardized forecasting evaluation pipelines address a related implementation problem. The checked publication is PVLDB 17(9), 2024. |
 | `hope1968montecarlo` | https://doi.org/10.1111/j.2517-6161.1968.tb00759.x | Monte Carlo significance testing predates the implemented reference-covariance rank check. |
-| `lei2018conformal` | https://doi.org/10.1080/01621459.2017.1307116 | Split calibration yields marginal finite-sample guarantees under exchangeability; it does not guarantee conditional error control for each realised calibration set. |
+| `lei2018conformal` | https://doi.org/10.1080/01621459.2017.1307116 | Split calibration yields marginal finite-sample guarantees under exchangeability; it does not guarantee conditional error control for each realized calibration set. |
 | `holm1979multiple` | https://www.jstor.org/stable/4615733 | Step-down multiplicity adjustment applies to a declared family of valid tests, not arbitrary adaptive searches. |
 | `gneiting2011point` | https://doi.org/10.1198/jasa.2011.r10138 | Point scoring functions must match the requested statistical functional. |
 | `gneiting2007proper` | https://doi.org/10.1198/016214506000001437 | Proper distributional scoring; energy score and CRPS. |
 | `scheuerer2015variogram` | https://doi.org/10.1175/MWR-D-14-00269.1 | Variogram scores complement energy scores when evaluating dependence. |
 | `rAirPassengers` | https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/AirPassengers.html | Official provenance for the single historical real-series repair example. |
-| `gama2014drift` | https://doi.org/10.1145/2523813 | The distinction between process drift and changes in the generating parameters or predictive relationship in “Seasonality, process drift, and changing mechanisms” (`main.tex`). It does not make every changing latent state concept drift. |
-| `merton1976jumps` | https://doi.org/10.1016/0304-405X(76)90022-2 | The Merton construction in “Financial stress mechanisms and non-Gaussian references” (`main.tex`): continuous diffusion plus compound-Poisson jumps. TimeGym specifies a physical drift, not an option-pricing validation. |
-| `bollerslev1986garch` | https://doi.org/10.1016/0304-4076(86)90063-1 | The GARCH(1,1) conditional-variance recursion and its parameter restrictions in “Financial stress mechanisms and non-Gaussian references” (`main.tex`). |
-| `hamilton1989regimes` | https://doi.org/10.2307/1912559 | The hidden-regime principle in “Financial stress mechanisms and non-Gaussian references” (`main.tex`): inference integrates over an unobserved Markov state; the terminal regime is not observed forecaster input. |
+| `gama2014drift` | https://doi.org/10.1145/2523813 | The distinction between process drift and changes in the generating parameters or predictive relationship in “Seasonality, process drift, and changing mechanisms” (`main.tex`, Appendix A). It does not make every changing latent state concept drift. |
+| `merton1976jumps` | https://doi.org/10.1016/0304-405X(76)90022-2 | The Merton construction in “Financial stress mechanisms and non-Gaussian references” (`main.tex`, Appendix A): continuous diffusion plus compound-Poisson jumps. TimeGym specifies a physical drift, not an option-pricing validation. |
+| `bollerslev1986garch` | https://doi.org/10.1016/0304-4076(86)90063-1 | The GARCH(1,1) conditional-variance recursion and its parameter restrictions in “Financial stress mechanisms and non-Gaussian references” (`main.tex`, Appendix A). |
+| `hamilton1989regimes` | https://doi.org/10.2307/1912559 | The hidden-regime principle in “Financial stress mechanisms and non-Gaussian references” (`main.tex`, Appendix A): inference integrates over an unobserved Markov state; the terminal regime is not observed forecaster input. |
 | `sun2026finstressts` | https://doi.org/10.1145/3770855.3817578 | The related-work sentence identifying isolated and composed financial mechanisms, including volatility, regimes, and jumps (`main.tex`). FinStressTS is direct prior work; financial composition alone is not a novelty claim. |
 | `hu2026fintsb` | https://doi.org/10.1007/s11704-026-51064-5 | The related-work sentence about market constraints and transaction costs in financial evaluation (`main.tex`). The present synthetic tests do not establish trading performance. |
-| `bollerslev1990ccc` | https://doi.org/10.2307/2109358 | The constant conditional correlation construction (CCC-GARCH) in “Joint mechanisms and dependence-aware uncertainty” (`main.tex`). It supplies the model precedent, not a claim of exact multi-step cross-moments or arbitrary dynamic correlations. |
+| `bollerslev1990ccc` | https://doi.org/10.2307/2109358 | The constant conditional correlation construction (CCC-GARCH) in “Joint mechanisms and dependence-aware uncertainty” (`main.tex`, Appendix A). It supplies the model precedent, not a claim of exact multi-step cross-moments or arbitrary dynamic correlations. |
 | `weyuker1982testing` | https://doi.org/10.1093/comjnl/25.4.465 | The oracle-problem framing in “The oracle problem” (`main.tex`) and Table “oracles”: non-testable programs, partial oracles, simplified data with known results, and known properties. Read in full. |
 | `davis1981pseudo` | https://doi.org/10.1145/800175.809889 | The pseudo-oracle: an independent implementation compared within a tolerance. Supports calling the experimental NumPy comparator a pseudo-oracle; it does not make that comparator a public diagnostic. Read in full. |
 | `guderlei2007statistical` | https://doi.org/10.1109/QSIC.2007.4385527 | Statistical metamorphic testing: relations between output distributions checked by hypothesis tests. Names the class of the covariance rank check and the calibrated loss alarm. Read in full. |
@@ -68,7 +68,7 @@ record are retained where neither applies.
 | `jia2011analysis` | https://doi.org/10.1109/TSE.2010.62 | Survey definitions: mutation score, competent programmer hypothesis, coupling effect, equivalent mutants. Vocabulary only. |
 | `andrews2005mutation` | https://doi.org/10.1145/1062455.1062530 | Generated mutants resembled real faults in detectability; hand-seeded faults were harder to detect. Supports the statement that the hand-selected corpus is closer to the hand-seeded case; it does not estimate how the present faults compare with real ones. |
 | `just2014mutants` | https://doi.org/10.1145/2635868.2635929 | 357 real faults in five Java programs: 73% coupled to common mutants, 27% not, 17% coupled to no mutant. Numbers quoted as reported; they concern Java programs, not forecasting code. |
-| `humbatova2020taxonomy` | https://doi.org/10.1145/3377811.3380395 | A taxonomy of real deep-learning faults from 1,059 artefacts and 20 interviews, intended as a source of mutation operators. Supports the sentence that no comparable taxonomy exists for forecasting pipelines. |
+| `humbatova2020taxonomy` | https://doi.org/10.1145/3377811.3380395 | A taxonomy of real deep-learning faults from 1,059 artifacts and 20 interviews, intended as a source of mutation operators. Supports the sentence that no comparable taxonomy exists for forecasting pipelines. |
 | `humbatova2021deepcrime` | https://doi.org/10.1145/3460319.3464825 | Mutation operators derived from real-fault taxonomies with a statistical killing definition (repeated retraining, significance and effect size). Analogue of the calibrated loss alarm; no tool comparison is claimed. |
 | `jahangirova2020empirical` | https://doi.org/10.1109/ICST46399.2020.00018 | Abstract-level support (full text not retrieved) that mutant killing for trained models needs a stochastic definition because retraining alone moves accuracy. |
 | `arcuri2011practical` | https://doi.org/10.1145/1985793.1985795 | Guidance to assess randomized procedures over repeated independent runs with statistical tests and effect sizes. Supports the reporting convention; the paper's intervals follow its own stated conventions. |
@@ -100,7 +100,7 @@ files are required by the standalone manuscript. Figure generation does not
 alter experimental records or silently select replacement seeds.
 
 
-## Controlled process extension
+## Controlled processes
 
 The package adds four scalar and joint kinds (`composite`,
 `merton_jump_diffusion`, `garch`, `markov_switching`) through the same Scenario
@@ -117,15 +117,8 @@ future realized volatility is supplied as observed information.
 
 The financial matrix reads configurations directly from application notebook
 26 and records its 18 illustrative cases in the figure provenance file.
-The original observation-dot / forecast-cross visual language is retained.
 
-The literature table above records the financial and process-model precedents,
-including the direct prior work FinStressTS and the CCC-GARCH construction.
-Their existence rules out novelty based merely on controlled or composed
-financial generators. The contribution remains forecast contracts, fault
-evidence, and repair verification.
-
-## Multivariate financial extension (28 October 2026)
+## Joint controlled processes
 
 All four additional families support dependent targets. The declared laws use
 correlated innovations, shared jump clocks and/or a shared hidden chain;
@@ -149,8 +142,7 @@ or a guarantee of power against all dependence errors.
 Validation includes independent hidden-state-path enumeration, multivariate
 Gaussian forward-filter calculations, direct cumulant calculations,
 Gauss-Hermite integration of two-step GARCH cross-moments, conditional simulation,
-shape/parameter boundaries, retained scalar behaviour, and public report replay.
+shape/parameter boundaries, retained scalar behavior, and public report replay.
 Notebook 27 and the joint figure demonstrate re-pairing whole target trajectories:
 per-target marginal distributions and temporal paths remain unchanged while
-cross-series dependence and aggregate uncertainty change. These illustrations
-do not add cases to either recorded empirical study.
+cross-series dependence and aggregate uncertainty change.

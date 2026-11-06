@@ -2,11 +2,11 @@
 
 ## Unreleased
 
-- The API reference pages end with signatures and docstrings generated from the
-  code by mkdocstrings; the `docs` extra adds `mkdocstrings` and
-  `mkdocstrings-python`. Every public class, method and property now has a
-  docstring.
-- Added a capability map to the Concepts pages. It crosses the behaviours a
+- The API reference pages, except Market data, end with signatures and
+  docstrings generated from the code by mkdocstrings; the `docs` extra adds
+  `mkdocstrings` and `mkdocstrings-python`. Every public class, method and
+  property now has a docstring.
+- Added a capability map to the Concepts pages. It crosses the behaviors a
   forecaster needs with the four kinds of evidence, and links the scenario
   family, diagnostic and tutorial for each pair that a tutorial covers.
 
@@ -42,7 +42,7 @@
 
 ## 1.0.0 — 2026-10-30
 
-Prepared release; publication is performed only by the version-tag workflow.
+Not published to PyPI; 1.1.0 is the first PyPI release.
 
 - Unified package, citation and manuscript version metadata; added checked
   citation rendering and a tag-driven PyPI/GitHub release workflow.
@@ -60,15 +60,6 @@ Prepared release; publication is performed only by the version-tag workflow.
 - Renamed `Pipeline.plot_error()` to `Pipeline.plot_errors()` for consistency with
   retained runs. The singular spelling remains a forwarding alias for the 1.0
   release; migrate callers before the next release.
-
-### Joint controlled processes
-
-- Extended composed, Merton, GARCH and Markov scenarios to multiple dependent targets.
-- Added correlated shocks, shared jump events, shared hidden regimes, and state-specific correlation matrices.
-- Added CCC-GARCH with exact joint simulation and explicitly labelled numerical cross-covariance.
-- Added source notebook 15 and application notebook 27, including dependence-fault and repair examples.
-- Preserved scalar-case outputs, seed behaviour, and replay records.
-
 
 TimeGym now provides a reproducible verification and diagnosis workflow for
 forecasting pipelines, with a new manuscript and bounded controlled studies.
@@ -95,3 +86,11 @@ forecasting pipelines, with a new manuscript and bounded controlled studies.
 The 2021 API and dependency assumptions changed substantially.
 Direct/multioutput forecasting strategies, automatic repair discovery, and
 universal fault detection are not claimed.
+
+### Joint controlled processes
+
+- Extended composed, Merton, GARCH and Markov scenarios to multiple dependent targets.
+- Added correlated shocks, shared jump events, shared hidden regimes, and state-specific correlation matrices.
+- Added CCC-GARCH with exact joint simulation and explicitly labeled numerical cross-covariance.
+- Added source notebook 15 and application notebook 27, including dependence-fault and repair examples.
+- Preserved scalar-case outputs, seed behavior, and replay records.

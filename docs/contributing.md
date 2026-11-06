@@ -14,10 +14,6 @@ implementation cells there; expand collapsed cells when needed. Keep explanatory
 examples beside the implementation. Application notebooks 00 and 20–30 import
 the package and demonstrate its use.
 
-The original notebook-first approach used `%%runwrite` to execute and append
-cells to modules. The current build uses nbdev 3.3.26 to export selected saved
-cells into complete modules. Normal notebook execution does not write modules.
-
 ```bash
 # Save notebook edits before exporting.
 python tools/export_notebooks.py
@@ -45,9 +41,8 @@ python notebooks/check_notebooks.py --group demo
 python notebooks/check_notebooks.py --write --html-dir /tmp/timegym-notebooks
 ```
 
-The checker executes active notebooks in fresh independent kernels with the
-invoking Python interpreter. It clears stale outputs first, rejects uncaught
-errors or skipped code, and excludes the archive. Successful execution does not
+The [notebook guide](../notebooks/README.md#execute-and-review) describes the
+checker. Successful execution does not
 prove that labels, scales or explanations are useful, so inspect the rendered
 plots and explanations. Seeded results are reproducible within an environment,
 while numerical and rendering versions can affect output. Use discrete markers
@@ -73,11 +68,14 @@ python tools/check_site_links.py site
 link checker covers both. Notebook links between tutorials are written relative
 to `notebooks/`, and `tools/docs_hooks.py` points them at the built pages, or at
 GitHub for files the site does not render. The tutorial groups are listed in
-`mkdocs.yml`, the README and the [notebook guide](../notebooks/README.md);
-`tests/test_docs_navigation.py` keeps the three in step.
+`mkdocs.yml`, the README, the [notebook guide](../notebooks/README.md) and the
+[tutorials page](notebooks.md); `tests/test_docs_navigation.py` keeps the four
+in step.
 
-Each API page ends with a Signatures section that mkdocstrings generates from
-the docstrings. The docstrings live in the source notebooks, so edit the owning
+Each API page except Market data ends with a Signatures section that
+mkdocstrings generates from the docstrings; `default_scenarios` and `get_stock`
+keep hand-written descriptions because griffe cannot load `timegym.data`. The
+docstrings live in the source notebooks, so edit the owning
 notebook and export it; never edit `timegym/*.py`. Members without a docstring
 are left out of the page, so `tests/test_docs_signatures.py` fails when a public
 class, method, property or function lacks one, or when a public name in the
@@ -105,7 +103,7 @@ drift without rewriting it; CI runs this check beside the package export check.
 
 ## Report a problem
 
-Start with the [quick start](../README.md) and the [tutorials](notebooks.md).
+Start with the [quick start](../notebooks/00_quick_start.ipynb) and the [tutorials](notebooks.md).
 For a diagnostic failure, include the JSON report, exact package versions, model
 configuration, scenario manifest and seed when opening an
 [issue](https://github.com/diogoseca/timegym/issues). Avoid including private

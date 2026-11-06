@@ -38,7 +38,7 @@ detection or validation on every supported platform.
 | Documentation | Strict build passes with local links resolved; original source paths registered for live reload |
 | Distributions | Wheel and source archive build; both pass metadata validation |
 | Clean installed wheel | Core dependencies only; point/joint forecasts, joint controlled financial processes, reports, replay, retained runs, and CLI demo pass outside the checkout |
-| Source archive | Includes all 25 active notebooks, manuscript inputs, study records, citation metadata and build tooling; extracted source passes export drift check |
+| Source archive | Includes all 24 active notebooks, manuscript inputs, study records, citation metadata and build tooling; extracted source passes export drift check |
 | Original study | Numerical JSON unchanged; historical execution evidence retained in the manifest |
 | Protocol-2 study | Frozen numerical record; offline schema migration described below. Future repeats are compared by the CI research-smoke job |
 | Manuscript | Generated standalone source compiles successfully |
@@ -97,8 +97,10 @@ Timing is recorded separately and is not a benchmark claim.
 
 CI covers the [declared Python range](../README.md#install), the older compatibility stack,
 installed wheels on Linux/macOS/Windows, all notebooks, documentation, and both
-studies. These remote jobs have not been executed from this checkout. Local
-validation was on macOS; do not infer Windows or Linux results from it.
+studies. `release.yml` ran these jobs on the v1.1.0 tag before publishing; the
+`research-smoke` job only warns on a hash mismatch, so a green run does not
+show Linux repeatability; the observed hashes are in its `research-linux-hashes`
+artifact. Local validation was on macOS; do not infer Windows or Linux results from it.
 
 1.1.0 was published to PyPI on 5 November 2026 by the release workflow. No
 manuscript has been submitted.

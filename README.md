@@ -8,11 +8,12 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 A forecast can have the same numerical error and still be on the wrong dates
-or the wrong targets. TimeGym's forecast contract catches that before scoring,
-and its reference scores show a wrong scale. TimeGym generates synthetic
-forecasting cases whose true conditional distribution is known, runs
-your model on them, checks the output against an explicit contract, scores it
-against the known reference, and writes down why anything failed.
+or the wrong targets. TimeGym's forecast contract rejects such forecasts before
+anything is scored; a wrong scale shows up as a large distance from the known
+reference. TimeGym generates synthetic forecasting cases whose true conditional
+distribution is known, runs your model on them, checks the output against an
+explicit contract, scores it against the known reference, and writes down why
+anything failed.
 
 [![Six synthetic configurations, three seeds each: observations as dots, forecasts as crosses, conditional references as thin curves](notebooks/assets/quick-start-matrix.png)](https://diogoseca.github.io/timegym/notebooks/00_quick_start/)
 
@@ -52,10 +53,12 @@ report.assert_passed()   # raises on FAIL or ERROR, never on unsupported capabil
 report.to_json("report.json")
 ```
 
-Every case in the report carries the scenario, the seed, the model's
-parameters, each diagnostic with its status and evidence, and the versions of
-everything involved, so a failure with a built-in model can be replayed from
-the file alone; a custom model also needs its source.
+The report records each case's scenario, seed, manifest, metrics and
+diagnostics (status and evidence), plus the pipeline configuration, the Python,
+TimeGym, NumPy, pandas, SciPy and scikit-learn versions and a source digest, so
+a failure with a built-in model can be replayed from the file alone. Sklearn
+steps, model factories, custom target transforms and your own classes also need
+their code, and `GaussianAR1Forecaster` needs a fixed seed.
 
 To look at the forecasts instead of the numbers, keep the run:
 
@@ -67,18 +70,18 @@ run.plot_errors(metric="mean_reference_mse")
 
 ## What it checks
 
-**Contracts.** A `Forecast` is a point array `(H, D)`, optional quantiles
-`(H, D, Q)` and optional joint samples `(S, H, D)`. TimeGym checks the index
+**Contracts.** A `Forecast` holds at least one of a point array `(H, D)`,
+quantiles `(H, D, Q)` and joint samples `(S, H, D)`. TimeGym checks the index
 against the requested future, the target names and order, shapes, finiteness
 and quantile ordering before any score is computed. A misaligned index is a
-`FAIL` with the offending labels in the evidence, not a slightly worse MSE.
+`contract_index_mismatch` `FAIL`, not a slightly worse MSE.
 
 [![A forecast with the right values on the wrong dates: the same error, a different diagnosis](notebooks/assets/alignment-demo.png)](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/)
 
 **References.** Each synthetic scenario knows its conditional mean, variance,
 cross-horizon covariance, quantiles and samples given the observed context.
 Scores against the reference (mean-reference MSE, CRPS, energy and variogram
-scores) measure distance to the truth, not to one noisy realisation.
+scores) measure distance to the truth, not to one noisy realization.
 
 **Diagnostics with evidence.** Optional Monte Carlo covariance checks compare an
 ensemble to the known law at a stated significance level; a shift-equivariance
@@ -92,7 +95,7 @@ without drift; multiple correlated targets; composed trend, seasonality and
 noise with scheduled changes, Merton jumps, GARCH volatility and hidden
 regimes; joint shocks, jumps and regimes across targets, each with explicit
 reference capabilities. The [scenario guide](docs/stress-cases.md) explains
-what every family can and cannot certify.
+what the composed and financial families can and cannot show.
 
 ## Bring your own model
 
@@ -101,7 +104,7 @@ Any object with `fit(context)` and `predict(future_index)` returning a
 writes a nearest-analogues forecaster from scratch, tests it on synthetic
 suites, then on real data with and without a known truth.
 
-[![A nearest-analogues forecaster on a synthetic series: truth line, observed points, predicted points](notebooks/assets/custom-model-knn.png)](https://diogoseca.github.io/timegym/notebooks/28_custom_model/)
+[![A nearest-analogues forecaster on white-noise, trend and seasonal scenarios, two seeds each: observations as dots, forecasts as crosses, known conditional means as lines](notebooks/assets/custom-model-knn.png)](https://diogoseca.github.io/timegym/notebooks/28_custom_model/)
 
 scikit-learn regressors plug in through a recursive, direct or multioutput
 reduction that fits its transforms on the training window only:
@@ -144,8 +147,9 @@ The notebooks run on CPU with local data. `pip install -e '.[notebooks]'` and
 
 The method and two controlled studies are described in the manuscript kept in
 this repository: [`paper/main.tex`](paper/main.tex), built into a
-[single-file version](paper/timegym.tex) with every figure and table
-generated from the recorded study results. The studies, their frozen records
+[single-file version](paper/timegym.tex) whose tables and figures are
+generated by script from the recorded study results and the tutorial settings.
+The studies, their frozen records
 and the exact reproduction recipe are in [`experiments/`](experiments/README.md)
 and [`paper/README.md`](paper/README.md). The 2021 manuscript is on
 arXiv as [2105.01404](https://arxiv.org/abs/2105.01404v1).
@@ -161,9 +165,9 @@ python tools/export_notebooks.py --check
 python -m pytest
 ```
 
-[Contributing](docs/contributing.md) describes the cycle, the versioning rule
-and the compatibility policy; [releasing](docs/release.md) describes how a tag
-becomes a PyPI release with an archived DOI.
+[Contributing](docs/contributing.md) describes the notebook-to-module cycle;
+[releasing](docs/release.md) describes the versioning rule, the Python
+compatibility policy, and how a labeled merge becomes a tagged PyPI release.
 
 ## Scope
 

@@ -34,7 +34,7 @@ rows and seed columns with observation dots and unconnected forecast crosses.
 Optional shading shows marginal intervals. `run.plot_errors(metric="mean_reference_mse", *,
 bins=None, missing="raise", figsize=None)` shows one score per whole case;
 `missing="annotate"` explicitly permits unavailable scores and labels their
-counts and reasons. Neither method refits models. Install `.[plots]` for plotting.
+counts and reasons. Neither method refits models. Install `timegym[plots]` for plotting.
 
 `pipeline.plot_tests(...)` and `pipeline.plot_errors(...)` are convenient one-call
 experiments. Each creates a fresh run. Use `run()` when multiple views must share
@@ -88,10 +88,10 @@ adequate. A pass is always scoped to a check.
 `timegym.provenance.PIPELINE_CONFIG_SCHEMA_VERSION = 3` identifies current
 pipeline configuration writes, which add `target_transform` (`null` or a
 `transform_config` description). Schema 2 configurations, written without that
-field, remain readable; schema 1 configurations, which used `strategy`, are no
-longer read. Scenario manifests use integer version 1,
+field, remain readable; schema 1 configurations, which used `strategy`, are
+rejected. Scenario manifests use integer version 1,
 named by `timegym.scenarios.MANIFEST_SCHEMA_VERSION`. These are independent
-schemas: the historical report version is a string, while configuration and
+schemas: the report version is a string, while configuration and
 manifest versions are integers.
 
 ## Signatures

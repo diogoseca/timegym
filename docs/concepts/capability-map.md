@@ -5,7 +5,7 @@ hide:
 
 # Capability map
 
-Which behaviours of a forecaster does TimeGym exercise, and with what kind of
+Which behaviors of a forecaster does TimeGym exercise, and with what kind of
 evidence? This page crosses the two. Rows are capabilities a model may need;
 columns are the four kinds of evidence from
 [How TimeGym decides](how-timegym-decides.md). The layout follows CheckList's
@@ -13,9 +13,9 @@ capability by test-type matrix
 ([Ribeiro et al. 2020](https://doi.org/10.18653/v1/2020.acl-main.442)).
 
 Each entry in a cell names a scenario family, a diagnostic and the tutorial that
-shows the pair, by number. An empty cell is a gap: no tutorial shows that pair
-yet. A gap does not always mean the check is skipped. Forecast contracts, for
-example, run on every case of every family.
+shows the pair, by number. An empty cell is a gap: no tutorial shows that
+pair. The check may still run there; forecast contracts, for example, run on
+every case of every family.
 
 ## The four kinds of evidence
 
@@ -73,8 +73,6 @@ composed and financial families in
   has no reference, so the check returns `UNSUPPORTED`. Regime switching with
   jumps has an approximate reference, so tutorials 26 and 27 show the check
   returning `UNSUPPORTED` there too.
-
-Each gap is a candidate for a new tutorial section or check.
 
 ## Keeping the map current
 

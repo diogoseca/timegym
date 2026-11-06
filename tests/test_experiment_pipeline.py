@@ -111,10 +111,11 @@ def test_frozen_fragments_and_macros_are_reproducible():
     assert 'Fresh corrected refit' not in text and 'wall time' not in text
     assert 'Reduced spread & --- & ---' in text
     assert 'clean-minus-faulty mean MSE was +0.5132 [+0.2122, +0.8141]' in text
-    macros = render_macros(supplement)
+    macros = render_macros(supplement, manifest, records('results')[1])
     assert macros == (ROOT / 'paper/generated-macros.tex').read_text()
     for macro, value in [('RepairDeltaMean', '0.513'), ('RepairDeltaLow', '0.212'), ('RepairDeltaHigh', '0.814'),
-                         ('RepairImproved', '21'), ('CasesPerCondition', '64'), ('CasesPerRow', '384')]:
+                         ('RepairImproved', '21'), ('CasesPerCondition', '64'), ('CasesPerRow', '384'),
+                         ('StudySklearnFits', '8,448'), ('StudyCalibrationEnsembles', '152,832')]:
         assert rf'\newcommand{{\{macro}}}{{{value}}}' in macros
 
 
