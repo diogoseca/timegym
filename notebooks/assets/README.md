@@ -5,8 +5,8 @@ Refresh it from the executed notebook when that experiment changes; it is not a 
 
 `alignment-demo.png` is saved by the index-shift section of
 [`23_faults_repairs_and_replay.ipynb`](../23_faults_repairs_and_replay.ipynb)
-(cell `05-24`): a seasonal forecast with its index shifted by one, against the
-requested future index. It is shown in the project README. Run that notebook to
+(cell `05-alignment-plot`): a seasonal forecast with its dates shifted by one
+step, against the dates asked for. It is shown in the project README. Run that notebook to
 refresh it.
 
 ## Custom-model preview
