@@ -1,5 +1,13 @@
 # Tasks and forecasts
 
+**In short.** Your model's `fit` receives the past as a pandas DataFrame, one row
+per time step and one column per series. Its `predict` receives the time labels
+to forecast and returns a `Forecast`: one row of values per label, one column
+per series, in the same order. Before scoring, TimeGym runs the output checks
+(the *forecast contract*): right dates, right series in the right order, the
+right shape, no NaN or infinity, and quantiles that do not cross. A forecast
+that fails one fails the test with a named reason and is not scored.
+
 What a model receives and what it must return: `ForecastTask` and `Forecast`,
 imported from `timegym`.
 

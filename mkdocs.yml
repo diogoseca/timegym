@@ -1,5 +1,5 @@
 site_name: TimeGym
-site_description: Controlled verification and diagnosis for forecasting pipelines
+site_description: A gym for time series forecasting algorithms
 site_author: Diogo Seca
 repo_url: https://github.com/diogoseca/timegym
 repo_name: diogoseca/timegym
