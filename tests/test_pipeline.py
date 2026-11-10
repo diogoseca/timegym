@@ -98,15 +98,21 @@ def test_supplied_prefitted_native_template_is_reset_by_clone_protocol():
     assert model.total == 9000
 
 
-def test_native_factory_is_called_per_fit_and_unsafe_instances_are_rejected():
+def test_native_factory_is_called_per_fit_and_plain_instances_are_copied_per_case():
     instances = []
 
     class Native:
+        def __init__(self):
+            self.fits = []
+
         def fit(self, context):
+            self.fits.append(len(context))
             self.last = context.iloc[-1].to_numpy()
             return self
 
         def predict(self, future_index):
+            # State from an earlier case would show up as more than one fit.
+            assert len(self.fits) == 1, "a model copy was fitted twice"
             return Forecast(future_index, point=np.tile(self.last, (len(future_index), 1)))
 
     def factory():
@@ -119,8 +125,11 @@ def test_native_factory_is_called_per_fit_and_unsafe_instances_are_rejected():
     pipeline.predict(context, future)
     pipeline.predict(context, future)
     assert len(instances) == 2 and instances[0] is not instances[1]
-    with pytest.raises(TypeError, match="clone_unfitted"):
-        Pipeline(Native()).predict(context, future)
+    original = Native()
+    copied = Pipeline(original)
+    copied.predict(context, future)
+    copied.predict(context, future)
+    assert original.fits == [], "the caller's instance must never be fitted"
     with pytest.raises(ValueError, match="not both"):
         Pipeline(Native(), model_factory=factory)
 

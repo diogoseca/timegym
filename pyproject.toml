@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.16"
 license = {file = "LICENSE"}
 authors = [{name = "Diogo Seca"}]
-dependencies = ["numpy>=1.26,<3", "pandas>=2.2,<4", "scipy>=1.11,<2"]
+dependencies = ["numpy>=1.26,<3", "pandas>=2.2,<4", "scipy>=1.11,<2", "matplotlib>=3.8", "scikit-learn>=1.4"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -22,11 +22,13 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-sklearn = ["scikit-learn>=1.4"]
-plots = ["matplotlib>=3.8"]
+# Matplotlib and scikit-learn are core dependencies; these two names stay so
+# that older install commands keep working.
+sklearn = []
+plots = []
 features = ["tsfel>=0.1.9", "tqdm>=4.66"]
 market-data = ["yfinance>=0.2.54"]
-dev = ["pytest>=8", "build>=1.2", "matplotlib>=3.8", "scikit-learn>=1.4", "nbdev==3.3.26", "black==26.10.1", "nbformat>=5.10", "PyYAML>=6,<7"]
+dev = ["pytest>=8", "build>=1.2", "nbdev==3.3.26", "black==26.10.1", "nbformat>=5.10", "PyYAML>=6,<7"]
 notebooks = ["timegym[dev]", "jupyterlab>=4.2", "ipykernel>=6.29", "nbclient>=0.10", "nbconvert>=7.16"]
 docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5,<10", "mkdocs-jupyter>=0.25,<1", "mkdocstrings>=1,<2", "mkdocstrings-python>=1.16.2,<3"]
 release = ["build>=1.2", "twine>=6,<7", "PyYAML>=6,<7"]

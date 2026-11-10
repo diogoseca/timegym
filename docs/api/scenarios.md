@@ -60,6 +60,21 @@ The five core families have exact known-parameter Gaussian reference laws. For A
 context starts in its stationary distribution. A random walk starts at its
 configured intercept at index zero. Future innovations are integrated out.
 
+`ar2` is a stationary AR(2), `Y[t] - mean = phi1*(Y[t-1] - mean) +
+phi2*(Y[t-2] - mean) + epsilon[t]`, defaulting to `phi1=1.0, phi2=-0.5,
+sigma=1.0`. It requires `phi1 + phi2 < 1`, `phi2 - phi1 < 1` and `|phi2| < 1`
+and starts in its stationary distribution. With complex roots its shocks ring
+and fade, giving irregular cycles with no fixed period. It is a known-parameter
+kind but not one of `CORE_KINDS`, so the default suite is unchanged.
+
+`ar1`, `ar2` and `random_walk` accept an optional `noise` parameter: the
+standard deviation of measurement noise added to each observation of the
+hidden process. The noise is drawn after the process shocks, so changing it
+keeps the hidden path. With `noise` set (and always for `ar2`) the reference is
+the exact Kalman-filter prediction given the noisy context, and
+`reference.conditioning["reference_method"]` is `"kalman_filter"`. Without
+`noise`, `ar1` and `random_walk` keep their analytic references and manifests.
+
 The five core families are listed by `timegym.scenarios.CORE_KINDS`, derived from
 the scenario defaults. `timegym.data.synthetic.default_scenarios(context_length=120,
 horizon=12, *, n_targets=1, seed=0)` creates fresh specifications for those families.

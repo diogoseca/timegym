@@ -28,9 +28,16 @@ _DEFAULTS = {
     "seasonal": {"mean": 0.0, "amplitude": 1.0, "period": 12.0, "sigma": 1.0},
     "ar1": {"mean": 0.0, "phi": 0.8, "sigma": 1.0},
     "random_walk": {"intercept": 0.0, "drift": 0.0, "sigma": 1.0},
+    "ar2": {"mean": 0.0, "phi1": 1.0, "phi2": -0.5, "sigma": 1.0},
 }
 
-CORE_KINDS = tuple(_DEFAULTS)
+# The five families of the original suite; ``default_scenarios`` draws these.
+CORE_KINDS = ("white_noise", "trend", "seasonal", "ar1", "random_walk")
+# Families whose shocks persist. They also accept optional measurement
+# ``noise``: independent Gaussian error added to each observation, which
+# hides the process's current state from the forecaster.
+_MEASURED_KINDS = ("ar1", "ar2", "random_walk")
+_SCALAR_PARAMETERS = {"phi", "phi1", "phi2", "period"}
 
 # %% ../notebooks/01_synthetic_data.ipynb #01_synthetic_data-09
 
@@ -44,35 +51,105 @@ def scenario_label(kind: str, parameters=None, *, target_index=None) -> str:
     Parameters may be raw scalar/vector values or a resolved case manifest's
     parameter dictionary. A target index selects its drift for a plot facet;
     otherwise a mixed zero/nonzero drift vector is described at case level.
-    This formats labels rather than validating a full generator specification.
-    Unknown custom kinds are returned unchanged.
+    Nonzero measurement ``noise`` is named in the label. This formats labels
+    rather than validating a full generator specification. Unknown custom
+    kinds are returned unchanged.
     """
     if kind in PROCESS_KINDS:
         return process_label(
             kind, {} if parameters is None else parameters, target_index=target_index
         )
+    parameters = {} if parameters is None else parameters
     labels = {
         "white_noise": "Gaussian white noise (fixed mean)",
         "trend": "Linear trend + white noise",
         "seasonal": "Seasonality + white noise",
         "ar1": "Stationary AR(1)",
+        "ar2": "Stationary AR(2)",
     }
-    if kind != "random_walk":
-        return labels.get(kind, kind)
-    parameters = {} if parameters is None else parameters
-    drift = _real_array(parameters.get("drift", 0.0), "drift")
-    if drift.ndim > 1 or drift.size == 0 or not np.isfinite(drift).all():
-        raise ValueError("drift must be a finite scalar or a nonempty vector")
-    if target_index is not None:
-        target_index = nonnegative_int(target_index, "target_index")
-        if drift.ndim == 1:
-            drift = drift[target_index]
-    nonzero = drift != 0
-    if not np.any(nonzero):
-        return "Random walk without drift"
-    if np.all(nonzero):
-        return "Random walk with drift"
-    return "Random walk (mixed drift across targets)"
+    if kind == "random_walk":
+        drift = _real_array(parameters.get("drift", 0.0), "drift")
+        if drift.ndim > 1 or drift.size == 0 or not np.isfinite(drift).all():
+            raise ValueError("drift must be a finite scalar or a nonempty vector")
+        if target_index is not None:
+            target_index = nonnegative_int(target_index, "target_index")
+            if drift.ndim == 1:
+                drift = drift[target_index]
+        nonzero = drift != 0
+        if not np.any(nonzero):
+            label = "Random walk without drift"
+        elif np.all(nonzero):
+            label = "Random walk with drift"
+        else:
+            label = "Random walk (mixed drift across targets)"
+    else:
+        label = labels.get(kind, kind)
+    if kind in _MEASURED_KINDS and np.any(
+        np.asarray(parameters.get("noise", 0.0), dtype=float) != 0
+    ):
+        label += " + measurement noise"
+    return label
+
+
+# %% ../notebooks/01_synthetic_data.ipynb #scenario-kalman-forecast
+def _kalman_forecast(
+    observations,
+    transition,
+    offset,
+    innovation,
+    measurement,
+    initial_mean,
+    initial_covariance,
+    horizon,
+):
+    """Exact Gaussian forecast for a linear state observed with noise.
+
+    The state follows ``s_t = offset + transition @ s_{t-1} + shock`` and each
+    observation is the state's first ``d`` entries plus measurement error.
+    Returns the conditional mean ``(horizon, d)``, the horizon-major joint
+    covariance ``(horizon*d, horizon*d)`` and the final filtered state mean.
+    The Joseph-form update with a pseudo-inverse stays valid when an
+    observation is noise-free.
+    """
+    length, dimensions = observations.shape
+    size = len(offset)
+    loading = np.eye(dimensions, size)
+    mean, cov = initial_mean.copy(), initial_covariance.copy()
+    for t in range(length):
+        if t:
+            mean = offset + transition @ mean
+            cov = transition @ cov @ transition.T + innovation
+        gain = (
+            cov
+            @ loading.T
+            @ np.linalg.pinv(loading @ cov @ loading.T + measurement, hermitian=True)
+        )
+        mean = mean + gain @ (observations[t] - loading @ mean)
+        keep = np.eye(size) - gain @ loading
+        cov = keep @ cov @ keep.T + gain @ measurement @ gain.T
+        cov = (cov + cov.T) / 2
+    filtered = mean.copy()
+    means, state_covs = [], []
+    for _ in range(horizon):
+        mean = offset + transition @ mean
+        cov = transition @ cov @ transition.T + innovation
+        means.append(loading @ mean)
+        state_covs.append(cov)
+    joint = np.zeros((horizon * dimensions, horizon * dimensions))
+    for i in range(horizon):
+        cross = state_covs[i]
+        for j in range(i, horizon):
+            block = loading @ cross @ loading.T + (measurement if i == j else 0)
+            joint[
+                i * dimensions : (i + 1) * dimensions,
+                j * dimensions : (j + 1) * dimensions,
+            ] = block
+            joint[
+                j * dimensions : (j + 1) * dimensions,
+                i * dimensions : (i + 1) * dimensions,
+            ] = block.T
+            cross = cross @ transition.T
+    return np.array(means), (joint + joint.T) / 2, filtered
 
 
 # %% ../notebooks/01_synthetic_data.ipynb #01_synthetic_data-13
@@ -81,17 +158,24 @@ class Scenario:
     """A fully specified known-parameter data-generating process.
 
     Vector-valued location/scale parameters are allowed, with one entry per
-    target. ``phi`` and ``period`` are scalar. ``correlation`` is either an
-    equicorrelation coefficient or a positive-semidefinite correlation matrix.
+    target. ``phi``, ``phi1``, ``phi2`` and ``period`` are scalar.
+    ``correlation`` is either an equicorrelation coefficient or a
+    positive-semidefinite correlation matrix.
 
     AR(1) starts from its stationary distribution and requires ``abs(phi)<1``.
+    AR(2) uses two lags, ``phi1`` and ``phi2``; with ``phi1**2 + 4*phi2 < 0``
+    its shocks ring as irregular cycles. It also starts stationary.
     White noise fluctuates around a fixed mean; trend and seasonal processes
     add noise independently over time to a deterministic mean. Those shocks
     do not carry into future observations. A random walk instead accumulates
     shocks, starts at ``intercept`` at index zero, and has optional ``drift``
     (zero by default). Its variance grows with the forecast horizon. Targets
     may have correlated contemporaneous innovations in every family. Zero
-    ``sigma`` gives a degenerate deterministic component. Parameters are exposed
+    ``sigma`` gives a degenerate deterministic component. AR(1), AR(2) and
+    random walks accept an optional measurement ``noise``: an independent
+    Gaussian error with that standard deviation is added to each
+    observation, so the process's current state is hidden; the reference is
+    then the exact Kalman-filter conditional law. Parameters are exposed
     to the evaluator only; a model receives just ``case.task``. The
     composite, Merton, GARCH and hidden-regime processes also support joint
     targets, with explicit dependence laws and reference capabilities. These
@@ -141,7 +225,10 @@ class Scenario:
         nonnegative_int(self.seed, "seed")
         if not isinstance(self.parameters, dict):
             raise TypeError("parameters must be a dictionary")
-        unsupported = set(self.parameters) - set(_DEFAULTS[self.kind]) - {"correlation"}
+        optional = {"correlation"} | (
+            {"noise"} if self.kind in _MEASURED_KINDS else set()
+        )
+        unsupported = set(self.parameters) - set(_DEFAULTS[self.kind]) - optional
         if unsupported:
             raise ValueError(
                 f"Unsupported parameters for {self.kind}: {sorted(unsupported)}"
@@ -176,7 +263,7 @@ class Scenario:
             value = _real_array(raw, name)
             if not np.isfinite(value).all():
                 raise ValueError(f"{name} must be finite")
-            if name in {"phi", "period"}:
+            if name in _SCALAR_PARAMETERS:
                 if value.ndim != 0:
                     raise ValueError(f"{name} must be scalar")
                 resolved[name] = float(value)
@@ -190,6 +277,14 @@ class Scenario:
                 resolved[name] = value
         if np.any(resolved["sigma"] < 0):
             raise ValueError("sigma must be nonnegative")
+        if "noise" in resolved and np.any(resolved["noise"] < 0):
+            raise ValueError("noise must be nonnegative")
+        if self.kind == "ar2":
+            phi1, phi2 = resolved["phi1"], resolved["phi2"]
+            if not (phi1 + phi2 < 1 and phi2 - phi1 < 1 and abs(phi2) < 1):
+                raise ValueError(
+                    "Stationary ar2 requires phi1 + phi2 < 1, phi2 - phi1 < 1 and abs(phi2) < 1"
+                )
         if "phi" in resolved and not abs(resolved["phi"]) < 1:
             raise ValueError("Stationary ar1 requires abs(phi) < 1")
         if "period" in resolved and resolved["period"] <= 0:
@@ -251,6 +346,49 @@ class Scenario:
             temporal_cov = loading @ loading.T
             conditioning["last_observed"] = last.tolist()
             conditioning["initialization"] = "stationary_distribution"
+            state = (
+                np.full((1, 1), phi),
+                (1 - phi) * p["mean"],
+                p["mean"],
+                innovation_cov / (1.0 - phi * phi),
+            )
+        elif self.kind == "ar2":
+            phi1, phi2 = p["phi1"], p["phi2"]
+            # Stationary covariance of (x_t, x_{t-1}) for unit-variance shocks.
+            gamma0 = (1 - phi2) / ((1 + phi2) * ((1 - phi2) ** 2 - phi1**2))
+            stationary = np.kron(
+                np.array(
+                    [
+                        [gamma0, phi1 * gamma0 / (1 - phi2)],
+                        [phi1 * gamma0 / (1 - phi2), gamma0],
+                    ]
+                ),
+                innovation_cov,
+            )
+            low, vectors = np.linalg.eigh(stationary)
+            start = np.tile(p["mean"], 2) + (
+                vectors * np.sqrt(np.maximum(low, 0.0))
+            ) @ rng.standard_normal(2 * dimensions)
+            values = np.empty_like(noise)
+            values[0], previous = start[:dimensions], start[dimensions:]
+            for t in range(1, len(values)):
+                values[t] = (
+                    p["mean"]
+                    + phi1 * (values[t - 1] - p["mean"])
+                    + phi2 * (previous - p["mean"])
+                    + noise[t]
+                )
+                previous = values[t - 1]
+            conditioning["initialization"] = "stationary_distribution"
+            identity = np.eye(dimensions)
+            state = (
+                np.block(
+                    [[phi1 * identity, phi2 * identity], [identity, 0 * identity]]
+                ),
+                np.concatenate([(1 - phi1 - phi2) * p["mean"], np.zeros(dimensions)]),
+                np.tile(p["mean"], 2),
+                stationary,
+            )
         else:  # random_walk
             values = np.empty_like(noise)
             values[0] = p["intercept"]
@@ -263,6 +401,37 @@ class Scenario:
             )
             conditioning["last_observed"] = last.tolist()
             conditioning["initialization"] = "intercept_at_index_zero"
+            state = (
+                np.eye(1),
+                p["drift"],
+                p["intercept"],
+                np.zeros((dimensions, dimensions)),
+            )
+
+        covariance = None
+        if self.kind == "ar2" or "noise" in p:
+            # Measurement noise is drawn after the process shocks, so the hidden
+            # path is the same at every noise level for a given seed.
+            measurement = np.zeros(dimensions) if "noise" not in p else p["noise"]
+            values = values + rng.standard_normal(values.shape) * measurement
+            transition, offset, initial_mean, initial_cov = state
+            if transition.shape[0] < len(offset):
+                transition = np.kron(transition, np.eye(dimensions))
+            state_innovation = np.zeros((len(offset), len(offset)))
+            state_innovation[:dimensions, :dimensions] = innovation_cov
+            conditional_mean, covariance, filtered = _kalman_forecast(
+                values[:length],
+                transition,
+                offset,
+                state_innovation,
+                np.diag(measurement**2),
+                np.broadcast_to(initial_mean, offset.shape).astype(float),
+                initial_cov,
+                horizon,
+            )
+            conditioning.pop("last_observed", None)
+            conditioning["filtered_state"] = filtered[:dimensions].tolist()
+            conditioning["reference_method"] = "kalman_filter"
 
         names = ("y",) if dimensions == 1 else tuple(f"y{i}" for i in range(dimensions))
         context_index = pd.RangeIndex(length)
@@ -273,7 +442,8 @@ class Scenario:
         observed = pd.DataFrame(
             values[length:].copy(), index=future_index, columns=names
         )
-        covariance = np.kron(temporal_cov, innovation_cov)
+        if covariance is None:
+            covariance = np.kron(temporal_cov, innovation_cov)
         variance = np.diag(covariance).reshape(horizon, dimensions).copy()
         resolved_parameters = {
             name: value.tolist() if isinstance(value, np.ndarray) else value

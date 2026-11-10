@@ -86,8 +86,9 @@ def test_forecasts_are_unconnected_blue_crosses_and_observations_gray_dots():
     assert lines["Forecast origin"].get_linestyle() == "--"
     np.testing.assert_allclose(lines["Forecast origin"].get_xdata(), [23.5, 23.5])
     np.testing.assert_allclose(axis.get_xlim(), [0, 32])
-    assert "observed MSE=" in axis.get_title(loc="left")
-    assert "mean-reference MSE=" in axis.get_title(loc="left")
+    assert "vs what happened " in axis.get_title(loc="left")
+    assert "error vs answer key " in axis.get_title(loc="left")
+    assert "/100" in axis.get_title(loc="left")
 
 
 def test_multitarget_single_seed_and_duplicate_scenario_kinds_have_distinct_rows():
@@ -232,22 +233,6 @@ def test_importing_package_does_not_import_matplotlib():
     completed = subprocess.run([sys.executable, "-c", source], cwd=Path(__file__).resolve().parents[1],
                                env=os.environ.copy(), capture_output=True, text=True, check=False)
     assert completed.returncode == 0, completed.stderr
-
-
-def test_plotting_without_matplotlib_names_the_plots_extra(monkeypatch):
-    import builtins
-
-    run = Pipeline().run([Scenario("white_noise", context_length=10, horizon=3)], seeds=[4])
-    original = builtins.__import__
-
-    def without_matplotlib(name, *args, **kwargs):
-        if name == "matplotlib" or name.startswith("matplotlib."):
-            raise ImportError("No module named matplotlib")
-        return original(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", without_matplotlib)
-    with pytest.raises(ImportError, match=r"Install timegym\[plots\]"):
-        run.plot_forecasts()
 
 
 def test_mixed_random_walk_drift_is_named_per_target_and_aggregated_in_error_plot():

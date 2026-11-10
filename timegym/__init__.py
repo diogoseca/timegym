@@ -12,6 +12,8 @@ from .reporting import (
     CaseResult,
 )
 from .evaluation import ForecastRun, EvaluatedCase
+from .grid import PATTERNS, GridCell, scenario_grid
+from .scorecard import Scorecard
 
 __all__ = [
     "Case",
@@ -30,6 +32,10 @@ __all__ = [
     "DiagnosticCategory",
     "DiagnosticResult",
     "CaseResult",
+    "Scorecard",
+    "PATTERNS",
+    "GridCell",
+    "scenario_grid",
 ]
 
 # %% ../notebooks/12_package.ipynb #12_package-05

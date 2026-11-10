@@ -12,6 +12,7 @@ import numpy as np
 
 __all__ = [
     "REPORT_SCHEMA_VERSION",
+    "CHECKS",
     "DiagnosticStatus",
     "DiagnosticCategory",
     "DiagnosticResult",
@@ -190,6 +191,76 @@ def _report_text(value, path, *, allow_empty=False):
         )
 
 
+# %% ../notebooks/10_reports_and_replay.ipynb #report-check-names
+# The output checks in plain words, in display order. Each forecast is
+# checked before it is scored; a case passes a check when the check ran and
+# none of the diagnostics it covers failed.
+CHECKS = {
+    "runs": "Runs without errors",
+    "dates": "Forecasts the requested dates",
+    "series": "Returns every series, in order",
+    "shape": "Right number of steps and series",
+    "finite": "No missing or infinite values",
+    "quantiles": "Quantiles in order",
+    "dependence": "Joint spread matches the answer key",
+}
+_CHECK_CODES = {
+    "series": {"target_names", "target_mismatch"},
+    "shape": {"point_shape", "quantile_shape", "sample_shape", "missing_prediction"},
+    "quantiles": {
+        "invalid_levels",
+        "duplicate_levels",
+        "nonmonotonic_levels",
+        "missing_quantiles",
+        "quantile_crossing",
+    },
+}
+
+
+def _check_key(name):
+    """Map a diagnostic name to the plain check it belongs to, if any."""
+    if name in ("model_execution", "forecast_contract"):
+        return "runs" if name == "model_execution" else None
+    if name == "reference_covariance":
+        return "dependence"
+    if not name.startswith("contract_"):
+        return None
+    code = name[len("contract_") :]
+    if code.startswith("index_"):
+        return "dates"
+    if code.startswith(("nonfinite_", "nonreal_")):
+        return "finite"
+    return next((key for key, codes in _CHECK_CODES.items() if code in codes), None)
+
+
+def _case_checks(case):
+    """Return ``{check: True/False}`` for the checks that ran on one case."""
+    by_name = {}
+    for diagnostic in case.diagnostics:
+        by_name.setdefault(diagnostic.name, []).append(diagnostic)
+    crashed = any(
+        d.failed
+        for name in ("model_execution", "forecast_contract")
+        for d in by_name.get(name, [])
+    )
+    outcome = {"runs": not crashed}
+    if crashed:
+        return outcome
+    failed = {_check_key(d.name) for d in case.diagnostics if d.failed}
+    for key in ("dates", "series", "shape", "finite"):
+        outcome[key] = key not in failed
+    quantiles_given = any(
+        d.status != "UNSUPPORTED" for d in by_name.get("quantile_accuracy", [])
+    )
+    if quantiles_given or "quantiles" in failed:
+        outcome["quantiles"] = "quantiles" not in failed
+    if any(
+        d.status in ("PASS", "FAIL") for d in by_name.get("reference_covariance", [])
+    ):
+        outcome["dependence"] = "dependence" not in failed
+    return outcome
+
+
 # %% ../notebooks/10_reports_and_replay.ipynb #10_reports_and_repla-15
 @dataclass
 class TestReport:
@@ -347,20 +418,46 @@ class TestReport:
         """Read and validate a report file; paths are explicit, never guessed."""
         return cls.from_json(Path(path).read_bytes())
 
-    def assert_passed(self):
-        """Raise for FAIL/ERROR; INCONCLUSIVE and UNSUPPORTED remain explicit.
+    @property
+    def checks(self):
+        """Count, per plain-language output check, the cases that passed and failed.
 
-        This is a CI gate for detected failures, not a claim that every possible
-        forecasting capability was tested or passed.
+        Returns one dictionary per check that ran on at least one case, in the
+        order of ``CHECKS``: ``{"check", "title", "passed", "failed"}``.
+        Scores are not checks: they have no pass mark.
+        """
+        counts = {key: [0, 0] for key in CHECKS}
+        for case in self.cases:
+            for key, passed in _case_checks(case).items():
+                counts[key][0 if passed else 1] += 1
+        return [
+            {"check": key, "title": CHECKS[key], "passed": passed, "failed": failed}
+            for key, (passed, failed) in counts.items()
+            if passed + failed
+        ]
+
+    def assert_passed(self):
+        """Raise when an output check failed or the model raised; otherwise return self.
+
+        The error names each failed check in plain words, then lists every
+        failing case. Scores never fail this gate: TimeGym sets no accuracy
+        pass mark, so INCONCLUSIVE and UNSUPPORTED results do not raise.
         """
         failures = [
-            f"{case.scenario}[seed={case.seed}] {diagnostic.name}: {diagnostic.message}"
+            f"  {case.scenario}[seed={case.seed}] {diagnostic.name}: {diagnostic.message}"
             for case in self.cases
             for diagnostic in case.diagnostics
             if diagnostic.failed
         ]
         if failures:
-            raise AssertionError("TimeGym detected failures:\n" + "\n".join(failures))
+            failed = [
+                f"{row['title']}: failed in {row['failed']} of {row['passed'] + row['failed']} cases"
+                for row in self.checks
+                if row["failed"]
+            ]
+            raise AssertionError(
+                "TimeGym detected failures:\n" + "\n".join(failed + failures)
+            )
         return self
 
     def replay_case(self, case_index=0):

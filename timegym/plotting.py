@@ -30,10 +30,8 @@ _STYLE = {
 
 # %% ../notebooks/11_plotting.ipynb #11_plotting-07
 def _pyplot():
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError as exc:
-        raise ImportError("Install timegym[plots] to create forecast figures") from exc
+    import matplotlib.pyplot as plt
+
     return plt
 
 
@@ -128,7 +126,24 @@ def _valid_reference(case):
 
 
 # %% ../notebooks/11_plotting.ipynb #11_plotting-19
-def _draw_case(ax, entry, target, *, show_quantiles):
+def _run_title(run, scenario_index):
+    """The run's plain-words title for a scenario position, if it has one."""
+    titles = getattr(run, "titles", None) or []
+    return titles[scenario_index] if scenario_index < len(titles) else None
+
+
+def _reference_spread(case, dimension):
+    """Mean variance of the answer key for one series: the unavoidable error."""
+    try:
+        spread = float(
+            np.mean(np.asarray(case.reference.variance, dtype=float)[:, dimension])
+        )
+    except (AttributeError, IndexError, TypeError, ValueError):
+        return None
+    return spread if np.isfinite(spread) and spread > 0 else None
+
+
+def _draw_case(ax, entry, target, *, show_quantiles, title=None):
     case = entry.case
     task = case.task
     messages = []
@@ -229,13 +244,21 @@ def _draw_case(ax, entry, target, *, show_quantiles):
                     linestyle="None",
                     label="Predictive mean",
                 )
+                if reference_valid:
+                    gap = metrics.mean_reference_mse(
+                        case.reference.mean[:, dimension], point
+                    )
+                    spread = _reference_spread(case, dimension)
+                    if (
+                        spread is not None
+                    ):  # the scorecard's 0-100 score, for this one case
+                        score_text.append(
+                            f"score {100 * spread / (spread + gap):.0f}/100"
+                        )
+                    score_text.append(f"error vs answer key {gap:.3g}")
                 if observed_valid:
                     score_text.append(
-                        f"observed MSE={metrics.mse(observed, point):.3g}"
-                    )
-                if reference_valid:
-                    score_text.append(
-                        f"mean-reference MSE={metrics.mean_reference_mse(case.reference.mean[:, dimension], point):.3g}"
+                        f"vs what happened {metrics.mse(observed, point):.3g}"
                     )
             else:
                 messages.append(
@@ -273,11 +296,17 @@ def _draw_case(ax, entry, target, *, show_quantiles):
     label = scenario_label(
         entry.result.scenario, case.manifest.get("parameters"), target_index=dimension
     )
-    title = f"{entry.scenario_index + 1}. {label} · {target} · seed={entry.result.seed}"
+    if title is None:
+        title = (
+            f"{entry.scenario_index + 1}. {label} · {target} · seed={entry.result.seed}"
+        )
+    else:
+        several = len(task.target_names) > 1
+        title = f"{title}{f' · {target}' if several else ''} · instance {entry.seed_index + 1}"
     if len(title) > 82:
         title = textwrap.fill(title, width=70, break_long_words=False)
     if score_text:
-        title += "\n" + "; ".join(score_text)
+        title += "\n" + " · ".join(score_text)
     ax.set_title(title, loc="left")
     ax.legend(loc="upper left")
     _annotate(ax, messages)
@@ -335,7 +364,13 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None):
                         ha="center",
                     )
                 else:
-                    _draw_case(ax, entry, target, show_quantiles=show_quantiles)
+                    _draw_case(
+                        ax,
+                        entry,
+                        target,
+                        show_quantiles=show_quantiles,
+                        title=_run_title(run, scenario_index),
+                    )
         return fig
 
 
@@ -407,17 +442,18 @@ def plot_errors(
                     values, bins=bin_count, color=_BLUE, alpha=0.55, edgecolor="white"
                 )
             label = (
-                "Mean-reference MSE"
+                "Error against the answer key (MSE)"
                 if metric == "mean_reference_mse"
-                else "Observed-future MSE" if metric == "mse" else metric
+                else "Error against what happened (MSE)" if metric == "mse" else metric
             )
-            ax.set_xlabel(f"{label} (one whole-case score)")
+            ax.set_xlabel(f"{label}, one score per case")
             ax.set_ylabel("Evaluated cases")
-            process = scenario_label(
+            titled = _run_title(run, scenario_index)
+            process = titled or scenario_label(
                 entries[0].result.scenario, entries[0].case.manifest.get("parameters")
             )
             ax.set_title(
-                f"{scenario_index + 1}. {process} · "
+                f"{'' if titled else f'{scenario_index + 1}. '}{process} · "
                 f"{len(values)} scored / {len(entries)} evaluated cases",
                 loc="left",
             )
