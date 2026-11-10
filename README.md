@@ -235,19 +235,19 @@ the reason before it scores anything.
 
 A forecaster is any object with two methods. `fit(context)` gets the series so
 far. `predict(future_index)` gets the dates to forecast, the steps right after
-the context, and returns a `Forecast` with one value per date. This one
-repeats the last value it saw:
+the context, and returns one value per date: a `Forecast`, or simply a list
+or NumPy array. This one repeats the last value it saw:
 
 ```python
 from timegym import Forecast, Pipeline
 
 class LastValueForecaster:
-    def fit(self, context):            # the series so far: a DataFrame with a column y
-        self.last = context["y"].iloc[-1]
+    def fit(self, context):            # the series so far, one column per series
+        self.last = context.iloc[-1]   # the last row seen
         return self
 
     def predict(self, future_index):   # the dates to forecast
-        return Forecast(index=future_index, point=[[self.last]] * len(future_index))
+        return Forecast(future_index, [self.last] * len(future_index))
 
 card = Pipeline(LastValueForecaster()).scorecard()
 ```
