@@ -10,6 +10,7 @@ from ._internal import positive_int
 from .contracts import _describe_shift, _index_shift
 from .evaluation import ForecastRun
 from .grid import PATTERNS, GridCell, scenario_grid
+from .plotting import _BAND_COLORS, _FORECAST, _HAIRLINE, _INK, _MUTED, _SURFACE
 from .reporting import CHECKS, TestReport, _case_checks
 
 __all__ = ["VERDICTS", "verdict", "Scorecard", "scorecard"]
@@ -383,8 +384,9 @@ class Scorecard:
         lines = [
             f"## {self.title}: {self.score:.0f}/100",
             "",
-            f"TimeGym scorecard: {self.table['pattern'].nunique()} kinds of series x {len(levels)} "
-            f"noise levels, {self.instances} instances each, seed {self.seed}.",
+            f"TimeGym scorecard: {_count(self.table['pattern'].nunique(), 'kind of series', 'kinds of series')}"
+            f" x {_count(len(levels), 'noise level', 'noise levels')}, "
+            f"{_count(self.instances, 'instance', 'instances')} each, seed {self.seed}.",
             "",
             "| Pattern | " + " | ".join(levels) + " | Mistakes |",
             "|---|" + "---|" * len(levels) + "---|",
@@ -460,16 +462,12 @@ _LEGEND = (
 )
 
 # %% ../notebooks/13_scorecard.ipynb #scorecard-plot
-_INK, _MUTED, _SURFACE, _HAIRLINE = "#0b0b0b", "#52514e", "#fcfcfb", "#c3c2b7"
-_FORECAST = "#2a78d6"
-# Verdict colors with the text color that stays readable on each.
-_BAND_COLORS = {
-    "Nails it": ("#0ca30c", "white"),
-    "Good": ("#8fd18f", _INK),
-    "Struggles": ("#fab219", _INK),
-    "Fails": ("#d03b3b", "white"),
-    None: ("#52514e", "white"),
-}
+# The palette and band colors come from timegym.plotting, shared by every figure.
+
+
+def _count(number, one, many):
+    """``1 kind of series``, ``10 kinds of series``."""
+    return f"{number} {one if number == 1 else many}"
 
 
 def _wrap(text, width):
@@ -558,8 +556,9 @@ def _plot_scorecard(card, *, compact=False):
     good, fails = card.good_at, card.fails_at
     headline = f"{card.title}: {card.score:.0f}/100"
     subtitle = (
-        f"TimeGym scorecard · {len(keys)} kinds of series × {len(levels)} noise levels · "
-        f"{card.instances} instances each · seed {card.seed}"
+        f"TimeGym scorecard · {_count(len(keys), 'kind of series', 'kinds of series')} × "
+        f"{_count(len(levels), 'noise level', 'noise levels')} · "
+        f"{_count(card.instances, 'instance', 'instances')} each · seed {card.seed}"
     )
     verdict_lines = [
         f"Good at: {', '.join(good) or 'none'}.",
@@ -670,9 +669,13 @@ def _plot_scorecard(card, *, compact=False):
                 va="top",
                 color=_MUTED,
             )
+        noise_headers = [f"{level} (sd {sd:g})" for level, sd in zip(levels, sds)]
+        if compact and any(len(header) > 18 for header in noise_headers):
+            # Narrow columns: every noise sd goes under its name, so the headers line up.
+            noise_headers = [f"{level}\n(sd {sd:g})" for level, sd in zip(levels, sds)]
         headers = (
             ["Pattern" if compact else "What can and can't be predicted"]
-            + [f"{level} (sd {sd:g})" for level, sd in zip(levels, sds)]
+            + noise_headers
             + ["Mistakes"]
         )
         for column, header in enumerate(headers):

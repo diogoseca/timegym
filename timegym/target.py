@@ -6,6 +6,7 @@ from numpy.typing import NDArray
 import numpy as np
 import pandas as pd
 from ._internal import positive_int
+import dataclasses
 from collections.abc import Sequence
 from scipy import optimize, special, stats
 from ._internal import _real_array
@@ -217,13 +218,16 @@ class _TargetTransform:
     def _fitted_on(self, context: pd.DataFrame) -> None:
         self.target_names_ = tuple(context.columns)
 
-    def _check_forecast(self, forecast: Forecast) -> None:
+    def _check_forecast(self, forecast: Forecast) -> Forecast:
+        """Return the forecast to invert; unnamed series are the fitted context's."""
         if not hasattr(self, "target_names_"):
             raise ValueError(
                 f"Call {type(self).__name__}.fit_transform(context) before inverse_transform"
             )
         if not isinstance(forecast, Forecast):
             raise TypeError("inverse_transform requires a timegym.Forecast")
+        if forecast.target_names is None:
+            forecast = dataclasses.replace(forecast, target_names=self.target_names_)
         problems = sorted({problem["code"] for problem in forecast.validate()})
         if problems:
             raise ValueError(
@@ -233,6 +237,7 @@ class _TargetTransform:
             raise ValueError(
                 "Forecast targets or their order differ from the fitted context"
             )
+        return forecast
 
 
 def _invert_elementwise(forecast: Forecast, inverse) -> Forecast:
@@ -291,7 +296,7 @@ class LogTransform(_TargetTransform):
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
         """Return a forecast that meets its contract on the original scale."""
-        self._check_forecast(forecast)
+        forecast = self._check_forecast(forecast)
         return _invert_elementwise(forecast, lambda values, axis: np.exp(values))
 
 
@@ -338,7 +343,7 @@ class BoxCoxTransform(_TargetTransform):
 
         Raises when a value has no Box-Cox preimage.
         """
-        self._check_forecast(forecast)
+        forecast = self._check_forecast(forecast)
         return _invert_elementwise(forecast, self._inverse)
 
     def _inverse(self, values: NDArray[np.float64], axis: int) -> NDArray[np.float64]:
@@ -396,7 +401,7 @@ class DifferenceTransform(_TargetTransform):
         Quantiles are recomputed from the integrated samples, or omitted
         without samples.
         """
-        self._check_forecast(forecast)
+        forecast = self._check_forecast(forecast)
         point = (
             None
             if forecast.point is None
@@ -480,7 +485,7 @@ class ComposedTransform(_TargetTransform):
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
         """Invert the members in reverse order."""
-        self._check_forecast(forecast)
+        forecast = self._check_forecast(forecast)
         for transform in reversed(self.transforms):
             forecast = transform.inverse_transform(forecast)
         return forecast

@@ -20,6 +20,8 @@ def _integer_index(result):
 
 
 def _multiple_targets(result):
+    if result.target_names is None:
+        raise ValueError("target_swap requires explicit target names")
     if len(result.target_names) < 2:
         raise ValueError("target_swap requires two or more targets")
 

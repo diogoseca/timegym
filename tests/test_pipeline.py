@@ -296,3 +296,104 @@ def test_ar1_custom_quantiles_use_the_returned_joint_samples():
     np.testing.assert_array_equal(forecast.quantiles,
                                   np.moveaxis(np.quantile(forecast.samples, model.levels, axis=0), 0, -1))
     assert forecast.validate(case.task) == []
+
+
+# --- What a custom model's predict may return -------------------------------------------
+
+class _LastRow:
+    """The README's last-value forecaster: remember the last row, repeat it."""
+
+    def fit(self, context):
+        self.last = context.iloc[-1]
+        return self
+
+    def predict(self, future_index):
+        return Forecast(future_index, [self.last] * len(future_index))
+
+
+class _Returns:
+    """Return whatever ``make(last, steps)`` builds from the last value of ``y``."""
+
+    def __init__(self, make):
+        self.make = make
+
+    def fit(self, context):
+        self.last = float(context.iloc[-1, 0])
+        return self
+
+    def predict(self, future_index):
+        return self.make(self.last, len(future_index))
+
+
+@pytest.mark.parametrize("make", [
+    lambda last, steps: [last] * steps,
+    lambda last, steps: tuple([last] * steps),
+    lambda last, steps: np.full(steps, last),
+    lambda last, steps: np.full((steps, 1), last),
+    lambda last, steps: [[last]] * steps,
+])
+def test_lists_and_arrays_are_one_value_per_requested_step(make):
+    case = Scenario("trend", context_length=20, horizon=3).generate(seed=0)
+    forecast = Pipeline(_Returns(make)).predict(case.task.context, case.task.future_index)
+    assert forecast.index.equals(case.task.future_index)
+    assert forecast.target_names == ("y",)
+    np.testing.assert_array_equal(forecast.point, np.full((3, 1), case.task.context.iloc[-1, 0]))
+    assert forecast.validate(case.task) == []
+
+
+def test_the_readme_forecaster_needs_no_numpy_or_target_names_for_several_series():
+    scenarios = [Scenario("ar1", context_length=12, horizon=3, n_targets=2),
+                 Scenario("trend", context_length=12, horizon=3)]
+    report = Pipeline(_LastRow()).test(scenarios, instances=2)
+    report.assert_passed()
+    reference = Pipeline(NaiveForecaster()).test(scenarios, instances=2)
+    assert ([case.metrics for case in report.cases]
+            == [case.metrics for case in reference.cases])
+
+
+def test_wrong_lengths_and_unusable_outputs_fail_with_their_reason():
+    scenario = Scenario("trend", context_length=12, horizon=3)
+    short = Pipeline(_Returns(lambda last, steps: [last] * (steps - 1))).test([scenario], instances=1)
+    assert short.cases[0].diagnostics[0].name == "contract_point_shape"
+    ragged = Pipeline(_Returns(lambda last, steps: [[last], [last, last], [last]])).test(
+        [scenario], instances=1)
+    assert ragged.cases[0].diagnostics[0].status == "FAIL"
+    several = Pipeline(_Returns(lambda last, steps: [last] * steps)).test(
+        [Scenario("ar1", context_length=12, horizon=3, n_targets=2)], instances=1)
+    assert any(d.name == "contract_point_shape" for d in several.cases[0].diagnostics)
+    scalar = Pipeline(_Returns(lambda last, steps: last)).test([scenario], instances=1)
+    execution = scalar.cases[0].diagnostics[0]
+    assert execution.name == "model_execution" and "one value per future step" in execution.message
+
+
+def test_a_pandas_output_still_has_its_dates_checked():
+    def shifted(last, steps):
+        return pd.Series([last] * steps)  # labelled 0, 1, 2 instead of the requested steps
+    report = Pipeline(_Returns(shifted)).test([Scenario("trend", context_length=12, horizon=3)],
+                                              instances=1)
+    assert any(d.name == "contract_index_mismatch" for d in report.cases[0].diagnostics)
+
+
+def test_unnamed_forecast_series_are_the_tasks_and_named_ones_are_still_checked():
+    case = Scenario("ar1", context_length=12, horizon=3, n_targets=2).generate(seed=0)
+    point = np.zeros((3, 2))
+    assert Forecast(case.task.future_index, point).validate(case.task) == []
+    assert Forecast(case.task.future_index, np.zeros((3, 1))).validate() == []
+    wrong = Forecast(case.task.future_index, point, target_names=("y1", "y0"))
+    assert {item["code"] for item in wrong.validate(case.task)} == {"target_mismatch"}
+    # Outside the pipeline a one-dimensional point is still a shape fault.
+    one = Scenario("trend", context_length=12, horizon=3).generate(seed=0)
+    flat = Forecast(one.task.future_index, np.zeros(3))
+    assert "point_shape" in {item["code"] for item in flat.validate(one.task)}
+
+
+def test_pipeline_predict_accepts_a_plain_list_or_array_as_the_past():
+    model = Pipeline(_LastRow())
+    forecast = model.predict([1.0, 2.0, 3.0], range(3, 6))
+    assert list(forecast.index) == [3, 4, 5] and forecast.target_names == ("y",)
+    np.testing.assert_array_equal(forecast.point, [[3.0], [3.0], [3.0]])
+    forecast = model.predict(np.arange(6.0).reshape(3, 2), range(3, 5))
+    assert forecast.target_names == (0, 1)
+    np.testing.assert_array_equal(forecast.point, [[4.0, 5.0], [4.0, 5.0]])
+    with pytest.raises(TypeError, match="context must be"):
+        model.predict({"y": [1.0, 2.0]}, range(2, 4))

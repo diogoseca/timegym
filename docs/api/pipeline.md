@@ -17,10 +17,15 @@ model and inverts the forecast the model returns, so evaluation sees the
 original scale.
 
 `.predict(context, future_index)` returns the model's Forecast for inspection.
-A model's `predict(future_index)` may return a `Forecast`, a pandas `DataFrame`
-indexed by the requested dates with one column per series, or a `Series` for a
-single series. A DataFrame keeps its own index and column names, so wrong dates
-or a wrong series order still fail their checks.
+`context` may be a DataFrame, a Series, or a list or NumPy array (labelled 0, 1,
+2, ...), and `future_index` any sequence of the labels to forecast, such as
+`range(120, 132)` after 120 values.
+A model's `predict(future_index)` returns one value per requested step: a list
+or NumPy array (one column per series when there are several), a `Forecast`, a
+pandas `DataFrame` indexed by the requested dates with one column per series,
+or a `Series` for a single series. A list or array has no dates, so its rows are
+taken as the requested steps in order. A DataFrame keeps its own index and
+column names, so wrong dates or a wrong series order still fail their checks.
 
 `.test(scenarios=None, seeds=None, *, seed=0, instances=None,
 check_dependence=False, n_calibration=99, alpha=0.05,
@@ -44,14 +49,18 @@ retains each `EvaluatedCase`, including the generated case, forecast (or `None`
 on model failure), result, and scenario/seed positions. This in-memory inspection
 object keeps arrays separate from the portable report schema.
 
-`run.plot_forecasts(*, show_quantiles=False, figsize=None)` draws scenario/target
-rows and seed columns with observation dots and unconnected forecast crosses.
-Optional shading shows marginal intervals. `run.plot_errors(metric="mean_reference_mse", *,
-bins=None, missing="raise", figsize=None)` shows one score per whole case;
-`missing="annotate"` explicitly permits unavailable scores and labels their
-counts and reasons. Each forecast panel's title gives the case's 0-100 score
-(as on the scorecard), its error against the answer key and its error against
-what happened. `run.titles` optionally names each scenario position in plain
+`run.plot_forecasts(*, show_quantiles=False, figsize=None, history=None)` draws
+scenario/target rows and seed columns in the scorecard's look: gray dots are
+observations, the black line is the answer key, blue crosses are the forecast,
+and one key above the panels names them. `history` is how many past steps each
+panel shows: four times the horizon by default, `"all"` for the whole context.
+Optional shading shows marginal intervals. Above each panel, the case's 0-100
+score sits in its colored band (as on the scorecard), next to its error against
+the answer key and its error against what happened.
+`run.plot_errors(metric="mean_reference_mse", *, bins=None, missing="raise",
+figsize=None)` shows one score per whole case, with a black line at each row's
+median; `missing="annotate"` explicitly permits unavailable scores and labels
+their counts and reasons. `run.titles` optionally names each scenario position in plain
 words for both plots; a scorecard's run sets them to the pattern and noise
 level, so `card.run.plot_forecasts()` zooms into its rows. Neither method refits models. Matplotlib is installed with
 TimeGym and imported only when a plot is drawn.

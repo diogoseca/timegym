@@ -14,6 +14,7 @@ import pytest
 
 from timegym import Forecast, NaiveForecaster, Pipeline, Scenario
 from timegym.evaluation import ForecastRun
+from timegym.plotting import _FORECAST, _INK, _MUTED
 
 
 @pytest.fixture(autouse=True)
@@ -75,20 +76,41 @@ def test_forecasts_are_unconnected_blue_crosses_and_observations_gray_dots():
     point = lines["Predictive mean"]
     assert point.get_marker() == "x"
     assert point.get_linestyle() == "None"
-    assert point.get_color() == "blue"
+    assert point.get_color() == _FORECAST
     assert len(point.get_xdata()) == 9
     for name in ["Observed context", "Held-out observations"]:
         assert lines[name].get_marker() == "."
         assert lines[name].get_linestyle() == "None"
-        assert lines[name].get_color() == "gray"
+        assert lines[name].get_color() == _MUTED
     reference = lines["Known conditional mean"]
+    assert reference.get_color() == _INK
     np.testing.assert_array_equal(reference.get_xdata(), np.arange(24, 33))
     assert lines["Forecast origin"].get_linestyle() == "--"
     np.testing.assert_allclose(lines["Forecast origin"].get_xdata(), [23.5, 23.5])
     np.testing.assert_allclose(axis.get_xlim(), [0, 32])
-    assert "vs what happened " in axis.get_title(loc="left")
-    assert "error vs answer key " in axis.get_title(loc="left")
-    assert "/100" in axis.get_title(loc="left")
+    assert axis.get_title(loc="left") == "1. Linear trend + white noise · seed 8"
+    header = [text.get_text() for text in axis.texts]
+    badge = next(text for text in header if "/" not in text and text.strip()[:1].isdigit())
+    assert badge.split()[-1] in {"it", "Good", "Struggles", "Fails"}
+    assert any("error vs answer key " in text and "vs what happened " in text for text in header)
+    assert axis.get_legend() is None
+    (key,) = figure.legends
+    assert [text.get_text() for text in key.get_texts()] == [
+        "Observations", "Answer key", "Forecast", "Forecast origin"]
+
+
+def test_forecast_panels_show_recent_history_unless_asked_for_all():
+    run = Pipeline().run([Scenario("trend", context_length=100, horizon=5)], seeds=[8])
+    recent = run.plot_forecasts().axes[0]
+    context = next(line for line in recent.lines if line.get_label() == "Observed context")
+    np.testing.assert_array_equal(context.get_xdata(), np.arange(80, 100))
+    np.testing.assert_allclose(recent.get_xlim(), [80, 104])
+    everything = run.plot_forecasts(history="all").axes[0]
+    np.testing.assert_allclose(everything.get_xlim(), [0, 104])
+    np.testing.assert_allclose(run.plot_forecasts(history=50).axes[0].get_xlim(), [50, 104])
+    for bad in (0, "recent", 2.5):
+        with pytest.raises((TypeError, ValueError)):
+            run.plot_forecasts(history=bad)
 
 
 def test_multitarget_single_seed_and_duplicate_scenario_kinds_have_distinct_rows():
@@ -213,7 +235,8 @@ def test_unknown_or_partly_missing_metrics_never_disappear_silently():
     with pytest.raises(ValueError, match="seed=2"):
         run.plot_errors()
     axis = run.plot_errors(missing="annotate").axes[0]
-    assert "1 scored / 2 evaluated cases" in axis.get_title(loc="left")
+    assert "1 scored / 2 evaluated cases" in axis.get_title(loc="right")
+    assert "median" in axis.get_title(loc="right")
     assert any("1 case(s) have no finite" in text.get_text() for text in axis.texts)
     assert sum(patch.get_height() for patch in axis.patches) == 1
 

@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- A custom model's `predict` may return a plain list or NumPy array: one value
+  per requested step for one series, or one row per step and one column per
+  series. TimeGym labels the rows with `future_index` and the columns with the
+  context's series. `Forecast(future_index, values)` takes one value per step
+  for a single series, and `target_names` now defaults to `None`, meaning the
+  task's series in order. The last-value forecaster needs no NumPy and no
+  target names: `self.last = context.iloc[-1]` in `fit`, then
+  `Forecast(future_index, [self.last] * len(future_index))` in `predict`.
+- `Pipeline.predict(context, future_index)` also takes a list or NumPy array as
+  the past (labelled 0, 1, 2, ...) and any sequence of labels as
+  `future_index`.
+- Forecast and error plots use the scorecard's look: gray dots for
+  observations, a black answer key, blue forecast crosses and one key above the
+  panels in plain words. Each forecast panel shows the case's score as a colored
+  badge, and only the last four horizons of history unless
+  `plot_forecasts(history="all")` or a number of steps is given. `plot_errors`
+  marks each row's median.
+- The scorecard says "1 kind of series" for a one-row card, and the compact
+  image puts each noise level's sd on its own line when three or more levels
+  would run their headers together.
+
 - Added the scorecard: `Pipeline(model).scorecard()` runs a forecaster on ten
   kinds of series at low and high noise and returns a `Scorecard`. Its image
   gives a 0-100 score, what the model is good at and fails at, the mistakes it
