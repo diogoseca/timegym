@@ -266,6 +266,10 @@ def test_last_value_nails_the_random_walk_and_misses_the_cycle():
     assert table.loc[("random_walk", "Low noise"), "score"] >= 90
     assert table.loc[("seasonal", "Low noise"), "score"] < 40
     assert "Misses the cycle" in table.loc[("seasonal", "Low noise"), "mistakes"]
+    # Bands describe skill; they are not checks. A "Fails" cell with valid output passes.
+    assert table.loc[("seasonal", "Low noise"), "verdict"] == "Fails"
+    report = card.report
+    assert report.assert_passed() is report
 
 
 def test_the_historical_mean_forecasts_a_rising_line_too_low():
