@@ -1,12 +1,5 @@
 # Notebook preview
 
-`quick-start-matrix.png`, at the top of the project README, is the forecast
-matrix from the earlier quick start: six kinds of series by three seeds, forecast
-by the recursive Ridge pipeline. The quick start now opens with the scorecard
-instead. The same settings live in
-[`paper/figure_matrix.py`](../../paper/figure_matrix.py), which draws the
-paper's version of this figure.
-
 `alignment-demo.png` is saved by the index-shift section of
 [`23_faults_repairs_and_replay.ipynb`](../23_faults_repairs_and_replay.ipynb)
 (cell `05-alignment-plot`): a seasonal forecast with its dates shifted by one
