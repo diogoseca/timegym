@@ -6,18 +6,24 @@ alongside the package's source notebooks. Start with
 and error distributions. See the [notebook guide](../notebooks/README.md) for
 univariate and multivariate uncertainty, real data, diagnosis, and development.
 
-This folder has two terminal examples:
+This folder has four terminal examples:
 
 - [`quickstart.py`](quickstart.py): generate controlled cases and inspect a
   diagnostic report.
 - [`reproduce_report.py`](reproduce_report.py): replay a saved report case for a
   supported built-in model.
+- [`scorecard.py`](scorecard.py): print and save the last-value forecaster's
+  scorecard.
+- [`readme_figures.py`](readme_figures.py): redraw the figures in the README's
+  "More things to do with a scorecard".
 
 From the project root:
 
 ```bash
 python examples/quickstart.py
 python examples/reproduce_report.py report.json --case-index 0
+python examples/scorecard.py scorecard.png
+python examples/readme_figures.py
 ```
 
 The original example notebook is preserved as
