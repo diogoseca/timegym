@@ -1,5 +1,12 @@
 # Scenarios and references
 
+**In short.** A `Scenario` is a recipe for a kind of series. `generate(seed)`
+draws one `Case` from it: the past your model sees (`case.task`), the future
+that then happened (`case.observed`), and the answer key (`case.reference`):
+the expected value and the spread of every future step, given that past. Your
+model never sees the future or the answer key; only the scorer does.
+[Synthetic scenarios](../stress-cases.md) describes each recipe in plain terms.
+
 Synthetic cases and their known conditional references: `Scenario`, `Case` and
 `Reference` from `timegym`, `DEFAULT_LEVELS` from `timegym.contracts`, and
 `scenario_label` from `timegym.scenarios`.

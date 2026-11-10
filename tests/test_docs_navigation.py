@@ -63,7 +63,7 @@ def test_tutorial_lists_agree():
             "notebooks/README.md", "| Group | Application | Explore |"
         ),
         "docs/notebooks.md": table_tutorials(
-            "docs/notebooks.md", "| Group | Tutorial | Question it answers | Needs |"
+            "docs/notebooks.md", "| Group | Tutorial | Question it answers |"
         ),
     }
     for path, listed in lists.items():

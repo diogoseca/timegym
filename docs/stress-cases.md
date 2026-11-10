@@ -1,11 +1,70 @@
-# Synthetic forecasting stress cases
+# Synthetic scenarios
 
-TimeGym separates the **process generating a test case** from the **forecasting
-model being tested**. A generator supplies controlled observations and conditional
-references; the same `Pipeline` can test a statistical, econometric, or machine
-learning forecaster against them.
+A scenario is a recipe for a kind of series. TimeGym draws a past and a future
+from it, gives your model the past, and keeps the answer key: the expected value
+and the spread of every future step, given that past. Because the recipe is
+known, so is the limit of what any forecaster can achieve on it. The useful
+question for each scenario is what a forecast *can* get right, and what nobody
+can.
 
-## Seasonality, drift, and changing mechanisms
+## The core scenarios
+
+| Scenario | What the series does | What a good forecast gets right | What nobody can predict |
+| --- | --- | --- | --- |
+| Noise around a fixed level (`white_noise`) | Scatters randomly around a constant | The level | Each individual wiggle |
+| Noise around a trend (`trend`) | A straight line plus scatter | The line, extended | The scatter |
+| Noise around a season (`seasonal`) | A repeating wave plus scatter | The wave, repeated | The scatter |
+| Mean reversion (`ar1`, also called AR(1)) | Wanders, but is pulled back to its mean | The next few steps, sliding back to the mean | Anything beyond that: far ahead, the best forecast is the mean |
+| Random walk (`random_walk`) | Each step adds a fresh shock to the last value, and shocks never fade | Only that it stays near where it is now | Which way it goes; the uncertainty grows with every step ahead |
+| Random walk with drift (`random_walk` with `drift`) | A random walk with a steady push | The push | The wandering around it |
+
+In the first three, the noise is fresh at every step and leaves no trace: the
+best forecast is the underlying level, line or wave, and the error that remains
+is the noise itself. In the last three, each shock carries into the future, so
+where the series is now matters.
+
+**Mean reversion and random walks are the same equation.** Write the series as
+its distance from a mean `m`. Each step keeps a fraction `phi` of the last
+step's distance and adds a fresh shock `e[t]`:
+
+```text
+y[t] - m = phi * (y[t-1] - m) + e[t]
+```
+
+- With `phi` between 0 and 1 (TimeGym's default is 0.8) the series is
+  *mean-reverting*, also called a stationary *autoregressive* process of order
+  one, AR(1): "autoregressive" because each value is regressed on the one before
+  it. A shock fades by a factor `phi` per step, so after `h` steps only
+  `phi**h` of today's distance from the mean remains (0.8 to the 12th power is
+  about 0.07). The best forecast slides from today's value back to the mean.
+- With `phi = 1` the pull disappears: `y[t] = y[t-1] + e[t]` is a *random walk*.
+  Shocks never fade, the best forecast is today's value, and its uncertainty
+  keeps growing: `h` steps ahead the variance is `h` times the variance of one
+  shock. A drift adds a constant to every step.
+- With `phi` between -1 and 0, the series alternates around the mean. A
+  positive `phi` does not make the series cycle; a regular cycle is what the
+  seasonal scenario provides.
+
+A random walk without drift can still look like a trend in one draw. That is
+why every scenario is drawn many times: one draw can mislead, the spread of
+errors across draws does not.
+
+## Composed and financial scenarios
+
+Four more recipes combine or extend the core ones. Each works for one series or
+for several correlated series.
+
+| Scenario | What it adds | What it tests |
+| --- | --- | --- |
+| `composite` | A trend, a season and noise together, with optional scheduled changes and jumps | Whether a model separates the parts, and how it copes when one changes |
+| `merton_jump_diffusion` | A price that drifts and diffuses, with occasional sudden jumps | Whether forecasts and their spread account for jumps |
+| `garch` | Returns whose volatility clusters: calm periods and turbulent periods | Whether the forecast spread widens and narrows with recent volatility |
+| `markov_switching` | Hidden regimes, such as calm and stressed, with different behavior in each | Whether a model infers the regime it cannot see |
+
+The rest of this page explains these four in more depth: what they can and
+cannot show, and how to build a test out of them.
+
+## Changing mechanisms
 
 Seasonality repeats: for example, a cycle with fixed amplitude, period, and phase.
 Process drift is an expected increment, as in a random walk with drift. Concept

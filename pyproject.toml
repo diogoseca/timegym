@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "timegym"
 dynamic = ["version"]
-description = "Controlled verification and diagnosis for forecasting pipelines"
+description = "A gym for time series forecasting algorithms"
 readme = "README.md"
 requires-python = ">=3.11,<3.16"
 license = {file = "LICENSE"}
