@@ -27,13 +27,13 @@ after that gives 1.3.8. Only Diogo Seca starts a new major version, which
 restarts both counters at 0.
 
 Pull requests do not edit the version, `CITATION.cff` or the changelog heading;
-the release workflow writes them. Label a pull request `feature` or `fix` when it
-should produce a release, and leave documentation, paper and tooling changes
-unlabeled. A pull request may add user-facing notes under a `## Unreleased`
-heading at the top of `CHANGELOG.md`. When that section has text it becomes the
-version's CHANGELOG entry; otherwise the entry lists the labeled pull request
-titles. GitHub generates the release-page notes. To check the release metadata
-by hand:
+the release workflow writes them in its release pull request. Label a pull
+request `feature` or `fix` when it should produce a release, and leave
+documentation, paper and tooling changes unlabeled. A pull request may add
+user-facing notes under a `## Unreleased` heading at the top of `CHANGELOG.md`.
+When that section has text it becomes the version's CHANGELOG entry; otherwise
+the entry lists the labeled pull request titles. GitHub generates the
+release-page notes. To check the release metadata by hand:
 
 ```bash
 .venv/bin/python tools/sync_citation.py --check --tag v1.1.0
@@ -50,7 +50,7 @@ The release workflow commits generated sources along with their inputs before ta
 
 Nothing reaches PyPI without a `v*` tag: `release.yml` is the only publishing
 path, and it runs only for a tag, which `tag-release.yml` creates and
-dispatches after a labeled merge. The package uses
+dispatches when its release pull request is merged. The package uses
 [trusted publishing](https://docs.pypi.org/trusted-publishers/), so no API token
 or repository secret is involved; an account-wide `twine` token is not needed.
 
@@ -66,29 +66,14 @@ or repository secret is involved; an account-wide `twine` token is not needed.
    with pattern `v*`. The workflow's publish job uses this environment and
    requests `id-token: write` for OIDC authentication.
 4. Under **Settings → Actions → General**, allow the actions used by these
-   workflows and enable **Allow GitHub Actions to create and approve pull
-   requests** for the compatibility bot. Workflows declare their own minimal
-   permissions. The `feature`, `fix` and `python-compatibility` labels are
-   created the first time a pull request uses them.
-5. `tag-release.yml` pushes its version commit and tag straight to `main`. The
-   ruleset on `main` requires pull requests, so GitHub rejects that push
-   ("Changes must be made through a pull request") and nothing is tagged
-   unless the push may bypass the ruleset. The workflow pushes with a write
-   deploy key that the ruleset lets through:
-   1. Make a key pair without a passphrase:
-      `ssh-keygen -t ed25519 -N '' -C timegym-release -f timegym-release`.
-   2. Under **Settings → Deploy keys → Add deploy key**, name it
-      `timegym-release`, paste `timegym-release.pub` and tick **Allow write
-      access**.
-   3. Under **Settings → Secrets and variables → Actions → New repository
-      secret**, name it `RELEASE_DEPLOY_KEY` and paste the whole private key
-      file `timegym-release`. Delete both local files afterwards.
-   4. Under **Settings → Rules → Rulesets**, open the ruleset that targets
-      `main`, choose **Add bypass** under **Bypass list**, pick **Deploy keys**
-      and save the ruleset.
-
-   Without the secret the job pushes with `GITHUB_TOKEN`, which succeeds only
-   if the ruleset lets GitHub Actions bypass it.
+   workflows and, under **Workflow permissions**, enable **Allow GitHub Actions
+   to create and approve pull requests** for the release pull request and the
+   compatibility bot. Workflows declare their own minimal permissions. The
+   `feature`, `fix` and `python-compatibility` labels are created the first time
+   a pull request uses them.
+5. The ruleset on `main` requires pull requests, so `tag-release.yml` never
+   pushes to `main`: it proposes each version as a pull request and pushes
+   only the release branch and the tag, which the ruleset does not cover.
 
 These fields must match the [PyPI trusted publisher configuration](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
 
@@ -130,28 +115,36 @@ does not submit or replace arXiv papers.
 ## Automatic releases
 
 Nobody tags by hand. Merging a pull request into `main` runs `tag-release.yml`.
-It finds the latest `v*` tag and counts the pull requests labeled `feature` or
-`fix` merged since then. When there is at least one, `tools/release_version.py`
+It counts the pull requests labeled `feature` or `fix` merged since the tag of
+the version on `main`. When there is at least one, `tools/release_version.py`
 writes the next version into notebook 12, `CITATION.cff` (dated the day of the
 run) and `CHANGELOG.md`. The job regenerates the package module, README
 citation and standalone manuscript, runs the release-metadata checks, commits
-`Release X.Y.Z` to `main` with the annotated tag `vX.Y.Z`, and pushes both with
-the release deploy key. That push starts `release.yml` for the tag and the
-documentation deploy. When the job pushes with `GITHUB_TOKEN` instead, it
-dispatches both workflows itself, because a push made with that token starts no
-workflow. Unlabeled merges release nothing; their changes ship with the next
-labeled one.
+`Release X.Y.Z` on the `release` branch and opens the **Release X.Y.Z** pull
+request. Unlabeled merges release nothing by themselves; their changes ship
+with the next release.
 
-To release pending changes without a new merge, or to start a major version,
-open **Actions → Version and tag merged changes → Run workflow** and tick
-**major** for a major version. The job refuses to run when `__version__` on
-`main` differs from the latest tag, which catches hand-edited versions. Several
-quick merges queue behind each other; each run counts everything since the
-latest tag, so later runs find nothing left and stop. If a merge lands while a
-run is preparing a release, GitHub refuses that run's push; the run then stops
-without failing and leaves the release to the newer merge's run, which counts
-both. A merge from a fork runs without secrets and with a read-only token, so
-it cannot release; run the workflow by hand after merging one.
+The release pull request stays open until you merge it. Every merge into `main`
+rebuilds it from the new `main`, so its version, notes and date always count
+everything merged so far; only the workflow writes the `release` branch. Leave
+it unlabeled. Merging it, with any merge method, runs `tag-release.yml` again:
+the job checks the release commit's metadata, tags that commit `vX.Y.Z` and
+dispatches `release.yml`, because a tag pushed with `GITHUB_TOKEN` starts no
+workflow. The tag marks the release commit itself, so it holds exactly what the
+release counted; anything merged after the last rebuild counts toward the next
+version. Pull requests opened with `GITHUB_TOKEN` start no checks of their own;
+`release.yml` runs the full checks against the tag before anything is published.
+
+To rebuild the release pull request without a new merge, or to prepare a major
+version, open **Actions → Version and tag merged changes → Run workflow** and
+tick **major** for a major version. The job refuses to run when the version on
+`main` has no matching tag, which catches hand-edited versions. Several quick
+merges queue behind each other. If a merge lands while a run is preparing the
+release pull request, that run stops without failing and leaves the release
+pull request to the newer merge's run, which counts both. When nothing labeled
+is waiting, the job closes an open release pull request. A merge from a fork
+runs with a read-only token, so it cannot prepare a release; run the workflow
+by hand after merging one.
 
 `release.yml` runs the complete reusable `checks.yml` workflow against the tag,
 checks the version identity, builds sdist/wheel, and compiles the standalone
@@ -159,7 +152,7 @@ manuscript with LaTeX. The `pypi` job publishes via trusted publishing after
 its environment review. Only then does the GitHub job attach the distributions,
 PDF and standalone TeX to a draft release and publish it, triggering Zenodo.
 The release date is the `date-released` that `tag-release.yml` wrote to
-`CITATION.cff` when it tagged.
+`CITATION.cff` when it last rebuilt the release pull request.
 All artifacts identify the tagged source; study records retain their original
 execution provenance.
 
@@ -177,8 +170,8 @@ and the latest pandas release's Python classifiers, requirement and CPython
 wheel availability. Prereleases and a new Python minor without pandas wheels
 are deferred. A changed supported range updates classifiers, `requires-python`,
 CI, the Docker base and the marked documentation ranges. The proposal leaves
-the version alone and is labeled `fix`, so merging it releases the next fix
-version through `tag-release.yml`. The study lock is retained.
+the version alone and is labeled `fix`, so merging it adds one to the fix
+counter in the next release pull request. The study lock is retained.
 
 The proposal runs tests, notebooks, examples, replay, export/citation/paper
 checks, strict docs, distribution validation, and the pinned development image

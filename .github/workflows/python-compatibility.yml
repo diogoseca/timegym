@@ -61,4 +61,4 @@ jobs:
             Update the supported CPython range after a stable Python release and pandas wheel support.
             Synchronizes classifiers, requires-python, CI, Docker and documentation. It is labelled `fix`, so merging it releases the next fix version.
             The proposal passed tests, notebooks, export/citation checks, strict docs, distributions and the development image on the newest Python.
-            Merging lets tag-release.yml add one to the fix counter, tag the release and dispatch release.yml.
+            Merging lets tag-release.yml add one to the fix counter in the next release pull request.
