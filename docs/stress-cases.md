@@ -42,12 +42,24 @@ y[t] - m = phi * (y[t-1] - m) + e[t]
   keeps growing: `h` steps ahead the variance is `h` times the variance of one
   shock. A drift adds a constant to every step.
 - With `phi` between -1 and 0, the series alternates around the mean. A
-  positive `phi` does not make the series cycle; a regular cycle is what the
-  seasonal scenario provides.
+  positive `phi` does not make the series cycle. A regular cycle is what the
+  seasonal scenario provides; irregular cycles need two lags, which is the `ar2`
+  scenario: a shock overshoots and swings back, with no fixed period to copy.
 
 A random walk without drift can still look like a trend in one draw. That is
 why every scenario is drawn many times: one draw can mislead, the spread of
 errors across draws does not.
+
+## The scorecard's ten rows
+
+`Pipeline.scorecard()` draws ten kinds of series from these scenarios, each at
+low and high noise: pure noise, noise around a fixed level, a straight-line
+trend, a repeating seasonal cycle, trend plus seasonal cycle, a sudden level
+shift in the history, mean reversion, irregular cycles, and random walks with and
+without drift. On the mean-reversion, cycle and random-walk rows the noise is
+measurement noise on top of the hidden process, so a good forecaster has to
+smooth it out. [Scorecards and the scenario grid](api/scorecard.md) lists each
+row's parameters and what it lets a forecast get right.
 
 ## Composed and financial scenarios
 
