@@ -28,6 +28,11 @@
   *Forecasts the requested dates*) with the cases that passed and failed.
   `assert_passed()` names the failed checks first. The scorecard reports how
   many steps wrong dates are shifted.
+- Forecast plots title each panel with the case's 0-100 score, its error
+  against the answer key and its error against what happened, instead of
+  "observed MSE" and "mean-reference MSE"; `plot_errors` labels its axis
+  "Error against the answer key". `ForecastRun.titles` names rows in plain
+  words, and a scorecard's run uses its pattern and noise titles.
 - `pip install timegym` now includes Matplotlib and scikit-learn. The `plots`
   and `sklearn` extras remain as empty aliases so older install commands work.
 

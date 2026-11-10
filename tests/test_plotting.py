@@ -86,8 +86,9 @@ def test_forecasts_are_unconnected_blue_crosses_and_observations_gray_dots():
     assert lines["Forecast origin"].get_linestyle() == "--"
     np.testing.assert_allclose(lines["Forecast origin"].get_xdata(), [23.5, 23.5])
     np.testing.assert_allclose(axis.get_xlim(), [0, 32])
-    assert "observed MSE=" in axis.get_title(loc="left")
-    assert "mean-reference MSE=" in axis.get_title(loc="left")
+    assert "vs what happened " in axis.get_title(loc="left")
+    assert "error vs answer key " in axis.get_title(loc="left")
+    assert "/100" in axis.get_title(loc="left")
 
 
 def test_multitarget_single_seed_and_duplicate_scenario_kinds_have_distinct_rows():

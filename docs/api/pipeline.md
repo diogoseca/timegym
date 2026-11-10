@@ -49,7 +49,11 @@ rows and seed columns with observation dots and unconnected forecast crosses.
 Optional shading shows marginal intervals. `run.plot_errors(metric="mean_reference_mse", *,
 bins=None, missing="raise", figsize=None)` shows one score per whole case;
 `missing="annotate"` explicitly permits unavailable scores and labels their
-counts and reasons. Neither method refits models. Matplotlib is installed with
+counts and reasons. Each forecast panel's title gives the case's 0-100 score
+(as on the scorecard), its error against the answer key and its error against
+what happened. `run.titles` optionally names each scenario position in plain
+words for both plots; a scorecard's run sets them to the pattern and noise
+level, so `card.run.plot_forecasts()` zooms into its rows. Neither method refits models. Matplotlib is installed with
 TimeGym and imported only when a plot is drawn.
 
 `pipeline.plot_tests(...)` and `pipeline.plot_errors(...)` are convenient one-call

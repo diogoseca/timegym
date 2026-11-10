@@ -301,6 +301,19 @@ def test_scorecard_draws_saves_and_prints(tmp_path):
     assert card.report.to_dict()["metadata"]["seed"] == 4
 
 
+def test_zooming_into_a_scorecard_row_keeps_its_plain_titles():
+    card = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=2)
+    forecasts = card.run.plot_forecasts()
+    title = forecasts.axes[0].get_title(loc="left")
+    assert title.startswith("Straight-line trend · Low noise · instance 1\nscore ")
+    assert "seed" not in title and "MSE" not in title
+    assert forecasts.axes[-1].get_title(loc="left").startswith("Straight-line trend · High noise · instance 2")
+    errors = card.run.plot_errors()
+    assert errors.axes[0].get_title(loc="left").startswith("Straight-line trend · Low noise · 2 scored")
+    assert errors.axes[0].get_xlabel() == "Error against the answer key (MSE), one score per case"
+    plt.close("all")
+
+
 def test_plain_install_brings_plots_and_the_sklearn_adapter():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     names = {requirement.split(">")[0].split("=")[0] for requirement in project["dependencies"]}

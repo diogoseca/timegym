@@ -256,6 +256,9 @@ def scorecard(
     run = pipeline.run(
         [cell.scenario for cell in cells], seed=seed, instances=instances
     )
+    run.titles = [
+        f"{cell.title} · {cell.noise}" for cell in cells
+    ]  # plain row titles for run.plot_*
     by_cell = {}
     for entry in run.cases:
         by_cell.setdefault(entry.scenario_index, []).append(entry)

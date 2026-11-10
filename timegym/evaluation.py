@@ -34,12 +34,16 @@ class ForecastRun:
     """Retain the evidence needed to inspect a run without fitting again.
 
     Arrays remain in memory; ``report`` uses the JSON report schema and does
-    not embed contexts, observations, or forecast arrays. Plotting requires
-    Matplotlib, imported only when a plot is drawn.
+    not embed contexts, observations, or forecast arrays. ``titles``
+    optionally names each scenario position in plain words for the plots (a
+    scorecard sets them to the pattern and noise level); they are not saved
+    in the report. Plotting requires Matplotlib, imported only when a plot is
+    drawn.
     """
 
     cases: list[EvaluatedCase]
     metadata: dict[str, Any] = field(default_factory=dict)
+    titles: list[str] = field(default_factory=list)
 
     @property
     def report(self) -> TestReport:
