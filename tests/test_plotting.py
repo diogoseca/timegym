@@ -234,22 +234,6 @@ def test_importing_package_does_not_import_matplotlib():
     assert completed.returncode == 0, completed.stderr
 
 
-def test_plotting_without_matplotlib_names_the_plots_extra(monkeypatch):
-    import builtins
-
-    run = Pipeline().run([Scenario("white_noise", context_length=10, horizon=3)], seeds=[4])
-    original = builtins.__import__
-
-    def without_matplotlib(name, *args, **kwargs):
-        if name == "matplotlib" or name.startswith("matplotlib."):
-            raise ImportError("No module named matplotlib")
-        return original(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", without_matplotlib)
-    with pytest.raises(ImportError, match=r"Install timegym\[plots\]"):
-        run.plot_forecasts()
-
-
 def test_mixed_random_walk_drift_is_named_per_target_and_aggregated_in_error_plot():
     run = Pipeline().run([Scenario("random_walk", context_length=12, horizon=3, n_targets=2,
                                    parameters={"drift": [0., 1e-15]})], seeds=[7])

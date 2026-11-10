@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from collections.abc import Sequence
+from copy import deepcopy
 from ._internal import positive_int, nonnegative_int, _real_array
 import numpy as np
 import pandas as pd
@@ -315,14 +316,10 @@ class SklearnForecaster(_ConfiguredForecaster):
         )
 
     def _estimator(self, multioutput=False):
-        try:
-            from sklearn.base import clone
-            from sklearn.multioutput import MultiOutputRegressor
-            from sklearn.pipeline import Pipeline as SkPipeline
-        except ImportError as exc:
-            raise ImportError(
-                "Install timegym[sklearn] to use sklearn estimators"
-            ) from exc
+        from sklearn.base import clone
+        from sklearn.multioutput import MultiOutputRegressor
+        from sklearn.pipeline import Pipeline as SkPipeline
+
         steps = [clone(step) for step in self.steps]
         if multioutput and not _native_multioutput(steps[-1]):
             steps[-1] = MultiOutputRegressor(steps[-1])
@@ -402,12 +399,13 @@ class SklearnForecaster(_ConfiguredForecaster):
 
 # %% ../notebooks/06_forecasting_models.ipynb #06_forecasting_model-15
 def fresh_model(model):
-    """Clone configuration only; never silently copy learned native state.
+    """Return a fresh copy of a model for one case, never the caller's object.
 
-    Native instances must explicitly implement ``clone_unfitted()``. Custom
-    models without that protocol can be constructed with Pipeline's
-    ``model_factory`` argument. The protocol is a model-author contract: its
-    implementation must return a fresh, unfitted object.
+    Models with ``clone_unfitted()`` rebuild themselves from configuration;
+    sklearn estimators are cloned. Any other instance is deep-copied as
+    supplied, so pass it unfitted: TimeGym never fits the original object and
+    calls ``fit`` on every copy, so state does not leak between cases unless
+    ``fit`` itself reuses state it was given.
     """
     if callable(getattr(model, "clone_unfitted", None)):
         cloned = model.clone_unfitted()
@@ -415,25 +413,17 @@ def fresh_model(model):
             raise ValueError("clone_unfitted() must return a new model instance")
         return cloned
     if hasattr(model, "get_params"):
-        try:
-            from sklearn.base import clone
-        except ImportError as exc:
-            raise ImportError(
-                "Install timegym[sklearn] to clone sklearn estimators"
-            ) from exc
+        from sklearn.base import clone
+
         return clone(model)
-    raise TypeError(
-        "Native model instances must implement clone_unfitted(); alternatively use Pipeline(model_factory=...) or supply a model class"
-    )
+    return deepcopy(model)
 
 
 # %% ../notebooks/06_forecasting_models.ipynb #06_forecasting_model-17
 def is_sklearn_regressor(model):
-    """Read estimator tags lazily; sklearn need not be installed for native use."""
+    """Read estimator tags lazily, importing sklearn only when it is needed."""
     if not hasattr(model, "get_params"):
         return False
-    try:
-        from sklearn.base import is_regressor
-    except ImportError as exc:
-        raise ImportError("Install timegym[sklearn] to use sklearn estimators") from exc
+    from sklearn.base import is_regressor
+
     return bool(is_regressor(model))

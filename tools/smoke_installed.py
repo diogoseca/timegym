@@ -1,4 +1,7 @@
-"""Exercise the installed wheel, with optional imports deliberately unavailable.
+"""Exercise the installed wheel, with lazily imported libraries deliberately unavailable.
+
+Matplotlib and scikit-learn are installed with TimeGym but imported only when a
+plot is drawn or an sklearn object is used, so scoring must work without them.
 
 Run with `python -I tools/smoke_installed.py` after installing a built wheel.
 --report PATH also saves the replayed report for replay in a separate process.
@@ -35,7 +38,7 @@ def main():
     sys.meta_path.insert(0, BlockOptional())
     import numpy as np
     import timegym
-    from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, TestReport
+    from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, Scorecard, TestReport
 
     installed_path = Path(timegym.__file__).resolve()
     repository = Path(__file__).resolve().parents[1]
@@ -85,6 +88,9 @@ def main():
     guard = covariance_dependence_check(approximate.reference,
                                        approximate.reference.sample(64, seed=91))
     assert guard.status == "UNSUPPORTED" and "p_value" not in guard.evidence
+    card = Pipeline(NaiveForecaster()).scorecard(["random_walk", "seasonal"], instances=2)
+    assert isinstance(card, Scorecard) and len(card.table) == 4
+    assert "Random walk" in str(card) and all(row["failed"] == 0 for row in card.checks)
     assert not attempts, attempts
     assert not (set(sys.modules) & blocked)
     print(json.dumps({"imported_from": str(installed_path), "version": timegym.__version__,
@@ -92,6 +98,7 @@ def main():
                       "joint_sample_shape": list(joint.samples.shape),
                       "retained_cases": len(run.cases), "index_shift_fault_codes": fault_codes,
                       "joint_processes_verified": joint_processes,
+                      "scorecard_score": round(card.score, 1),
                       "optional_import_attempts": attempts}, indent=2))
 
 

@@ -35,7 +35,7 @@ class ForecastRun:
 
     Arrays remain in memory; ``report`` uses the JSON report schema and does
     not embed contexts, observations, or forecast arrays. Plotting requires
-    the optional ``timegym[plots]`` dependencies, loaded on demand.
+    Matplotlib, imported only when a plot is drawn.
     """
 
     cases: list[EvaluatedCase]

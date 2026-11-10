@@ -17,14 +17,29 @@ model and inverts the forecast the model returns, so evaluation sees the
 original scale.
 
 `.predict(context, future_index)` returns the model's Forecast for inspection.
-`.test(scenarios=None, seeds=(0, 1, 2), *, check_dependence=False,
-n_calibration=99, alpha=0.05, dependence_seed_offset=100_000)` evaluates cases and
-returns a TestReport. Explicit test seeds override a Scenario's default seed.
-Model/evaluation exceptions are recorded with traceback evidence. Invalid scenario
-configuration is a caller error and is raised rather than counted as a model fault.
+A model's `predict(future_index)` may return a `Forecast`, a pandas `DataFrame`
+indexed by the requested dates with one column per series, or a `Series` for a
+single series. A DataFrame keeps its own index and column names, so wrong dates
+or a wrong series order still fail their checks.
 
-`.run(scenarios=None, seeds=(0,1,2), ...)` accepts the same diagnostic settings
-and returns a `ForecastRun`. Its `.report` is the usual `TestReport`; `.cases`
+`.test(scenarios=None, seeds=None, *, seed=0, instances=None,
+check_dependence=False, n_calibration=99, alpha=0.05,
+dependence_seed_offset=100_000)` evaluates cases and returns a TestReport. One
+`seed` drives the whole test: each scenario is run `instances` times (3 by
+default) with seeds `seed, seed + 1, ...`, so the default equals
+`seeds=[0, 1, 2]`. `seed=None` draws a fresh seed and records it, with the
+instance count, in `report.metadata`. An explicit `seeds` list is used as given
+and cannot be combined with `seed` or `instances`. Test seeds override a
+Scenario's default seed. Model/evaluation exceptions are recorded with
+traceback evidence. Invalid scenario configuration is a caller error and is
+raised rather than counted as a model fault.
+
+`.scorecard(patterns=None, *, noise_levels=2, instances=10, seed=0,
+context_length=120, horizon=24, title=None)` runs the scenario grid and returns
+a `Scorecard`; see [Scorecards and the scenario grid](scorecard.md).
+
+`.run(scenarios=None, seeds=None, *, seed=0, instances=None, ...)` accepts the
+same seeding and diagnostic settings and returns a `ForecastRun`. Its `.report` is the usual `TestReport`; `.cases`
 retains each `EvaluatedCase`, including the generated case, forecast (or `None`
 on model failure), result, and scenario/seed positions. This in-memory inspection
 object keeps arrays separate from the portable report schema.
@@ -34,10 +49,11 @@ rows and seed columns with observation dots and unconnected forecast crosses.
 Optional shading shows marginal intervals. `run.plot_errors(metric="mean_reference_mse", *,
 bins=None, missing="raise", figsize=None)` shows one score per whole case;
 `missing="annotate"` explicitly permits unavailable scores and labels their
-counts and reasons. Neither method refits models. Install `timegym[plots]` for plotting.
+counts and reasons. Neither method refits models. Matplotlib is installed with
+TimeGym and imported only when a plot is drawn.
 
 `pipeline.plot_tests(...)` and `pipeline.plot_errors(...)` are convenient one-call
-experiments. Each creates a fresh run. Use `run()` when multiple views must share
+experiments; both take `seed` and `instances` (20 by default for `plot_errors`). Each creates a fresh run. Use `run()` when multiple views must share
 exactly the same predictions, especially for stochastic models.
 
 `.to_config()` describes the configured model and `.from_config(config)` can
@@ -78,7 +94,13 @@ They reject unknown schemas/statuses/categories, nonfinite values, duplicate JSO
 malformed records, and stored summary counts that disagree with the diagnostics.
 `from_json` always expects JSON text; use `read` for a file. Evidence and metadata
 are copied so later edits to the input dictionary cannot change the loaded report.
-`report.assert_passed()` raises for detected FAIL/ERROR outcomes; callers must
+`report.checks` counts, per output check in plain words, the cases that passed
+and failed: one `{"check", "title", "passed", "failed"}` dictionary per check
+that ran (`runs`, `dates`, `series`, `shape`, `finite`, `quantiles`,
+`dependence`). Scores are not checks: they have no pass mark.
+`report.assert_passed()` raises for detected FAIL/ERROR outcomes. Its message
+names each failed check first, for example `Forecasts the requested dates:
+failed in 4 of 4 cases`, then lists the underlying diagnostics. Callers must
 inspect unsupported/inconclusive checks to decide whether their CI coverage is
 adequate. A pass is always scoped to a check.
 

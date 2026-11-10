@@ -15,3 +15,16 @@ refresh it.
 [`28_custom_model.ipynb`](../28_custom_model.ipynb). Run that notebook to refresh
 the three-scenario, two-seed nearest-analogue comparison. It uses the retained
 forecast plots with known future means and explicit contract status.
+
+## Scorecard preview
+
+`scorecard.png` and `scorecard-compact.png` are the full and compact scorecards
+of the last-value forecaster, drawn by
+[`examples/scorecard.py`](../../examples/scorecard.py):
+
+```bash
+python examples/scorecard.py notebooks/assets/scorecard.png
+python -c "from timegym import NaiveForecaster, Pipeline; Pipeline(NaiveForecaster()).scorecard().save('notebooks/assets/scorecard-compact.png', compact=True)"
+```
+
+[13 · Scorecard](../13_scorecard.ipynb) explains how they are built.

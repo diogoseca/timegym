@@ -3,6 +3,7 @@
 from __future__ import annotations
 from ._internal import positive_int, nonnegative_int
 import inspect
+import secrets
 import numpy as np
 import pandas as pd
 from .contracts import Forecast, ForecastTask
@@ -31,12 +32,59 @@ __all__ = ["Pipeline", "replay_case"]
 
 
 # %% ../notebooks/07_pipeline.ipynb #07_pipeline-14
+def _as_forecast(output, task):
+    """Accept a Forecast, or a DataFrame/Series of point forecasts indexed by date.
+
+    A DataFrame keeps its own index and column names, so wrong dates or a wrong
+    series order still fail their checks. An unnamed Series stands for the
+    task's single series.
+    """
+    if isinstance(output, Forecast):
+        return output
+    if isinstance(output, pd.Series):
+        if output.name is None and len(task.target_names) == 1:
+            names = task.target_names
+        else:
+            names = (output.name if output.name is not None else "y",)
+        return Forecast(
+            output.index, point=output.to_numpy()[:, None], target_names=names
+        )
+    if isinstance(output, pd.DataFrame):
+        return Forecast(
+            output.index, point=output.to_numpy(), target_names=tuple(output.columns)
+        )
+    raise TypeError(
+        "model.predict(future_index) must return a pandas DataFrame indexed by future_index "
+        "with one column per series, a Series for one series, or a timegym.Forecast"
+    )
+
+
+def _instance_seeds(seeds, seed, instances, default_instances):
+    """Return the case seeds and the seeding record for run metadata.
+
+    With an explicit ``seeds`` list nothing else is derived. Otherwise
+    instance ``i`` uses ``seed + i``; ``seed=None`` draws a fresh base seed,
+    which is recorded so the run can be repeated.
+    """
+    if seeds is not None:
+        if seed != 0 or instances is not None:
+            raise ValueError("Pass either seeds=[...] or seed/instances, not both")
+        return [nonnegative_int(value, "seed") for value in seeds], None
+    count = positive_int(
+        default_instances if instances is None else instances, "instances"
+    )
+    base = secrets.randbelow(2**31) if seed is None else nonnegative_int(seed, "seed")
+    return [base + i for i in range(count)], {"seed": base, "instances": count}
+
+
 class Pipeline:
     """Evaluate fresh model instances on independent, seeded scenarios.
 
-    Native models implement fit(context: DataFrame) and predict(future_index),
-    returning a Forecast. Supply a native class, a model_factory producing a
-    fresh unfitted instance, or an instance implementing clone_unfitted().
+    Native models implement fit(context: DataFrame) and predict(future_index).
+    ``predict`` returns a DataFrame indexed by ``future_index`` with one column
+    per series (a Series for one series), or a Forecast for quantiles and
+    samples. Supply a model instance (copied before every case), a class, or a
+    model_factory producing a fresh unfitted instance.
     sklearn regressors/transformers can be added with add(); ``reduction``
     selects one of REDUCTIONS for them and, like ``window_length``, does not
     change native models. An optional ``target_transform`` is refitted on
@@ -168,9 +216,7 @@ class Pipeline:
             )
         model = self._model(len(future_index))
         model.fit(task.context.copy(deep=True))
-        forecast = model.predict(future_index.copy())
-        if not isinstance(forecast, Forecast):
-            raise TypeError("Native model.predict must return a timegym.Forecast")
+        forecast = _as_forecast(model.predict(future_index.copy()), task)
         if transform is not None and not forecast.validate(task):
             forecast = transform.inverse_transform(forecast)
         return forecast
@@ -178,8 +224,10 @@ class Pipeline:
     def run(
         self,
         scenarios=None,
-        seeds=(0, 1, 2),
+        seeds=None,
         *,
+        seed=0,
+        instances=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
@@ -187,9 +235,13 @@ class Pipeline:
     ):
         """Evaluate once per case and retain the data, forecast, and diagnostics.
 
-        ``run.report`` is the usual serializable ``TestReport``;
-        ``run.plot_forecasts()`` and ``run.plot_errors()`` inspect these exact
-        outputs without additional fitting or predictive sampling.
+        Each scenario is drawn ``instances`` times (default 3). Instance ``i``
+        uses seed ``seed + i`` in every scenario, so scenarios are compared on
+        the same random draws. ``seed=None`` picks a fresh base seed and
+        records it in ``run.metadata["seed"]``. An explicit ``seeds`` list
+        replaces both. ``run.report`` is the usual serializable
+        ``TestReport``; ``run.plot_forecasts()`` and ``run.plot_errors()``
+        inspect these exact outputs without additional fitting.
         """
         if self.steps:
             SklearnForecaster(self.steps, self.window_length)
@@ -199,15 +251,16 @@ class Pipeline:
             alpha=alpha,
             dependence_seed_offset=dependence_seed_offset,
         )
+        seeds, seeding = _instance_seeds(seeds, seed, instances, 3)
         if scenarios is None:
             scenarios = default_scenarios()
-        scenarios, seeds = list(scenarios), list(seeds)
+        scenarios = list(scenarios)
         if not scenarios or not seeds:
             raise ValueError("Provide at least one scenario and one seed")
         results = []
         for scenario_index, scenario in enumerate(scenarios):
-            for seed_index, seed in enumerate(seeds):
-                case = scenario.generate(seed=seed)
+            for seed_index, case_seed in enumerate(seeds):
+                case = scenario.generate(seed=case_seed)
                 forecast = None
                 try:
                     forecast = self.predict(case.task.context, case.task.future_index)
@@ -215,14 +268,14 @@ class Pipeline:
                         case,
                         forecast,
                         check_dependence=check_dependence,
-                        dependence_seed=int(seed) + dependence_seed_offset,
+                        dependence_seed=int(case_seed) + dependence_seed_offset,
                         n_calibration=n_calibration,
                         alpha=alpha,
                     )
                 except Exception as exc:
                     result = CaseResult(
                         scenario=scenario.kind,
-                        seed=int(seed),
+                        seed=int(case_seed),
                         diagnostics=[
                             DiagnosticResult(
                                 name="model_execution",
@@ -257,34 +310,76 @@ class Pipeline:
                 "target_transform": config["target_transform"],
                 "pipeline_config": config,
                 "diagnostic_settings": settings,
+                **(seeding or {}),
             },
         )
 
     def test(
         self,
         scenarios=None,
-        seeds=(0, 1, 2),
+        seeds=None,
         *,
+        seed=0,
+        instances=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
         dependence_seed_offset=100_000,
     ):
-        """Evaluate each scenario at each seed and return a TestReport."""
+        """Evaluate each scenario on each instance and return a TestReport.
+
+        Seeds work as in ``run``: instance ``i`` uses ``seed + i``.
+        """
         return self.run(
             scenarios,
             seeds=seeds,
+            seed=seed,
+            instances=instances,
             check_dependence=check_dependence,
             n_calibration=n_calibration,
             alpha=alpha,
             dependence_seed_offset=dependence_seed_offset,
         ).report
 
+    def scorecard(
+        self,
+        patterns=None,
+        *,
+        noise_levels=2,
+        instances=10,
+        seed=0,
+        context_length=120,
+        horizon=24,
+        title=None,
+    ):
+        """Score the model on a grid of patterns and noise levels; returns a Scorecard.
+
+        Rows are patterns from ``timegym.PATTERNS`` (all ten by default) and
+        columns are noise levels from low to high. Each cell is drawn
+        ``instances`` times with seeds ``seed + i``. Display the result in a
+        notebook, ``print`` it as Markdown, or ``save`` it as an image. See
+        ``timegym.scorecard.scorecard`` for the score and its mistakes.
+        """
+        from timegym.scorecard import scorecard
+
+        return scorecard(
+            self,
+            patterns,
+            noise_levels=noise_levels,
+            instances=instances,
+            seed=seed,
+            context_length=context_length,
+            horizon=horizon,
+            title=title,
+        )
+
     def plot_tests(
         self,
         scenarios=None,
-        seeds=(0, 1, 2),
+        seeds=None,
         *,
+        seed=0,
+        instances=None,
         show_quantiles=False,
         figsize=None,
         **diagnostic_settings,
@@ -298,15 +393,21 @@ class Pipeline:
         """
         if scenarios is None:
             scenarios = default_scenarios(context_length=240, horizon=80)
-        return self.run(scenarios, seeds=seeds, **diagnostic_settings).plot_forecasts(
-            show_quantiles=show_quantiles, figsize=figsize
-        )
+        return self.run(
+            scenarios,
+            seeds=seeds,
+            seed=seed,
+            instances=instances,
+            **diagnostic_settings,
+        ).plot_forecasts(show_quantiles=show_quantiles, figsize=figsize)
 
     def plot_errors(
         self,
         scenarios=None,
-        seeds=tuple(range(20)),
+        seeds=None,
         *,
+        seed=0,
+        instances=None,
         metric="mean_reference_mse",
         bins=None,
         missing="raise",
@@ -315,12 +416,18 @@ class Pipeline:
     ):
         """Fit once per requested case and plot the retained score distribution.
 
-        This convenience call evaluates a new run. Use an existing run's
-        ``plot_errors`` method to inspect previously evaluated forecasts.
+        This convenience call draws 20 instances by default. Use an existing
+        run's ``plot_errors`` method to inspect previously evaluated forecasts.
         """
-        return self.run(scenarios, seeds=seeds, **diagnostic_settings).plot_errors(
-            metric=metric, bins=bins, missing=missing, figsize=figsize
-        )
+        if seeds is None and instances is None:
+            instances = 20
+        return self.run(
+            scenarios,
+            seeds=seeds,
+            seed=seed,
+            instances=instances,
+            **diagnostic_settings,
+        ).plot_errors(metric=metric, bins=bins, missing=missing, figsize=figsize)
 
 
 # %% ../notebooks/07_pipeline.ipynb #10_reports_and_repla-32

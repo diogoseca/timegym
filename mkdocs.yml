@@ -123,6 +123,7 @@ nav:
       - Composed and joint processes: docs/api/processes.md
       - Models and reductions: docs/api/models.md
       - Pipeline and reports: docs/api/pipeline.md
+      - Scorecards and the scenario grid: docs/api/scorecard.md
       - Scores and diagnostics: docs/api/diagnostics.md
       - Fault fixtures: docs/api/fault-fixtures.md
       - Data preparation: docs/api/data-preparation.md

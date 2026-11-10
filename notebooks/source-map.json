@@ -82,6 +82,13 @@
       ]
     },
     {
+      "notebook": "notebooks/13_scorecard.ipynb",
+      "modules": [
+        "timegym/grid.py",
+        "timegym/scorecard.py"
+      ]
+    },
+    {
       "notebook": "notebooks/14_controlled_processes.ipynb",
       "modules": [
         "timegym/processes.py",

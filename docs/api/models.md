@@ -36,10 +36,12 @@ lacks native multioutput support. `direct` and `multioutput` need a positive
 integer `horizon`, forecast at most that many steps, and need at least
 `window_length + horizon` context rows; `recursive` needs `window_length + 1`.
 All three return point outputs only. `steps` must end in an sklearn regressor. `fresh_model(model)` uses
-`clone_unfitted()` for native instances or sklearn's configuration clone;
-it rejects native instances without that protocol and clones returning the
-original object. `is_sklearn_regressor(model)` reads sklearn tags lazily after
-checking for `get_params`. Install `timegym[sklearn]` when using sklearn objects.
+`clone_unfitted()` for native instances, sklearn's configuration clone for
+estimators, and otherwise a deep copy, so a plain class with `fit` and
+`predict` can be passed as an instance; the original is never fitted. A
+`clone_unfitted()` that returns the original object is rejected. `is_sklearn_regressor(model)`
+reads sklearn tags after checking for `get_params`. scikit-learn is installed
+with TimeGym and imported only when an sklearn object is used.
 
 ## Signatures
 

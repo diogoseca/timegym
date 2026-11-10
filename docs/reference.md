@@ -16,6 +16,9 @@ Underscore-prefixed names and modules, including `_internal` and
 | `ForecastTask`, `Forecast`, `Reference`, `SimulationReference`, `Case`, `Scenario` | `timegym` | Public | [Tasks and forecasts](api/tasks-and-forecasts.md); [Scenarios and references](api/scenarios.md); [Composed and joint processes](api/processes.md) |
 | `Pipeline`, `NaiveForecaster`, `GaussianAR1Forecaster` | `timegym` | Public | [Pipeline and reports](api/pipeline.md); [Models and reductions](api/models.md) |
 | `ForecastRun`, `EvaluatedCase`, `TestReport`, `DiagnosticResult`, `CaseResult` | `timegym` | Public | [Pipeline and reports](api/pipeline.md) |
+| `Scorecard`, `PATTERNS`, `GridCell`, `scenario_grid` | `timegym` | Public | [Scorecards and the scenario grid](api/scorecard.md) |
+| `scorecard`, `verdict`, `VERDICTS` | `timegym.scorecard` | Public | [Scorecards and the scenario grid](api/scorecard.md) |
+| `Pattern`, `noise_levels`, `NOISE_LOW`, `NOISE_HIGH` | `timegym.grid` | Public | [Scorecards and the scenario grid](api/scorecard.md) |
 | `DiagnosticStatus`, `DiagnosticCategory`, `__version__` | `timegym` | Public | [Pipeline and reports](api/pipeline.md); [Diagnostics catalogue](api/diagnostics.md#diagnostics-catalogue) |
 | `DEFAULT_LEVELS` | `timegym.contracts` | Public | [Scenarios and references](api/scenarios.md) |
 | `mse`, `mae`, `mase`, `mean_reference_mse`, `pinball`, `crps`, `empirical_crps`, `energy_score`, `variogram_score`, `UndefinedMetricError` | `timegym.metrics` | Public; `empirical_crps` aliases `crps` | [Scores and diagnostics](api/diagnostics.md) |
@@ -24,7 +27,7 @@ Underscore-prefixed names and modules, including `_internal` and
 | `SklearnForecaster`, `fresh_model`, `is_sklearn_regressor` | `timegym.models` | Public; sklearn loaded when needed | [Models and reductions](api/models.md) |
 | `REDUCTIONS` | `timegym.models` | Public | [Models and reductions](api/models.md) |
 | `MUTATIONS`, `mutate_forecast` | `timegym.mutations` | Public controlled fixtures | [Fault fixtures](api/fault-fixtures.md) |
-| `plot_forecasts`, `plot_errors` | `timegym.plotting` | Public; requires plots extra | [Pipeline and reports](api/pipeline.md) |
+| `plot_forecasts`, `plot_errors` | `timegym.plotting` | Public; Matplotlib imported when drawing | [Pipeline and reports](api/pipeline.md) |
 | `wilson_interval`, `paired_t_interval` | `timegym.statistics` | Public; independent cases | [Scores and diagnostics](api/diagnostics.md) |
 | `default_scenarios` | `timegym.data.synthetic` | Public | [Scenarios and references](api/scenarios.md) |
 | `get_stock` | `timegym.data.real` | Public; provider data may change | [Market data](api/market-data.md) |

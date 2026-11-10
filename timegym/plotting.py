@@ -30,10 +30,8 @@ _STYLE = {
 
 # %% ../notebooks/11_plotting.ipynb #11_plotting-07
 def _pyplot():
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError as exc:
-        raise ImportError("Install timegym[plots] to create forecast figures") from exc
+    import matplotlib.pyplot as plt
+
     return plt
 
 

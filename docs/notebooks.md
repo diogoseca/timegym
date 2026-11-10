@@ -58,7 +58,7 @@ and Run All Cells**. Each notebook runs in its own kernel. The real-data
 notebook reads the included AirPassengers CSV; no notebook uses the network
 ([Market data](api/market-data.md) covers the optional fetch helper).
 
-The 14 source notebooks that generate the package, and the checks that execute
+The 15 source notebooks that generate the package, and the checks that execute
 every notebook, are described in [Contributing](contributing.md) and the
 [notebook guide](../notebooks/README.md).
 

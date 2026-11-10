@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+- Added the scorecard: `Pipeline(model).scorecard()` runs a forecaster on ten
+  kinds of series at low and high noise and returns a `Scorecard`. Its image
+  gives a 0-100 score, what the model is good at and fails at, the mistakes it
+  makes (for example *Values one step late* or *Wrong dates*), and for each
+  kind of series what can be predicted and what cannot by design. `print(card)`
+  gives the same as Markdown; `card.save(path)` writes PNG, SVG or PDF; the
+  JSON report stays available as `card.report`. Source notebook 13 builds it.
+- Added the scenario grid behind it: `PATTERNS`, `scenario_grid()` and
+  `GridCell` from `timegym`, with `noise_levels()` in `timegym.grid`. Two noise
+  levels by default; more levels fill the range between the same two extremes.
+- Added the `ar2` scenario kind (stationary AR(2), irregular cycles) and an
+  optional `noise` parameter for `ar1`, `ar2` and `random_walk`: measurement
+  noise on the hidden process, with an exact Kalman-filter reference. Scenarios
+  without `noise` keep their references and manifests.
+- One seed drives a whole run: `Pipeline.test`, `run`, `plot_tests` and
+  `plot_errors` take `seed=0` and `instances`, using seeds `seed, seed + 1, ...`.
+  The default is unchanged (`seeds=[0, 1, 2]`). `seed=None` draws a fresh seed
+  and records it in the report metadata. An explicit `seeds` list still works.
+- A model's `predict` may return a pandas DataFrame indexed by the requested
+  dates, or a Series for one series, as well as a `Forecast`. A plain class
+  with `fit` and `predict` can be passed as an instance; each case fits a deep
+  copy and the original is never fitted.
+- `report.checks` counts each output check in plain words (for example
+  *Forecasts the requested dates*) with the cases that passed and failed.
+  `assert_passed()` names the failed checks first. The scorecard reports how
+  many steps wrong dates are shifted.
+- `pip install timegym` now includes Matplotlib and scikit-learn. The `plots`
+  and `sklearn` extras remain as empty aliases so older install commands work.
+
 - The API reference pages, except Market data, end with signatures and
   docstrings generated from the code by mkdocstrings; the `docs` extra adds
   `mkdocstrings` and `mkdocstrings-python`. Every public class, method and
