@@ -28,3 +28,15 @@ python -c "from timegym import NaiveForecaster, Pipeline; Pipeline(NaiveForecast
 ```
 
 [13 · Scorecard](../13_scorecard.ipynb) explains how they are built.
+
+## README figures
+
+`readme-trend-scorecard.png`, `readme-trend-forecasts.png`,
+`readme-trend-errors.png` and `readme-custom-scenarios.png` show the output of
+the README's "More things to do with a scorecard". Redraw all four after a
+plotting change with
+[`examples/readme_figures.py`](../../examples/readme_figures.py):
+
+```bash
+python examples/readme_figures.py
+```

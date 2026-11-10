@@ -95,7 +95,7 @@ Timing is recorded separately and is not a benchmark claim.
 
 ## Remaining release and research work
 
-CI covers the [declared Python range](../README.md#install), the older compatibility stack,
+CI covers the [declared Python range](../README.md#sixty-seconds), the older compatibility stack,
 installed wheels on Linux/macOS/Windows, all notebooks, documentation, and both
 studies. `release.yml` ran these jobs on the v1.1.0 tag before publishing; the
 `research-smoke` job only warns on a hash mismatch, so a green run does not
