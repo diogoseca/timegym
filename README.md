@@ -55,12 +55,37 @@ nobody could avoid. The bands read "Nails it" from 90, "Good" from 70,
 51: it nails the random walk and fails trends and seasons. In a notebook, `card`
 on its own shows the picture.
 
+### Scorecard, test and report
+
+A scorecard is a test on TimeGym's ten kinds of series, drawn as one picture.
+"Test" is what TimeGym does; the report is the record it hands back. Three
+calls give you three views of the same work:
+
+| You call | You get | Use it to |
+| --- | --- | --- |
+| `pipeline.scorecard()` | A `Scorecard`: the picture and its table | See what the model is good and bad at |
+| `pipeline.test(scenarios)` | A `TestReport`: every case's scores and output checks | Test series you choose, save them as JSON, fail a CI build |
+| `pipeline.run(scenarios)` | A `ForecastRun`: the report plus every series and forecast | Plot the forecasts behind the scores |
+
+A scorecard carries the other two: `card.report` and `card.run`.
+
 ### More things to do with a scorecard
 
-Print the same scorecard as a Markdown table, for a pull request or a log:
+Print it as Markdown, for a pull request or a log:
 
 ```python
 print(card)
+```
+
+```text
+## NaiveForecaster(strategy='last', period=1): 51/100
+
+| Pattern | Low noise | High noise | Mistakes |
+|---|---|---|---|
+| Pure noise | 56 Struggles | 56 Struggles | Misreads the current level |
+| Straight-line trend | 10 Fails | 43 Struggles | Low: Forecasts too low; Trend too flat · High: Misreads the current level |
+| Random walk: shocks never fade | 99 Nails it | 87 Good | none found |
+…
 ```
 
 List what it is good at, where it fails, and where noise throws it off:
@@ -69,29 +94,72 @@ List what it is good at, where it fails, and where noise throws it off:
 card.good_at, card.fails_at, card.noise_sensitive
 ```
 
-Read every score, per kind of series and noise level, as a DataFrame:
-
-```python
-card.table
+```text
+(['Mean reversion (AR(1)): shocks fade', 'Random walk: shocks never fade'],
+ ['Straight-line trend', 'Repeating seasonal cycle', 'Trend + seasonal cycle', 'Irregular cycles (AR(2))'],
+ [])
 ```
 
-Zoom in on one row to see the forecasts behind its score, and how the error is
-spread across many draws:
+Read the scores as a DataFrame, one row per kind of series and noise level:
+
+```python
+card.table[["title", "noise", "score", "verdict", "mse"]].round(2)
+```
+
+```text
+                        title       noise  score    verdict   mse
+0                  Pure noise   Low noise  56.37  Struggles  0.49
+1                  Pure noise  High noise  56.37  Struggles  7.87
+2  Noise around a fixed level   Low noise  56.37  Struggles  0.49
+…
+```
+
+`card.table` also names the mistakes and splits each error into the part
+nobody could avoid and the part the model could have.
+
+Zoom in on one row:
 
 ```python
 trend = pipeline.scorecard(["trend"], instances=3)   # one row, both noise levels
+trend.save("trend.png")
+```
+
+[![The scorecard's straight-line trend row on its own](notebooks/assets/readme-trend-scorecard.png)](notebooks/assets/readme-trend-scorecard.png)
+
+Plot every draw behind that row, with the answer key and the forecast:
+
+```python
 trend.run.plot_forecasts()
+```
+
+[![The three draws of the trend row at each noise level, with the answer key and the last-value forecast](notebooks/assets/readme-trend-forecasts.png)](notebooks/assets/readme-trend-forecasts.png)
+
+See how the error spreads over 20 draws per noise level:
+
+```python
 pipeline.scorecard(["trend"], instances=20).run.plot_errors(metric="mse")
 ```
+
+[![Histograms of the error against what happened, 20 draws at low and at high noise](notebooks/assets/readme-trend-errors.png)](notebooks/assets/readme-trend-errors.png)
 
 `mse` is the error against what actually happened. The default,
 `mean_reference_mse`, is the error against the answer key: the part your model
 could have avoided.
 
-Stop a CI build when a forecast is malformed or the model crashes:
+Stop a CI build when a forecast is malformed or the model crashes. Each output
+check counts the cases that passed it:
 
 ```python
-card.checks                   # each output check, with how many cases passed it
+card.checks
+```
+
+```text
+[{'check': 'runs', 'title': 'Runs without errors', 'passed': 200, 'failed': 0},
+ {'check': 'dates', 'title': 'Forecasts the requested dates', 'passed': 200, 'failed': 0},
+ …]
+```
+
+```python
 card.report.assert_passed()   # raises on any failure and says what went wrong
 ```
 
@@ -101,7 +169,18 @@ Save every case to analyse later, or to replay one on another machine:
 card.report.to_json("report.json")
 ```
 
-The file records each case's scenario, seed and scores, every check's verdict
+```text
+{"cases": [{"diagnostics": [{"name": "forecast_contract", "status": "PASS", "message": …}, …],
+            "manifest": {"kind": "white_noise", "horizon": 24, "parameters": …, …},
+            "metrics": {"mae": 0.571, "mase": 1.081, "mean_reference_mse": 0.339, "mse": 0.538},
+            "scenario": "white_noise",
+            "seed": 0},
+           …],
+ "metadata": {"instances": 10, "model": "NaiveForecaster", "seed": 0, "timegym_version": …, …},
+ "summary": {…}}
+```
+
+The file holds each case's scenario, seed and scores, every check's verdict
 and the numbers behind it, the pipeline's settings, and the Python and library
 versions, so a failure with a built-in model can be replayed from the file
 alone.
@@ -121,7 +200,7 @@ When tuning a model on the scorecard, 20 or 30 instances keep the score from
 rewarding luck on a few draws; with `seed=None` every evaluation sees new
 series, so the tuning cannot overfit to fixed ones.
 
-Pick your own series:
+Pick your own series. `test` returns the report; `run` keeps the forecasts too:
 
 ```python
 from timegym import Scenario
@@ -130,15 +209,20 @@ suite = [
     Scenario("seasonal", context_length=240, horizon=24),
     Scenario("random_walk", parameters={"drift": 0.1}),
 ]
-report = pipeline.test(suite, seed=0, instances=30)
+report = pipeline.test(suite, seed=0, instances=30)   # scores and checks
+run = pipeline.run(suite, seed=0, instances=3)         # the same, plus every forecast
+run.plot_forecasts()
 ```
+
+[![Three draws each of a seasonal series and a random walk with drift, with the last-value forecast](notebooks/assets/readme-custom-scenarios.png)](notebooks/assets/readme-custom-scenarios.png)
 
 ## Why not just backtest?
 
 A backtest compares your forecast with the one future that happened. That
-future is noisy, so a lucky model looks good and a sound one can look bad. TimeGym made the data, so it holds the answer key: the
-expected value and the spread of every future step. It scores your forecast
-against that key, which measures skill rather than luck.
+future is noisy, so a lucky model looks good and a sound one can look bad.
+TimeGym made the data, so it holds the answer key: the expected value and the
+spread of every future step. It scores your forecast against that key, which
+measures skill rather than luck.
 
 **A score can also hide a bug.** Put the right numbers on the wrong dates and
 any scorer that compares arrays gives them exactly the same error. TimeGym
@@ -149,66 +233,35 @@ the reason before it scores anything.
 
 ## Bring your own model
 
-A forecaster is any Python object with two methods. TimeGym calls them once
-per test series:
-
-- `fit(context)` receives the past: a pandas DataFrame with one row per time
-  step and one column per series (a single series is one column, `y`). Learn
-  whatever you need from it.
-- `predict(future_index)` receives the time labels to forecast, for example the
-  12 steps after the context ends. Return a `timegym.Forecast` holding one row
-  of values for each of those labels.
-
-There is nothing to subclass; `Forecast` is only the container for the answer.
-This model forecasts that every future value equals the last one it saw:
+A forecaster is any object with two methods. `fit(context)` gets the series so
+far. `predict(future_index)` gets the dates to forecast, the steps right after
+the context, and returns a `Forecast` with one value per date. This one
+repeats the last value it saw:
 
 ```python
-import numpy as np
 from timegym import Forecast, Pipeline
 
-class LastValue:
-    def fit(self, context):            # DataFrame: one row per past step, one column per target
-        self.last_ = context.iloc[-1].to_numpy()
-        self.targets_ = tuple(context.columns)
+class LastValueForecaster:
+    def fit(self, context):            # the series so far: a DataFrame with a column y
+        self.last = context["y"].iloc[-1]
         return self
 
-    def predict(self, future_index):   # the time labels to forecast
-        point = np.tile(self.last_, (len(future_index), 1))   # (steps, targets)
-        return Forecast(index=future_index, point=point, target_names=self.targets_)
+    def predict(self, future_index):   # the dates to forecast
+        return Forecast(index=future_index, point=[[self.last]] * len(future_index))
 
-card = Pipeline(LastValue()).scorecard()
+card = Pipeline(LastValueForecaster()).scorecard()
 ```
 
-TimeGym fits a fresh copy of the model for every series, so nothing learned on
-one leaks into the next. `predict` may also return a pandas DataFrame, indexed
-by the future dates with one column per series.
-
-On a random walk, this naive forecast is hard to beat: the best guess for
-tomorrow is today's value. On a trend or a season it is plainly wrong, and the
-scorecard says so.
-
-The forecast must use exactly the `future_index` it was given, the same column
-names in the same order, one row per step and finite numbers. Break any of these
-and the case fails with the reason, for example that its dates are shifted one
-step. A `Forecast` can also carry quantiles or sample paths
-for uncertainty, and TimeGym scores those too.
+It scores 51, like the built-in one.
 [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/)
-walks through it step by step, up to a nearest-analogues forecaster on real
-data.
+adds several series, quantiles and a nearest-analogues forecaster.
 
-[![A nearest-analogues forecaster on white-noise, trend and seasonal scenarios, two seeds each: observations as dots, forecasts as crosses, known conditional means as lines](notebooks/assets/custom-model-knn.png)](https://diogoseca.github.io/timegym/notebooks/28_custom_model/)
-
-scikit-learn regressors plug in directly. TimeGym feeds them the last
-`window_length` values as features and turns their predictions into a
-multi-step forecast, fitting any scaler on the training window only:
+scikit-learn regressors plug in directly, fed the last `window_length` values:
 
 ```python
 from sklearn.linear_model import Ridge
-from sklearn.preprocessing import StandardScaler
-from timegym import Pipeline
 
-pipeline = Pipeline(window_length=12).add(StandardScaler()).add(Ridge(alpha=1.0))
-report = pipeline.test(seeds=[0])
+card = Pipeline(Ridge(), window_length=12).scorecard()
 ```
 
 ## What TimeGym checks
