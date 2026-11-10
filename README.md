@@ -10,12 +10,13 @@
 [OpenAI Gym](https://arxiv.org/abs/1606.01540) gave reinforcement-learning
 agents a standard set of environments to train and be tested in. TimeGym does
 the same for forecasters. It generates time series whose future it already
-knows the odds of: pure noise, a trend, a season, a level pulled back to its
-mean, a random walk. It hands your forecaster the past, asks for the future,
-and scores the answer against the truth. One picture shows what your algorithm
-nails and where it falls over.
+knows the odds of: noise, trends, seasons, sudden shifts, cycles, levels pulled
+back to their mean, random walks, each at low and at high noise. It hands your
+forecaster the past, asks for the future, and scores the answer against the
+truth. One picture shows what your algorithm nails, where it struggles and
+where it fails.
 
-[![Six kinds of series, three draws each: the data as gray dots, the forecast as blue crosses, the answer key as a thin line](notebooks/assets/quick-start-matrix.png)](#sixty-seconds)
+[![TimeGym scorecard: a 0 to 100 score for each kind of series at low and high noise](notebooks/assets/scorecard-compact.png)](#sixty-seconds)
 
 **Why not just backtest?** A backtest compares your forecast with the one
 future that happened. That future is noisy, so a lucky model looks good and a
@@ -48,64 +49,73 @@ Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
 
 ## Sixty seconds
 
-Wrap your forecaster in a `Pipeline` and plot it against every kind of series.
-The built-in last-value forecaster stands in for yours here:
+Wrap your forecaster in a `Pipeline` and ask for its scorecard. The built-in
+last-value forecaster stands in for yours here:
 
 ```python
 from timegym import NaiveForecaster, Pipeline
 
 pipeline = Pipeline(NaiveForecaster())   # put your own forecaster here
-fig = pipeline.plot_tests()
-fig.savefig("forecasts.png")
+card = pipeline.scorecard()
+card.save("scorecard.png")
 ```
 
-You get a picture like the one at the top. Each row is a kind of series and
-each column a fresh draw of it. Gray dots are the data, blue crosses the
-forecast, and the thin line is the answer key: the best forecast anyone could
-make from that past. Where the crosses sit on the line, your model nails it;
-where they wander off, it doesn't.
+[![The scorecard of the last-value forecaster: a score per kind of series and noise level, with example forecasts](notebooks/assets/scorecard.png)](notebooks/assets/scorecard.png)
 
-### More things to do
+Each row is a kind of series and each column a noise level. The left column
+says what can and cannot be predicted for that kind of series, and the right
+column names the mistakes the model made there. A score of 100 means the
+forecasts were as close as those of a forecaster that knows exactly how the
+series was made; 50 means the model's avoidable error is as large as the noise
+nobody could avoid. The bands read "Nails it" from 90, "Good" from 70,
+"Struggles" from 40 and "Fails" below that. The last-value forecaster scores
+51: it nails the random walk and fails trends and seasons. In a notebook, `card`
+on its own shows the picture.
 
-Keep the forecasts, so several views share the same fits:
+### More things to do with a scorecard
+
+Print the same scorecard as a Markdown table, for a pull request or a log:
 
 ```python
-run = pipeline.run(seeds=range(20))
-run.plot_forecasts()
+print(card)
 ```
 
-See how the error is spread across those 20 draws of each kind of series:
+List what it is good at, where it fails, and where noise throws it off:
 
 ```python
-run.plot_errors(metric="mse")
+card.good_at, card.fails_at, card.noise_sensitive
+```
+
+Read every score, per kind of series and noise level, as a DataFrame:
+
+```python
+card.table
+```
+
+Zoom in on one row to see the forecasts behind its score, and how the error is
+spread across many draws:
+
+```python
+trend = pipeline.scorecard(["trend"], instances=3)   # one row, both noise levels
+trend.run.plot_forecasts()
+pipeline.scorecard(["trend"], instances=20).run.plot_errors(metric="mse")
 ```
 
 `mse` is the error against what actually happened. The default,
 `mean_reference_mse`, is the error against the answer key: the part your model
 could have avoided.
 
-Get the scores as a table:
-
-```python
-import pandas as pd
-
-scores = pd.DataFrame(
-    {"scenario": case.scenario, "seed": case.seed, **case.metrics}
-    for case in run.report.cases
-)
-scores.groupby("scenario")[["mse", "mean_reference_mse"]].mean()
-```
-
 Stop a CI build when a forecast is malformed or the model crashes:
 
 ```python
-run.report.assert_passed()   # raises on FAIL or ERROR and lists each one
+card.checks                   # each output check, with how many cases passed it
+card.report.assert_passed()   # raises on any failure and says what went wrong
 ```
 
 Save every case to analyse later, or to replay one on another machine:
 
 ```python
-run.report.to_json("report.json")
+card.report.to_json("report.json")
 ```
 
 The file records each case's scenario, seed and scores, every check's verdict
@@ -113,9 +123,22 @@ and the numbers behind it, the pipeline's settings, and the Python and library
 versions, so a failure with a built-in model can be replayed from the file
 alone.
 
-Change the size of the test, or pick your own series. The same seed always
-gives the same series; when tuning a model, 20 or 30 seeds per kind of series
-keep the score from rewarding luck on a few draws:
+Change the size of the test. Each kind of series is drawn `instances` times at
+each noise level; draw `i` uses seed `seed + i`, so the same seed always gives
+the same series:
+
+```python
+card = pipeline.scorecard(instances=30)     # more draws: steadier scores
+card = pipeline.scorecard(noise_levels=3)   # low, medium and high noise
+card = pipeline.scorecard(seed=None)        # fresh draws every time
+card.seed                                   # the seed that was drawn, to repeat the run
+```
+
+When tuning a model on the scorecard, 20 or 30 instances keep the score from
+rewarding luck on a few draws; with `seed=None` every evaluation sees new
+series, so the tuning cannot overfit to fixed ones.
+
+Pick your own series:
 
 ```python
 from timegym import Scenario
@@ -124,7 +147,7 @@ suite = [
     Scenario("seasonal", context_length=240, horizon=24),
     Scenario("random_walk", parameters={"drift": 0.1}),
 ]
-report = pipeline.test(suite, seeds=range(30))
+report = pipeline.test(suite, seed=0, instances=30)
 ```
 
 ## Bring your own model
@@ -156,21 +179,21 @@ class LastValue:
         point = np.tile(self.last_, (len(future_index), 1))   # (steps, targets)
         return Forecast(index=future_index, point=point, target_names=self.targets_)
 
-report = Pipeline(LastValue).test()
+card = Pipeline(LastValue()).scorecard()
 ```
 
-Pass the class, not an instance: TimeGym builds a fresh model for every series,
-so nothing learned on one leaks into the next. To set parameters, pass a
-factory, as in `Pipeline(model_factory=lambda: MyModel(window=48))`.
+TimeGym fits a fresh copy of the model for every series, so nothing learned on
+one leaks into the next. `predict` may also return a pandas DataFrame, indexed
+by the future dates with one column per series.
 
 On a random walk, this naive forecast is hard to beat: the best guess for
 tomorrow is today's value. On a trend or a season it is plainly wrong, and the
-scores say so.
+scorecard says so.
 
 The forecast must use exactly the `future_index` it was given, the same column
 names in the same order, one row per step and finite numbers. Break any of these
-and the case fails with the reason, for example `contract_index_mismatch` when
-the dates are shifted. A `Forecast` can also carry quantiles or sample paths
+and the case fails with the reason, for example that its dates are shifted one
+step. A `Forecast` can also carry quantiles or sample paths
 for uncertainty, and TimeGym scores those too.
 [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/)
 walks through it step by step, up to a nearest-analogues forecaster on real
@@ -198,16 +221,15 @@ Every forecast goes through three questions, in this order.
 **1. Is the forecast well-formed?** These output checks run on every forecast
 (in the code, the *forecast contract*):
 
-- Forecasts the requested dates
+- Forecasts the requested dates; a failure says how many steps they are off
 - Returns every series, in order
 - Right number of steps and series
 - No missing or infinite values
 - Quantiles in order, when the forecast has quantiles
+- Runs without errors
 
-A forecast that fails a check fails the test with a named reason, such as
-`contract_index_mismatch` when the dates are off, and is never scored, so a bug
-cannot pass as a slightly worse error. A model that crashes gets `ERROR`, with
-its traceback.
+A forecast that fails a check fails the test with the reason and is never
+scored, so a bug cannot pass as a slightly worse error.
 
 **2. How far is it from the answer key?** Because TimeGym generated the series,
 it knows the expected value and the spread of every future step (in the code,
@@ -240,25 +262,30 @@ explains each verdict in more depth.
 
 ## Scenarios
 
-Each scenario is a kind of series with a known answer key. The useful question
-for each is what a forecast *can* get right, and what nobody can predict.
+The scorecard's rows are ten kinds of series, each drawn at low noise (standard
+deviation 0.5) and high noise (2.0). For each one TimeGym knows what a forecast
+*can* get right, and what nobody can predict:
 
-| Scenario | What the series does | What a good forecast gets right | What nobody can predict |
-| --- | --- | --- | --- |
-| Noise around a fixed level (`white_noise`) | Scatters randomly around a constant | The level | Each individual wiggle |
-| Noise around a trend (`trend`) | A straight line plus scatter | The line, extended | The scatter |
-| Noise around a season (`seasonal`) | A repeating wave plus scatter | The wave, repeated | The scatter |
-| Mean reversion (`ar1`, also called AR(1)) | Wanders, but is pulled back to its mean | The next few steps, sliding back to the mean | Anything further out: there the best forecast is the mean |
-| Random walk (`random_walk`) | Each step adds a fresh shock to the last value, and shocks never fade | That it stays near where it is now | Which way it goes; the uncertainty grows with every step |
-| Random walk with drift (`random_walk` with `drift`) | A random walk with a steady push | The push | The wandering around it |
+| Kind of series | What a good forecast gets right | What nobody can predict |
+| --- | --- | --- |
+| Pure noise | Only the average, zero: the best forecast is a flat line at zero. | Every individual value. Any pattern a model finds here is invented. |
+| Noise around a fixed level | The level, estimated from the whole history. | Each wiggle around the level. |
+| Straight-line trend | The line, extended any number of steps ahead. | The noise around the line. |
+| Repeating seasonal cycle | The repeating shape, any number of steps ahead. | The noise around the cycle. |
+| Trend + seasonal cycle | Both the line and the repeating shape. | The noise around them. |
+| Sudden level shift | The new level, from the history since the jump. | The noise. Older history sits at the old level and misleads. |
+| Mean reversion (AR(1)): shocks fade | The pull back to the average: a gap halves in about three steps. | New shocks. After about ten steps only the average is left; measurement noise hides where the series is now. |
+| Irregular cycles (AR(2)) | The rest of the current swing, fading over the next cycles. | When the next swings come and how big they are; noise hides the current phase. |
+| Random walk: shocks never fade | Where it is now: the best forecast is flat at the current level, smoothed when noisy. | The direction of the next move. Uncertainty grows without limit with the horizon. |
+| Random walk with drift | The current level plus the steady drift. | The wandering around the drift line, which grows with the horizon. |
 
 Mean reversion and the random walk are the same equation: each step keeps a
 fraction of the last step's distance from the mean and adds a fresh shock. Keep
-80%, the default, and the series is pulled back; keep 100% and the pull is
-gone. The [scenario guide](docs/stress-cases.md) explains each kind in plain
-terms, and the composed and financial ones: trends, seasons and noise with
-scheduled changes, price jumps, volatility clusters (GARCH) and hidden regime
-switches, alone or across several correlated series.
+80% and the series is pulled back; keep 100% and the pull is gone. The
+[scenario guide](docs/stress-cases.md) explains each kind in plain terms, and
+the composed and financial ones beyond the scorecard: price jumps, volatility
+clusters (GARCH) and hidden regime switches, alone or across several correlated
+series.
 
 ## Tutorials
 

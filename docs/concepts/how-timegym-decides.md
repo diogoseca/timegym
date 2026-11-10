@@ -17,7 +17,9 @@ verdicts and the words the rest of the documentation uses for them.
    several series the right correlation.
 
 TimeGym never turns a score into a pass mark. It reports how far off a forecast
-is; you decide what is good enough.
+is; you decide what is good enough. The scorecard's bands ("Nails it", "Good",
+"Struggles", "Fails") are labels for reading the picture, not verdicts. A band
+never fails `assert_passed`; only a failed output check or a crash does.
 
 ## Words these pages use
 
