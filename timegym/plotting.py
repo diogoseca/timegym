@@ -249,7 +249,9 @@ def _case_header(ax, title, score, details):
         )
 
 
-def _draw_case(ax, entry, target, *, show_quantiles, title=None, history=None):
+def _draw_case(
+    ax, entry, target, *, show_quantiles, title=None, history=None, title_width=70
+):
     case = entry.case
     task = case.task
     messages = []
@@ -411,8 +413,8 @@ def _draw_case(ax, entry, target, *, show_quantiles, title=None, history=None):
         title = f"{entry.scenario_index + 1}. {label}{f' · {target}' if several else ''} · seed {entry.result.seed}"
     else:
         title = f"{title}{f' · {target}' if several else ''} · instance {entry.seed_index + 1}"
-    if len(title) > 82:
-        title = textwrap.fill(title, width=70, break_long_words=False)
+    if len(title) > title_width:
+        title = textwrap.fill(title, width=title_width, break_long_words=False)
     _case_header(ax, title, score, " · ".join(details))
     _annotate(ax, messages)
 
@@ -478,6 +480,8 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
             figsize=figsize or (6 * len(columns), 0.4 + 3.4 * len(rows)),
             layout="constrained",
         )
+        # Wrap long titles to the panel: about ten bold characters per inch.
+        title_width = max(24, int(10.5 * fig.get_figwidth() / len(columns)))
         for row_index, (scenario_index, target) in enumerate(rows):
             for column_index, seed_index in enumerate(columns):
                 ax = axes[row_index, column_index]
@@ -499,6 +503,7 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
                         show_quantiles=show_quantiles,
                         title=_run_title(run, scenario_index),
                         history=history,
+                        title_width=title_width,
                     )
         for ax in axes[:-1].flat:  # the time axis is named once, under the last row
             ax.set_xlabel("")
