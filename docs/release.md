@@ -70,10 +70,25 @@ or repository secret is involved; an account-wide `twine` token is not needed.
    requests** for the compatibility bot. Workflows declare their own minimal
    permissions. The `feature`, `fix` and `python-compatibility` labels are
    created the first time a pull request uses them.
-5. `tag-release.yml` pushes its version commit straight to `main`. If a branch
-   protection rule or ruleset on `main` requires pull requests or status checks,
-   GitHub rejects that push and the job stops before anything is tagged. Let
-   the workflow through by removing those requirements or giving it a bypass.
+5. `tag-release.yml` pushes its version commit and tag straight to `main`. The
+   ruleset on `main` requires pull requests, so GitHub rejects that push
+   ("Changes must be made through a pull request") and nothing is tagged
+   unless the push may bypass the ruleset. The workflow pushes with a write
+   deploy key that the ruleset lets through:
+   1. Make a key pair without a passphrase:
+      `ssh-keygen -t ed25519 -N '' -C timegym-release -f timegym-release`.
+   2. Under **Settings → Deploy keys → Add deploy key**, name it
+      `timegym-release`, paste `timegym-release.pub` and tick **Allow write
+      access**.
+   3. Under **Settings → Secrets and variables → Actions → New repository
+      secret**, name it `RELEASE_DEPLOY_KEY` and paste the whole private key
+      file `timegym-release`. Delete both local files afterwards.
+   4. Under **Settings → Rules → Rulesets**, open the ruleset that targets
+      `main`, choose **Add bypass** under **Bypass list**, pick **Deploy keys**
+      and save the ruleset.
+
+   Without the secret the job pushes with `GITHUB_TOKEN`, which succeeds only
+   if the ruleset lets GitHub Actions bypass it.
 
 These fields must match the [PyPI trusted publisher configuration](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
 
@@ -120,17 +135,23 @@ It finds the latest `v*` tag and counts the pull requests labeled `feature` or
 writes the next version into notebook 12, `CITATION.cff` (dated the day of the
 run) and `CHANGELOG.md`. The job regenerates the package module, README
 citation and standalone manuscript, runs the release-metadata checks, commits
-`Release X.Y.Z` to `main` with the annotated tag `vX.Y.Z`, and dispatches
-`release.yml` for that tag, because a tag pushed with `GITHUB_TOKEN` starts no
-workflow by itself. Unlabeled merges release nothing; their changes ship with
-the next labeled one.
+`Release X.Y.Z` to `main` with the annotated tag `vX.Y.Z`, and pushes both with
+the release deploy key. That push starts `release.yml` for the tag and the
+documentation deploy. When the job pushes with `GITHUB_TOKEN` instead, it
+dispatches both workflows itself, because a push made with that token starts no
+workflow. Unlabeled merges release nothing; their changes ship with the next
+labeled one.
 
 To release pending changes without a new merge, or to start a major version,
 open **Actions → Version and tag merged changes → Run workflow** and tick
 **major** for a major version. The job refuses to run when `__version__` on
 `main` differs from the latest tag, which catches hand-edited versions. Several
 quick merges queue behind each other; each run counts everything since the
-latest tag, so later runs find nothing left and stop.
+latest tag, so later runs find nothing left and stop. If a merge lands while a
+run is preparing a release, GitHub refuses that run's push; the run then stops
+without failing and leaves the release to the newer merge's run, which counts
+both. A merge from a fork runs without secrets and with a read-only token, so
+it cannot release; run the workflow by hand after merging one.
 
 `release.yml` runs the complete reusable `checks.yml` workflow against the tag,
 checks the version identity, builds sdist/wheel, and compiles the standalone
