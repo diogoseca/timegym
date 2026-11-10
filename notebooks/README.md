@@ -6,10 +6,10 @@ distributions. The plots continue the 2021 Quick Start's visual language: gray
 observation dots, blue prediction crosses, thin reference curves, and a clear
 forecast origin.
 
-Everything lives in this folder: **14 source notebooks generate the package,
+Everything lives in this folder: **15 source notebooks generate the package,
 12 application notebooks use it**, and the [11 original notebooks](archive/README.md)
 retain their development history and saved figures in Git. The historical
-archive is excluded from source distributions; the 26 active notebooks are included.
+archive is excluded from source distributions; the 27 active notebooks are included.
 
 ## Open and explore
 
@@ -43,7 +43,7 @@ explicit seeds. Installing the wheel alone does not install these notebook files
 
 The source notebooks combine reasoning, editable implementation cells, examples,
 and plots. Implementation cells are collapsed for reading; expand them to work
-on the code. The [source map](source-map.json) gives each of the 23 package modules
+on the code. The [source map](source-map.json) gives each of the 25 package modules
 one notebook owner.
 
 | Source notebook | Responsibility |
@@ -60,6 +60,7 @@ one notebook owner.
 | [10 · Reports and replay](10_reports_and_replay.ipynb) | Structured results and provenance |
 | [11 · Plotting](11_plotting.ipynb) | Forecast matrices and case-score distributions |
 | [12 · Package](12_package.ipynb) | Public exports and package structure |
+| [13 · Scorecard](13_scorecard.ipynb) | The pattern-by-noise grid, scores, named mistakes and the scorecard image |
 | [14 · Controlled processes](14_controlled_processes.ipynb) | Compositions, parameter changes, Merton/GARCH/regime simulation and references |
 | [15 · Joint controlled processes](15_joint_processes.ipynb) | Correlated innovations, shared jumps and regimes, CCC-GARCH, and joint reference laws |
 

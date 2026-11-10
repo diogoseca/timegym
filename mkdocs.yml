@@ -1,5 +1,5 @@
 site_name: TimeGym
-site_description: Controlled verification and diagnosis for forecasting pipelines
+site_description: A gym for time series forecasting algorithms
 site_author: Diogo Seca
 repo_url: https://github.com/diogoseca/timegym
 repo_name: diogoseca/timegym
@@ -123,6 +123,7 @@ nav:
       - Composed and joint processes: docs/api/processes.md
       - Models and reductions: docs/api/models.md
       - Pipeline and reports: docs/api/pipeline.md
+      - Scorecards and the scenario grid: docs/api/scorecard.md
       - Scores and diagnostics: docs/api/diagnostics.md
       - Fault fixtures: docs/api/fault-fixtures.md
       - Data preparation: docs/api/data-preparation.md

@@ -70,6 +70,64 @@ def _target_labels(values, name="target names") -> tuple:
     return names
 
 
+# %% ../notebooks/08_forecast_contracts.ipynb #index-shift
+def _index_shift(index, future_index):
+    """Return ``k`` when ``index`` is the requested ``future_index`` moved ``k`` steps.
+
+    Negative ``k`` means the labels start early (``-1``: at the last observed
+    step), positive means late. Returns ``None`` when the labels are not a
+    whole-step shift of the requested ones, for example a truncated horizon.
+    Steps come from the requested index: its frequency for time indexes, its
+    constant spacing for numeric ones.
+    """
+    if (
+        not isinstance(index, pd.Index)
+        or len(index) != len(future_index)
+        or len(index) == 0
+    ):
+        return None
+    if index.equals(future_index):
+        return 0
+    if isinstance(future_index, (pd.DatetimeIndex, pd.TimedeltaIndex, pd.PeriodIndex)):
+        frequency = future_index.freq
+        if frequency is None and len(future_index) >= 3:
+            frequency = pd.infer_freq(future_index)
+        if frequency is None:
+            return None
+
+        def moved(k):
+            return (
+                future_index.shift(k, freq=frequency)
+                if not isinstance(future_index, pd.PeriodIndex)
+                else future_index + k
+            )
+
+    elif pd.api.types.is_numeric_dtype(future_index.dtype) and len(future_index) >= 2:
+        steps = np.diff(future_index.to_numpy())
+        if not np.all(steps == steps[0]) or steps[0] == 0:
+            return None
+
+        def moved(k):
+            return future_index + k * steps[0]
+
+    else:
+        return None
+    for distance in range(1, 4 * len(future_index) + 1):
+        for k in (-distance, distance):
+            try:
+                if index.equals(moved(k)):
+                    return k
+            except (TypeError, ValueError, OverflowError):
+                return None
+    return None
+
+
+def _describe_shift(k):
+    """Say in words how far forecast dates moved from the requested ones."""
+    steps = f"{abs(k)} step{'s' if abs(k) != 1 else ''}"
+    return f"shifted {steps} {'early' if k < 0 else 'late'}"
+
+
 # %% ../notebooks/08_forecast_contracts.ipynb #08_forecast_contract-11
 @dataclass
 class ForecastTask:

@@ -1,5 +1,13 @@
 # Scores and diagnostics
 
+**In short.** Scores measure how far a forecast is, both from what actually
+happened (`mse`, `mae`, `mase`) and from the answer key (`mean_reference_mse`);
+lower is better. A diagnostic is one check's result: a verdict (`PASS`, `FAIL`,
+`INCONCLUSIVE`, `UNSUPPORTED` or `ERROR`), a message, and the numbers it rests
+on, called its evidence. Accuracy diagnostics are always `INCONCLUSIVE`,
+because TimeGym sets no pass mark for accuracy; that threshold is yours.
+[How TimeGym decides](../concepts/how-timegym-decides.md) explains the verdicts.
+
 What each score measures, how the evaluator turns scores and checks into
 diagnostics, and the catalogue of every diagnostic the package can emit: scores
 from `timegym.metrics`, the evaluator from `timegym.diagnostics`, the shift check

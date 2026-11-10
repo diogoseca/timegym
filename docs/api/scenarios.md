@@ -1,5 +1,12 @@
 # Scenarios and references
 
+**In short.** A `Scenario` is a recipe for a kind of series. `generate(seed)`
+draws one `Case` from it: the past your model sees (`case.task`), the future
+that then happened (`case.observed`), and the answer key (`case.reference`):
+the expected value and the spread of every future step, given that past. Your
+model never sees the future or the answer key; only the scorer does.
+[Synthetic scenarios](../stress-cases.md) describes each recipe in plain terms.
+
 Synthetic cases and their known conditional references: `Scenario`, `Case` and
 `Reference` from `timegym`, `DEFAULT_LEVELS` from `timegym.contracts`, and
 `scenario_label` from `timegym.scenarios`.
@@ -59,6 +66,21 @@ default marginal levels for the Gaussian AR(1) model.
 The five core families have exact known-parameter Gaussian reference laws. For AR(1), |phi| < 1 and the
 context starts in its stationary distribution. A random walk starts at its
 configured intercept at index zero. Future innovations are integrated out.
+
+`ar2` is a stationary AR(2), `Y[t] - mean = phi1*(Y[t-1] - mean) +
+phi2*(Y[t-2] - mean) + epsilon[t]`, defaulting to `phi1=1.0, phi2=-0.5,
+sigma=1.0`. It requires `phi1 + phi2 < 1`, `phi2 - phi1 < 1` and `|phi2| < 1`
+and starts in its stationary distribution. With complex roots its shocks ring
+and fade, giving irregular cycles with no fixed period. It is a known-parameter
+kind but not one of `CORE_KINDS`, so the default suite is unchanged.
+
+`ar1`, `ar2` and `random_walk` accept an optional `noise` parameter: the
+standard deviation of measurement noise added to each observation of the
+hidden process. The noise is drawn after the process shocks, so changing it
+keeps the hidden path. With `noise` set (and always for `ar2`) the reference is
+the exact Kalman-filter prediction given the noisy context, and
+`reference.conditioning["reference_method"]` is `"kalman_filter"`. Without
+`noise`, `ar1` and `random_walk` keep their analytic references and manifests.
 
 The five core families are listed by `timegym.scenarios.CORE_KINDS`, derived from
 the scenario defaults. `timegym.data.synthetic.default_scenarios(context_length=120,

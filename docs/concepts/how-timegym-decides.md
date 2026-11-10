@@ -1,129 +1,130 @@
 # How TimeGym decides
 
-In TimeGym, verification means exercising specified runtime contracts, not
-formal proof of a program. This page explains where each verdict in a report
-comes from, using the terms of the [TimeGym manuscript](../../paper/README.md).
+TimeGym asks three questions of every forecast, in order, and records a verdict
+for each with the numbers behind it. This page explains the questions, the
+verdicts and the words the rest of the documentation uses for them.
 
-## Why forecasts need other oracles
+## In short
 
-A test needs an oracle: a way to decide whether an output is correct. A
-forecaster has no exact expected output, so it is what
-[Weyuker (1982)](https://doi.org/10.1093/comjnl/25.4.465) called a non-testable
-program. Weyuker listed the remedies that remain: a partial oracle, tests on
-simplified data with known results, and known properties of the output.
-[Davis and Weyuker (1981)](https://doi.org/10.1145/800175.809889) had
-already proposed the pseudo-oracle, an independent implementation of the same specification whose
-outputs are compared within a tolerance.
-[Guderlei and Mayer (2007)](https://doi.org/10.1109/QSIC.2007.4385527) extended
-metamorphic relations to programs with random output by comparing output
-distributions with hypothesis tests.
+1. **Is the forecast well-formed?** Right dates, right series in the right
+   order, one row per step, no NaN or infinity, quantiles that do not cross. If
+   not, the case fails with a named reason and is not scored.
+2. **How far is it from the answer key?** TimeGym generated the series, so it
+   knows the expected value and the spread of every future step. The forecast
+   is scored against that key and against what actually happened.
+3. **Does it do what you declared?** Optional checks of properties a model
+   claims, such as moving its forecast up when the data move up, or giving
+   several series the right correlation.
 
-None of these ideas is new. TimeGym makes each one executable for forecasts and
-records its assumptions in the report.
+TimeGym never turns a score into a pass mark. It reports how far off a forecast
+is; you decide what is good enough.
 
-| Oracle type | TimeGym mechanism | Where to find it |
-| --- | --- | --- |
-| Partial oracle | Forecast contracts on shape, index, finiteness and quantile order | `forecast_contract` diagnostics; [Tasks and forecasts](../api/tasks-and-forecasts.md) |
-| Simplified data with known results | Synthetic scenarios with conditional references | [Scenarios and references](../api/scenarios.md); [Synthetic scenarios](../stress-cases.md) |
-| Known properties | Declared relations such as shift equivariance | `check_shift_equivariance`; [Scores and diagnostics](../api/diagnostics.md) |
-| Pseudo-oracle | Independent NumPy lag-Ridge comparator | Study only, in `experiments/model_faults.py`; not part of the package |
-| Statistical metamorphic test | Reference-covariance rank check; calibrated loss alarm | `reference_covariance` diagnostic; the loss alarm is study only |
+## Words these pages use
 
-The [diagnostics catalogue](../api/diagnostics.md#diagnostics-catalogue) gives
-the oracle type of every diagnostic the package emits. The
-[capability map](capability-map.md) crosses these oracle types with the
-behaviors a forecaster needs, and shows which tutorial covers each pair.
+| Word | Plain meaning |
+| --- | --- |
+| Scenario | A recipe for a kind of series, such as noise around a trend |
+| Case | One draw from a scenario: a past, a future and its answer key |
+| Seed | The number that fixes a draw, so the same seed gives the same case |
+| Context | The past the model sees: a pandas DataFrame, one row per time step, one column per series |
+| Future index | The time labels the model must forecast |
+| Horizon | How many steps ahead the model forecasts |
+| Target | One of the series being forecast; a single series is named `y` |
+| Forecast | The model's answer: point values, and optionally quantiles or sample paths |
+| Reference | The answer key: the true expected value and spread of each future step, given the past |
+| Forecast contract | The output checks of question 1 |
+| Diagnostic | One check's result: a verdict, a message and its evidence |
+| Evidence | The numbers a verdict rests on, saved with it |
+| Report | Every case's scores and diagnostics, with the settings and versions that produced them |
 
 ## From case to verdict
 
 ```mermaid
 flowchart LR
-    S["Scenario<br/>context, future index,<br/>conditional reference"] --> M["Model<br/>refit on the context"]
+    S["Scenario<br/>past, future dates,<br/>answer key"] --> M["Your model<br/>fitted on the past"]
     M --> F["Forecast"]
-    F --> C{"Contract holds?"}
+    F --> C{"Well-formed?"}
     C -- no --> X["FAIL<br/>not scored"]
-    C -- yes --> R["Scores against observations<br/>and the reference<br/>INCONCLUSIVE: descriptive"]
-    C -- yes --> D["Opt-in statistical checks<br/>check_dependence=True"]
-    R --> T["TestReport"]
+    C -- yes --> R["Scores against what happened<br/>and the answer key<br/>INCONCLUSIVE: no pass mark"]
+    C -- yes --> D["Optional checks<br/>check_dependence=True"]
+    R --> T["Report"]
     D --> T
     X --> T
 ```
 
-Each case starts at a fixed forecast origin, and the model is refit from scratch
-for every case. A forecast that breaks its contract is reported as `FAIL` and is
-not scored.
+Each case starts at a fixed point in time, the forecast origin, and the model is
+fitted from scratch for every case, so nothing learned on one case leaks into
+the next.
 
-## What the five outcomes mean
+## What the five verdicts mean
 
-| Outcome | Meaning |
+| Verdict | Meaning |
 | --- | --- |
-| `PASS` | An implemented check was satisfied. A pass is scoped to that check. |
-| `FAIL` | An observed violation, such as a broken contract or a failed relation. |
-| `INCONCLUSIVE` | The evidence does not support a verdict. Capability scores return it. |
-| `UNSUPPORTED` | The check does not apply, for example a quantile score for a point-only model. |
-| `ERROR` | Execution failed. A model exception is not silently converted into a numerical loss. |
+| `PASS` | The check was run and satisfied. A pass covers that check only. |
+| `FAIL` | Something is wrong: a malformed forecast or a broken declared property. |
+| `INCONCLUSIVE` | Scored, but no pass mark is set. Every accuracy score returns it. |
+| `UNSUPPORTED` | Not checked, because the forecast lacks what the check needs, for example quantiles for a quantile score. |
+| `ERROR` | The model raised an exception. It is recorded with its traceback, never turned into a large error. |
 
-A report with no `FAIL` and no `ERROR` means every forecast met its contract,
-every fit and prediction ran without an exception, and, with
-`check_dependence=True`, no sample covariance was rejected against its reference
-law. It does not mean the forecasts are accurate. Capability scores are
-descriptive because the package imposes no universal acceptance tolerance, and a
-large score can reflect estimation noise, a limited model class or an
-implementation fault.
+A report with no `FAIL` and no `ERROR` means every forecast was well-formed and
+every fit and prediction ran; with `check_dependence=True`, it also means no
+set of sample paths had the wrong correlation. It does not mean the forecasts
+are accurate. A large error can come from noise in a small test, from a model
+too simple for the series, or from a bug, and a fixed pass mark cannot tell
+which.
 
-Tolerance-based assertions are a common source of flaky tests
+Pass marks on numerical results are a known source of flaky tests
 ([Nejadgholi and Yang 2019](https://doi.org/10.1109/ASE.2019.00078);
-[Dutta et al. 2020](https://doi.org/10.1145/3395363.3397366)). The explicit
-`INCONCLUSIVE` outcome keeps a tolerance choice from being reported as a
-verdict. Where a check uses a tolerance, the diagnostics catalogue states it.
+[Dutta et al. 2020](https://doi.org/10.1145/3395363.3397366)). Reporting scores
+as `INCONCLUSIVE` keeps that choice with you. Where a check does use a
+tolerance, the [diagnostics catalogue](../api/diagnostics.md#diagnostics-catalogue)
+states it.
 
-## Declared relations
+## Declared properties
 
-A declared relation is a property in the sense of property-based testing: it is
-stated beside the code and checked on generated inputs
-([Claessen and Hughes 2000](https://doi.org/10.1145/351240.351266)). In TimeGym
-the scenario generators supply those inputs. A relation is not universal, so the
-caller declares that it applies to the model. Relations run on their own: each
-returns a `DiagnosticResult`, and `Pipeline.test` does not add it to the report.
+Some properties hold only for some models, so TimeGym tests them only when you
+say they apply. This is property-based testing: a property is written next to
+the code and checked on generated inputs
+([Claessen and Hughes 2000](https://doi.org/10.1145/351240.351266)), and the
+scenarios supply those inputs. A property check runs on its own and returns one
+`DiagnosticResult`; `Pipeline.test` does not add it to the report.
 
 **Shift equivariance** (`timegym.checks.check_shift_equivariance`)
 
-- *Property:* shifting the context by a constant `c` shifts the point forecast by
+- *Property:* add a constant `c` to the past and the point forecast moves by
   `c`, that is `f(y + c) = f(y) + c`. The defaults are `shift=10.0`,
   `atol=1e-8` and `rtol=1e-7`.
-- *When it holds:* for a model that declares location equivariance.
-- *Counterexample:* a model that clips forecasts at zero, uses absolute
-  features, or regularizes towards a fixed level can violate it on purpose.
-- *Outcomes:* `PASS` or `FAIL` with `max_absolute_error` in the evidence;
-  `ERROR` when either forecast breaks its contract first; `UNSUPPORTED` without
-  point forecasts.
+- *When it holds:* for a model that declares it, such as a last-value or
+  moving-average forecaster.
+- *When it should not:* a model that clips forecasts at zero, uses absolute
+  values as features, or shrinks towards a fixed level breaks it on purpose.
+- *Verdicts:* `PASS` or `FAIL` with `max_absolute_error` as evidence; `ERROR`
+  when either forecast is malformed; `UNSUPPORTED` without point forecasts.
 
-[Tutorial 23](../../notebooks/23_faults_repairs_and_replay.ipynb) shows the
-relation on a declared model.
+[Tutorial 23](../../notebooks/23_faults_repairs_and_replay.ipynb) runs it on a
+model that declares it.
 
-## Testing the instrument
+## Testing the tests
 
-A check earns trust by catching a known fault. The output fault
-fixtures in `timegym.mutations` inject known faults into otherwise valid
-forecasts, and a repair should clear the diagnostic they trigger. This follows
-the use of injected faults to evaluate a test instrument
+A check earns trust by catching a known fault. The fault fixtures in
+`timegym.mutations` break otherwise valid forecasts in known ways, such as
+shifting the dates or swapping two series, and each repair should clear the
+diagnostic its fault triggered. Injecting known faults to see whether a test
+notices is an established way to evaluate tests
 ([Andrews et al. 2005](https://doi.org/10.1145/1062455.1062530);
-[Just et al. 2014](https://doi.org/10.1145/2635868.2635929)), within its known
-limits. Generated mutants resemble real faults in how hard they are to detect,
-while hand-seeded faults are harder to detect; TimeGym's fixtures are hand
-selected, so they are closer to the hand-seeded case. TimeGym calls them output fault fixtures, not mutants,
-because they perturb forecasts, not code. See
-[Fault fixtures](../api/fault-fixtures.md).
+[Just et al. 2014](https://doi.org/10.1145/2635868.2635929)). TimeGym's faults
+are chosen by hand and change forecasts, not code, so they are called fault
+fixtures rather than mutants. See [Fault fixtures](../api/fault-fixtures.md).
 
 ## Scores
 
-[Scores and diagnostics](../api/diagnostics.md) lists which functional each
-metric targets.
+[Scores and diagnostics](../api/diagnostics.md) lists every score and what it
+rewards.
 
 ## What a report records
 
-Weyuker (1982) asked test documentation to record five things. Each maps onto a
-field of the saved `TestReport`:
+[Weyuker (1982)](https://doi.org/10.1093/comjnl/25.4.465) asked test
+documentation to record five things. Each is a field of the saved `TestReport`:
 
 | Weyuker's item | Where it is in a report |
 | --- | --- |
@@ -133,7 +134,41 @@ field of the saved `TestReport`:
 | The outputs | Each case's `metrics` and the diagnostic `evidence`. Forecasts are not stored; `replay_case` regenerates them |
 | How correctness was decided | Each diagnostic's `category`, `message` and `evidence`, with version and dependency provenance in `metadata` |
 
-[Pipeline and reports](../api/pipeline.md) documents the schema and replay.
+[Pipeline and reports](../api/pipeline.md) documents the format and replay.
+
+## Where these ideas come from
+
+In software testing, the thing that decides whether an output is correct is
+called an oracle. A forecaster has no exact correct output, so it is what
+[Weyuker (1982)](https://doi.org/10.1093/comjnl/25.4.465) called a non-testable
+program. Weyuker listed what remains possible: a partial oracle that checks only
+some properties of the output, tests on simplified data with known results, and
+known properties of the output.
+[Davis and Weyuker (1981)](https://doi.org/10.1145/800175.809889) had proposed
+the pseudo-oracle, an independent implementation of the same specification
+whose outputs are compared within a tolerance, and
+[Guderlei and Mayer (2007)](https://doi.org/10.1109/QSIC.2007.4385527) extended
+property checks to programs with random output by comparing output
+distributions with hypothesis tests.
+
+None of these ideas is new. TimeGym makes each one runnable for forecasts and
+records its assumptions in the report. In this vocabulary, the three questions
+above are a partial oracle, simplified data with known results, and known
+properties:
+
+| Oracle type | TimeGym mechanism | Where to find it |
+| --- | --- | --- |
+| Partial oracle | The output checks: shape, dates, finiteness and quantile order | `forecast_contract` diagnostics; [Tasks and forecasts](../api/tasks-and-forecasts.md) |
+| Simplified data with known results | Synthetic scenarios with an answer key | [Scenarios and references](../api/scenarios.md); [Synthetic scenarios](../stress-cases.md) |
+| Known properties | Declared properties such as shift equivariance | `check_shift_equivariance`; [Scores and diagnostics](../api/diagnostics.md) |
+| Pseudo-oracle | Independent NumPy lag-Ridge comparator | Study only, in `experiments/model_faults.py`; not part of the package |
+| Statistical metamorphic test | Correlation check of sample paths against the answer key; calibrated loss alarm | `reference_covariance` diagnostic; the loss alarm is study only |
+
+The [diagnostics catalogue](../api/diagnostics.md#diagnostics-catalogue) gives
+the oracle type of every diagnostic the package emits, and the
+[capability map](capability-map.md) shows which tutorial exercises each pair of
+model behavior and oracle type. The
+[TimeGym manuscript](../../paper/README.md) uses the same terms.
 
 ## Further reading
 
