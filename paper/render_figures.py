@@ -28,7 +28,7 @@ def main():
         print(f"Rendered {name}: SVG, PNG, TikZ", flush=True)
     metadata["inputs_sha256"] = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in [ROOT / "experiments/results/results.json", ROOT / "experiments/results-v2/results.json",
-                     ROOT / "notebooks/00_quick_start.ipynb", Path(__file__), ROOT / "paper/figure_evidence.py",
+                     Path(__file__), ROOT / "paper/figure_evidence.py",
                      ROOT / "paper/vector_canvas.py", ROOT / "paper/figure_common.py",
                      ROOT / "paper/figure_matrix.py", ROOT / "paper/figure_dependence.py", ROOT / "paper/figure_stresses.py",
                      ROOT / "notebooks/26_composed_and_financial_stresses.ipynb",

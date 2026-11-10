@@ -59,7 +59,7 @@ Study 2 adds `supplement-implementation-ablation` (complementary checks on the s
 The manuscript embeds five vector figures, designed at print width; figures 4
 and 5 are in Appendix A:
 
-1. [Forecast matrix (SVG)](figures/paper-forecast-matrix.svg): six configurations from five families by three fixed seeds, using gray observation dots, unconnected blue forecast crosses, and thin conditional references. It uses the quick-start model and settings, with paired random walks without drift and with drift (0.03 per step) sharing identical innovations. To remain readable, it shows the final 72 context values and first 48 predictions from each complete 300-context/100-horizon run.
+1. [Forecast matrix (SVG)](figures/paper-forecast-matrix.svg): six configurations from five families by three fixed seeds, using gray observation dots, unconnected blue forecast crosses, and thin conditional references. It uses the quick start's Ridge model, with paired random walks without drift and with drift (0.03 per step) sharing identical innovations. To remain readable, it shows the final 72 context values and first 48 predictions from each complete 300-context/100-horizon run.
 2. [Marginal versus joint dependence (SVG)](figures/paper-dependence.svg): the first predefined Study 1 case, identical empirical marginals, different joint sample clouds, and saved paired score changes over all 64 evaluation cases.
 3. [Diagnostic evidence (SVG)](figures/paper-diagnostic-evidence.svg): the implementation ablation with clean controls and the random-walk-with-drift counterexample where correcting an algorithm worsens forecast loss.
 
@@ -68,7 +68,7 @@ and 5 are in Appendix A:
 
 `render_figures.py` generates editable SVGs, PNG previews, and self-contained
 TikZ scenes from shared plotted coordinates; TikZ type is set by the document. It regenerates the illustrative
-quick-start fits and first dependence case; aggregate results are read from
+forecast-matrix fits and first dependence case; aggregate results are read from
 the existing studies and checked against their raw records. It does not change
 either study protocol or numerical results. The
 [figure provenance record](figures/paper-figure-provenance.json) records the
