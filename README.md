@@ -16,28 +16,13 @@ forecaster the past, asks for the future, and scores the answer against the
 truth. One picture shows what your algorithm nails, where it struggles and
 where it fails.
 
-[![TimeGym scorecard: a 0 to 100 score for each kind of series at low and high noise](notebooks/assets/scorecard-compact.png)](#sixty-seconds)
-
-**Why not just backtest?** A backtest compares your forecast with the one
-future that happened. That future is noisy, so a lucky model looks good and a
-sound one can look bad. TimeGym made the data, so it holds the answer key: the
-expected value and the spread of every future step. It scores your forecast
-against that key, which measures skill rather than luck.
-
-**A score can also hide a bug.** Put the right numbers on the wrong dates and
-any scorer that compares arrays gives them exactly the same error. TimeGym
-checks the dates, the series and the shape first, and fails the forecast with
-the reason before it scores anything.
-
-[![A forecast with the right values on the wrong dates: the same error, a different diagnosis](notebooks/assets/alignment-demo.png)](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/)
-
 **[Documentation](https://diogoseca.github.io/timegym/)** ·
 [Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) ·
 [Tutorials](https://diogoseca.github.io/timegym/docs/notebooks/) ·
 [API](https://diogoseca.github.io/timegym/docs/reference/) ·
 [Changelog](CHANGELOG.md)
 
-## Install
+## Sixty seconds
 
 ```bash
 pip install timegym
@@ -46,8 +31,6 @@ pip install timegym
 <!-- BEGIN PYTHON SUPPORT -->
 Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
 <!-- END PYTHON SUPPORT -->
-
-## Sixty seconds
 
 Wrap your forecaster in a `Pipeline` and ask for its scorecard. The built-in
 last-value forecaster stands in for yours here:
@@ -149,6 +132,20 @@ suite = [
 ]
 report = pipeline.test(suite, seed=0, instances=30)
 ```
+
+## Why not just backtest?
+
+A backtest compares your forecast with the one future that happened. That
+future is noisy, so a lucky model looks good and a sound one can look bad. TimeGym made the data, so it holds the answer key: the
+expected value and the spread of every future step. It scores your forecast
+against that key, which measures skill rather than luck.
+
+**A score can also hide a bug.** Put the right numbers on the wrong dates and
+any scorer that compares arrays gives them exactly the same error. TimeGym
+checks the dates, the series and the shape first, and fails the forecast with
+the reason before it scores anything.
+
+[![A forecast with the right values on the wrong dates: the same error, a different diagnosis](notebooks/assets/alignment-demo.png)](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/)
 
 ## Bring your own model
 
