@@ -49,20 +49,20 @@ one notebook owner.
 | Source notebook | Responsibility |
 |---|---|
 | [01 · Synthetic data](01_synthetic_data.ipynb) | Scenario generation and conditional references |
-| [02 · Real data](02_real_data.ipynb) | Real-data helper |
-| [03 · Smoothing](03_smoothing.ipynb) | Moving averages |
-| [04 · Feature engineering](04_feature_engineering.ipynb) | Lagged and calendar features |
+| [02 · Real data](02_real_data.ipynb) | Freeze a stock download in a snapshot; test three simple rules on a hidden year of airline passengers |
+| [03 · Smoothing](03_smoothing.ipynb) | Trailing averages: how long a window, why a centered one leaks the future, exponential weights |
+| [04 · Feature engineering](04_feature_engineering.ipynb) | Inputs known at forecast time: past values as columns, cycles as circles, calendar columns |
 | [05 · Target engineering](05_target_engineering.ipynb) | Integer and fractional differencing, reversible target transforms |
-| [06 · Forecasting models](06_forecasting_models.ipynb) | Native baselines and recursive, direct and multioutput reductions |
+| [06 · Forecasting models](06_forecasting_models.ipynb) | Built-in baselines, which one to beat, and three ways to turn a regressor into a forecaster |
 | [07 · Pipeline](07_pipeline.ipynb) | Fresh fitting, evaluation, and retained runs |
 | [08 · Forecast contracts](08_forecast_contracts.ipynb) | Tasks, forecasts, and reference shapes |
 | [09 · Scores and diagnostics](09_scores_and_diagnostics.ipynb) | Scores, case-level intervals, checks, and fault fixtures |
-| [10 · Reports and replay](10_reports_and_replay.ipynb) | Structured results and provenance |
+| [10 · Reports and replay](10_reports_and_replay.ipynb) | Read a report, gate CI on it, save and load it strictly, and replay a case months later |
 | [11 · Plotting](11_plotting.ipynb) | Forecast matrices and case-score distributions |
-| [12 · Package](12_package.ipynb) | Public exports and package structure |
+| [12 · Package](12_package.ipynb) | Shared guards, which notebook owns each public name, and how an edit becomes package code |
 | [13 · Scorecard](13_scorecard.ipynb) | The pattern-by-noise grid, scores, named mistakes and the scorecard image |
-| [14 · Controlled processes](14_controlled_processes.ipynb) | Compositions, parameter changes, Merton/GARCH/regime simulation and references |
-| [15 · Joint controlled processes](15_joint_processes.ipynb) | Correlated innovations, shared jumps and regimes, CCC-GARCH, and joint reference laws |
+| [14 · Controlled processes](14_controlled_processes.ipynb) | Series built one ingredient at a time, plus jumps, calm and stormy periods and hidden regimes, each with its answer key |
+| [15 · Joint controlled processes](15_joint_processes.ipynb) | Several series with declared links: shared jumps, one hidden regime, CCC-GARCH, and links zero correlation misses |
 
 The package is exported with nbdev 3.3.26's modular exporter. Save notebook
 edits, then build explicitly:
