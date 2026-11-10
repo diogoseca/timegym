@@ -1,10 +1,10 @@
 # TimeGym notebooks
 
-Start with the [Quick start](00_quick_start.ipynb): specify a forecasting
-pipeline, see its predictions across controlled scenarios, and inspect its error
-distributions. The plots continue the 2021 Quick Start's visual language: gray
-observation dots, blue prediction crosses, thin reference curves, and a clear
-forecast origin.
+Start with the [Quick start](00_quick_start.ipynb): one call scores a
+forecaster on ten kinds of series at two noise levels, and a second model shows
+that each is blind where the other sees. The forecast plots continue the 2021
+Quick Start's visual language: gray observation dots, blue prediction crosses,
+thin answer-key curves, and a clear forecast origin.
 
 Everything lives in this folder: **15 source notebooks generate the package,
 12 application notebooks use it**, and the [11 original notebooks](archive/README.md)
@@ -26,7 +26,7 @@ explicit seeds. Installing the wheel alone does not install these notebook files
 
 | Group | Application | Explore |
 |---|---|---|
-| Start | [Quick start](00_quick_start.ipynb) | A pipeline, a scenario matrix, and error distributions |
+| Start | [Quick start](00_quick_start.ipynb) | Two scorecards, last value against Ridge, and why TimeGym scores against the answer key |
 | Find what breaks | [Faults, repairs and replay](23_faults_repairs_and_replay.ipynb) | Four ways to break a correct forecast, a bug caught by a broken promise, and replay |
 | | [Write and test a custom model](28_custom_model.ipynb) | The 10-line `LastValue` model, nearest analogues, and real data with and without an answer key |
 | Shape the forecast | [Target transforms](29_target_transforms.ipynb) | Why logs help when the swing grows with the level, and why exp(mean log) is too low |
@@ -35,7 +35,7 @@ explicit seeds. Installing the wheel alone does not install these notebook files
 | | [Real-data forecasts](24_real_data_forecasts.ipynb) | No answer key: four origins, three baselines, and a leakage check |
 | Measure uncertainty | [Univariate uncertainty](20_univariate_uncertainty.ipynb) | Same predictions, overconfident spread: which scores notice |
 | | [Multivariate uncertainty](22_multivariate_uncertainty.ipynb) | Scrambled pairings: every series right, joint risk gone |
-| Stress-test | [Capability sweeps](25_capability_sweeps.ipynb) | Five scenario families, custom models, context, noise, and repeated cases |
+| Stress-test | [Capability sweeps](25_capability_sweeps.ipynb) | Three simple bets, a weak model versus a broken one, and history and noise sweeps |
 | | [Composed and financial stresses](26_composed_and_financial_stresses.ipynb) | A ladder of mechanisms, bad luck vs a bad model, and a conversion bug |
 | | [Joint financial uncertainty](27_joint_financial_uncertainty.ipynb) | Assets that crash together, and the check that notices a lost link |
 
