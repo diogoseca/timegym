@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 — 2026-11-10
 
 - Added the scorecard: `Pipeline(model).scorecard()` runs a forecaster on ten
   kinds of series at low and high noise and returns a `Scorecard`. Its image
