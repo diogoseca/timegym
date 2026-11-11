@@ -138,7 +138,8 @@ jobs:
                      for pr in prs if set(pr['labels']) & {'feature', 'fix'}]
           print(f"Merging this pull request releases TimeGym {os.environ['VERSION']}. "
                 f"The workflow then tags `v{os.environ['VERSION']}` at this pull request's commit and "
-                "starts `release.yml`, whose PyPI job waits for approval in the `pypi` environment.\n")
+                "starts `release.yml`, which checks the tag and publishes it to PyPI if the repository "
+                "owner merged or approved this pull request.\n")
           print(f"Labelled pull requests merged since {os.environ['PREVIOUS']}:\n")
           print('\n'.join(counted) or '- None: this starts a new major version.')
           print('\nEvery merge into main rebuilds this pull request, so it always counts everything '

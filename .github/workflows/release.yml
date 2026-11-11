@@ -45,8 +45,48 @@ jobs:
           path: |
             paper/build/timegym.pdf
             paper/timegym.tex
+  authorize:
+    # The pypi environment needs no reviewer click: a release publishes on its
+    # own when the repository owner merged or approved its release pull request,
+    # pushed the tag, or started or re-ran this run. Anyone else's merge stops
+    # here, before PyPI. The environment's v* tag rule still limits publishing
+    # to release tags.
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check that the repository owner authorised this release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          ACTOR: ${{ github.triggering_actor }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ "$ACTOR" = "$OWNER" ]; then
+            echo "$OWNER started this run."
+            exit 0
+          fi
+          PULLS=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq \
+            '.[] | select(.head.ref == "release" and .user.login == "github-actions[bot]" and .merged_at != null) | .number')
+          for NUMBER in $PULLS; do
+            if [ "$(gh api "repos/$REPO/pulls/$NUMBER" --jq '.merged_by.login')" = "$OWNER" ]; then
+              echo "$OWNER merged release pull request #$NUMBER."
+              exit 0
+            fi
+            if gh api --paginate "repos/$REPO/pulls/$NUMBER/reviews" --jq \
+              ".[] | select(.user.login == \"$OWNER\" and .state == \"APPROVED\" and .commit_id == \"$SHA\") | .id" | grep -q .; then
+              echo "$OWNER approved release pull request #$NUMBER at its release commit."
+              exit 0
+            fi
+          done
+          echo "::error::$TAG was not merged, approved, tagged or started by $OWNER, so it is not published. $OWNER can re-run this job to publish it."
+          exit 1
   pypi:
-    needs: build
+    needs: [build, authorize]
     runs-on: ubuntu-latest
     environment:
       name: pypi

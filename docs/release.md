@@ -60,11 +60,16 @@ or repository secret is involved; an account-wide `twine` token is not needed.
    The filename is not `.github/workflows/release.yml`.
 3. In the GitHub repository, open [Settings → Environments → New
    environment](https://github.com/diogoseca/timegym/settings/environments/new),
-   name it `pypi`, and save. Under **Deployment protection rules** tick
-   **Required reviewers** and add the author. Under **Deployment branches and
-   tags** choose **Selected branches and tags** and add a rule of type **Tag**
-   with pattern `v*`. The workflow's publish job uses this environment and
-   requests `id-token: write` for OIDC authentication.
+   name it `pypi`, and save. Under **Deployment branches and tags** choose
+   **Selected branches and tags** and add a rule of type **Tag** with pattern
+   `v*`. Leave **Required reviewers** unticked: the `authorize` job in
+   `release.yml` lets a release publish only when the repository owner merged
+   or approved its release pull request, pushed its tag, or started or re-ran
+   its run. Tick **Required reviewers** and add the author instead if every
+   release should wait for a click; that is also the only gate that a
+   collaborator with write access cannot get around by editing the workflow.
+   The workflow's publish job uses this environment and requests
+   `id-token: write` for OIDC authentication.
 4. Under **Settings → Actions → General**, allow the actions used by these
    workflows and, under **Workflow permissions**, enable **Allow GitHub Actions
    to create and approve pull requests** for the release pull request and the
@@ -133,9 +138,9 @@ dispatches `release.yml`, because a tag pushed with `GITHUB_TOKEN` starts no
 workflow. The tag marks the release commit itself, so it holds exactly what the
 release counted; anything merged after the last rebuild counts toward the next
 version. Because the bot opens the release pull request, GitHub holds its
-checks until you approve them on the pull request, and the Claude review skips
-it. Approving them is optional: `release.yml` runs the full checks against the
-tag before anything is published.
+checks until you click **Approve workflows to run** on the pull request, and the
+Claude review skips it. Running them is optional: `release.yml` runs the full
+checks against the tag before anything is published.
 
 To rebuild the release pull request without a new merge, or to prepare a major
 version, open **Actions → Version and tag merged changes → Run workflow** and
@@ -150,9 +155,14 @@ by hand after merging one.
 
 `release.yml` runs the complete reusable `checks.yml` workflow against the tag,
 checks the version identity, builds sdist/wheel, and compiles the standalone
-manuscript with LaTeX. The `pypi` job publishes via trusted publishing after
-its environment review. Only then does the GitHub job attach the distributions,
-PDF and standalone TeX to a draft release and publish it, triggering Zenodo.
+manuscript with LaTeX. Its `authorize` job checks that the repository owner
+merged or approved the release pull request (an approval counts only on the
+release commit), pushed the tag, or started or re-ran the run. A release
+pull request merged by anyone else stops there, and the owner can publish it by
+re-running the failed job. The `pypi` job then publishes via trusted publishing,
+so merging the release pull request yourself publishes it a few minutes later.
+Only then does the GitHub job attach the distributions, PDF and standalone TeX
+to a draft release and publish it, triggering Zenodo.
 The release date is the `date-released` that `tag-release.yml` wrote to
 `CITATION.cff` when it last rebuilt the release pull request.
 All artifacts identify the tagged source; study records retain their original
@@ -182,4 +192,5 @@ or check leaves the scheduled run red for inspection and opens no passing PR.
 A bot-created PR may not trigger another workflow using the default token;
 validation therefore runs in the scheduled job itself.
 
-The PyPI environment review still applies to its release.
+Like any other change, it reaches PyPI only through a release pull request
+that the `authorize` job accepts.
