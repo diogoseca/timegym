@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 — 2026-11-11
 
 - A custom model's `predict` may return a plain list or NumPy array: one value
   per requested step for one series, or one row per step and one column per
