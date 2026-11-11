@@ -52,16 +52,20 @@ class ForecastRun:
             cases=[entry.result for entry in self.cases], metadata=self.metadata
         )
 
-    def plot_forecasts(self, *, show_quantiles=False, figsize=None):
+    def plot_forecasts(self, *, show_quantiles=False, figsize=None, history=None):
         """Plot scenario/target rows by seed columns, using retained outputs.
 
-        Means are discrete blue crosses, observations are gray dots, and
-        known conditional means are thin gray curves. Optional bands use
-        explicit marginal quantiles; samples never imply a point forecast.
+        Gray dots are observations, the black line is the answer key and blue
+        crosses are the forecast, with each case's score above its panel.
+        ``history`` is how many past steps to show (four times the horizon by
+        default, ``"all"`` for everything). Optional bands use explicit
+        marginal quantiles; samples never imply a point forecast.
         """
         from timegym.plotting import plot_forecasts
 
-        return plot_forecasts(self, show_quantiles=show_quantiles, figsize=figsize)
+        return plot_forecasts(
+            self, show_quantiles=show_quantiles, figsize=figsize, history=history
+        )
 
     def plot_errors(
         self, metric="mean_reference_mse", *, bins=None, missing="raise", figsize=None

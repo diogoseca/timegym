@@ -13,18 +13,61 @@ __all__ = ["plot_forecasts", "plot_errors"]
 # %% ../notebooks/11_plotting.ipynb #11_plotting-05
 
 
-_BLUE = "blue"
-_GRAY = "gray"
+# One look for every TimeGym figure, shared with the scorecard: gray dots for
+# what was observed, a black line for the answer key, blue crosses for the
+# forecast, and a hairline at the forecast origin.
+_INK, _MUTED, _SURFACE, _HAIRLINE = "#0b0b0b", "#52514e", "#fcfcfb", "#c3c2b7"
+_FORECAST = "#2a78d6"
+_ALERT = "#a32020"
+_GRID = "#ebeae4"
+# Score bands (timegym.scorecard.verdict) with the text color that stays readable on each.
+_BAND_COLORS = {
+    "Nails it": ("#0ca30c", "white"),
+    "Good": ("#8fd18f", _INK),
+    "Struggles": ("#fab219", _INK),
+    "Fails": ("#d03b3b", "white"),
+    None: ("#52514e", "white"),
+}
 _STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.grid": False,
-    "font.size": 10,
+    "font.family": "DejaVu Sans",
+    "font.size": 9,
+    "text.color": _INK,
+    "figure.facecolor": _SURFACE,
+    "axes.facecolor": _SURFACE,
+    "savefig.facecolor": _SURFACE,
+    "axes.edgecolor": _HAIRLINE,
+    "axes.labelcolor": _MUTED,
+    "axes.labelsize": 8.5,
     "axes.titlesize": 10,
+    "axes.titleweight": "bold",
     "axes.titlelocation": "left",
-    "legend.fontsize": 8,
-    "legend.frameon": True,
+    "axes.titlecolor": _INK,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+    "axes.spines.left": False,
+    "axes.grid": True,
+    "axes.grid.axis": "y",
+    "axes.axisbelow": True,
+    "grid.color": _GRID,
+    "grid.linewidth": 0.6,
+    "xtick.color": _MUTED,
+    "ytick.color": _MUTED,
+    "xtick.labelsize": 8,
+    "ytick.labelsize": 8,
+    "ytick.major.size": 0,
+    "xtick.major.size": 3,
+    "legend.frameon": False,
+    "legend.fontsize": 8.5,
     "figure.dpi": 110,
+}
+# Plain names for the figure key; the artists keep their descriptive labels.
+_KEY_NAMES = {
+    "Observed context": "Observations",
+    "Held-out observations": "Observations",
+    "Known conditional mean": "Answer key",
+    "Conditional mean (approx. filter)": "Answer key (approximate filter)",
+    "Predictive mean": "Forecast",
+    "Forecast origin": "Forecast origin",
 }
 
 
@@ -67,7 +110,7 @@ def _time_coordinates(context_index, future_index, ax):
         label = "Elapsed time (seconds)"
     elif all(pd.api.types.is_numeric_dtype(index.dtype) for index in indexes):
         coordinates = [index.to_numpy(dtype=float) for index in indexes]
-        label = "Time index"
+        label = "Time step"
     else:
         # A custom model may use ordered nonnumeric labels. Show those labels
         # explicitly on an ordinal axis rather than pretending they are dates.
@@ -98,8 +141,13 @@ def _annotate(ax, messages):
             va="bottom",
             ha="left",
             fontsize=8,
-            color="#8B0000",
-            bbox={"facecolor": "white", "alpha": 0.92, "edgecolor": "none"},
+            color=_ALERT,
+            bbox={
+                "facecolor": _SURFACE,
+                "alpha": 0.94,
+                "edgecolor": _HAIRLINE,
+                "boxstyle": "round,pad=0.35",
+            },
         )
 
 
@@ -143,7 +191,67 @@ def _reference_spread(case, dimension):
     return spread if np.isfinite(spread) and spread > 0 else None
 
 
-def _draw_case(ax, entry, target, *, show_quantiles, title=None):
+def _history_start(history, past, horizon):
+    """Position of the first past step to draw: the last ``history`` steps (4 x horizon by default)."""
+    if isinstance(history, str):
+        if history != "all":
+            raise ValueError(
+                "history must be a positive number of steps, None or 'all'"
+            )
+        return 0
+    shown = 4 * horizon if history is None else positive_int(history, "history")
+    return max(0, past - shown)
+
+
+def _case_header(ax, title, score, details):
+    """A bold title over the case's score as a colored badge and its errors in gray."""
+    ax.set_title(title, loc="left", pad=19 if score is not None or details else 6)
+    badge = None
+    if score is not None:
+        from timegym.scorecard import verdict
+
+        band = verdict(score)
+        fill, ink = _BAND_COLORS[band]
+        badge = ax.text(
+            0,
+            1.035,
+            f" {score:.0f}  {band} ",
+            transform=ax.transAxes,
+            va="bottom",
+            ha="left",
+            fontsize=8,
+            weight="bold",
+            color=ink,
+            bbox={"facecolor": fill, "edgecolor": "none", "boxstyle": "round,pad=0.2"},
+        )
+    if details and badge is None:
+        ax.text(
+            0,
+            1.035,
+            details,
+            transform=ax.transAxes,
+            va="bottom",
+            ha="left",
+            fontsize=8,
+            color=_MUTED,
+        )
+    elif details:
+        ax.annotate(
+            details,
+            xy=(1, 0),
+            xycoords=badge,
+            xytext=(7, 0),
+            textcoords="offset points",
+            va="bottom",
+            ha="left",
+            fontsize=8,
+            color=_MUTED,
+        )
+
+
+def _draw_case(
+    ax, entry, target, *, show_quantiles, title=None, history=None, title_width=70
+):
     case = entry.case
     task = case.task
     messages = []
@@ -158,15 +266,17 @@ def _draw_case(ax, entry, target, *, show_quantiles, title=None):
         )
         return
     dimension = task.target_names.index(target)
+    start = _history_start(history, len(task.context), len(task.future_index))
     context_x, future_x, cutoff, xlabel = _time_coordinates(
-        task.context.index, task.future_index, ax
+        task.context.index[start:], task.future_index, ax
     )
     ax.plot(
         context_x,
-        task.context.iloc[:, dimension].to_numpy(),
-        color=_GRAY,
+        task.context.iloc[start:, dimension].to_numpy(),
+        color=_MUTED,
+        alpha=0.8,
         marker=".",
-        markersize=2.5,
+        markersize=2.6,
         linestyle="None",
         label="Observed context",
     )
@@ -182,9 +292,10 @@ def _draw_case(ax, entry, target, *, show_quantiles, title=None):
         ax.plot(
             future_x,
             observed,
-            color=_GRAY,
+            color=_MUTED,
+            alpha=0.8,
             marker=".",
-            markersize=3,
+            markersize=2.6,
             linestyle="None",
             label="Held-out observations",
         )
@@ -198,8 +309,8 @@ def _draw_case(ax, entry, target, *, show_quantiles, title=None):
         ax.plot(
             future_x,
             case.reference.mean[:, dimension],
-            color=_GRAY,
-            linewidth=1,
+            color=_INK,
+            linewidth=1.1,
             label=(
                 "Conditional mean (approx. filter)"
                 if getattr(case.reference, "sampler_kind", None)
@@ -213,7 +324,7 @@ def _draw_case(ax, entry, target, *, show_quantiles, title=None):
         )
 
     forecast = entry.forecast
-    score_text = []
+    score, details = None, []
     if forecast is None:
         messages.append("No forecast: model execution failed.")
     else:
@@ -237,10 +348,10 @@ def _draw_case(ax, entry, target, *, show_quantiles, title=None):
                 ax.plot(
                     future_x,
                     point,
-                    color=_BLUE,
+                    color=_FORECAST,
                     marker="x",
-                    markersize=3.5,
-                    markeredgewidth=0.8,
+                    markersize=3.6,
+                    markeredgewidth=0.9,
                     linestyle="None",
                     label="Predictive mean",
                 )
@@ -252,14 +363,13 @@ def _draw_case(ax, entry, target, *, show_quantiles, title=None):
                     if (
                         spread is not None
                     ):  # the scorecard's 0-100 score, for this one case
-                        score_text.append(
-                            f"score {100 * spread / (spread + gap):.0f}/100"
-                        )
-                    score_text.append(f"error vs answer key {gap:.3g}")
+                        score = 100 * spread / (spread + gap)
+                    details.append(f"error vs answer key {gap:.3g}")
                 if observed_valid:
-                    score_text.append(
-                        f"vs what happened {metrics.mse(observed, point):.3g}"
+                    against = (
+                        "vs what happened" if details else "error vs what happened"
                     )
+                    details.append(f"{against} {metrics.mse(observed, point):.3g}")
             else:
                 messages.append(
                     "No explicit predictive mean supplied; no point predictions plotted."
@@ -274,8 +384,9 @@ def _draw_case(ax, entry, target, *, show_quantiles, title=None):
                         future_x,
                         quantiles[:, dimension, 0],
                         quantiles[:, dimension, -1],
-                        color=_BLUE,
-                        alpha=0.1,
+                        color=_FORECAST,
+                        alpha=0.15,
+                        linewidth=0,
                         label=f"{coverage:g}% marginal interval",
                     )
                 else:
@@ -288,41 +399,64 @@ def _draw_case(ax, entry, target, *, show_quantiles, title=None):
     other_problems = [problem for problem in problems if "contract_" not in problem]
     messages.extend(other_problems)
     ax.axvline(
-        cutoff, color=_BLUE, linewidth=1.2, linestyle="--", label="Forecast origin"
+        cutoff, color=_HAIRLINE, linewidth=0.9, linestyle="--", label="Forecast origin"
     )
     ax.set_xlim(context_x[0], future_x[-1])
     ax.set_xlabel(xlabel)
     ax.set_ylabel(str(target))
-    label = scenario_label(
-        entry.result.scenario, case.manifest.get("parameters"), target_index=dimension
-    )
+    several = len(task.target_names) > 1
     if title is None:
-        title = (
-            f"{entry.scenario_index + 1}. {label} · {target} · seed={entry.result.seed}"
+        label = scenario_label(
+            entry.result.scenario,
+            case.manifest.get("parameters"),
+            target_index=dimension,
         )
+        seed = (
+            "" if entry.result.seed is None else f" · seed {entry.result.seed}"
+        )  # real data has none
+        title = f"{entry.scenario_index + 1}. {label}{f' · {target}' if several else ''}{seed}"
     else:
-        several = len(task.target_names) > 1
         title = f"{title}{f' · {target}' if several else ''} · instance {entry.seed_index + 1}"
-    if len(title) > 82:
-        title = textwrap.fill(title, width=70, break_long_words=False)
-    if score_text:
-        title += "\n" + " · ".join(score_text)
-    ax.set_title(title, loc="left")
-    ax.legend(loc="upper left")
+    if len(title) > title_width:
+        title = textwrap.fill(title, width=title_width, break_long_words=False)
+    _case_header(ax, title, score, " · ".join(details))
     _annotate(ax, messages)
 
 
 # %% ../notebooks/11_plotting.ipynb #11_plotting-21
-def plot_forecasts(run, *, show_quantiles=False, figsize=None):
+def _figure_key(fig):
+    """One key above all panels, in plain words, instead of a legend in each."""
+    handles = {}
+    for ax in fig.axes:
+        for handle, label in zip(*ax.get_legend_handles_labels()):
+            handles.setdefault(_KEY_NAMES.get(label, label), handle)
+    if handles:
+        fig.legend(
+            list(handles.values()),
+            list(handles),
+            loc="outside upper left",
+            ncols=len(handles),
+            markerscale=1.8,
+            handlelength=1.6,
+            columnspacing=1.8,
+            labelcolor=_MUTED,
+        )
+
+
+def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
     """Plot retained forecasts as scenario/target rows and seed columns.
 
-    Every model point is an unconnected blue cross, including dense forecast
-    horizons. Reference curves are conditional means for the future only.
-    Facets have separate target axes and display target-specific MSEs. Bands,
-    when requested, are marginal intervals, never simultaneous path regions.
+    Each panel uses the scorecard's look: gray dots are observations, the
+    black line is the answer key, blue crosses are the forecast. Above it, the
+    case's 0-100 score sits in its colored band beside its error against the
+    answer key and against what happened. ``history`` is how many past steps
+    to show: four times the horizon by default, ``"all"`` for the whole
+    context. Bands, when requested, are marginal intervals, never
+    simultaneous path regions.
     """
     if not isinstance(show_quantiles, bool):
         raise ValueError("show_quantiles must be a boolean")
+    _history_start(history, 1, 1)  # reject a bad value before drawing anything
     groups = _groups(run)
     columns = sorted({entry.seed_index for entry in run.cases})
     rows = []
@@ -347,9 +481,11 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None):
             len(rows),
             len(columns),
             squeeze=False,
-            figsize=figsize or (6 * len(columns), 3.3 * len(rows)),
+            figsize=figsize or (6 * len(columns), 0.4 + 3.4 * len(rows)),
             layout="constrained",
         )
+        # Wrap long titles to the panel: about ten bold characters per inch.
+        title_width = max(24, int(10.5 * fig.get_figwidth() / len(columns)))
         for row_index, (scenario_index, target) in enumerate(rows):
             for column_index, seed_index in enumerate(columns):
                 ax = axes[row_index, column_index]
@@ -370,7 +506,12 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None):
                         target,
                         show_quantiles=show_quantiles,
                         title=_run_title(run, scenario_index),
+                        history=history,
+                        title_width=title_width,
                     )
+        for ax in axes[:-1].flat:  # the time axis is named once, under the last row
+            ax.set_xlabel("")
+        _figure_key(fig)
         return fig
 
 
@@ -381,8 +522,9 @@ def plot_errors(
     """Show distributions of retained whole-case metrics, one row per scenario.
 
     These are distributions over evaluated cases, not over predictive sample
-    draws or dependent coordinates. Scenario positions remain distinct even
-    when their kind strings match. Missing scores are never silently dropped.
+    draws or dependent coordinates. A black line marks each row's median.
+    Scenario positions remain distinct even when their kind strings match.
+    Missing scores are never silently dropped.
     """
     groups = _groups(run)
     if not isinstance(metric, str) or not metric:
@@ -424,14 +566,20 @@ def plot_errors(
             len(groups),
             1,
             squeeze=False,
-            figsize=figsize or (10, 3 * len(groups)),
+            figsize=figsize or (10, 2.6 * len(groups)),
             layout="constrained",
+        )
+        label = (
+            "Error against the answer key (MSE)"
+            if metric == "mean_reference_mse"
+            else "Error against what happened (MSE)" if metric == "mse" else metric
         )
         for ax, (scenario_index, entries) in zip(axes[:, 0], groups.items()):
             values, missing_entries = (
                 values_by_group[scenario_index],
                 missing_by_group[scenario_index],
             )
+            summary = f"{len(values)} scored / {len(entries)} evaluated cases"
             if values:
                 bin_count = (
                     bins
@@ -439,23 +587,26 @@ def plot_errors(
                     else max(1, min(20, int(np.ceil(np.sqrt(len(values))))))
                 )
                 ax.hist(
-                    values, bins=bin_count, color=_BLUE, alpha=0.55, edgecolor="white"
+                    values,
+                    bins=bin_count,
+                    color=_FORECAST,
+                    alpha=0.45,
+                    edgecolor=_SURFACE,
+                    linewidth=1,
                 )
-            label = (
-                "Error against the answer key (MSE)"
-                if metric == "mean_reference_mse"
-                else "Error against what happened (MSE)" if metric == "mse" else metric
-            )
-            ax.set_xlabel(f"{label}, one score per case")
-            ax.set_ylabel("Evaluated cases")
+                median = float(np.median(values))
+                ax.axvline(median, color=_INK, linewidth=1.1)
+                summary = f"median {median:.3g} (black line) · {summary}"
+            ax.set_ylabel("Cases")
             titled = _run_title(run, scenario_index)
             process = titled or scenario_label(
                 entries[0].result.scenario, entries[0].case.manifest.get("parameters")
             )
             ax.set_title(
-                f"{'' if titled else f'{scenario_index + 1}. '}{process} · "
-                f"{len(values)} scored / {len(entries)} evaluated cases",
-                loc="left",
+                f"{'' if titled else f'{scenario_index + 1}. '}{process}", loc="left"
+            )
+            ax.set_title(
+                summary, loc="right", fontsize=8, fontweight="normal", color=_MUTED
             )
             if missing_entries:
                 messages = [
@@ -467,4 +618,5 @@ def plot_errors(
                         f"seed={entry.result.seed}: {problem[0] if problem else 'metric unavailable'}"
                     )
                 _annotate(ax, messages)
+        axes[-1, 0].set_xlabel(f"{label}, one score per case")
         return fig

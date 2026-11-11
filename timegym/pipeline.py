@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from ._internal import positive_int, nonnegative_int
+import dataclasses
 import inspect
 import secrets
 import numpy as np
@@ -32,15 +33,61 @@ __all__ = ["Pipeline", "replay_case"]
 
 
 # %% ../notebooks/07_pipeline.ipynb #07_pipeline-14
-def _as_forecast(output, task):
-    """Accept a Forecast, or a DataFrame/Series of point forecasts indexed by date.
+def _as_context(context):
+    """The past as a DataFrame: one row per time step, one column per series.
 
-    A DataFrame keeps its own index and column names, so wrong dates or a wrong
-    series order still fail their checks. An unnamed Series stands for the
-    task's single series.
+    A list or NumPy array has no time labels, so its rows are labelled 0, 1,
+    2, ... and its columns ``y`` (one series) or 0, 1, ... (several series).
+    """
+    if isinstance(context, pd.DataFrame):
+        return context
+    if isinstance(context, pd.Series):
+        return context.to_frame(name=context.name if context.name is not None else "y")
+    if isinstance(context, (list, tuple, np.ndarray)):
+        values = np.asarray(context)
+        if values.ndim == 1:
+            return pd.DataFrame({"y": values})
+        if values.ndim == 2:
+            return pd.DataFrame(values)
+    raise TypeError(
+        "context must be a pandas DataFrame or Series, a list, or a one- or two-dimensional "
+        "NumPy array"
+    )
+
+
+def _one_value_per_step(values, names):
+    """Read one value per step as one row per step when there is a single series."""
+    try:
+        array = np.asarray(values)
+    except (TypeError, ValueError):
+        return values  # ragged or non-numeric: the output checks report it
+    if array.ndim == 1 and names is not None and len(names) == 1:
+        return array[:, None]
+    return array
+
+
+def _as_forecast(output, task):
+    """Turn whatever the model's ``predict`` returned into a Forecast to check.
+
+    - A list or NumPy array holds one value per step for one series, or one
+      row per step and one column per series. Its rows are the requested
+      future steps in order and its columns the context's series in order.
+    - A pandas DataFrame or Series keeps its own index and column names, so
+      wrong dates or a wrong series order still fail their checks. An unnamed
+      Series stands for the task's single series.
+    - A Forecast is used as given. Without ``target_names`` its series are the
+      task's, and a one-dimensional ``point`` for one series is one value per step.
     """
     if isinstance(output, Forecast):
-        return output
+        names = (
+            task.target_names if output.target_names is None else output.target_names
+        )
+        point = output.point
+        if point is not None:
+            point = _one_value_per_step(point, names)
+        if names is output.target_names and point is output.point:
+            return output
+        return dataclasses.replace(output, point=point, target_names=names)
     if isinstance(output, pd.Series):
         if output.name is None and len(task.target_names) == 1:
             names = task.target_names
@@ -53,9 +100,16 @@ def _as_forecast(output, task):
         return Forecast(
             output.index, point=output.to_numpy(), target_names=tuple(output.columns)
         )
+    if isinstance(output, (list, tuple, np.ndarray)):
+        return Forecast(
+            task.future_index.copy(),
+            point=_one_value_per_step(output, task.target_names),
+            target_names=task.target_names,
+        )
     raise TypeError(
-        "model.predict(future_index) must return a pandas DataFrame indexed by future_index "
-        "with one column per series, a Series for one series, or a timegym.Forecast"
+        "model.predict(future_index) must return one value per future step: a list or NumPy "
+        "array, a pandas Series or DataFrame indexed by future_index, or a timegym.Forecast; "
+        f"got {type(output).__name__}"
     )
 
 
@@ -80,11 +134,15 @@ def _instance_seeds(seeds, seed, instances, default_instances):
 class Pipeline:
     """Evaluate fresh model instances on independent, seeded scenarios.
 
-    Native models implement fit(context: DataFrame) and predict(future_index).
-    ``predict`` returns a DataFrame indexed by ``future_index`` with one column
-    per series (a Series for one series), or a Forecast for quantiles and
-    samples. Supply a model instance (copied before every case), a class, or a
-    model_factory producing a fresh unfitted instance.
+    Native models implement fit(context) and predict(future_index). The
+    context is the past as a DataFrame, one row per time step and one column
+    per series (``y`` for one series). ``future_index`` holds the labels of the
+    steps to forecast, continuing the context's index. ``predict`` returns one
+    value per step: a list or NumPy array (one column per series when there
+    are several), a Series or DataFrame indexed by ``future_index``, or a
+    Forecast, which can also carry quantiles and samples. Supply a model
+    instance (copied before every case), a class, or a model_factory
+    producing a fresh unfitted instance.
     sklearn regressors/transformers can be added with add(); ``reduction``
     selects one of REDUCTIONS for them and, like ``window_length``, does not
     change native models. An optional ``target_transform`` is refitted on
@@ -192,15 +250,19 @@ class Pipeline:
     def predict(self, context, future_index):
         """Fit on context and predict the supplied index, without future targets.
 
+        ``context`` is the past: a DataFrame with one column per series, a
+        Series, or a list or NumPy array, whose rows are labelled 0, 1, 2, ...
+        ``future_index`` is any sequence of the labels to forecast; after a
+        list of 120 values the next 12 steps are ``range(120, 132)``.
+
         A target transform is refitted on this context alone and the model sees
         only the transformed context. A forecast that meets its contract is
         inverted to the original scale; one that violates it is returned
         unchanged, so evaluation reports the model's fault, not the inversion's.
         """
-        if isinstance(context, pd.Series):
-            context = context.to_frame(
-                name=context.name if context.name is not None else "y"
-            )
+        context = _as_context(context)
+        if not isinstance(future_index, pd.Index):
+            future_index = pd.Index(future_index)
         # Share the public task contract, including unique target names.
         task = ForecastTask(context=context, future_index=future_index)
         transform = None
@@ -382,6 +444,7 @@ class Pipeline:
         instances=None,
         show_quantiles=False,
         figsize=None,
+        history=None,
         **diagnostic_settings,
     ):
         """Fit a display suite and return its forecast matrix Figure.
@@ -399,7 +462,9 @@ class Pipeline:
             seed=seed,
             instances=instances,
             **diagnostic_settings,
-        ).plot_forecasts(show_quantiles=show_quantiles, figsize=figsize)
+        ).plot_forecasts(
+            show_quantiles=show_quantiles, figsize=figsize, history=history
+        )
 
     def plot_errors(
         self,

@@ -186,6 +186,8 @@ class Forecast:
     Construction intentionally does not validate or repair data. Call
     ``validate`` to obtain stable diagnostic codes before scoring it.
     A point forecast denotes a predictive mean, not an arbitrary quantile.
+    ``target_names=None`` means the task's series, in order (``("y",)``
+    when validated without a task).
     """
 
     index: pd.Index
@@ -193,7 +195,7 @@ class Forecast:
     quantiles: np.ndarray | None = None
     levels: tuple = ()
     samples: np.ndarray | None = None
-    target_names: tuple = ("y",)
+    target_names: tuple | None = None
 
     def validate(self, task: ForecastTask | None = None) -> list[dict[str, str]]:
         """Return one ``{"code", "message"}`` finding per contract violation.
@@ -226,8 +228,11 @@ class Forecast:
                     "index_mismatch",
                     "Forecast index does not match the requested future index.",
                 )
+        declared = self.target_names
+        if declared is None:
+            declared = task.target_names if task is not None else ("y",)
         try:
-            names = _target_labels(self.target_names)
+            names = _target_labels(declared)
         except (TypeError, ValueError):
             names = task.target_names if task is not None else ()
             add(

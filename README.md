@@ -235,19 +235,19 @@ the reason before it scores anything.
 
 A forecaster is any object with two methods. `fit(context)` gets the series so
 far. `predict(future_index)` gets the dates to forecast, the steps right after
-the context, and returns a `Forecast` with one value per date. This one
-repeats the last value it saw:
+the context, and returns one value per date: a `Forecast`, or simply a list
+or NumPy array. This one repeats the last value it saw:
 
 ```python
 from timegym import Forecast, Pipeline
 
 class LastValueForecaster:
-    def fit(self, context):            # the series so far: a DataFrame with a column y
-        self.last = context["y"].iloc[-1]
+    def fit(self, context):            # the series so far, one column per series
+        self.last = context.iloc[-1]   # the last row seen
         return self
 
     def predict(self, future_index):   # the dates to forecast
-        return Forecast(index=future_index, point=[[self.last]] * len(future_index))
+        return Forecast(future_index, [self.last] * len(future_index))
 
 card = Pipeline(LastValueForecaster()).scorecard()
 ```
@@ -343,7 +343,7 @@ series.
 |---|---|---|
 | Start | [Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) | Two scorecards, last value against Ridge: each is blind where the other sees |
 | Find what breaks | [Faults, repairs and replay](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/) | Four ways to break a correct forecast, a bug caught by a broken promise, replay |
-| | [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | The 10-line LastValue model, nearest analogues, real data |
+| | [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | The six-line LastValueForecaster, nearest analogues, real data |
 | Shape the forecast | [Target transforms](https://diogoseca.github.io/timegym/notebooks/29_target_transforms/) | Why logs help when the swing grows with the level, and why exp(mean log) is too low |
 | | [Reductions](https://diogoseca.github.io/timegym/notebooks/30_reductions/) | Recursive, direct and multioutput: when recursive errors compound |
 | | [Multivariate forecasting](https://diogoseca.github.io/timegym/notebooks/21_multivariate_forecasting/) | Right numbers under the wrong series name; when extra history doesn't help |

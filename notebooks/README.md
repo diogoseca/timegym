@@ -28,7 +28,7 @@ explicit seeds. Installing the wheel alone does not install these notebook files
 |---|---|---|
 | Start | [Quick start](00_quick_start.ipynb) | Two scorecards, last value against Ridge, and why TimeGym scores against the answer key |
 | Find what breaks | [Faults, repairs and replay](23_faults_repairs_and_replay.ipynb) | Four ways to break a correct forecast, a bug caught by a broken promise, and replay |
-| | [Write and test a custom model](28_custom_model.ipynb) | The 10-line `LastValue` model, nearest analogues, and real data with and without an answer key |
+| | [Write and test a custom model](28_custom_model.ipynb) | The six-line `LastValueForecaster`, nearest analogues, and real data with and without an answer key |
 | Shape the forecast | [Target transforms](29_target_transforms.ipynb) | Why logs help when the swing grows with the level, and why exp(mean log) is too low |
 | | [Reductions](30_reductions.ipynb) | Recursive, direct and multioutput: when recursive errors compound |
 | | [Multivariate forecasting](21_multivariate_forecasting.ipynb) | Right numbers under the wrong series name, and when extra history doesn't help |

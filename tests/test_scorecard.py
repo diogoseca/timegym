@@ -181,13 +181,19 @@ def test_a_series_output_and_unusable_outputs():
         def predict(self, future_index):
             return np.zeros((len(future_index), 1))
 
+    class DictModel(LastValue):
+        def predict(self, future_index):
+            return {"y": [0.0] * len(future_index)}
+
     class Renamed(LastValue):
         def predict(self, future_index):
             return super().predict(future_index).rename(columns={"y": "sales"})
 
     Pipeline(SeriesModel()).test([Scenario("trend", 20, 3)], instances=1).assert_passed()
-    checks = {row["check"]: row for row in Pipeline(ArrayModel()).test([Scenario("trend", 20, 3)],
-                                                                     instances=1).checks}
+    # An array has no dates of its own: its rows are the requested steps, in order.
+    Pipeline(ArrayModel()).test([Scenario("trend", 20, 3)], instances=1).assert_passed()
+    checks = {row["check"]: row for row in Pipeline(DictModel()).test([Scenario("trend", 20, 3)],
+                                                                    instances=1).checks}
     assert checks["runs"]["failed"] == 1
     checks = {row["check"]: row for row in Pipeline(Renamed()).test([Scenario("trend", 20, 3)],
                                                                   instances=1).checks}
@@ -305,12 +311,15 @@ def test_zooming_into_a_scorecard_row_keeps_its_plain_titles():
     card = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=2)
     forecasts = card.run.plot_forecasts()
     title = forecasts.axes[0].get_title(loc="left")
-    assert title.startswith("Straight-line trend · Low noise · instance 1\nscore ")
-    assert "seed" not in title and "MSE" not in title
-    assert forecasts.axes[-1].get_title(loc="left").startswith("Straight-line trend · High noise · instance 2")
+    assert title == "Straight-line trend · Low noise · instance 1"
+    header = " ".join(text.get_text() for text in forecasts.axes[0].texts)
+    assert "error vs answer key" in header
+    assert "seed" not in title + header and "MSE" not in title + header
+    assert forecasts.axes[-1].get_title(loc="left") == "Straight-line trend · High noise · instance 2"
     errors = card.run.plot_errors()
-    assert errors.axes[0].get_title(loc="left").startswith("Straight-line trend · Low noise · 2 scored")
-    assert errors.axes[0].get_xlabel() == "Error against the answer key (MSE), one score per case"
+    assert errors.axes[0].get_title(loc="left") == "Straight-line trend · Low noise"
+    assert errors.axes[0].get_title(loc="right").endswith("2 scored / 2 evaluated cases")
+    assert errors.axes[-1].get_xlabel() == "Error against the answer key (MSE), one score per case"
     plt.close("all")
 
 
@@ -320,3 +329,15 @@ def test_plain_install_brings_plots_and_the_sklearn_adapter():
     assert {"matplotlib", "scikit-learn"} <= names
     # Old install commands keep working.
     assert project["optional-dependencies"]["plots"] == project["optional-dependencies"]["sklearn"] == []
+
+
+def test_scorecard_text_counts_one_of_a_kind_and_compact_headers_fit():
+    card = Pipeline(NaiveForecaster()).scorecard(["trend"], noise_levels=3, instances=1)
+    assert "1 kind of series x 3 noise levels, 1 instance each" in card.to_markdown()
+    figure = card.plot(compact=True)
+    texts = [text.get_text() for ax in figure.axes for text in ax.texts]
+    texts += [text.get_text() for text in figure.texts]
+    assert "Medium noise\n(sd 1)" in texts
+    full = [text.get_text() for text in card.plot().texts]
+    assert any("1 kind of series × 3 noise levels · 1 instance each" in text for text in full)
+    plt.close("all")
