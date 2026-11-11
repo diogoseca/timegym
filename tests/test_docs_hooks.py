@@ -56,25 +56,25 @@ def test_notebook_links_point_at_built_pages_or_github():
         return SimpleNamespace(url=url, is_documentation_page=lambda: True)
 
     built = {
-        'notebooks/20_univariate_uncertainty.ipynb': page('notebooks/20_univariate_uncertainty/'),
-        'notebooks/README.md': page('notebooks/'),
+        'tutorials/08_univariate_uncertainty.ipynb': page('tutorials/08_univariate_uncertainty/'),
+        'tutorials/README.md': page('tutorials/'),
         'docs/stress-cases.md': page('docs/stress-cases/'),
-        'notebooks/07_pipeline.ipynb': SimpleNamespace(url='notebooks/07_pipeline.ipynb',
-                                                       is_documentation_page=lambda: False),
+        'source/07_pipeline.ipynb': SimpleNamespace(url='source/07_pipeline.ipynb',
+                                                    is_documentation_page=lambda: False),
     }
     files = SimpleNamespace(get_file_from_path=built.get)
     repo = 'https://github.com/diogoseca/timegym'
 
     def link(href):
-        return notebook_link(href, 'notebooks/00_quick_start.ipynb', 'notebooks/00_quick_start/', files, repo)
+        return notebook_link(href, 'tutorials/01_quick_start.ipynb', 'tutorials/01_quick_start/', files, repo)
 
-    assert link('20_univariate_uncertainty.ipynb') == '../20_univariate_uncertainty/'
-    assert link('20_univariate_uncertainty.ipynb#scores') == '../20_univariate_uncertainty/#scores'
+    assert link('08_univariate_uncertainty.ipynb') == '../08_univariate_uncertainty/'
+    assert link('08_univariate_uncertainty.ipynb#scores') == '../08_univariate_uncertainty/#scores'
     assert link('README.md') == '../'
     assert link('../docs/stress-cases.md') == '../../docs/stress-cases/'
-    assert link('07_pipeline.ipynb') == f'{repo}/blob/main/notebooks/07_pipeline.ipynb'
-    assert link('archive/3.%20Semi-Synthetic%20Data.ipynb') == (
-        f'{repo}/blob/main/notebooks/archive/3.%20Semi-Synthetic%20Data.ipynb')
+    assert link('../source/07_pipeline.ipynb') == f'{repo}/blob/main/source/07_pipeline.ipynb'
+    assert link('../source/archive/3.%20Semi-Synthetic%20Data.ipynb') == (
+        f'{repo}/blob/main/source/archive/3.%20Semi-Synthetic%20Data.ipynb')
     for unchanged in ('https://doi.org/10.1/x', '#section', '/absolute/', '../../outside.md'):
         assert link(unchanged) == unchanged
 
@@ -91,3 +91,41 @@ def test_site_link_check_reports_missing_targets(tmp_path):
     assert broken_links(tmp_path) == [('page/index.html', '../img.png'), ('page/index.html', 'missing.ipynb')]
     (tmp_path / 'img.png').write_bytes(b'')
     assert broken_links(tmp_path) == [('page/index.html', 'missing.ipynb')]
+
+
+def test_moved_pages_redirect_to_built_pages(tmp_path):
+    from tools.docs_hooks import MOVED_PAGES, on_post_build
+
+    for new in MOVED_PAGES.values():
+        (tmp_path / new).mkdir(parents=True, exist_ok=True)
+        (tmp_path / new / 'index.html').write_text('<html></html>', encoding='utf-8')
+    on_post_build({'site_dir': str(tmp_path), 'site_url': 'https://diogoseca.github.io/timegym/'})
+    page = (tmp_path / 'notebooks/00_quick_start/index.html').read_text(encoding='utf-8')
+    assert 'url=../../tutorials/01_quick_start/' in page
+    assert 'href="https://diogoseca.github.io/timegym/tutorials/01_quick_start/"' in page
+    assert 'url=../tutorials/' in (tmp_path / 'docs/notebooks/index.html').read_text(encoding='utf-8')
+
+
+def test_raw_github_images_are_served_from_the_site():
+    from types import SimpleNamespace
+    from tools.docs_hooks import on_page_markdown
+
+    config = {'repo_url': 'https://github.com/diogoseca/timegym'}
+    raw = 'https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/scorecard.png'
+    home = SimpleNamespace(file=SimpleNamespace(src_uri='README.md'))
+    deeper = SimpleNamespace(file=SimpleNamespace(src_uri='docs/tutorials.md'))
+    assert on_page_markdown(f'[![card]({raw})]({raw})', home, config, None) == (
+        '[![card](docs/images/scorecard.png)](docs/images/scorecard.png)')
+    assert on_page_markdown(f'![card]({raw})', deeper, config, None) == '![card](images/scorecard.png)'
+
+
+def test_readme_images_exist_in_the_repository():
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    raw = 'https://raw.githubusercontent.com/diogoseca/timegym/main/'
+    images = re.findall(re.escape(raw) + r'([^)\s]+)', (root / 'README.md').read_text(encoding='utf-8'))
+    assert images, 'README shows no images'
+    for image in images:
+        assert (root / image).is_file(), f'README image {image} is not in the repository'

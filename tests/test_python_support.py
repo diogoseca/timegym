@@ -21,14 +21,14 @@ def test_discovery_requires_final_python_and_pandas_wheel_support():
 
 def test_update_rewrites_support_and_leaves_versioning_to_the_merge_workflow(tmp_path):
     files = ['pyproject.toml', 'Dockerfile', 'README.md', 'docs/release.md',
-             'notebooks/12_package.ipynb', 'CITATION.cff', 'CHANGELOG.md']
+             'source/12_package.ipynb', 'CITATION.cff', 'CHANGELOG.md']
     files += [str(p.relative_to(ROOT)) for p in (ROOT / '.github/workflows').glob('*.yml')]
     for name in files:
         target = tmp_path / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / name, target)
     versioned = {name: (tmp_path / name).read_bytes()
-                 for name in ('notebooks/12_package.ipynb', 'CITATION.cff', 'CHANGELOG.md')}
+                 for name in ('source/12_package.ipynb', 'CITATION.cff', 'CHANGELOG.md')}
     versions = [f'3.{i}' for i in range(12, 17)]
     assert update(tmp_path, versions)
     project = tomllib.loads((tmp_path / 'pyproject.toml').read_text())['project']

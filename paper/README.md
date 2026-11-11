@@ -63,8 +63,8 @@ and 5 are in Appendix A:
 2. [Marginal versus joint dependence (SVG)](figures/paper-dependence.svg): the first predefined Study 1 case, identical empirical marginals, different joint sample clouds, and saved paired score changes over all 64 evaluation cases.
 3. [Diagnostic evidence (SVG)](figures/paper-diagnostic-evidence.svg): the implementation ablation with clean controls and the random-walk-with-drift counterexample where correcting an algorithm worsens forecast loss.
 
-4. [Financial stress matrix (SVG)](figures/paper-financial-stresses.svg): six univariate configurations from application notebook 26, showing diffusion, jumps, GARCH, hidden regimes, and combined regimes/jumps. Filter approximation and output units are explicit. These are illustrative software cases; neither Gaussian fault-study protocol is expanded.
-5. [Joint financial uncertainty (SVG)](figures/paper-joint-stresses.svg): notebook 27 preserves each target trajectory while breaking cross-series pairing, revealing changes in joint and aggregate uncertainty. This is a controlled reference demonstration.
+4. [Financial stress matrix (SVG)](figures/paper-financial-stresses.svg): six univariate configurations from tutorial 11 (composed and financial stresses), showing diffusion, jumps, GARCH, hidden regimes, and combined regimes/jumps. Filter approximation and output units are explicit. These are illustrative software cases; neither Gaussian fault-study protocol is expanded.
+5. [Joint financial uncertainty (SVG)](figures/paper-joint-stresses.svg): tutorial 12 (joint financial uncertainty) preserves each target trajectory while breaking cross-series pairing, revealing changes in joint and aggregate uncertainty. This is a controlled reference demonstration.
 
 `render_figures.py` generates editable SVGs, PNG previews, and self-contained
 TikZ scenes from shared plotted coordinates; TikZ type is set by the document. It regenerates the illustrative
@@ -87,14 +87,14 @@ main figure.
 
 The studies retain clean false alarms, missed defects, negative controls, and paired repair effects. Study 1 reverses selected output corruptions. Study 2 changes implementation branches inside a fitted recursive model and compares complementary diagnostic rules. Repairs are specified by the experimenter; automatic cause identification and repair discovery are outside the claim. For its covariance conditions, Study 2 reports a declared four-check Holm family; other exploratory comparisons are not covered by that guarantee. See [the claim ledger](claims.md) and [publication strategy](publication-strategy.md).
 
-The [notebook collection](../notebooks/README.md) contains executable source
-notebooks that export the package and application notebooks that explain its
+The [source notebooks](../source/README.md) export the package and the
+[tutorials](../tutorials/README.md) explain its
 methods, including univariate and joint multivariate
 uncertainty. They are teaching examples with their own seeds and smaller studies,
 not additional empirical results in this manuscript. Install `.[notebooks]` and
 run `python tools/export_notebooks.py --check` and then
-`python notebooks/check_notebooks.py` from the repository root to verify source
-parity and execute every active notebook in a fresh kernel. Their source and saved
+`python tools/check_notebooks.py` from the repository root to verify source
+parity and execute every source notebook and tutorial in a fresh kernel. Their source and saved
 outputs accompany the source distribution. The original notebooks are
-preserved separately in `notebooks/archive/` in Git and excluded from both
+preserved separately in `source/archive/` in Git and excluded from both
 execution and the source distribution.

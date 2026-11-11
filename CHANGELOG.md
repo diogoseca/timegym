@@ -22,6 +22,12 @@
 - The scorecard says "1 kind of series" for a one-row card, and the compact
   image puts each noise level's sd on its own line when three or more levels
   would run their headers together.
+- The tutorials moved out of `notebooks/` into `tutorials/`, numbered 01–12 in
+  reading order, with "Write and test a custom model" second. The 15 source
+  notebooks that generate the package are in `source/`, with the 2021 archive
+  in `source/archive/`, and the README and site images in `docs/images/`. The
+  old tutorial addresses on the documentation site redirect to the new ones,
+  and the README's images now show on PyPI too.
 
 ## 1.2.0 — 2026-11-10
 

@@ -42,5 +42,5 @@ testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.flit.sdist]
-include = ["tests/", "experiments/", "paper/", "docs/", "notebooks/", "tools/", "examples/", "requirements-study.txt", "CITATION.cff", "CHANGELOG.md", "AGENTS.md", "mkdocs.yml", ".github/workflows/", "Dockerfile", ".dockerignore"]
-exclude = ["notebooks/archive/", "paper/build/", "paper/*.pdf", "paper/**/*.pdf", "paper/figures/*.svg", "paper/figures/*.png", "paper/timegym.tex", "paper/__pycache__/", "notebooks/.ipynb_checkpoints/", "notebooks/html/", "tools/__pycache__/", "notebooks/__pycache__/"]
+include = ["tests/", "experiments/", "paper/", "docs/", "tutorials/", "source/", "tools/", "examples/", "requirements-study.txt", "CITATION.cff", "CHANGELOG.md", "AGENTS.md", "mkdocs.yml", ".github/workflows/", "Dockerfile", ".dockerignore"]
+exclude = ["source/archive/", "paper/build/", "paper/*.pdf", "paper/**/*.pdf", "paper/figures/*.svg", "paper/figures/*.png", "paper/timegym.tex", "paper/__pycache__/", "tutorials/.ipynb_checkpoints/", "source/.ipynb_checkpoints/", "tools/__pycache__/"]

@@ -9,10 +9,10 @@ python -m pip install -e '.[dev,notebooks]'
 ## Change the library in its source notebook
 
 All 25 modules under `timegym/` are generated from the 15 source notebooks
-listed in [the source map](../notebooks/source-map.json). Edit the marked
+listed in [the source map](../source/source-map.json). Edit the marked
 implementation cells there; expand collapsed cells when needed. Keep explanatory
-examples beside the implementation. Application notebooks 00 and 20–30 import
-the package and demonstrate its use.
+examples beside the implementation. The 12 tutorials in `tutorials/` import the
+package the way a user would and demonstrate its use.
 
 ```bash
 # Save notebook edits before exporting.
@@ -36,12 +36,12 @@ reads saved source cells, not kernel state or stored outputs.
 ## Verify notebooks and plots
 
 ```bash
-python notebooks/check_notebooks.py --group source
-python notebooks/check_notebooks.py --group demo
-python notebooks/check_notebooks.py --write --html-dir /tmp/timegym-notebooks
+python tools/check_notebooks.py --group source
+python tools/check_notebooks.py --group tutorials
+python tools/check_notebooks.py --write --html-dir /tmp/timegym-notebooks
 ```
 
-The [notebook guide](../notebooks/README.md#execute-and-review) describes the
+The [source guide](../source/README.md#execute-and-review) describes the
 checker. Successful execution does not
 prove that labels, scales or explanations are useful, so inspect the rendered
 plots and explanations. Seeded results are reproducible within an environment,
@@ -52,9 +52,9 @@ Keep seeds explicit, use local data, and preserve uncertainty caveats. Keep
 implementation cells exportable and demonstration cells unmarked. Run
 `python -m build` before packaging changes.
 
-Source notebooks [14](../notebooks/14_controlled_processes.ipynb) and
-[15](../notebooks/15_joint_processes.ipynb) explain and build the univariate and
-joint stress generators that tutorials 26 and 27 use.
+Source notebooks [14](../source/14_controlled_processes.ipynb) and
+[15](../source/15_joint_processes.ipynb) explain and build the univariate and
+joint stress generators that tutorials 11 and 12 use.
 
 ## Check the documentation site
 
@@ -65,11 +65,11 @@ python tools/check_site_links.py site
 ```
 
 `--strict` checks Markdown links but not the HTML rendered from notebooks; the
-link checker covers both. Notebook links between tutorials are written relative
-to `notebooks/`, and `tools/docs_hooks.py` points them at the built pages, or at
+link checker covers both. Notebook links are written relative to the notebook's
+own folder, and `tools/docs_hooks.py` points them at the built pages, or at
 GitHub for files the site does not render. The tutorial groups are listed in
-`mkdocs.yml`, the README, the [notebook guide](../notebooks/README.md) and the
-[tutorials page](notebooks.md); `tests/test_docs_navigation.py` keeps the four
+`mkdocs.yml`, the README, the [tutorials guide](../tutorials/README.md) and the
+[tutorials page](tutorials.md); `tests/test_docs_navigation.py` keeps the four
 in step.
 
 Each API page except Market data ends with a Signatures section that
@@ -103,7 +103,7 @@ drift without rewriting it; CI runs this check beside the package export check.
 
 ## Report a problem
 
-Start with the [quick start](../notebooks/00_quick_start.ipynb) and the [tutorials](notebooks.md).
+Start with the [quick start](../tutorials/01_quick_start.ipynb) and the [tutorials](tutorials.md).
 For a diagnostic failure, include the JSON report, exact package versions, model
 configuration, scenario manifest and seed when opening an
 [issue](https://github.com/diogoseca/timegym/issues). Avoid including private

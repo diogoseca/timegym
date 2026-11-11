@@ -1,11 +1,12 @@
 # Repository guidance
 
 TimeGym is notebook-first. Every Python file under `timegym/` is generated from
-marked implementation cells owned by `notebooks/source-map.json`. Edit the
+marked implementation cells owned by `source/source-map.json`. Edit the
 owning notebook, preserve cell IDs and `metadata.timegym.role`, save it, then
 run `.venv/bin/python tools/export_notebooks.py` and its `--check` mode. Never
-edit generated modules by hand. Read `tools/README.md` and `notebooks/README.md`
-before changing library code. Paper result fragments and `paper/timegym.tex`
+edit generated modules by hand. Read `tools/README.md` and `source/README.md`
+before changing library code. The 15 source notebooks in `source/` are the
+library; the 12 notebooks in `tutorials/` only use it, the way a user would. Paper result fragments and `paper/timegym.tex`
 are generated too; edit their inputs and run their builders.
 
 Create the environment with `python3 -m venv .venv` and
@@ -25,7 +26,7 @@ example, a feature after `1.2.7` becomes `1.3.7`, and a fix then becomes `1.3.8`
 Only Diogo Seca decides when to change the major version. Do not infer a major
 bump from another project's versioning convention.
 
-The authoritative version string is `__version__` in notebook 12's package cell,
+The authoritative version string is `__version__` in source notebook 12's package cell,
 exported to `timegym/__init__.py`; flit reads it dynamically. Do not edit it,
 the CITATION.cff version/date or the leading CHANGELOG heading in a pull
 request: `tag-release.yml` writes them in its release pull request. Label every
@@ -57,7 +58,7 @@ push tags, never force-push. Before handoff run, with the venv interpreter,
 `tools/export_notebooks.py --check`, `python -m pytest -q`,
 `python -m mkdocs build --strict` followed by `tools/check_site_links.py site`,
 `paper/build_standalone.py --check`,
-`tools/sync_citation.py --check`, and `notebooks/check_notebooks.py` on every
+`tools/sync_citation.py --check`, and `tools/check_notebooks.py` on every
 notebook you touched, with `--write` when outputs change, because the docs
 site renders saved outputs. When the manuscript changes, also compile
 `paper/timegym.tex` with latexmk as `paper/README.md` describes. Recount

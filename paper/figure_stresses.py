@@ -1,4 +1,4 @@
-"""A descriptive financial-process matrix sourced from the application notebook.
+"""A descriptive financial-process matrix sourced from the composed and financial stresses tutorial.
 
 The notebook is parsed as data: only its literal ``financial_specs`` assignment
 is read. No notebook cell is executed and no study result is changed.
@@ -29,7 +29,7 @@ def build_stresses(root: Path):
     from timegym import NaiveForecaster, Pipeline, Scenario
 
     root = Path(root)
-    notebook_path = root / "notebooks/26_composed_and_financial_stresses.ipynb"
+    notebook_path = root / "tutorials/11_composed_and_financial_stresses.ipynb"
     specs = notebook_literal(notebook_path, "stress-finance", "financial_specs", expect_len=6)
     seeds, context_length, horizon, visible_context = [11, 22, 33], 240, 24, 72
     scenarios = [Scenario(context_length=context_length, horizon=horizon, **spec) for spec in specs]

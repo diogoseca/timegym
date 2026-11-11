@@ -51,19 +51,16 @@ def table_tutorials(path, heading):
 def test_tutorial_lists_agree():
     expected = nav_tutorials()
     assert len(expected) == len(set(number for _, number in expected))
-    on_disk = sorted(
-        _number(path.name)
-        for pattern in ("00_*.ipynb", "2[0-9]_*.ipynb", "3[0-9]_*.ipynb")
-        for path in (ROOT / "notebooks").glob(pattern)
-    )
-    assert sorted(number for _, number in expected) == on_disk
+    on_disk = sorted(_number(path.name) for path in (ROOT / "tutorials").glob("[0-9][0-9]_*.ipynb"))
+    # Tutorial numbers follow the reading order: the nav lists them as 01, 02, ...
+    assert [number for _, number in expected] == on_disk
     lists = {
         "README.md": table_tutorials("README.md", "| Group | Notebook | What it shows |"),
-        "notebooks/README.md": table_tutorials(
-            "notebooks/README.md", "| Group | Application | Explore |"
+        "tutorials/README.md": table_tutorials(
+            "tutorials/README.md", "| Group | Tutorial | Explore |"
         ),
-        "docs/notebooks.md": table_tutorials(
-            "docs/notebooks.md", "| Group | Tutorial | Question it answers |"
+        "docs/tutorials.md": table_tutorials(
+            "docs/tutorials.md", "| Group | Tutorial | Question it answers |"
         ),
     }
     for path, listed in lists.items():

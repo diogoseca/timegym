@@ -203,13 +203,13 @@ def test_capability_map_cells_link_real_pairs():
                 name, anchor = re.fullmatch(
                     r"\[`([^`]+)`\]\(\.\./api/diagnostics\.md#([a-z_]+)\)", diagnostic).groups()
                 number, notebook = re.fullmatch(
-                    r"\[(\d\d)\]\(\.\./\.\./notebooks/(\d\d_[a-z0-9_]+\.ipynb)\)", tutorial).groups()
+                    r"\[(\d\d)\]\(\.\./\.\./tutorials/(\d\d_[a-z0-9_]+\.ipynb)\)", tutorial).groups()
                 where = f"{capability} × {column}: {entry}"
                 assert families and set(families) <= kinds, f"{where}: unknown family"
                 key = _catalogue_key(name, entries)
                 assert entries[key]["oracle"] == columns[column][0], f"{where}: wrong column"
                 assert anchor == re.sub(r"[<>]", "", entries[key]["raw"]), f"{where}: wrong anchor"
-                path = ROOT / "notebooks" / notebook
+                path = ROOT / "tutorials" / notebook
                 assert notebook.startswith(number) and path.exists(), f"{where}: no such tutorial"
                 code, shown = _tutorial_text(path)
                 for family in families:

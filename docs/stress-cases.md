@@ -181,7 +181,7 @@ matrix. Target-specific parameters accept vectors. The joint mechanisms are:
   observed targets; optional `regime_correlation` matrices change dependence
   between states. Jump arrivals can also depend on the shared state.
 
-The [joint uncertainty notebook](../notebooks/27_joint_financial_uncertainty.ipynb)
+The [joint uncertainty notebook](../tutorials/12_joint_financial_uncertainty.ipynb)
 compares paired futures with deliberately mismatched target trajectories. The
 mutation preserves every target's marginal distribution and temporal path;
 joint diagnostics and aggregate uncertainty reveal what marginal checks miss.

@@ -43,7 +43,7 @@ jobs:
           python tools/sync_citation.py --check
           python paper/build_standalone.py --check
           python -m pytest -q
-          python notebooks/check_notebooks.py
+          python tools/check_notebooks.py
           python examples/quickstart.py
           python -m mkdocs build --strict
           python -m build
