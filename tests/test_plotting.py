@@ -280,3 +280,21 @@ def test_custom_case_kind_remains_plotable_without_a_builtin_scenario_label():
     run = Pipeline().run([MeasuredCase("white_noise", context_length=12, horizon=3)], seeds=[7])
     assert "Measured sensor signal" in run.plot_forecasts().axes[0].get_title(loc="left")
     assert "Measured sensor signal" in run.plot_errors().axes[0].get_title(loc="left")
+
+
+def test_real_data_panel_has_no_seed_and_labels_its_one_error():
+    from timegym import Case, ForecastTask
+    from timegym.diagnostics import evaluate_forecast
+    from timegym.evaluation import EvaluatedCase
+
+    values = pd.DataFrame({"sales": np.arange(1.0, 15.0)})
+    task = ForecastTask(values.iloc[:10], values.index[10:])
+    case = Case(task, values.iloc[10:], reference=None,
+                manifest={"kind": "Store sales", "seed": None})
+    forecast = Forecast(task.future_index, np.full((4, 1), 10.0))
+    result = evaluate_forecast(case, forecast)
+    run = ForecastRun([EvaluatedCase(case, forecast, result, 0, 0)])
+    axis = run.plot_forecasts().axes[0]
+    assert axis.get_title(loc="left") == "1. Store sales"
+    details = [text.get_text() for text in axis.texts]
+    assert any(text.startswith("error vs what happened ") for text in details), details

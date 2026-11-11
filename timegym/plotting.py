@@ -366,9 +366,10 @@ def _draw_case(
                         score = 100 * spread / (spread + gap)
                     details.append(f"error vs answer key {gap:.3g}")
                 if observed_valid:
-                    details.append(
-                        f"vs what happened {metrics.mse(observed, point):.3g}"
+                    against = (
+                        "vs what happened" if details else "error vs what happened"
                     )
+                    details.append(f"{against} {metrics.mse(observed, point):.3g}")
             else:
                 messages.append(
                     "No explicit predictive mean supplied; no point predictions plotted."
@@ -410,7 +411,10 @@ def _draw_case(
             case.manifest.get("parameters"),
             target_index=dimension,
         )
-        title = f"{entry.scenario_index + 1}. {label}{f' · {target}' if several else ''} · seed {entry.result.seed}"
+        seed = (
+            "" if entry.result.seed is None else f" · seed {entry.result.seed}"
+        )  # real data has none
+        title = f"{entry.scenario_index + 1}. {label}{f' · {target}' if several else ''}{seed}"
     else:
         title = f"{title}{f' · {target}' if several else ''} · instance {entry.seed_index + 1}"
     if len(title) > title_width:
