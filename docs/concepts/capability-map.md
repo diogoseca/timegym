@@ -39,14 +39,14 @@ composed and financial families in
 
 | Capability and scenario families | Forecast contract | Reference score | Declared relation | Statistical check |
 | --- | --- | --- | --- | --- |
-| **Level and trend**<br>`white_noise`, `trend`, `composite` | `white_noise` · [`contract_index_mismatch`](../api/diagnostics.md#contract_code) · [23](../../notebooks/23_faults_repairs_and_replay.ipynb)<br>`white_noise` · [`contract_quantile_crossing`](../api/diagnostics.md#contract_code) · [23](../../notebooks/23_faults_repairs_and_replay.ipynb) | `trend` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [25](../../notebooks/25_capability_sweeps.ipynb)<br>`trend` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [28](../../notebooks/28_custom_model.ipynb) | `white_noise` · [`shift_equivariance`](../api/diagnostics.md#shift_equivariance) · [23](../../notebooks/23_faults_repairs_and_replay.ipynb) |  |
-| **Persistence**<br>`ar1`, `random_walk`, `composite` | `ar1` · [`forecast_contract`](../api/diagnostics.md#forecast_contract) · [20](../../notebooks/20_univariate_uncertainty.ipynb) | `ar1` · [`interval_coverage`](../api/diagnostics.md#interval_coverage) · [20](../../notebooks/20_univariate_uncertainty.ipynb)<br>`random_walk` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [25](../../notebooks/25_capability_sweeps.ipynb)<br>`ar1` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [30](../../notebooks/30_reductions.ipynb) |  |  |
-| **Seasonality**<br>`seasonal`, `composite` | `seasonal` · [`contract_index_mismatch`](../api/diagnostics.md#contract_code) · [23](../../notebooks/23_faults_repairs_and_replay.ipynb)<br>`seasonal` · [`contract_point_shape`](../api/diagnostics.md#contract_code) · [28](../../notebooks/28_custom_model.ipynb) | `composite` · [`interval_coverage`](../api/diagnostics.md#interval_coverage) · [29](../../notebooks/29_target_transforms.ipynb)<br>`seasonal` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [30](../../notebooks/30_reductions.ipynb) |  |  |
-| **Parameter changes**<br>`composite` |  | `composite` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [26](../../notebooks/26_composed_and_financial_stresses.ipynb) |  |  |
-| **Jumps**<br>`merton_jump_diffusion`, `composite`, `markov_switching` |  | `merton_jump_diffusion` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [26](../../notebooks/26_composed_and_financial_stresses.ipynb) |  |  |
-| **Volatility clustering**<br>`garch` |  | `garch` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [26](../../notebooks/26_composed_and_financial_stresses.ipynb) |  |  |
-| **Hidden regimes**<br>`markov_switching` |  | `markov_switching` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [26](../../notebooks/26_composed_and_financial_stresses.ipynb) |  |  |
-| **Dependence between targets**<br>Every family, with `n_targets` of 2 or more | `ar1` · [`contract_target_mismatch`](../api/diagnostics.md#contract_code) · [21](../../notebooks/21_multivariate_forecasting.ipynb) | `ar1` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [21](../../notebooks/21_multivariate_forecasting.ipynb)<br>`ar1` · [`sample_scores`](../api/diagnostics.md#sample_scores) · [22](../../notebooks/22_multivariate_uncertainty.ipynb) |  | `ar1` · [`reference_covariance`](../api/diagnostics.md#reference_covariance) · [22](../../notebooks/22_multivariate_uncertainty.ipynb)<br>`composite`, `merton_jump_diffusion`, `garch`, `markov_switching` · [`reference_covariance`](../api/diagnostics.md#reference_covariance) · [27](../../notebooks/27_joint_financial_uncertainty.ipynb) |
+| **Level and trend**<br>`white_noise`, `trend`, `composite` | `white_noise` · [`contract_index_mismatch`](../api/diagnostics.md#contract_code) · [03](../../tutorials/03_faults_repairs_and_replay.ipynb)<br>`white_noise` · [`contract_quantile_crossing`](../api/diagnostics.md#contract_code) · [03](../../tutorials/03_faults_repairs_and_replay.ipynb) | `trend` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [10](../../tutorials/10_capability_sweeps.ipynb)<br>`trend` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [02](../../tutorials/02_custom_model.ipynb) | `white_noise` · [`shift_equivariance`](../api/diagnostics.md#shift_equivariance) · [03](../../tutorials/03_faults_repairs_and_replay.ipynb) |  |
+| **Persistence**<br>`ar1`, `random_walk`, `composite` | `ar1` · [`forecast_contract`](../api/diagnostics.md#forecast_contract) · [08](../../tutorials/08_univariate_uncertainty.ipynb) | `ar1` · [`interval_coverage`](../api/diagnostics.md#interval_coverage) · [08](../../tutorials/08_univariate_uncertainty.ipynb)<br>`random_walk` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [10](../../tutorials/10_capability_sweeps.ipynb)<br>`ar1` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [05](../../tutorials/05_reductions.ipynb) |  |  |
+| **Seasonality**<br>`seasonal`, `composite` | `seasonal` · [`contract_index_mismatch`](../api/diagnostics.md#contract_code) · [03](../../tutorials/03_faults_repairs_and_replay.ipynb)<br>`seasonal` · [`contract_point_shape`](../api/diagnostics.md#contract_code) · [02](../../tutorials/02_custom_model.ipynb) | `composite` · [`interval_coverage`](../api/diagnostics.md#interval_coverage) · [04](../../tutorials/04_target_transforms.ipynb)<br>`seasonal` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [05](../../tutorials/05_reductions.ipynb) |  |  |
+| **Parameter changes**<br>`composite` |  | `composite` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [11](../../tutorials/11_composed_and_financial_stresses.ipynb) |  |  |
+| **Jumps**<br>`merton_jump_diffusion`, `composite`, `markov_switching` |  | `merton_jump_diffusion` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [11](../../tutorials/11_composed_and_financial_stresses.ipynb) |  |  |
+| **Volatility clustering**<br>`garch` |  | `garch` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [11](../../tutorials/11_composed_and_financial_stresses.ipynb) |  |  |
+| **Hidden regimes**<br>`markov_switching` |  | `markov_switching` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [11](../../tutorials/11_composed_and_financial_stresses.ipynb) |  |  |
+| **Dependence between targets**<br>Every family, with `n_targets` of 2 or more | `ar1` · [`contract_target_mismatch`](../api/diagnostics.md#contract_code) · [06](../../tutorials/06_multivariate_forecasting.ipynb) | `ar1` · [`point_accuracy`](../api/diagnostics.md#point_accuracy) · [06](../../tutorials/06_multivariate_forecasting.ipynb)<br>`ar1` · [`sample_scores`](../api/diagnostics.md#sample_scores) · [09](../../tutorials/09_multivariate_uncertainty.ipynb) |  | `ar1` · [`reference_covariance`](../api/diagnostics.md#reference_covariance) · [09](../../tutorials/09_multivariate_uncertainty.ipynb)<br>`composite`, `merton_jump_diffusion`, `garch`, `markov_switching` · [`reference_covariance`](../api/diagnostics.md#reference_covariance) · [12](../../tutorials/12_joint_financial_uncertainty.ipynb) |
 
 </div>
 
@@ -59,19 +59,19 @@ composed and financial families in
   `sample_axis_swap` [fault fixtures](../api/fault-fixtures.md) appear in no
   tutorial.
 - **Reference score.** Every row has one, but the composed and financial rows
-  rest on tutorial 26 alone, which reports mean-reference MSE. Parameter changes
+  rest on tutorial 11 alone, which reports mean-reference MSE. Parameter changes
   appear only in its ladder of forecast plots, with the score in each panel
   title.
 - **Declared relation.** Shift equivariance is the only declared relation, and
-  only tutorial 23 runs it, on white noise. A relation holds only for a model
+  only tutorial 03 runs it, on white noise. A relation holds only for a model
   that declares it, so some of these cells stay empty by design.
 - **Statistical check.** `PASS` and `FAIL` come only from direct
-  `covariance_dependence_check` calls in tutorials 22 and 27, on reference
+  `covariance_dependence_check` calls in tutorials 09 and 12, on reference
   ensembles with and without a cross-target fault. No tutorial runs the check on
   a fitted model's samples, or against a jump, volatility or regime fault in one
-  target. Tutorials 24 and 28 pass `check_dependence=True` on real data, which
+  target. Tutorials 02 and 07 pass `check_dependence=True` on real data, which
   has no reference, so the check returns `UNSUPPORTED`. Regime switching with
-  jumps has an approximate reference, so tutorials 26 and 27 show the check
+  jumps has an approximate reference, so tutorials 11 and 12 show the check
   returning `UNSUPPORTED` there too.
 
 ## Keeping the map current

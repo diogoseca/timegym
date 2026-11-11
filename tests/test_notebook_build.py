@@ -22,7 +22,7 @@ spec.loader.exec_module(exporter)
 
 @pytest.mark.parametrize(
     "source",
-    json.loads((SCRIPT.parents[1] / "notebooks/source-map.json").read_text())["sources"],
+    json.loads((SCRIPT.parents[1] / "source/source-map.json").read_text())["sources"],
     ids=lambda source: Path(source["notebook"]).stem,
 )
 def test_source_notebook_export_cells_follow_convention(source):
@@ -45,7 +45,7 @@ def test_source_notebook_export_cells_follow_convention(source):
 
 
 def notebook(root, name, cells, *, role="source"):
-    path = root / "notebooks" / name
+    path = root / "source" / name
     path.parent.mkdir(parents=True, exist_ok=True)
     book = nbformat.v4.new_notebook(metadata={"timegym": {"role": role}})
     book.cells = [nbformat.v4.new_code_cell(source, id=f"cell-{index}") for index, source in enumerate(cells)]
@@ -54,7 +54,7 @@ def notebook(root, name, cells, *, role="source"):
 
 
 def manifest(root, sources, handwritten=()):
-    path = root / "notebooks/source-map.json"
+    path = root / "source/source-map.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"schema_version": 1, "sources": sources, "handwritten": list(handwritten)}))
 
@@ -77,8 +77,8 @@ def test_export_builds_multiple_owned_modules_without_running_cells(tmp_path):
     scaling = (tmp_path / "timegym/helpers/scaling.py").read_text()
     assert "def answer()" in core
     assert "demonstrations" not in core + scaling
-    assert "../notebooks/01_math.ipynb" in core
-    assert "../../notebooks/01_math.ipynb" in scaling
+    assert "../source/01_math.ipynb" in core
+    assert "../../source/01_math.ipynb" in scaling
     assert str(tmp_path) not in core + scaling
     assert "from ..core import answer" in scaling
     assert exporter.build(tmp_path, check=True).changed == ()

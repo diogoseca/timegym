@@ -115,8 +115,8 @@ Hidden regimes plus jumps use numerical filtering; the covariance rank check
 is unsupported for that approximate sampler. No hidden terminal regime or
 future realized volatility is supplied as observed information.
 
-The financial matrix reads configurations directly from application notebook
-26 and records its 18 illustrative cases in the figure provenance file.
+The financial matrix reads configurations directly from tutorial 11 (composed
+and financial stresses) and records its 18 illustrative cases in the figure provenance file.
 
 ## Joint controlled processes
 
@@ -143,6 +143,6 @@ Validation includes independent hidden-state-path enumeration, multivariate
 Gaussian forward-filter calculations, direct cumulant calculations,
 Gauss-Hermite integration of two-step GARCH cross-moments, conditional simulation,
 shape/parameter boundaries, retained scalar behavior, and public report replay.
-Notebook 27 and the joint figure demonstrate re-pairing whole target trajectories:
+The joint financial uncertainty tutorial (`tutorials/12_joint_financial_uncertainty.ipynb`) and the joint figure demonstrate re-pairing whole target trajectories:
 per-target marginal distributions and temporal paths remain unchanged while
 cross-series dependence and aggregate uncertainty change.

@@ -11,7 +11,7 @@ from timegym.contracts import DEFAULT_LEVELS
 
 @pytest.fixture(scope="module")
 def model_class():
-    path = Path(__file__).resolve().parents[1] / "notebooks/28_custom_model.ipynb"
+    path = Path(__file__).resolve().parents[1] / "tutorials/02_custom_model.ipynb"
     notebook = json.loads(path.read_text())
     source = next("".join(c["source"]) for c in notebook["cells"]
                   if c["id"] == "custom-model-definition")

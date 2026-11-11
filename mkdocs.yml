@@ -40,7 +40,7 @@ hooks:
 plugins:
   - search
   - mkdocs-jupyter:
-      include: ["notebooks/00_*.ipynb", "notebooks/2*.ipynb", "notebooks/3*.ipynb"]
+      include: ["tutorials/[0-9][0-9]_*.ipynb"]
       execute: false
       include_source: true
       ignore_h1_titles: true
@@ -83,10 +83,9 @@ validation:
     anchors: warn
     unrecognized_links: warn
 not_in_nav: |
-  /notebooks/**/README.md
-  /notebooks/archive/**
-  /notebooks/0[1-9]_*.ipynb
-  /notebooks/1[0-5]_*.ipynb
+  /tutorials/README.md
+  /source/**
+  /docs/images/README.md
   /examples/**
   /experiments/**
   /paper/**
@@ -94,24 +93,24 @@ not_in_nav: |
 nav:
   - Home: README.md
   - Tutorials:
-      - Overview: docs/notebooks.md
+      - Overview: docs/tutorials.md
       - Start:
-          - Quick start: notebooks/00_quick_start.ipynb
+          - Quick start: tutorials/01_quick_start.ipynb
+          - Write and test a custom model: tutorials/02_custom_model.ipynb
       - Find what breaks:
-          - Faults, repairs and replay: notebooks/23_faults_repairs_and_replay.ipynb
-          - Write and test a custom model: notebooks/28_custom_model.ipynb
+          - Faults, repairs and replay: tutorials/03_faults_repairs_and_replay.ipynb
       - Shape the forecast:
-          - Target transforms: notebooks/29_target_transforms.ipynb
-          - Reductions: notebooks/30_reductions.ipynb
-          - Multivariate forecasting: notebooks/21_multivariate_forecasting.ipynb
-          - Real-data forecasts: notebooks/24_real_data_forecasts.ipynb
+          - Target transforms: tutorials/04_target_transforms.ipynb
+          - Reductions: tutorials/05_reductions.ipynb
+          - Multivariate forecasting: tutorials/06_multivariate_forecasting.ipynb
+          - Real-data forecasts: tutorials/07_real_data_forecasts.ipynb
       - Measure uncertainty:
-          - Univariate uncertainty: notebooks/20_univariate_uncertainty.ipynb
-          - Multivariate uncertainty: notebooks/22_multivariate_uncertainty.ipynb
+          - Univariate uncertainty: tutorials/08_univariate_uncertainty.ipynb
+          - Multivariate uncertainty: tutorials/09_multivariate_uncertainty.ipynb
       - Stress-test:
-          - Capability sweeps: notebooks/25_capability_sweeps.ipynb
-          - Composed and financial stresses: notebooks/26_composed_and_financial_stresses.ipynb
-          - Joint financial uncertainty: notebooks/27_joint_financial_uncertainty.ipynb
+          - Capability sweeps: tutorials/10_capability_sweeps.ipynb
+          - Composed and financial stresses: tutorials/11_composed_and_financial_stresses.ipynb
+          - Joint financial uncertainty: tutorials/12_joint_financial_uncertainty.ipynb
   - Concepts:
       - How TimeGym decides: docs/concepts/how-timegym-decides.md
       - Capability map: docs/concepts/capability-map.md
@@ -128,7 +127,7 @@ nav:
       - Fault fixtures: docs/api/fault-fixtures.md
       - Data preparation: docs/api/data-preparation.md
       - Market data: docs/api/market-data.md
-  - Project:
+  - Develop:
       - Contributing: docs/contributing.md
       - Releasing: docs/release.md
       - Changelog: CHANGELOG.md

@@ -152,7 +152,7 @@ jobs:
             pyproject.toml
             requirements-study.txt
       - run: python -m pip install -e '.[notebooks]'
-      - run: python notebooks/check_notebooks.py
+      - run: python tools/check_notebooks.py
   paper:
     runs-on: ubuntu-latest
     steps:

@@ -1,12 +1,12 @@
 # Build the package from notebooks
 
-The source notebooks listed in `notebooks/source-map.json` own their generated
+The source notebooks listed in `source/source-map.json` own their generated
 Python modules. Edit their marked cells, save the notebooks, then run:
 
 ```bash
 python tools/export_notebooks.py
 python -m pytest
-python notebooks/check_notebooks.py
+python tools/check_notebooks.py
 ```
 
 The build command reads **saved files**, so unsaved edits in a running kernel
@@ -35,7 +35,7 @@ The manifest uses project-relative paths and lists every Python module under
   "schema_version": 1,
   "sources": [
     {
-      "notebook": "notebooks/01_example.ipynb",
+      "notebook": "source/01_example.ipynb",
       "modules": ["timegym/example.py", "timegym/helpers/scaling.py"]
     }
   ],

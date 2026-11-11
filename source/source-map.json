@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "notebook": "source/01_synthetic_data.ipynb",
+      "modules": [
+        "timegym/scenarios.py",
+        "timegym/data/synthetic.py"
+      ]
+    },
+    {
+      "notebook": "source/02_real_data.ipynb",
+      "modules": [
+        "timegym/data/real.py"
+      ]
+    },
+    {
+      "notebook": "source/03_smoothing.ipynb",
+      "modules": [
+        "timegym/smoothing.py"
+      ]
+    },
+    {
+      "notebook": "source/04_feature_engineering.ipynb",
+      "modules": [
+        "timegym/features.py"
+      ]
+    },
+    {
+      "notebook": "source/05_target_engineering.ipynb",
+      "modules": [
+        "timegym/target.py"
+      ]
+    },
+    {
+      "notebook": "source/06_forecasting_models.ipynb",
+      "modules": [
+        "timegym/models.py"
+      ]
+    },
+    {
+      "notebook": "source/07_pipeline.ipynb",
+      "modules": [
+        "timegym/evaluation.py",
+        "timegym/pipeline.py"
+      ]
+    },
+    {
+      "notebook": "source/08_forecast_contracts.ipynb",
+      "modules": [
+        "timegym/contracts.py"
+      ]
+    },
+    {
+      "notebook": "source/09_scores_and_diagnostics.ipynb",
+      "modules": [
+        "timegym/metrics.py",
+        "timegym/diagnostics.py",
+        "timegym/checks.py",
+        "timegym/mutations.py",
+        "timegym/statistics.py"
+      ]
+    },
+    {
+      "notebook": "source/10_reports_and_replay.ipynb",
+      "modules": [
+        "timegym/reporting.py",
+        "timegym/provenance.py"
+      ]
+    },
+    {
+      "notebook": "source/11_plotting.ipynb",
+      "modules": [
+        "timegym/plotting.py"
+      ]
+    },
+    {
+      "notebook": "source/12_package.ipynb",
+      "modules": [
+        "timegym/__init__.py",
+        "timegym/_internal.py"
+      ]
+    },
+    {
+      "notebook": "source/13_scorecard.ipynb",
+      "modules": [
+        "timegym/grid.py",
+        "timegym/scorecard.py"
+      ]
+    },
+    {
+      "notebook": "source/14_controlled_processes.ipynb",
+      "modules": [
+        "timegym/processes.py",
+        "timegym/_process_common.py"
+      ]
+    },
+    {
+      "notebook": "source/15_joint_processes.ipynb",
+      "modules": [
+        "timegym/joint_processes.py"
+      ]
+    }
+  ],
+  "handwritten": []
+}

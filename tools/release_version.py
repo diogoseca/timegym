@@ -42,7 +42,7 @@ def next_version(current: str, prs: list[dict], *, major: bool = False) -> str |
 
 def package_version(root: Path = ROOT) -> str:
     found = [VERSION.search(''.join(cell['source']))
-             for cell in json.loads((root / 'notebooks/12_package.ipynb').read_text())['cells']
+             for cell in json.loads((root / 'source/12_package.ipynb').read_text())['cells']
              if cell['cell_type'] == 'code']
     found = [match for match in found if match]
     if len(found) != 1:
@@ -69,7 +69,7 @@ def release_notes(changelog: str, prs: list[dict]) -> tuple[str, str]:
 
 def apply(root: Path, version: str, released: date, prs: list[dict]) -> None:
     """Write the version into notebook 12, CITATION.cff and CHANGELOG.md."""
-    notebook = root / 'notebooks/12_package.ipynb'
+    notebook = root / 'source/12_package.ipynb'
     data = json.loads(notebook.read_text())
     for cell in data['cells']:
         text = ''.join(cell['source'])

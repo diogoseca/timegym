@@ -31,8 +31,8 @@ def main():
                      Path(__file__), ROOT / "paper/figure_evidence.py",
                      ROOT / "paper/vector_canvas.py", ROOT / "paper/figure_common.py",
                      ROOT / "paper/figure_matrix.py", ROOT / "paper/figure_dependence.py", ROOT / "paper/figure_stresses.py",
-                     ROOT / "notebooks/26_composed_and_financial_stresses.ipynb",
-                     ROOT / "paper/figure_joint_stresses.py", ROOT / "notebooks/27_joint_financial_uncertainty.ipynb"]}
+                     ROOT / "tutorials/11_composed_and_financial_stresses.ipynb",
+                     ROOT / "paper/figure_joint_stresses.py", ROOT / "tutorials/12_joint_financial_uncertainty.ipynb"]}
     (directory / "paper-figure-provenance.json").write_text(json.dumps(metadata, indent=2, sort_keys=True, allow_nan=False)+"\n")
 
 

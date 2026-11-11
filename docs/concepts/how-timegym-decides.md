@@ -103,7 +103,7 @@ scenarios supply those inputs. A property check runs on its own and returns one
 - *Verdicts:* `PASS` or `FAIL` with `max_absolute_error` as evidence; `ERROR`
   when either forecast is malformed; `UNSUPPORTED` without point forecasts.
 
-[Tutorial 23](../../notebooks/23_faults_repairs_and_replay.ipynb) runs it on a
+[Tutorial 03](../../tutorials/03_faults_repairs_and_replay.ipynb) runs it on a
 model that declares it.
 
 ## Testing the tests

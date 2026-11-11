@@ -1,12 +1,9 @@
 # Python examples
 
-The Jupyter notebooks are in [`notebooks/`](../notebooks/README.md),
-alongside the package's source notebooks. Start with
-[00 · Quick start](../notebooks/00_quick_start.ipynb) for visual forecast matrices
-and error distributions. See the [notebook guide](../notebooks/README.md) for
-univariate and multivariate uncertainty, real data, diagnosis, and development.
-
-This folder has four terminal examples:
+This folder has three terminal examples. The Jupyter tutorials are in
+[`tutorials/`](../tutorials/README.md): start with
+[01 · Quick start](../tutorials/01_quick_start.ipynb), then
+[02 · Write and test a custom model](../tutorials/02_custom_model.ipynb).
 
 - [`quickstart.py`](quickstart.py): generate controlled cases and inspect a
   diagnostic report.
@@ -14,8 +11,6 @@ This folder has four terminal examples:
   supported built-in model.
 - [`scorecard.py`](scorecard.py): print and save the last-value forecaster's
   scorecard.
-- [`readme_figures.py`](readme_figures.py): redraw the figures in the README's
-  "More things to do with a scorecard".
 
 From the project root:
 
@@ -23,8 +18,9 @@ From the project root:
 python examples/quickstart.py
 python examples/reproduce_report.py report.json --case-index 0
 python examples/scorecard.py scorecard.png
-python examples/readme_figures.py
 ```
 
-The original example notebook is preserved as
-[Quick Start (2021)](../notebooks/archive/Quick%20Start%20%282021%29.ipynb).
+The README's figures are redrawn by
+[`tools/readme_figures.py`](../tools/readme_figures.py). The original example
+notebook is preserved as
+[Quick Start (2021)](../source/archive/Quick%20Start%20%282021%29.ipynb).

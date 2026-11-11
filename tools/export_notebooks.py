@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build TimeGym modules from the notebooks declared in notebooks/source-map.json.
+"""Build TimeGym modules from the notebooks declared in source/source-map.json.
 
 Run from any directory: ``python tools/export_notebooks.py [--check]``.
 Export reads saved cells; it never executes notebook examples or package code.
@@ -45,7 +45,7 @@ def _relative_path(value: object, root: Path, *, notebook: bool = False) -> str:
     ) or "\\" in value:
         raise BuildError(f"Expected a normalized project-relative path: {value!r}")
     if notebook:
-        valid = len(path.parts) == 2 and path.parts[0] == "notebooks" and path.suffix == ".ipynb"
+        valid = len(path.parts) == 2 and path.parts[0] == "source" and path.suffix == ".ipynb"
     else:
         names = (*path.parts[1:-1], path.stem)
         valid = (
@@ -55,7 +55,7 @@ def _relative_path(value: object, root: Path, *, notebook: bool = False) -> str:
             and all(re.fullmatch(r"[A-Za-z_]\w*", name) for name in names)
         )
     if not valid:
-        expected = "notebooks/<name>.ipynb" if notebook else "timegym/<module>.py"
+        expected = "source/<name>.ipynb" if notebook else "timegym/<module>.py"
         raise BuildError(f"Expected {expected}, got {value!r}")
     cursor = root
     for part in path.parts:
@@ -67,7 +67,7 @@ def _relative_path(value: object, root: Path, *, notebook: bool = False) -> str:
 
 def load_manifest(root: Path) -> tuple[Source, ...]:
     """Validate ownership, including explicit coverage of existing modules."""
-    manifest_path = root / "notebooks/source-map.json"
+    manifest_path = root / "source/source-map.json"
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:

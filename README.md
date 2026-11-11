@@ -17,8 +17,8 @@ truth. One picture shows what your algorithm nails, where it struggles and
 where it fails.
 
 **[Documentation](https://diogoseca.github.io/timegym/)** ·
-[Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) ·
-[Tutorials](https://diogoseca.github.io/timegym/docs/notebooks/) ·
+[Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) ·
+[Tutorials](https://diogoseca.github.io/timegym/docs/tutorials/) ·
 [API](https://diogoseca.github.io/timegym/docs/reference/) ·
 [Changelog](CHANGELOG.md)
 
@@ -43,7 +43,7 @@ card = pipeline.scorecard()
 card.save("scorecard.png")
 ```
 
-[![The scorecard of the last-value forecaster: a score per kind of series and noise level, with example forecasts](notebooks/assets/scorecard.png)](notebooks/assets/scorecard.png)
+[![The scorecard of the last-value forecaster: a score per kind of series and noise level, with example forecasts](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/scorecard.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/scorecard.png)
 
 Each row is a kind of series and each column a noise level. The left column
 says what can and cannot be predicted for that kind of series, and the right
@@ -124,7 +124,7 @@ trend = pipeline.scorecard(["trend"], instances=3)   # one row, both noise level
 trend.save("trend.png")
 ```
 
-[![The scorecard's straight-line trend row on its own](notebooks/assets/readme-trend-scorecard.png)](notebooks/assets/readme-trend-scorecard.png)
+[![The scorecard's straight-line trend row on its own](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-scorecard.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-scorecard.png)
 
 Plot every draw behind that row, with the answer key and the forecast:
 
@@ -132,7 +132,7 @@ Plot every draw behind that row, with the answer key and the forecast:
 trend.run.plot_forecasts()
 ```
 
-[![The three draws of the trend row at each noise level, with the answer key and the last-value forecast](notebooks/assets/readme-trend-forecasts.png)](notebooks/assets/readme-trend-forecasts.png)
+[![The three draws of the trend row at each noise level, with the answer key and the last-value forecast](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-forecasts.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-forecasts.png)
 
 See how the error spreads over 20 draws per noise level:
 
@@ -140,7 +140,7 @@ See how the error spreads over 20 draws per noise level:
 pipeline.scorecard(["trend"], instances=20).run.plot_errors(metric="mse")
 ```
 
-[![Histograms of the error against what happened, 20 draws at low and at high noise](notebooks/assets/readme-trend-errors.png)](notebooks/assets/readme-trend-errors.png)
+[![Histograms of the error against what happened, 20 draws at low and at high noise](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-errors.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-errors.png)
 
 `mse` is the error against what actually happened. The default,
 `mean_reference_mse`, is the error against the answer key: the part your model
@@ -214,7 +214,7 @@ run = pipeline.run(suite, seed=0, instances=3)         # the same, plus every fo
 run.plot_forecasts()
 ```
 
-[![Three draws each of a seasonal series and a random walk with drift, with the last-value forecast](notebooks/assets/readme-custom-scenarios.png)](notebooks/assets/readme-custom-scenarios.png)
+[![Three draws each of a seasonal series and a random walk with drift, with the last-value forecast](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-custom-scenarios.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-custom-scenarios.png)
 
 ## Why not just backtest?
 
@@ -229,7 +229,7 @@ any scorer that compares arrays gives them exactly the same error. TimeGym
 checks the dates, the series and the shape first, and fails the forecast with
 the reason before it scores anything.
 
-[![A forecast with the right values on the wrong dates: the same error, a different diagnosis](notebooks/assets/alignment-demo.png)](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/)
+[![A forecast with the right values on the wrong dates: the same error, a different diagnosis](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/alignment-demo.png)](https://diogoseca.github.io/timegym/tutorials/03_faults_repairs_and_replay/)
 
 ## Bring your own model
 
@@ -253,7 +253,7 @@ card = Pipeline(LastValueForecaster()).scorecard()
 ```
 
 It scores 51, like the built-in one.
-[Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/)
+[Write and test a custom model](https://diogoseca.github.io/timegym/tutorials/02_custom_model/)
 adds several series, quantiles and a nearest-analogues forecaster.
 
 scikit-learn regressors plug in directly, fed the last `window_length` values:
@@ -341,22 +341,22 @@ series.
 
 | Group | Notebook | What it shows |
 |---|---|---|
-| Start | [Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) | Two scorecards, last value against Ridge: each is blind where the other sees |
-| Find what breaks | [Faults, repairs and replay](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/) | Four ways to break a correct forecast, a bug caught by a broken promise, replay |
-| | [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | The six-line LastValueForecaster, nearest analogues, real data |
-| Shape the forecast | [Target transforms](https://diogoseca.github.io/timegym/notebooks/29_target_transforms/) | Why logs help when the swing grows with the level, and why exp(mean log) is too low |
-| | [Reductions](https://diogoseca.github.io/timegym/notebooks/30_reductions/) | Recursive, direct and multioutput: when recursive errors compound |
-| | [Multivariate forecasting](https://diogoseca.github.io/timegym/notebooks/21_multivariate_forecasting/) | Right numbers under the wrong series name; when extra history doesn't help |
-| | [Real-data forecasts](https://diogoseca.github.io/timegym/notebooks/24_real_data_forecasts/) | No answer key: four origins, three baselines, a leakage check |
-| Measure uncertainty | [Univariate uncertainty](https://diogoseca.github.io/timegym/notebooks/20_univariate_uncertainty/) | Same predictions, overconfident spread: which scores notice |
-| | [Multivariate uncertainty](https://diogoseca.github.io/timegym/notebooks/22_multivariate_uncertainty/) | Scrambled pairings: every series right, joint risk gone |
-| Stress-test | [Capability sweeps](https://diogoseca.github.io/timegym/notebooks/25_capability_sweeps/) | Three simple bets, and where each breaks as history and noise change |
-| | [Composed and financial stresses](https://diogoseca.github.io/timegym/notebooks/26_composed_and_financial_stresses/) | A ladder of mechanisms, bad luck vs a bad model, a conversion bug |
-| | [Joint financial uncertainty](https://diogoseca.github.io/timegym/notebooks/27_joint_financial_uncertainty/) | Assets that crash together, and the check that notices a lost link |
+| Start | [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) | Two scorecards, last value against Ridge: each is blind where the other sees |
+| | [Write and test a custom model](https://diogoseca.github.io/timegym/tutorials/02_custom_model/) | The six-line LastValueForecaster, nearest analogues, real data |
+| Find what breaks | [Faults, repairs and replay](https://diogoseca.github.io/timegym/tutorials/03_faults_repairs_and_replay/) | Four ways to break a correct forecast, a bug caught by a broken promise, replay |
+| Shape the forecast | [Target transforms](https://diogoseca.github.io/timegym/tutorials/04_target_transforms/) | Why logs help when the swing grows with the level, and why exp(mean log) is too low |
+| | [Reductions](https://diogoseca.github.io/timegym/tutorials/05_reductions/) | Recursive, direct and multioutput: when recursive errors compound |
+| | [Multivariate forecasting](https://diogoseca.github.io/timegym/tutorials/06_multivariate_forecasting/) | Right numbers under the wrong series name; when extra history doesn't help |
+| | [Real-data forecasts](https://diogoseca.github.io/timegym/tutorials/07_real_data_forecasts/) | No answer key: four origins, three baselines, a leakage check |
+| Measure uncertainty | [Univariate uncertainty](https://diogoseca.github.io/timegym/tutorials/08_univariate_uncertainty/) | Same predictions, overconfident spread: which scores notice |
+| | [Multivariate uncertainty](https://diogoseca.github.io/timegym/tutorials/09_multivariate_uncertainty/) | Scrambled pairings: every series right, joint risk gone |
+| Stress-test | [Capability sweeps](https://diogoseca.github.io/timegym/tutorials/10_capability_sweeps/) | Three simple bets, and where each breaks as history and noise change |
+| | [Composed and financial stresses](https://diogoseca.github.io/timegym/tutorials/11_composed_and_financial_stresses/) | A ladder of mechanisms, bad luck vs a bad model, a conversion bug |
+| | [Joint financial uncertainty](https://diogoseca.github.io/timegym/tutorials/12_joint_financial_uncertainty/) | Assets that crash together, and the check that notices a lost link |
 
-The notebooks run on CPU with local data. Clone the repository, then
-`pip install -e '.[notebooks]'` and `python -m jupyterlab notebooks`; the
-[notebook guide](notebooks/README.md) describes the folder.
+The tutorials run on CPU with local data. Clone the repository, then
+`pip install -e '.[notebooks]'` and `python -m jupyterlab tutorials`; the
+[tutorials guide](tutorials/README.md) describes the folder.
 
 ## Scope and development
 
@@ -366,8 +366,8 @@ answer key for data you bring yourself: real data is scored against what
 happened, and the checks that need a key say `UNSUPPORTED`. Panels, hierarchies,
 and missing or irregular observations are out of scope for now.
 
-The package is written in notebooks: the source notebooks in `notebooks/`
-generate every module in `timegym/`. [Contributing](docs/contributing.md)
+The package is written in notebooks: the [source notebooks](source/README.md)
+in `source/` generate every module in `timegym/`. [Contributing](docs/contributing.md)
 describes that cycle, and [releasing](docs/release.md) the version numbers and
 how a merged pull request becomes a PyPI release.
 

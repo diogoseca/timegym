@@ -13,7 +13,7 @@ def build_joint_stresses(root: Path):
     """Return the joint reference scene and its paired sample evidence."""
     from timegym import Scenario, metrics
 
-    notebook_path = root / "notebooks/27_joint_financial_uncertainty.ipynb"
+    notebook_path = root / "tutorials/12_joint_financial_uncertainty.ipynb"
     spec = notebook_literal(notebook_path, "joint-demo-specs", "joint_specs", expect_len=4)[1]
     case = Scenario(context_length=192, horizon=6, n_targets=2, **spec).generate(seed=11)
     forecast = case.reference.forecast(n_samples=768, seed=91)

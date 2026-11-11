@@ -4,7 +4,7 @@ MkDocs invokes this hook; it never executes notebook code or changes the repo.
 Only documentation and its transitive local file links enter the temporary tree.
 Rendered notebooks keep their repository-relative links, so the hook also
 points those links at the built pages, or at GitHub for files the site does not
-render.
+render. Pages that moved keep their old URLs as small redirect pages.
 """
 from __future__ import annotations
 
@@ -53,8 +53,7 @@ def on_config(config):
     stage = Path(temporary.name)
     pending = [root / "README.md", *[path for path in [root / "CHANGELOG.md"] if path.exists()],
                *sorted((root / "docs").rglob("*.md")), *sorted((root / "docs").rglob("*.css")),
-               *sorted((root / "notebooks").glob("00_*.ipynb")), *sorted((root / "notebooks").glob("2[0-9]_*.ipynb")),
-               *sorted((root / "notebooks").glob("3[0-9]_*.ipynb"))]
+               *sorted((root / "tutorials").glob("[0-9][0-9]_*.ipynb"))]
     copied = set()
     while pending:
         source = pending.pop()
@@ -71,6 +70,11 @@ def on_config(config):
         shutil.copyfile(resolved, destination)
         if source.suffix == ".md":
             for target in local_link_targets(source.read_text(encoding="utf-8")):
+                if raw_prefix(config) and target.startswith(raw_prefix(config)):
+                    # README images use raw GitHub URLs so PyPI can show them;
+                    # the site serves its own copy, which must exist.
+                    pending.append(root / unquote(target[len(raw_prefix(config)):]))
+                    continue
                 parts = urlsplit(target)
                 if parts.scheme or parts.netloc or not parts.path:
                     continue
@@ -79,13 +83,34 @@ def on_config(config):
     # `serve` otherwise watches only the temporary copies. Watch original
     # directories as well, so edits and new linked files trigger fresh staging.
     watch = list(config.get("watch", []))
-    for path in (root / "README.md", root / "docs", root / "notebooks",
+    for path in (root / "README.md", root / "docs", root / "tutorials", root / "source",
                  root / "examples", root / "experiments", root / "paper",
                  root / "tools", root / "CHANGELOG.md", root / "CITATION.cff"):
         if path.exists() and str(path) not in watch:
             watch.append(str(path))
     config["watch"] = watch
     return config
+
+
+def raw_prefix(config):
+    """The raw.githubusercontent.com address of the main branch, from repo_url."""
+    repo = (config.get("repo_url") or "").rstrip("/")
+    if not repo.startswith("https://github.com/"):
+        return ""
+    return repo.replace("https://github.com/", "https://raw.githubusercontent.com/", 1) + "/main/"
+
+
+def on_page_markdown(markdown, page, config, files):
+    """Serve README images from the site rather than from GitHub."""
+    prefix = raw_prefix(config)
+    if not prefix or prefix not in markdown:
+        return markdown
+    here = posixpath.dirname(page.file.src_uri)
+    return re.sub(
+        re.escape(prefix) + r"([^)\s\"']+)",
+        lambda match: posixpath.relpath(match.group(1), here or "."),
+        markdown,
+    )
 
 
 _HREF = re.compile(r'(<a\b[^>]*?\bhref=")([^"]*)(")')
@@ -123,3 +148,49 @@ def on_page_content(html, page, config, files):
         + match.group(3),
         html,
     )
+
+
+# Tutorials lived in notebooks/ with other numbers until the tutorials and the
+# source notebooks were split; old links (the 1.1.0 PyPI page among them) keep working.
+MOVED_PAGES = {
+    "notebooks/00_quick_start/": "tutorials/01_quick_start/",
+    "notebooks/28_custom_model/": "tutorials/02_custom_model/",
+    "notebooks/23_faults_repairs_and_replay/": "tutorials/03_faults_repairs_and_replay/",
+    "notebooks/29_target_transforms/": "tutorials/04_target_transforms/",
+    "notebooks/30_reductions/": "tutorials/05_reductions/",
+    "notebooks/21_multivariate_forecasting/": "tutorials/06_multivariate_forecasting/",
+    "notebooks/24_real_data_forecasts/": "tutorials/07_real_data_forecasts/",
+    "notebooks/20_univariate_uncertainty/": "tutorials/08_univariate_uncertainty/",
+    "notebooks/22_multivariate_uncertainty/": "tutorials/09_multivariate_uncertainty/",
+    "notebooks/25_capability_sweeps/": "tutorials/10_capability_sweeps/",
+    "notebooks/26_composed_and_financial_stresses/": "tutorials/11_composed_and_financial_stresses/",
+    "notebooks/27_joint_financial_uncertainty/": "tutorials/12_joint_financial_uncertainty/",
+    "docs/notebooks/": "docs/tutorials/",
+}
+
+_REDIRECT = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Moved</title>
+<meta name="robots" content="noindex">
+<link rel="canonical" href="{absolute}">
+<meta http-equiv="refresh" content="0; url={relative}">
+</head>
+<body><p>This page moved to <a href="{relative}">{relative}</a>.</p></body>
+</html>
+"""
+
+
+def on_post_build(config):
+    site = Path(config["site_dir"])
+    base = (config.get("site_url") or "").rstrip("/") + "/"
+    for old, new in MOVED_PAGES.items():
+        if not (site / new / "index.html").is_file():
+            raise PluginError(f"Redirect target is not a built page: {new}")
+        page = site / old / "index.html"
+        if page.exists():
+            raise PluginError(f"Redirect would overwrite a built page: {old}")
+        page.parent.mkdir(parents=True, exist_ok=True)
+        relative = posixpath.relpath(new, old) + "/"
+        page.write_text(_REDIRECT.format(absolute=base + new, relative=relative), encoding="utf-8")

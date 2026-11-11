@@ -9,7 +9,7 @@ and `SimulationReference` from `timegym`, with low-level generators in
 The additional four kinds use the same `Scenario` and `Pipeline` entry points
 and support both scalar and joint targets. These are controlled **data generators**; forecasting
 models are supplied separately. See the [stress-case guide](../stress-cases.md) and
-[executable application](../../notebooks/26_composed_and_financial_stresses.ipynb).
+[executable application](../../tutorials/11_composed_and_financial_stresses.ipynb).
 
 | Kind | Important parameters | Units and reference |
 | --- | --- | --- |

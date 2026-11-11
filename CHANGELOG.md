@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- The tutorials moved out of `notebooks/` into `tutorials/`, numbered 01–12 in
+  reading order, with "Write and test a custom model" second. The 15 source
+  notebooks that generate the package are in `source/`, with the 2021 archive
+  in `source/archive/`, and the README and site images in `docs/images/`. The
+  old tutorial addresses on the documentation site redirect to the new ones,
+  and the README's images now show on PyPI too.
+
 ## 1.3.0 — 2026-11-11
 
 - A custom model's `predict` may return a plain list or NumPy array: one value
