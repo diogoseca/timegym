@@ -9,7 +9,7 @@ what you want to check.
 
 | I want to | Start with | Then look up |
 | --- | --- | --- |
-| See what a report says about my pipeline | [00 · Quick start](../notebooks/00_quick_start.ipynb) | [Pipeline and reports](api/pipeline.md) |
+| See what my forecaster gets right and wrong | [00 · Quick start](../notebooks/00_quick_start.ipynb) | [Scorecards and the scenario grid](api/scorecard.md), [Pipeline and reports](api/pipeline.md) |
 | Plug in my own model and check its outputs | [28 · Write and test a custom model](../notebooks/28_custom_model.ipynb) | [Tasks and forecasts](api/tasks-and-forecasts.md) |
 | Tell a broken output from a weak model, and replay a failure | [23 · Faults, repairs and replay](../notebooks/23_faults_repairs_and_replay.ipynb) | [Scores and diagnostics](api/diagnostics.md), [Fault fixtures](api/fault-fixtures.md) |
 | Choose a target transform or a reduction | [29 · Target transforms](../notebooks/29_target_transforms.ipynb), [30 · Reductions](../notebooks/30_reductions.ipynb) | [Data preparation](api/data-preparation.md), [Models and reductions](api/models.md) |
@@ -30,7 +30,7 @@ catch, then modeling choices, uncertainty and stress tests.
 
 | Group | Tutorial | Question it answers |
 | --- | --- | --- |
-| Start | [00 · Quick start](../notebooks/00_quick_start.ipynb) | Does my pipeline behave sensibly across controlled series? |
+| Start | [00 · Quick start](../notebooks/00_quick_start.ipynb) | Which kinds of series does my forecaster get right, and which does it get wrong? |
 | Find what breaks | [23 · Faults, repairs and replay](../notebooks/23_faults_repairs_and_replay.ipynb) | What does a broken output look like, and how do I replay it? |
 | | [28 · Write and test a custom model](../notebooks/28_custom_model.ipynb) | How do I test a model I wrote myself? |
 | Shape the forecast | [29 · Target transforms](../notebooks/29_target_transforms.ipynb) | Which transform of the target, and what does inverting it do? |
@@ -39,7 +39,7 @@ catch, then modeling choices, uncertainty and stress tests.
 | | [24 · Real-data forecasts](../notebooks/24_real_data_forecasts.ipynb) | How do I evaluate on real data at ordered origins? |
 | Measure uncertainty | [20 · Univariate uncertainty](../notebooks/20_univariate_uncertainty.ipynb) | Are my intervals and quantiles calibrated? |
 | | [22 · Multivariate uncertainty](../notebooks/22_multivariate_uncertainty.ipynb) | Do my joint paths keep the dependence between targets? |
-| Stress-test | [25 · Capability sweeps](../notebooks/25_capability_sweeps.ipynb) | Where does the model stop coping as context and noise change? |
+| Stress-test | [25 · Capability sweeps](../notebooks/25_capability_sweeps.ipynb) | Where does each model stop coping as the history shortens or the noise grows? |
 | | [26 · Composed and financial stresses](../notebooks/26_composed_and_financial_stresses.ipynb) | How does it handle jumps, GARCH and hidden regimes? |
 | | [27 · Joint financial uncertainty](../notebooks/27_joint_financial_uncertainty.ipynb) | Does joint uncertainty survive shared shocks and broken dependence? |
 
