@@ -132,8 +132,10 @@ the job checks the release commit's metadata, tags that commit `vX.Y.Z` and
 dispatches `release.yml`, because a tag pushed with `GITHUB_TOKEN` starts no
 workflow. The tag marks the release commit itself, so it holds exactly what the
 release counted; anything merged after the last rebuild counts toward the next
-version. Pull requests opened with `GITHUB_TOKEN` start no checks of their own;
-`release.yml` runs the full checks against the tag before anything is published.
+version. Because the bot opens the release pull request, GitHub holds its
+checks until you approve them on the pull request, and the Claude review skips
+it. Approving them is optional: `release.yml` runs the full checks against the
+tag before anything is published.
 
 To rebuild the release pull request without a new merge, or to prepare a major
 version, open **Actions → Version and tag merged changes → Run workflow** and
