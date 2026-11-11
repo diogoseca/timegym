@@ -343,7 +343,7 @@ series.
 |---|---|---|
 | Start | [Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) | Two scorecards, last value against Ridge: each is blind where the other sees |
 | Find what breaks | [Faults, repairs and replay](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/) | Four ways to break a correct forecast, a bug caught by a broken promise, replay |
-| | [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | The 10-line LastValue model, nearest analogues, real data |
+| | [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | The six-line LastValueForecaster, nearest analogues, real data |
 | Shape the forecast | [Target transforms](https://diogoseca.github.io/timegym/notebooks/29_target_transforms/) | Why logs help when the swing grows with the level, and why exp(mean log) is too low |
 | | [Reductions](https://diogoseca.github.io/timegym/notebooks/30_reductions/) | Recursive, direct and multioutput: when recursive errors compound |
 | | [Multivariate forecasting](https://diogoseca.github.io/timegym/notebooks/21_multivariate_forecasting/) | Right numbers under the wrong series name; when extra history doesn't help |
