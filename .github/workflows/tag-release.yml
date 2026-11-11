@@ -1,9 +1,14 @@
 name: Version and tag merged changes
-# Every pull request merged into main runs this job. It counts the merged pull
-# requests labelled `feature` or `fix` since the last release tag, writes the
-# next major.features.fixes version, commits it to main, tags it and dispatches
-# release.yml. Merges without those labels release nothing. A manual dispatch
-# releases whatever is pending, or starts the next major version.
+# Every pull request merged into main runs this job. The ruleset on main
+# requires pull requests, so the job never pushes to main itself:
+# - It counts the merged pull requests labelled `feature` or `fix` since the
+#   last release tag, writes the next major.features.fixes version on the
+#   `release` branch and opens (or refreshes) the "Release X.Y.Z" pull request.
+#   Merges without those labels release nothing.
+# - When that release pull request is merged, it tags its release commit
+#   vX.Y.Z and starts release.yml.
+# A manual dispatch refreshes the release pull request, or prepares the next
+# major version.
 on:
   pull_request:
     types: [closed]
@@ -28,10 +33,11 @@ jobs:
     permissions:
       contents: write
       actions: write
-      pull-requests: read
+      pull-requests: write
     env:
       GH_TOKEN: ${{ github.token }}
       MPLBACKEND: Agg
+      RELEASE_BRANCH: release
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,14 +49,56 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - run: python -m pip install -e '.[dev,release]'
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+      - name: Tag the merged release pull request
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.ref == 'release' &&
+          github.event.pull_request.user.login == 'github-actions[bot]'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # The tag marks the release commit itself, whatever the merge method,
+          # so it holds exactly the pull requests the release counted.
+          git fetch --quiet origin "refs/pull/$NUMBER/head"
+          VERSION=$(git show "$HEAD_SHA:timegym/__init__.py" | sed -n 's/^__version__ = "\([0-9.]*\)"$/\1/p')
+          if [ -z "$VERSION" ]; then
+            echo "::error::The release commit $HEAD_SHA has no package version."
+            exit 1
+          fi
+          git worktree add --quiet "$RUNNER_TEMP/release" "$HEAD_SHA"
+          python "$RUNNER_TEMP/release/tools/sync_citation.py" --check --tag "v$VERSION"
+          if git rev-parse --quiet --verify "refs/tags/v$VERSION" > /dev/null; then
+            if [ "$(git rev-parse "v$VERSION^{commit}")" != "$HEAD_SHA" ]; then
+              echo "::error::Tag v$VERSION already exists on another commit."
+              exit 1
+            fi
+          else
+            git tag -a "v$VERSION" -m "TimeGym $VERSION" "$HEAD_SHA"
+            git push origin "v$VERSION"
+          fi
+          # A tag pushed with GITHUB_TOKEN starts no workflow, so start it here.
+          # The merge itself already started the documentation deploy.
+          gh workflow run release.yml --ref "v$VERSION"
       - id: previous
-        run: echo "tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*')" >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(python -c 'from tools.release_version import package_version; print(package_version())')
+          if ! git rev-parse --quiet --verify "refs/tags/v$VERSION" > /dev/null; then
+            echo "::error::main is at version $VERSION, which has no v$VERSION tag. Merge the release pull request instead of editing the version."
+            exit 1
+          fi
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - id: next
         env:
           MAJOR: ${{ inputs.major && '--major' || '' }}
-        run: >-
-          python tools/release_version.py --since '${{ steps.previous.outputs.tag }}'
-          --apply $MAJOR --github-output "$GITHUB_OUTPUT"
+        run: |
+          python tools/release_version.py --since '${{ steps.previous.outputs.tag }}' \
+            --apply $MAJOR --github-output "$GITHUB_OUTPUT" > "$RUNNER_TEMP/next.json"
+          cat "$RUNNER_TEMP/next.json"
       - name: Regenerate and check release metadata
         if: steps.next.outputs.release == 'true'
         env:
@@ -63,17 +111,50 @@ jobs:
           python tools/sync_citation.py --check --tag "$RELEASE_TAG"
           python paper/build_standalone.py --check
           python -m pytest -q tests/test_release_metadata.py tests/test_release_version.py
-      - name: Commit, tag and dispatch the release
+      - name: Open or refresh the release pull request
         if: steps.next.outputs.release == 'true'
         env:
           VERSION: ${{ steps.next.outputs.version }}
+          BASE: ${{ steps.previous.outputs.base }}
+          PREVIOUS: ${{ steps.previous.outputs.tag }}
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch --quiet -c "$RELEASE_BRANCH"
           git add -A
-          git commit -m "Release $VERSION"
-          git tag -a "v$VERSION" -m "TimeGym $VERSION"
-          git push --atomic origin HEAD:main "v$VERSION"
-          # Pushes made with GITHUB_TOKEN start no workflows, so start them here.
-          gh workflow run release.yml --ref "v$VERSION"
-          gh workflow run pages.yml --ref main
+          git commit --quiet -m "Release $VERSION"
+          # A merge that landed after checkout has its own run queued behind
+          # this one. That run counts everything since the latest tag, so this
+          # run leaves the release pull request to it.
+          git fetch --quiet origin main
+          if [ "$(git rev-parse FETCH_HEAD)" != "$BASE" ]; then
+            echo "::notice::main moved past $BASE while this run prepared $VERSION; the run for the newer merge prepares the release."
+            exit 0
+          fi
+          # Only this workflow writes the release branch; each run rebuilds it on main.
+          git push --quiet --force origin "HEAD:refs/heads/$RELEASE_BRANCH"
+          python - "$RUNNER_TEMP/next.json" > "$RUNNER_TEMP/body.md" <<'EOF'
+          import json, os, sys
+          prs = json.load(open(sys.argv[1]))['pull_requests']
+          counted = [f"- #{pr['number']} {pr['title']} ({', '.join(sorted(set(pr['labels']) & {'feature', 'fix'}))})"
+                     for pr in prs if set(pr['labels']) & {'feature', 'fix'}]
+          print(f"Merging this pull request releases TimeGym {os.environ['VERSION']}. "
+                f"The workflow then tags `v{os.environ['VERSION']}` at this pull request's commit and "
+                "starts `release.yml`, whose PyPI job waits for approval in the `pypi` environment.\n")
+          print(f"Labelled pull requests merged since {os.environ['PREVIOUS']}:\n")
+          print('\n'.join(counted) or '- None: this starts a new major version.')
+          print('\nEvery merge into main rebuilds this pull request, so it always counts everything '
+                'merged so far. Leave it unlabelled, and merge it when you want to publish.')
+          EOF
+          NUMBER=$(gh pr list --head "$RELEASE_BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -n "$NUMBER" ]; then
+            gh pr edit "$NUMBER" --title "Release $VERSION" --body-file "$RUNNER_TEMP/body.md"
+          elif ! gh pr create --base main --head "$RELEASE_BRANCH" --title "Release $VERSION" --body-file "$RUNNER_TEMP/body.md"; then
+            echo "::error::Could not open the release pull request. Tick Settings > Actions > General > Workflow permissions > Allow GitHub Actions to create and approve pull requests, then run this workflow by hand."
+            exit 1
+          fi
+      - name: Close a release pull request with nothing left to release
+        if: steps.next.outputs.release != 'true'
+        run: |
+          NUMBER=$(gh pr list --head "$RELEASE_BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -n "$NUMBER" ]; then
+            gh pr close "$NUMBER" --comment "No labelled pull request is waiting for release any more."
+          fi

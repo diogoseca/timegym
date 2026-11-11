@@ -1,4 +1,4 @@
-"""Forecast matrix from literal quick-start notebook settings."""
+"""Forecast matrix: six configurations, three seeds, the quick-start Ridge pipeline."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,16 +7,32 @@ from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 from timegym import Pipeline, Scenario
 from vector_canvas import Canvas
-from figure_common import AXIS, BLUE, GRAY, MUTED, REFERENCE, notebook_literal
+from figure_common import AXIS, BLUE, GRAY, MUTED, REFERENCE
+
+# Six configurations from five families, three fixed seeds, and the recursive
+# lag-Ridge pipeline that the quick start also uses as its contender.
+MATRIX_SPECS = [
+    {"kind": "white_noise", "context_length": 300, "horizon": 100,
+     "parameters": {"mean": 20.0, "sigma": 2.0}},
+    {"kind": "trend", "context_length": 300, "horizon": 100,
+     "parameters": {"intercept": 5.0, "slope": 0.04, "sigma": 0.8}},
+    {"kind": "seasonal", "context_length": 300, "horizon": 100,
+     "parameters": {"mean": 10.0, "amplitude": 4.0, "period": 24.0, "sigma": 0.7}},
+    {"kind": "ar1", "context_length": 300, "horizon": 100,
+     "parameters": {"mean": 5.0, "phi": 0.85, "sigma": 0.7}},
+    {"kind": "random_walk", "context_length": 300, "horizon": 100,
+     "parameters": {"drift": 0.0, "sigma": 0.5}},
+    {"kind": "random_walk", "context_length": 300, "horizon": 100,
+     "parameters": {"drift": 0.03, "sigma": 0.5}},
+]
+MATRIX_SEEDS = [11, 22, 33]
+MATRIX_MODEL = {"window_length": 24, "ridge_alpha": 1.0}
 
 
 def build_matrix(root: Path):
-    """Render the quick-start notebook specifications and retain plotted values."""
-    path = root / "notebooks/00_quick_start.ipynb"
-    specs = notebook_literal(path, "quick-03", "matrix_specs", expect_len=6)
+    """Render the forecast matrix and retain plotted values."""
+    specs, seeds, model = MATRIX_SPECS, MATRIX_SEEDS, MATRIX_MODEL
     scenarios = [Scenario(**spec) for spec in specs]
-    seeds = notebook_literal(path, "quick-03", "matrix_seeds", expect_len=3)
-    model = notebook_literal(path, "quick-03", "matrix_model")
     pipeline = Pipeline(window_length=model["window_length"]).add(StandardScaler()).add(Ridge(alpha=model["ridge_alpha"]))
     run = pipeline.run(scenarios, seeds=seeds)
     canvas = Canvas(448, 481)
@@ -28,8 +44,8 @@ def build_matrix(root: Path):
         canvas.text(x, 29, label, size=7.4)
     notes = ["Independent over time", "Fresh shocks around a line", "Fresh shocks around a cycle",
              "Shocks decay", "Shocks accumulate; drift = 0", "Shocks accumulate; drift = 0.03 / step"]
-    metadata = {"model": model, "seeds": seeds, "specification_cell": "quick-03",
-                "specification_source": str(path.relative_to(root)), "matrix_specs": specs,
+    metadata = {"model": model, "seeds": seeds,
+                "specification_source": "paper/figure_matrix.py", "matrix_specs": specs,
                 "context_length": specs[0]["context_length"], "forecast_horizon": specs[0]["horizon"],
                 "visible_context": 72, "visible_forecast": 48,
                 "note": "Illustrative quick-start configurations; no change to the study evaluation protocol.",

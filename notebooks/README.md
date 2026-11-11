@@ -1,10 +1,10 @@
 # TimeGym notebooks
 
-Start with [00 · Quick start](00_quick_start.ipynb): specify a forecasting
-pipeline, see its predictions across controlled scenarios, and inspect its error
-distributions. The plots continue the 2021 Quick Start's visual language: gray
-observation dots, blue prediction crosses, thin reference curves, and a clear
-forecast origin.
+Start with the [Quick start](00_quick_start.ipynb): one call scores a
+forecaster on ten kinds of series at two noise levels, and a second model shows
+that each is blind where the other sees. The forecast plots continue the 2021
+Quick Start's visual language: gray observation dots, blue prediction crosses,
+thin answer-key curves, and a clear forecast origin.
 
 Everything lives in this folder: **15 source notebooks generate the package,
 12 application notebooks use it**, and the [11 original notebooks](archive/README.md)
@@ -26,18 +26,18 @@ explicit seeds. Installing the wheel alone does not install these notebook files
 
 | Group | Application | Explore |
 |---|---|---|
-| Start | [00 · Quick start](00_quick_start.ipynb) | A pipeline, a scenario matrix, and error distributions |
-| Find what breaks | [23 · Faults, repairs, and replay](23_faults_repairs_and_replay.ipynb) | Invalid outputs, inverse scaling, declared equivariance, and report replay |
-| | [28 · Write and test a custom model](28_custom_model.ipynb) | Nearest analogues, contract failures, real observations, and a supplied semi-synthetic truth function |
-| Shape the forecast | [29 · Target transforms](29_target_transforms.ipynb) | Log, Box-Cox and difference transforms fitted per context and inverted on the forecast |
-| | [30 · Reductions](30_reductions.ipynb) | Recursive, direct and multioutput reductions of one regressor, and where their errors differ |
-| | [21 · Multivariate forecasting](21_multivariate_forecasting.ipynb) | Several targets, per-target scores, lag features, and target order |
-| | [24 · Real-data forecasts](24_real_data_forecasts.ipynb) | Training-only transforms and ordered AirPassengers forecast origins |
-| Measure uncertainty | [20 · Univariate uncertainty](20_univariate_uncertainty.ipynb) | Marginal intervals, coverage, CRPS, and uncertainty that is too narrow |
-| | [22 · Multivariate uncertainty](22_multivariate_uncertainty.ipynb) | Joint paths, dependence, covariance checks, and joint scores |
-| Stress-test | [25 · Capability sweeps](25_capability_sweeps.ipynb) | Five scenario families, custom models, context, noise, and repeated cases |
-| | [26 · Composed and financial stresses](26_composed_and_financial_stresses.ipynb) | Controlled combinations, jumps, GARCH, hidden regimes, price means, and replay |
-| | [27 · Joint financial uncertainty](27_joint_financial_uncertainty.ipynb) | Multi-target mechanisms, joint paths, dependence faults, aggregate uncertainty, and repair |
+| Start | [Quick start](00_quick_start.ipynb) | Two scorecards, last value against Ridge, and why TimeGym scores against the answer key |
+| Find what breaks | [Faults, repairs and replay](23_faults_repairs_and_replay.ipynb) | Four ways to break a correct forecast, a bug caught by a broken promise, and replay |
+| | [Write and test a custom model](28_custom_model.ipynb) | The 10-line `LastValue` model, nearest analogues, and real data with and without an answer key |
+| Shape the forecast | [Target transforms](29_target_transforms.ipynb) | Why logs help when the swing grows with the level, and why exp(mean log) is too low |
+| | [Reductions](30_reductions.ipynb) | Recursive, direct and multioutput: when recursive errors compound |
+| | [Multivariate forecasting](21_multivariate_forecasting.ipynb) | Right numbers under the wrong series name, and when extra history doesn't help |
+| | [Real-data forecasts](24_real_data_forecasts.ipynb) | No answer key: four origins, three baselines, and a leakage check |
+| Measure uncertainty | [Univariate uncertainty](20_univariate_uncertainty.ipynb) | Same predictions, overconfident spread: which scores notice |
+| | [Multivariate uncertainty](22_multivariate_uncertainty.ipynb) | Scrambled pairings: every series right, joint risk gone |
+| Stress-test | [Capability sweeps](25_capability_sweeps.ipynb) | Three simple bets, a weak model versus a broken one, and history and noise sweeps |
+| | [Composed and financial stresses](26_composed_and_financial_stresses.ipynb) | A ladder of mechanisms, bad luck vs a bad model, and a conversion bug |
+| | [Joint financial uncertainty](27_joint_financial_uncertainty.ipynb) | Assets that crash together, and the check that notices a lost link |
 
 ## Develop the package here
 
@@ -49,20 +49,20 @@ one notebook owner.
 | Source notebook | Responsibility |
 |---|---|
 | [01 · Synthetic data](01_synthetic_data.ipynb) | Scenario generation and conditional references |
-| [02 · Real data](02_real_data.ipynb) | Real-data helper |
-| [03 · Smoothing](03_smoothing.ipynb) | Moving averages |
-| [04 · Feature engineering](04_feature_engineering.ipynb) | Lagged and calendar features |
+| [02 · Real data](02_real_data.ipynb) | Freeze a stock download in a snapshot; test three simple rules on a hidden year of airline passengers |
+| [03 · Smoothing](03_smoothing.ipynb) | Trailing averages: how long a window, why a centered one leaks the future, exponential weights |
+| [04 · Feature engineering](04_feature_engineering.ipynb) | Inputs known at forecast time: past values as columns, cycles as circles, calendar columns |
 | [05 · Target engineering](05_target_engineering.ipynb) | Integer and fractional differencing, reversible target transforms |
-| [06 · Forecasting models](06_forecasting_models.ipynb) | Native baselines and recursive, direct and multioutput reductions |
+| [06 · Forecasting models](06_forecasting_models.ipynb) | Built-in baselines, which one to beat, and three ways to turn a regressor into a forecaster |
 | [07 · Pipeline](07_pipeline.ipynb) | Fresh fitting, evaluation, and retained runs |
 | [08 · Forecast contracts](08_forecast_contracts.ipynb) | Tasks, forecasts, and reference shapes |
 | [09 · Scores and diagnostics](09_scores_and_diagnostics.ipynb) | Scores, case-level intervals, checks, and fault fixtures |
-| [10 · Reports and replay](10_reports_and_replay.ipynb) | Structured results and provenance |
+| [10 · Reports and replay](10_reports_and_replay.ipynb) | Read a report, gate CI on it, save and load it strictly, and replay a case months later |
 | [11 · Plotting](11_plotting.ipynb) | Forecast matrices and case-score distributions |
-| [12 · Package](12_package.ipynb) | Public exports and package structure |
+| [12 · Package](12_package.ipynb) | Shared guards, which notebook owns each public name, and how an edit becomes package code |
 | [13 · Scorecard](13_scorecard.ipynb) | The pattern-by-noise grid, scores, named mistakes and the scorecard image |
-| [14 · Controlled processes](14_controlled_processes.ipynb) | Compositions, parameter changes, Merton/GARCH/regime simulation and references |
-| [15 · Joint controlled processes](15_joint_processes.ipynb) | Correlated innovations, shared jumps and regimes, CCC-GARCH, and joint reference laws |
+| [14 · Controlled processes](14_controlled_processes.ipynb) | Series built one ingredient at a time, plus jumps, calm and stormy periods and hidden regimes, each with its answer key |
+| [15 · Joint controlled processes](15_joint_processes.ipynb) | Several series with declared links: shared jumps, one hidden regime, CCC-GARCH, and links zero correlation misses |
 
 The package is exported with nbdev 3.3.26's modular exporter. Save notebook
 edits, then build explicitly:

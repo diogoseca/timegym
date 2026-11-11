@@ -28,9 +28,9 @@ bump from another project's versioning convention.
 The authoritative version string is `__version__` in notebook 12's package cell,
 exported to `timegym/__init__.py`; flit reads it dynamically. Do not edit it,
 the CITATION.cff version/date or the leading CHANGELOG heading in a pull
-request: `tag-release.yml` writes them when it releases. Label every pull
-request you open `feature` or `fix` when it changes the package, or leave it
-unlabelled for documentation, paper and tooling work. Put user-facing notes
+request: `tag-release.yml` writes them in its release pull request. Label every
+pull request you open `feature` or `fix` when it changes the package, or leave
+it unlabelled for documentation, paper and tooling work. Put user-facing notes
 under `## Unreleased` at the top of CHANGELOG.md. Never invent a DOI. Follow
 `docs/release.md` for DOI registration and publication.
 
@@ -45,9 +45,10 @@ and documentation updates and tests them before opening a pull request. Keep
 the historical study lock and its Python version separate from current support.
 A successful local check is not evidence that another OS or Python version passed.
 
-Publication follows merges: the release workflow versions, tags and publishes
-labelled pull requests after the owner merges them. Do not publish, push tags,
-or change external PyPI/Zenodo settings as part of ordinary implementation work.
+Publication follows merges: the release workflow proposes each version as a
+"Release X.Y.Z" pull request and tags and publishes it after the owner merges
+it. Do not edit or label that pull request. Do not publish, push tags, or change
+external PyPI/Zenodo settings as part of ordinary implementation work.
 
 ## Working agreements
 

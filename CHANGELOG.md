@@ -23,6 +23,8 @@
   image puts each noise level's sd on its own line when three or more levels
   would run their headers together.
 
+## 1.2.0 — 2026-11-10
+
 - Added the scorecard: `Pipeline(model).scorecard()` runs a forecaster on ten
   kinds of series at low and high noise and returns a `Scorecard`. Its image
   gives a 0-100 score, what the model is good at and fails at, the mistakes it

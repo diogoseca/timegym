@@ -341,18 +341,18 @@ series.
 
 | Group | Notebook | What it shows |
 |---|---|---|
-| Start | [Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) | A pipeline, a matrix of cases, error distributions |
-| Find what breaks | [Faults, repairs and replay](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/) | Invalid outputs, inverse scaling, replaying a saved report |
-| | [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | A forecaster from scratch, synthetic suites, real data |
-| Shape the forecast | [Target transforms](https://diogoseca.github.io/timegym/notebooks/29_target_transforms/) | Log, Box-Cox and difference transforms, inverted on the forecast |
-| | [Reductions](https://diogoseca.github.io/timegym/notebooks/30_reductions/) | Recursive, direct and multioutput sklearn forecasts compared |
-| | [Multivariate forecasting](https://diogoseca.github.io/timegym/notebooks/21_multivariate_forecasting/) | Several targets, lag features, per-target scores |
-| | [Real-data forecasts](https://diogoseca.github.io/timegym/notebooks/24_real_data_forecasts/) | Ordered origins on the AirPassengers series |
-| Measure uncertainty | [Univariate uncertainty](https://diogoseca.github.io/timegym/notebooks/20_univariate_uncertainty/) | Marginal intervals, coverage, CRPS |
-| | [Multivariate uncertainty](https://diogoseca.github.io/timegym/notebooks/22_multivariate_uncertainty/) | Joint paths, dependence, covariance checks |
-| Stress-test | [Capability sweeps](https://diogoseca.github.io/timegym/notebooks/25_capability_sweeps/) | Five families, context and noise sweeps |
-| | [Composed and financial stresses](https://diogoseca.github.io/timegym/notebooks/26_composed_and_financial_stresses/) | Jumps, GARCH, hidden regimes, one mechanism at a time |
-| | [Joint financial uncertainty](https://diogoseca.github.io/timegym/notebooks/27_joint_financial_uncertainty/) | Shared shocks and regimes, CCC-GARCH, broken dependence |
+| Start | [Quick start](https://diogoseca.github.io/timegym/notebooks/00_quick_start/) | Two scorecards, last value against Ridge: each is blind where the other sees |
+| Find what breaks | [Faults, repairs and replay](https://diogoseca.github.io/timegym/notebooks/23_faults_repairs_and_replay/) | Four ways to break a correct forecast, a bug caught by a broken promise, replay |
+| | [Write and test a custom model](https://diogoseca.github.io/timegym/notebooks/28_custom_model/) | The 10-line LastValue model, nearest analogues, real data |
+| Shape the forecast | [Target transforms](https://diogoseca.github.io/timegym/notebooks/29_target_transforms/) | Why logs help when the swing grows with the level, and why exp(mean log) is too low |
+| | [Reductions](https://diogoseca.github.io/timegym/notebooks/30_reductions/) | Recursive, direct and multioutput: when recursive errors compound |
+| | [Multivariate forecasting](https://diogoseca.github.io/timegym/notebooks/21_multivariate_forecasting/) | Right numbers under the wrong series name; when extra history doesn't help |
+| | [Real-data forecasts](https://diogoseca.github.io/timegym/notebooks/24_real_data_forecasts/) | No answer key: four origins, three baselines, a leakage check |
+| Measure uncertainty | [Univariate uncertainty](https://diogoseca.github.io/timegym/notebooks/20_univariate_uncertainty/) | Same predictions, overconfident spread: which scores notice |
+| | [Multivariate uncertainty](https://diogoseca.github.io/timegym/notebooks/22_multivariate_uncertainty/) | Scrambled pairings: every series right, joint risk gone |
+| Stress-test | [Capability sweeps](https://diogoseca.github.io/timegym/notebooks/25_capability_sweeps/) | Three simple bets, and where each breaks as history and noise change |
+| | [Composed and financial stresses](https://diogoseca.github.io/timegym/notebooks/26_composed_and_financial_stresses/) | A ladder of mechanisms, bad luck vs a bad model, a conversion bug |
+| | [Joint financial uncertainty](https://diogoseca.github.io/timegym/notebooks/27_joint_financial_uncertainty/) | Assets that crash together, and the check that notices a lost link |
 
 The notebooks run on CPU with local data. Clone the repository, then
 `pip install -e '.[notebooks]'` and `python -m jupyterlab notebooks`; the
@@ -384,13 +384,13 @@ Zenodo, cite that release's DOI.
   author = {Seca, Diogo},
   title = {{TimeGym: verification and diagnosis for forecasting pipelines}},
   year = {2026},
-  version = {1.1.0},
+  version = {1.2.0},
   url = {https://github.com/diogoseca/timegym},
 }
 ```
 
 Seca, D. (2026). *TimeGym: verification and diagnosis for forecasting pipelines*
-(Version 1.1.0) [Computer software]. https://github.com/diogoseca/timegym
+(Version 1.2.0) [Computer software]. https://github.com/diogoseca/timegym
 
 The 2021 preprint (arXiv version 1, the original prototype):
 
