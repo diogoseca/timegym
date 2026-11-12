@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 — 2026-11-12
 
 - Added `LastValueForecaster`, the last-value baseline under its own name: the
   same forecasts as `NaiveForecaster("last")` with nothing to set, so a
