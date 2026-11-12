@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added `LastValueForecaster`, the last-value baseline under its own name: the
+  same forecasts as `NaiveForecaster("last")` with nothing to set, so a
+  scorecard reads "LastValueForecaster: 51/100". It replays from a report like
+  the other built-in models, and the README, the quick start and the example
+  scripts now score it. The hand-written last-value example in the README and
+  the custom-model tutorial is now called `RepeatLast`.
 - The tutorials moved out of `notebooks/` into `tutorials/`, numbered 01–12 in
   reading order, with "Write and test a custom model" second. The 15 source
   notebooks that generate the package are in `source/`, with the 2021 archive

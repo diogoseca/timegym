@@ -1,7 +1,7 @@
 # Models and reductions
 
-Built-in forecasters and the sklearn reduction: `NaiveForecaster` and
-`GaussianAR1Forecaster` from `timegym`; `SklearnForecaster`, `REDUCTIONS`,
+Built-in forecasters and the sklearn reduction: `NaiveForecaster`,
+`LastValueForecaster` and `GaussianAR1Forecaster` from `timegym`; `SklearnForecaster`, `REDUCTIONS`,
 `fresh_model` and `is_sklearn_regressor` from `timegym.models`.
 
 `NaiveForecaster(strategy="last", period=1)` returns explicit point forecasts.
@@ -12,6 +12,11 @@ first to the last observation and needs at least two rows. `period` is a positiv
 integer. With two or more context rows, built-in step models require a regular
 index and immediately following consecutive future labels. With one row, the
 naive models can only require increasing future labels after the context.
+
+`LastValueForecaster()` is `NaiveForecaster("last")` with nothing to set, so
+reports and scorecards show it by name (*LastValueForecaster: 51/100*). It is
+the baseline the README and the quick start score, and it replays from a
+report like the other built-in models.
 
 `GaussianAR1Forecaster(n_samples=256, seed=0, levels=DEFAULT_LEVELS)` requires at
 least five context observations. It fits an intercept and lag coefficient by
@@ -48,6 +53,8 @@ with TimeGym and imported only when an sklearn object is used.
 Generated from the docstrings in the code.
 
 ::: timegym.NaiveForecaster
+
+::: timegym.LastValueForecaster
 
 ::: timegym.GaussianAR1Forecaster
 

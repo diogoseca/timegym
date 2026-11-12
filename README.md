@@ -33,12 +33,13 @@ Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
 <!-- END PYTHON SUPPORT -->
 
 Wrap your forecaster in a `Pipeline` and ask for its scorecard. The built-in
-last-value forecaster stands in for yours here:
+`LastValueForecaster`, which repeats the last value it saw, stands in for yours
+here:
 
 ```python
-from timegym import NaiveForecaster, Pipeline
+from timegym import LastValueForecaster, Pipeline
 
-pipeline = Pipeline(NaiveForecaster())   # put your own forecaster here
+pipeline = Pipeline(LastValueForecaster())   # put your own forecaster here
 card = pipeline.scorecard()
 card.save("scorecard.png")
 ```
@@ -78,7 +79,7 @@ print(card)
 ```
 
 ```text
-## NaiveForecaster(strategy='last', period=1): 51/100
+## LastValueForecaster: 51/100
 
 | Pattern | Low noise | High noise | Mistakes |
 |---|---|---|---|
@@ -176,7 +177,7 @@ card.report.to_json("report.json")
             "scenario": "white_noise",
             "seed": 0},
            …],
- "metadata": {"instances": 10, "model": "NaiveForecaster", "seed": 0, "timegym_version": …, …},
+ "metadata": {"instances": 10, "model": "LastValueForecaster", "seed": 0, "timegym_version": …, …},
  "summary": {…}}
 ```
 
@@ -241,7 +242,7 @@ or NumPy array. This one repeats the last value it saw:
 ```python
 from timegym import Forecast, Pipeline
 
-class LastValueForecaster:
+class RepeatLast:
     def fit(self, context):            # the series so far, one column per series
         self.last = context.iloc[-1]   # the last row seen
         return self
@@ -249,10 +250,10 @@ class LastValueForecaster:
     def predict(self, future_index):   # the dates to forecast
         return Forecast(future_index, [self.last] * len(future_index))
 
-card = Pipeline(LastValueForecaster()).scorecard()
+card = Pipeline(RepeatLast()).scorecard()
 ```
 
-It scores 51, like the built-in one.
+It scores 51, like the built-in `LastValueForecaster`.
 [Write and test a custom model](https://diogoseca.github.io/timegym/tutorials/02_custom_model/)
 adds several series, quantiles and a nearest-analogues forecaster.
 
@@ -342,7 +343,7 @@ series.
 | Group | Notebook | What it shows |
 |---|---|---|
 | Start | [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) | Two scorecards, last value against Ridge: each is blind where the other sees |
-| | [Write and test a custom model](https://diogoseca.github.io/timegym/tutorials/02_custom_model/) | The six-line LastValueForecaster, nearest analogues, real data |
+| | [Write and test a custom model](https://diogoseca.github.io/timegym/tutorials/02_custom_model/) | The six-line RepeatLast model, nearest analogues, real data |
 | Find what breaks | [Faults, repairs and replay](https://diogoseca.github.io/timegym/tutorials/03_faults_repairs_and_replay/) | Four ways to break a correct forecast, a bug caught by a broken promise, replay |
 | Shape the forecast | [Target transforms](https://diogoseca.github.io/timegym/tutorials/04_target_transforms/) | Why logs help when the swing grows with the level, and why exp(mean log) is too low |
 | | [Reductions](https://diogoseca.github.io/timegym/tutorials/05_reductions/) | Recursive, direct and multioutput: when recursive errors compound |

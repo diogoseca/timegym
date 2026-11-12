@@ -397,3 +397,19 @@ def test_pipeline_predict_accepts_a_plain_list_or_array_as_the_past():
     np.testing.assert_array_equal(forecast.point, [[4.0, 5.0], [4.0, 5.0]])
     with pytest.raises(TypeError, match="context must be"):
         model.predict({"y": [1.0, 2.0]}, range(2, 4))
+
+
+def test_last_value_forecaster_is_naive_last_with_nothing_to_set():
+    import timegym
+    from timegym import LastValueForecaster
+
+    assert "LastValueForecaster" in timegym.__all__
+    model = LastValueForecaster()
+    assert model.params() == {} and type(model.clone_unfitted()) is LastValueForecaster
+    case = Scenario("ar1", 40, 5, n_targets=2).generate(seed=6)
+    named = model.fit(case.task.context).predict(case.task.future_index)
+    naive = NaiveForecaster("last").fit(case.task.context).predict(case.task.future_index)
+    np.testing.assert_array_equal(named.point, naive.point)
+    assert named.target_names == naive.target_names and named.validate(case.task) == []
+    with pytest.raises(TypeError):
+        LastValueForecaster(strategy="mean")

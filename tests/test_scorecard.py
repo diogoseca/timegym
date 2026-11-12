@@ -341,3 +341,16 @@ def test_scorecard_text_counts_one_of_a_kind_and_compact_headers_fit():
     full = [text.get_text() for text in card.plot().texts]
     assert any("1 kind of series × 3 noise levels · 1 instance each" in text for text in full)
     plt.close("all")
+
+
+def test_the_built_in_last_value_forecaster_is_scored_by_name():
+    from timegym import LastValueForecaster
+
+    patterns = ["seasonal", "random_walk"]
+    named = Pipeline(LastValueForecaster()).scorecard(patterns, instances=3)
+    naive = Pipeline(NaiveForecaster()).scorecard(patterns, instances=3)
+    assert str(named).splitlines()[0] == f"## LastValueForecaster: {named.score:.0f}/100"
+    assert repr(named).startswith("Scorecard('LastValueForecaster', ")
+    assert named.report.metadata["model"] == "LastValueForecaster"
+    # One forecaster, two names: the scores are the same.
+    pd.testing.assert_frame_equal(named.table, naive.table)

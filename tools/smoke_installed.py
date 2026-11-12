@@ -38,7 +38,8 @@ def main():
     sys.meta_path.insert(0, BlockOptional())
     import numpy as np
     import timegym
-    from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, Scorecard, TestReport
+    from timegym import (GaussianAR1Forecaster, LastValueForecaster, NaiveForecaster, Pipeline,
+                         Scenario, Scorecard, TestReport)
 
     installed_path = Path(timegym.__file__).resolve()
     repository = Path(__file__).resolve().parents[1]
@@ -88,8 +89,9 @@ def main():
     guard = covariance_dependence_check(approximate.reference,
                                        approximate.reference.sample(64, seed=91))
     assert guard.status == "UNSUPPORTED" and "p_value" not in guard.evidence
-    card = Pipeline(NaiveForecaster()).scorecard(["random_walk", "seasonal"], instances=2)
+    card = Pipeline(LastValueForecaster()).scorecard(["random_walk", "seasonal"], instances=2)
     assert isinstance(card, Scorecard) and len(card.table) == 4
+    assert str(card).startswith("## LastValueForecaster: ")
     assert "Random walk" in str(card) and all(row["failed"] == 0 for row in card.checks)
     assert not attempts, attempts
     assert not (set(sys.modules) & blocked)
