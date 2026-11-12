@@ -31,7 +31,7 @@ def build_ablation(root: Path):
         raise ValueError("Supplement result/protocol identity mismatch")
 
     checks = ["contract", "scalar_shift", "target_shift", "conformance", "loss"]
-    headers = ["Output\ncontract", "Scalar\nshift", "Target\nshift*", "NumPy\nagreement*", "Calibrated\nMSE*"]
+    headers = ["Output\nchecks", "Scalar\nshift", "Target\nshift*", "NumPy\nagreement*", "Calibrated\nMSE*"]
     labels = ["Correct implementation", "Reversed prediction lags", "Stale recursive state",
               "Missing inverse scaling", "Swapped recursive targets"]
     branches = ["clean", *protocol["model_study"]["faults"]]
@@ -80,9 +80,9 @@ def build_ablation(root: Path):
                         weight="bold" if count else "normal", align="center")
     for boundary in (1,):
         canvas.line(12, y0 + boundary * cell_h, 436, y0 + boundary * cell_h, color=GRAY, width=.65)
-    canvas.text(12, 199, "* Experiment-only comparators. Counts are descriptive; dark cells mean more alarms.",
+    canvas.text(12, 199, "* Checks used only in this experiment. Counts are descriptive; dark cells mean more alarms.",
                 size=7, color=MUTED)
-    canvas.text(12, 213, "The clean row retains statistical false alarms; output contracts accept all four faults.",
+    canvas.text(12, 213, "The clean row retains statistical false alarms; the output checks accept all four faults.",
                 size=7, color=MUTED)
     canvas.line(12, 225, 436, 225, color=GRID, width=.6)
 

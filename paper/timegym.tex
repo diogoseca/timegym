@@ -2284,7 +2284,7 @@ Repair improves MAE at every displayed origin, but the repaired historical mean 
 \node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{10bp}{12bp}\selectfont\bfseries}] at (12.000,12.000) {Different checks expose different implementation faults};
 \node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont}] at (12.000,28.000) {Alarms / 384 cases per row: 6 fixed conditions, 64 independent cases per condition.};
 \node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (176.800,43.500) {Output};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (176.800,52.500) {contract};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (176.800,52.500) {checks};
 \node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (234.400,43.500) {Scalar};
 \node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (234.400,52.500) {shift};
 \node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (292.000,43.500) {Target};
@@ -2349,8 +2349,8 @@ Repair improves MAE at every displayed origin, but the repaired historical mean 
 \path[fill=tg19324c,draw=none,line width=0.5bp] (379.100,161.700) rectangle (435.300,184.300);
 \node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (407.200,173.000) {382/384};
 \draw[color=tg808080,line width=0.65bp,line cap=round] (12.000,89.000) -- (436.000,89.000);
-\node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7bp}{8.4bp}\selectfont}] at (12.000,199.000) {* Experiment-only comparators. Counts are descriptive; dark cells mean more alarms.};
-\node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7bp}{8.4bp}\selectfont}] at (12.000,213.000) {The clean row retains statistical false alarms; output contracts accept all four faults.};
+\node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7bp}{8.4bp}\selectfont}] at (12.000,199.000) {* Checks used only in this experiment. Counts are descriptive; dark cells mean more alarms.};
+\node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7bp}{8.4bp}\selectfont}] at (12.000,213.000) {The clean row retains statistical false alarms; the output checks accept all four faults.};
 \draw[color=tge1e4e7,line width=0.6bp,line cap=round] (12.000,225.000) -- (436.000,225.000);
 \node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8.5bp}{10.2bp}\selectfont\bfseries}] at (12.000,240.000) {Restoring the intended algorithm can still increase forecast error};
 \node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont}] at (12.000,255.000) {Random walk with drift / stale recursive state};

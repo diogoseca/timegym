@@ -38,7 +38,7 @@ z
     <text style="font-weight: 700; font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="176.8" y="45.448242" transform="rotate(-0 176.8 45.448242)">Output</text>
    </g>
    <g id="text_4">
-    <text style="font-weight: 700; font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="176.8" y="54.448242" transform="rotate(-0 176.8 54.448242)">contract</text>
+    <text style="font-weight: 700; font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="176.8" y="54.448535" transform="rotate(-0 176.8 54.448535)">checks</text>
    </g>
    <g id="text_5">
     <text style="font-weight: 700; font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="234.4" y="45.448535" transform="rotate(-0 234.4 45.448535)">Scalar</text>
@@ -360,10 +360,10 @@ L 436 89
 " clip-path="url(#p4c25164e3c)" style="fill: none; stroke: #808080; stroke-width: 0.65; stroke-linecap: round"/>
    </g>
    <g id="text_43">
-    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #626b73" x="12" y="200.818633" transform="rotate(-0 12 200.818633)">* Experiment-only comparators. Counts are descriptive; dark cells mean more alarms.</text>
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #626b73" x="12" y="200.818633" transform="rotate(-0 12 200.818633)">* Checks used only in this experiment. Counts are descriptive; dark cells mean more alarms.</text>
    </g>
    <g id="text_44">
-    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #626b73" x="12" y="214.818633" transform="rotate(-0 12 214.818633)">The clean row retains statistical false alarms; output contracts accept all four faults.</text>
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #626b73" x="12" y="214.818633" transform="rotate(-0 12 214.818633)">The clean row retains statistical false alarms; the output checks accept all four faults.</text>
    </g>
    <g id="line2d_2">
     <path d="M 12 225
