@@ -11,6 +11,7 @@ from .contracts import DEFAULT_LEVELS, Forecast
 __all__ = [
     "REDUCTIONS",
     "NaiveForecaster",
+    "LastValueForecaster",
     "GaussianAR1Forecaster",
     "SklearnForecaster",
     "fresh_model",
@@ -154,6 +155,22 @@ class NaiveForecaster(_ConfiguredForecaster):
             point=point,
             target_names=tuple(self.context_.columns),
         )
+
+
+# %% ../source/06_forecasting_models.ipynb #models-last-value
+class LastValueForecaster(NaiveForecaster):
+    """Repeat each series' last observed value at every future step.
+
+    The same forecasts as ``NaiveForecaster("last")``, with no settings, so
+    reports and scorecards name it ``LastValueForecaster``.
+    """
+
+    def __init__(self):
+        super().__init__(strategy="last", period=1)
+
+    def params(self) -> dict:
+        """No settings: ``clone_unfitted`` rebuilds a plain ``LastValueForecaster()``."""
+        return {}
 
 
 # %% ../source/06_forecasting_models.ipynb #06_forecasting_model-11

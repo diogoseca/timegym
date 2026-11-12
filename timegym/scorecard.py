@@ -225,7 +225,11 @@ def _model_title(pipeline):
     params = getattr(model, "params", None)
     if callable(params):
         arguments = ", ".join(f"{key}={value!r}" for key, value in params().items())
-        return f"{type(model).__name__}({arguments})"
+        return (
+            f"{type(model).__name__}({arguments})"
+            if arguments
+            else type(model).__name__
+        )
     return type(model).__name__
 
 

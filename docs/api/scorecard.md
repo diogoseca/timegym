@@ -7,9 +7,9 @@ One call that tells you what a forecaster can and cannot do:
 `NOISE_HIGH` from `timegym.scorecard` and `timegym.grid`.
 
 ```python
-from timegym import NaiveForecaster, Pipeline
+from timegym import LastValueForecaster, Pipeline
 
-card = Pipeline(NaiveForecaster()).scorecard()
+card = Pipeline(LastValueForecaster()).scorecard()
 card                       # in a notebook: the image
 print(card)                # Markdown summary and table
 card.save("scorecard.png") # or .svg / .pdf

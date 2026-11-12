@@ -3,7 +3,7 @@
 from .contracts import Forecast, ForecastTask, Reference, SimulationReference
 from .scenarios import Scenario, Case
 from .pipeline import Pipeline
-from .models import NaiveForecaster, GaussianAR1Forecaster
+from .models import NaiveForecaster, LastValueForecaster, GaussianAR1Forecaster
 from .reporting import (
     TestReport,
     DiagnosticStatus,
@@ -24,6 +24,7 @@ __all__ = [
     "Scenario",
     "Pipeline",
     "NaiveForecaster",
+    "LastValueForecaster",
     "GaussianAR1Forecaster",
     "TestReport",
     "ForecastRun",

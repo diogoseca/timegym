@@ -21,12 +21,12 @@ forecast plots with known future means and explicit contract status.
 ## Scorecard preview
 
 `scorecard.png` and `scorecard-compact.png` are the full and compact scorecards
-of the last-value forecaster, drawn by
+of `LastValueForecaster`, drawn by
 [`examples/scorecard.py`](../../examples/scorecard.py):
 
 ```bash
 python examples/scorecard.py docs/images/scorecard.png
-python -c "from timegym import NaiveForecaster, Pipeline; Pipeline(NaiveForecaster()).scorecard().save('docs/images/scorecard-compact.png', compact=True)"
+python -c "from timegym import LastValueForecaster, Pipeline; Pipeline(LastValueForecaster()).scorecard().save('docs/images/scorecard-compact.png', compact=True)"
 ```
 
 [13 · Scorecard](../../source/13_scorecard.ipynb) explains how they are built.

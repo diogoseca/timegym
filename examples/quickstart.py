@@ -1,7 +1,7 @@
 """Run with python examples/quickstart.py after installing timegym."""
-from timegym import Pipeline, Scenario, NaiveForecaster
+from timegym import LastValueForecaster, Pipeline, Scenario
 
-pipeline = Pipeline(NaiveForecaster(strategy="last"))
+pipeline = Pipeline(LastValueForecaster())
 report = pipeline.test(
     scenarios=[Scenario("random_walk", context_length=120, horizon=12)],
     seeds=[0, 1, 2],

@@ -6,11 +6,11 @@ import sys
 
 import pytest
 
-from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, TestReport
+from timegym import GaussianAR1Forecaster, LastValueForecaster, NaiveForecaster, Pipeline, Scenario, TestReport
 from timegym.pipeline import replay_case
 
 
-@pytest.mark.parametrize("model", [None, NaiveForecaster("seasonal", period=3),
+@pytest.mark.parametrize("model", [None, NaiveForecaster("seasonal", period=3), LastValueForecaster(),
                                    GaussianAR1Forecaster(n_samples=40, seed=37),
                                    GaussianAR1Forecaster(n_samples=40, seed=37, levels=(.2, .8))])
 def test_builtin_configuration_roundtrip_reproduces_exact_outputs(model):
@@ -84,7 +84,10 @@ def test_untrusted_model_names_and_parameters_cannot_trigger_imports(tmp_path):
 def test_native_subclasses_do_not_inherit_replay_permission():
     class CustomNaive(NaiveForecaster):
         pass
+    class CustomLastValue(LastValueForecaster):
+        pass
     assert Pipeline(CustomNaive()).to_config()["replayable"] is False
+    assert Pipeline(CustomLastValue()).to_config()["replayable"] is False
 
 
 def test_replay_rejects_ambiguous_flags_and_case_identity():
@@ -167,7 +170,7 @@ def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options
         NaiveForecaster(strategy="unknown")
 
 
-@pytest.mark.parametrize('model', [NaiveForecaster('seasonal', period=3),
+@pytest.mark.parametrize('model', [NaiveForecaster('seasonal', period=3), LastValueForecaster(),
                                     GaussianAR1Forecaster(n_samples=16, seed=13, levels=(.2, .8))])
 def test_builtin_params_cover_constructor_clone_and_replay(model):
     import inspect

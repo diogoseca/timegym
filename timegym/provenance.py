@@ -9,7 +9,12 @@ from pathlib import Path
 import platform
 import numpy as np
 from . import models
-from .models import REDUCTIONS, GaussianAR1Forecaster, NaiveForecaster
+from .models import (
+    REDUCTIONS,
+    GaussianAR1Forecaster,
+    LastValueForecaster,
+    NaiveForecaster,
+)
 from .target import transform_config, transform_from_config
 from ._internal import _json_safe
 
@@ -26,6 +31,7 @@ __all__ = [
 
 _BUILTINS = {
     "NaiveForecaster": NaiveForecaster,
+    "LastValueForecaster": LastValueForecaster,
     "GaussianAR1Forecaster": GaussianAR1Forecaster,
 }
 PIPELINE_CONFIG_SCHEMA_VERSION = 3

@@ -28,7 +28,7 @@ stable code/message dictionaries.
 ```python
 from timegym import Forecast
 
-class LastValueForecaster:
+class RepeatLast:
     def fit(self, context):
         self.last = context.iloc[-1]   # the last row seen
         return self
