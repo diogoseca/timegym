@@ -2,7 +2,7 @@
 
 \subsection{Study 1: fault detection and false alarms}
 
-Table~\ref{tab:faults} reports alarms for each selected corruption. The six explicit output violations were detected in every evaluation case. Both well-formed ensemble mutations were rejected by the covariance check in every case.
+Table~\ref{tab:faults} reports alarms for each corruption. The six explicit output violations were detected in every evaluation case. Both well-formed ensemble mutations were rejected by the covariance check in every case.
 
 \begin{table}[htbp]\centering\scriptsize
 
@@ -34,15 +34,15 @@ Dependence shuffle & 5/64 [3.4, 17.0] & 0/64 [0.0, 5.7] & 64/64 [94.3, 100.0] \\
 
 \bottomrule\end{tabular}\end{table}
 
-The clean covariance check rejected 6/64 cases (9.4\%; Wilson interval [4.4, 19.0]\%). The observed rate is above the nominal 5\% per-check level, with an interval that includes 5\%. No threshold was changed to remove these false alarms. The selected run does not establish precise calibration or a family-wise error rate.
+The clean covariance check rejected 6/64 cases (9.4\%; Wilson interval [4.4, 19.0]\%). The observed rate is above the nominal 5\% per-check level, with an interval that includes 5\%. No threshold was changed to remove these false alarms. This run does not establish precise calibration or a family-wise error rate.
 
 The point-MSE cutoff was 4.1853, the empirical 95th percentile from 16 development cases. It alarmed on 5/64 clean cases. It detects invalid point arrays, but ignores index labels, target names, quantiles, and trajectory samples. Where a mutation leaves the point values unchanged, its alarms are identical to the clean alarms and supply no mutation-specific evidence.
 
-Disabling an output mutation restored the exact clean output, including its sample array. Repaired outputs had zero contract violations and the same 6/64 covariance alarms as the clean control. These paired rechecks confirm removal of the selected corruption; they do not imply that every repaired case receives a statistical pass.
+Disabling an output mutation restored the exact clean output, including its sample array. Repaired outputs had zero contract violations and the same 6/64 covariance alarms as the clean control. These paired rechecks confirm removal of the corruption; they do not imply that every repaired case receives a statistical pass.
 
 \subsection{Study 1: marginal invariance and joint-score response}
 
-Table~\ref{tab:dependence} varies the proportion of ensemble rows selected for coordinate-wise permutation. Every empirical marginal is preserved at every strength, as checked directly in the runner. The maximum absolute CRPS difference across all cases and strengths was $8.88\times10^{-16}$. Energy and variogram scores both worsened on average at full permutation; their paired intervals exclude zero for this selected setting. Their raw effect magnitudes have different units and must not be used to rank their sensitivity.
+Table~\ref{tab:dependence} varies the proportion of ensemble rows selected for coordinate-wise permutation. Every empirical marginal is preserved at every strength, as checked directly in the runner. The maximum absolute CRPS difference across all cases and strengths was $8.88\times10^{-16}$. Energy and variogram scores both worsened on average at full permutation; their paired intervals exclude zero for this setting. Their raw effect magnitudes have different units and must not be used to rank their sensitivity.
 
 \begin{table}[htbp]\centering\small
 
@@ -68,27 +68,28 @@ Strength & CRPS mean & Energy & Variogram \\ \midrule
 
 \subsection{Study 1: capability profiles}
 
-The univariate capability sweep uses 16 evaluation seeds, three innovation scales, five mechanisms, and three unmodified models. Table~\ref{tab:capability} shows the middle scale; the full three-scale sweep is in \code{figures/capability-curves.pdf} and \code{capability-summary.csv} of the reproducibility artifact. The fitted AR(1) has small mean-reference error on white noise and AR(1), but is not the strongest of these models on every scenario. For the zero-drift random walk, last-value forecasting is the exact conditional mean. These results illustrate mechanism-specific capability, not implementation-fault decisions or a general model ranking.
+The univariate capability sweep uses 16 evaluation seeds, three innovation scales, five kinds of series, and three unmodified models. Table~\ref{tab:capability} scores each model against the answer key at the lowest and highest scale: 100 times the unavoidable error over the sum of the unavoidable and avoidable errors (Section~\ref{sec:references}). The full three-scale sweep is in \code{figures/capability-curves.pdf} and \code{capability-summary.csv} of the reproducibility artifact. The fitted AR(1) nails white noise and mean reversion and fails on the trend at both scales. For the zero-drift random walk, the last value is the answer key. Noise matters where a fixed-size pattern competes with it: on the seasonal cycle the fitted AR(1) scores 9 at low noise and 91 at high noise, where the cycle is mostly buried and ignoring it costs little.
 
 \begin{table}[htbp]\centering\small
 
-\caption{Mean distance from the conditional mean (MSE), at innovation scale $\sigma=1$, over 16 cases. These scores have no pass/fail threshold.}
+\caption{Score out of 100 (100 matches the answer key) at low ($\sigma=0.25$) and high ($\sigma=2$) innovation noise, over 16 cases each. N nails it, G good, S struggles, F fails. White noise, mean reversion and the random walk score the same at both levels: with a zero mean and no drift, a larger $\sigma$ only rescales the series. The package's scorecard adds measurement noise to tell those levels apart.}
 
 \label{tab:capability}
 
-\begin{tabular}{@{}p{0.34\linewidth}rrr@{}}\toprule
+\begin{tabular}{@{}lrrrrrr@{}}\toprule
+ & \multicolumn{2}{c}{Last value} & \multicolumn{2}{c}{Seasonal naive (12)} & \multicolumn{2}{c}{Fitted AR(1)} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Kind of series & Low & High & Low & High & Low & High \\ \midrule
 
-Scenario & Last value & Seasonal naive (12) & Fitted AR(1) \\ \midrule
+Noise around a fixed level & 51 S & 51 S & 55 S & 55 S & 99 N & 99 N \\
 
-Gaussian white noise (fixed mean) & 0.9779 & 0.8126 & 0.0119 \\
+Straight-line trend & 17 F & 50 S & 4 F & 47 S & 39 F & 18 F \\
 
-Linear trend + white noise & 1.1544 & 2.2011 & 4.0041 \\
+Repeating seasonal cycle & 5 F & 46 S & 55 S & 55 S & 9 F & 91 N \\
 
-Seasonality + white noise & 1.8805 & 0.8126 & 0.4140 \\
+Mean reversion (AR(1)) & 68 S & 68 S & 40 S & 40 S & 95 N & 95 N \\
 
-Stationary AR(1) & 1.0451 & 3.2207 & 0.1078 \\
-
-Random walk without drift & 0.0000 & 7.6919 & 0.6645 \\
+Random walk & 100 N & 100 N & 37 F & 37 F & 87 G & 87 G \\
 
 \bottomrule\end{tabular}\end{table}
 

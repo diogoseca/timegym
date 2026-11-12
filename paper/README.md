@@ -52,27 +52,38 @@ Study 1 exports three scientific figures in both PNG and vector PDF under `figur
 
 - `fault-alarm-matrix`: observed alarms for each selected fixture, with unsupported covariance cells visibly masked. The clean row shows false alarms.
 - `dependence-score-deltas`: paired score changes against permutation strength, with 95% t intervals across independent seeds. Panels have different scales; marginal CRPS differences are numerical roundoff.
-- `capability-curves`: mean-reference MSE across three innovation scales, five scenario families, and three unmodified models. Curves are descriptive means over 16 cases; panel scales differ. `capability-summary.csv` includes the means and seed-level intervals.
+- `capability-curves`: mean-reference MSE across three innovation scales, five scenario families, and three unmodified models. Curves are descriptive means over 16 cases; panel scales differ. `capability-summary.csv` includes the means and seed-level intervals, and for each row the unavoidable error and the 0 to 100 score that the manuscript's capability table prints at the lowest and highest scale.
 
 Study 2 adds `supplement-implementation-ablation` (complementary checks on the selected implementation regressions) and `supplement-covariance-holm` (raw versus Holm-adjusted suite rejection rates), also in PNG and PDF. The generated tables retain per-condition counts so the aggregate ablation cannot conceal differences among conditions.
 
 The manuscript embeds five vector figures, designed at print width; figures 4
 and 5 are in Appendix A:
 
-1. [Forecast matrix (SVG)](figures/paper-forecast-matrix.svg): six configurations from five families by three fixed seeds, using gray observation dots, unconnected blue forecast crosses, and thin conditional references. It uses the quick start's Ridge model, with paired random walks without drift and with drift (0.03 per step) sharing identical innovations. To remain readable, it shows the final 72 context values and first 48 predictions from each complete 300-context/100-horizon run.
+1. [Scorecard (SVG)](figures/paper-scorecard.svg): the package scorecard of the quick start's Ridge pipeline (`Pipeline(window_length=24)` with `StandardScaler` and `Ridge(alpha=1.0)`), redrawn in print style. It uses the scorecard defaults: ten kinds of series by two noise levels (sd 0.5 and 2), 10 instances per cell, seed 0. Each row gives the package's sentences on what can and cannot be predicted, one panel per noise level with the cell's score and verdict and the series of instance 1 (gray observation dots, black answer key, blue forecast crosses, dashed forecast origin), and the mistakes the package names. Every number and label is read from the `Scorecard` object.
 2. [Marginal versus joint dependence (SVG)](figures/paper-dependence.svg): the first predefined Study 1 case, identical empirical marginals, different joint sample clouds, and saved paired score changes over all 64 evaluation cases.
 3. [Diagnostic evidence (SVG)](figures/paper-diagnostic-evidence.svg): the implementation ablation with clean controls and the random-walk-with-drift counterexample where correcting an algorithm worsens forecast loss.
 
-4. [Financial stress matrix (SVG)](figures/paper-financial-stresses.svg): six univariate configurations from tutorial 11 (composed and financial stresses), showing diffusion, jumps, GARCH, hidden regimes, and combined regimes/jumps. Filter approximation and output units are explicit. These are illustrative software cases; neither Gaussian fault-study protocol is expanded.
+4. [Financial stress matrix (SVG)](figures/paper-financial-stresses.svg): six univariate configurations from tutorial 11 (composed and financial stresses), three series each (their fixed seeds are recorded in the provenance file), showing diffusion, jumps, GARCH, hidden regimes, and combined regimes/jumps. Filter approximation and output units are explicit. These are illustrative software cases; neither Gaussian fault-study protocol is expanded.
 5. [Joint financial uncertainty (SVG)](figures/paper-joint-stresses.svg): tutorial 12 (joint financial uncertainty) preserves each target trajectory while breaking cross-series pairing, revealing changes in joint and aggregate uncertainty. This is a controlled reference demonstration.
 
 `render_figures.py` generates editable SVGs, PNG previews, and self-contained
-TikZ scenes from shared plotted coordinates; TikZ type is set by the document. It regenerates the illustrative
-forecast-matrix fits and first dependence case; aggregate results are read from
+TikZ scenes from shared plotted coordinates; TikZ type is set by the document. It regenerates the
+scorecard and the first dependence case; aggregate results are read from
 the existing studies and checked against their raw records. It does not change
 either study protocol or numerical results. The
 [figure provenance record](figures/paper-figure-provenance.json) records the
-inputs, seeds, plotted values, settings, and file fingerprints.
+inputs, seeds, plotted values, settings, and file fingerprints; each figure's
+entry has an `inputs_sha256` record of its own inputs.
+
+`render_figures.py --only NAME [NAME ...]` renders only the named figures (for
+example `--only paper-scorecard`). It replaces those figures' entries in the
+existing provenance record and leaves the other entries and the top-level
+`inputs_sha256` unchanged. The partial render exists because not every figure
+reproduces byte for byte on every platform: Matplotlib PNG bytes differ between
+operating systems even when the SVG and TikZ are identical, and the dependence
+figure re-creates a Study 1 case and compares it with the records made on the
+recording machine. A partial render updates one figure without rewriting the
+others.
 
 `main.tex` inputs these scenes; `build_standalone.py` regenerates
 `timegym.tex` with their complete vector commands and the bibliography.

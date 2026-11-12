@@ -38,7 +38,7 @@ def build_stresses(root: Path):
         raise ValueError("The financial matrix has missing scenario/seed combinations")
 
     canvas = Canvas(width=448, height=484)
-    canvas.text(0, 10, "Six financial configurations. Three seeds each.", size=10.2, weight="bold")
+    canvas.text(0, 10, "Six financial configurations, three series each", size=10.2, weight="bold")
     for x, label in ((22, "Observed values"), (150, "Last-value forecast"), (301, "Conditional mean")):
         if x == 22:
             canvas.circle(x - 12, 29, r=1.1, color=GRAY)
@@ -111,7 +111,7 @@ def build_stresses(root: Path):
                 # A 1 bp-wide cross keeps constant forecasts visibly separate.
                 canvas.cross(xx(time), yy(value), r=.5, color=BLUE, width=.38)
             if row == 0:
-                canvas.text(left + width / 2, 40, f"Seed {seed}", size=7.4, align="center", weight="bold")
+                canvas.text(left + width / 2, 40, f"Series {col + 1}", size=7.4, align="center", weight="bold")
             if row == len(scenarios) - 1:
                 for time, label in ((-visible_context, "-72"), (0, "0"), (horizon, "+24")):
                     canvas.text(xx(time), top + height + 9, label, size=6.8, align="center", color=MUTED)
@@ -121,7 +121,7 @@ def build_stresses(root: Path):
             if approximate != (row in (4, 5)):
                 raise ValueError("Financial row approximation labels no longer match reference capabilities")
             metadata["cases"].append({
-                "row": row, "seed": seed, "display_name": scenario.display_name,
+                "row": row, "seed": seed, "column_label": f"Series {col + 1}", "display_name": scenario.display_name,
                 "row_note": notes[row], "manifest": case.manifest,
                 "reference_kind": case.reference.kind,
                 "reference_capabilities": capabilities,

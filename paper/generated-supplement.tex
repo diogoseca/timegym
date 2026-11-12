@@ -2,7 +2,7 @@
 
 \subsection{Study 2: implementation regressions}
 
-Study 2 evaluates 4 selected implementation regressions under 6 fixed conditions, with 128 independent clean calibration cases and 64 disjoint evaluation cases each (768 calibration and 384 evaluation cases in total). The ridge penalty is 1 and the lag window is 6. Figure~\ref{fig:diagnostic-evidence} gives the pooled alarm counts, and Table~\ref{tab:supplement-complete} gives them for each condition. The paired comparison is clean-minus-faulty, with no separate repaired arm. Any output-contract violation terminates the study.
+Study 2 evaluates 4 implementation regressions under 6 fixed conditions, with 128 independent clean calibration cases and 64 disjoint evaluation cases each (768 calibration and 384 evaluation cases in total). The ridge penalty is 1 and the lag window is 6. Figure~\ref{fig:diagnostic-evidence} gives the pooled alarm counts, and Table~\ref{tab:supplement-complete} gives them for each condition. The paired comparison is clean-minus-faulty, with no separate repaired arm. Any output-contract violation terminates the study.
 
 Across the fixed condition--fault pairs, the calibrated loss alarm changed from no alarm to alarm in 861 paired comparisons and from alarm to no alarm in 11. The same clean case appears once per fault in these descriptive paired counts; they are not independent replicates of a pooled statistical test.
 
@@ -118,7 +118,7 @@ Reduced spread & --- & --- \\
 
 \begin{table}[htbp]\centering\small
 
-\caption{All condition-specific covariance rejections, raw and Holm, out of 64 suites. Clean columns and the first shuffled row are negative controls; other entries measure power on the selected alternatives.}
+\caption{All condition-specific covariance rejections, raw and Holm, out of 64 suites. Clean columns and the first shuffled row are negative controls; other entries measure power on these alternatives.}
 
 \label{tab:supplement-covariance}
 

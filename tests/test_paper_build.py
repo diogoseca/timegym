@@ -41,7 +41,7 @@ def test_standalone_cli_detects_drift_without_writing(paper_tree):
 
 
 @pytest.mark.parametrize("name", ["generated-results.tex", "generated-supplement.tex",
-                                  "generated-macros.tex", "figures/paper-forecast-matrix.tikz",
+                                  "generated-macros.tex", "figures/paper-scorecard.tikz",
                                   "references.bib"])
 def test_standalone_tracks_each_input(paper_tree, name):
     original = build(paper_dir=paper_tree)

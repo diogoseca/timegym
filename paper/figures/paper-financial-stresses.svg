@@ -29,7 +29,7 @@ z
   </g>
   <g id="axes_1">
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 10.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #18314b" x="0" y="12.650008" transform="rotate(-0 0 12.650008)">Six financial configurations. Three seeds each.</text>
+    <text style="font-weight: 700; font-size: 10.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #18314b" x="0" y="12.650008" transform="rotate(-0 0 12.650008)">Six financial configurations, three series each</text>
    </g>
    <g id="PathCollection_1">
     <path d="M 10 30.1
@@ -666,7 +666,7 @@ L 146.260417 83.450972
 " clip-path="url(#p204b575f68)" style="fill: none; stroke: #0000ff; stroke-width: 0.38; stroke-linecap: round"/>
    </g>
    <g id="text_9">
-    <text style="font-weight: 700; font-size: 7.4px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="87.5" y="41.922555" transform="rotate(-0 87.5 41.922555)">Seed 11</text>
+    <text style="font-weight: 700; font-size: 7.4px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="87.5" y="41.922555" transform="rotate(-0 87.5 41.922555)">Series 1</text>
    </g>
    <g id="line2d_56">
     <path d="M 174 61
@@ -1260,7 +1260,7 @@ L 292.260417 93.732437
 " clip-path="url(#p204b575f68)" style="fill: none; stroke: #0000ff; stroke-width: 0.38; stroke-linecap: round"/>
    </g>
    <g id="text_12">
-    <text style="font-weight: 700; font-size: 7.4px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="233.5" y="41.922555" transform="rotate(-0 233.5 41.922555)">Seed 22</text>
+    <text style="font-weight: 700; font-size: 7.4px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="233.5" y="41.922555" transform="rotate(-0 233.5 41.922555)">Series 2</text>
    </g>
    <g id="line2d_108">
     <path d="M 320 61
@@ -1854,7 +1854,7 @@ L 438.260417 69.96639
 " clip-path="url(#p204b575f68)" style="fill: none; stroke: #0000ff; stroke-width: 0.38; stroke-linecap: round"/>
    </g>
    <g id="text_15">
-    <text style="font-weight: 700; font-size: 7.4px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="379.5" y="41.922555" transform="rotate(-0 379.5 41.922555)">Seed 33</text>
+    <text style="font-weight: 700; font-size: 7.4px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #18314b" x="379.5" y="41.922555" transform="rotate(-0 379.5 41.922555)">Series 3</text>
    </g>
    <g id="text_16">
     <text style="font-weight: 700; font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #18314b" x="0" y="121.078438" transform="rotate(-0 0 121.078438)">Merton jump diffusion (log price)</text>

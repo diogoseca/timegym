@@ -25,6 +25,7 @@ from matplotlib.ticker import PercentFormatter
 import numpy as np
 from timegym.statistics import paired_t_interval
 from timegym import Scenario
+from timegym.scorecard import verdict
 from .common import interval_cell, rate_cell, require_conclusion, scientific_tex, sha256
 
 
@@ -48,6 +49,24 @@ MODEL_LABELS = {
 SCENARIO_LABELS = {kind: Scenario(kind).display_name
                    for kind in ("white_noise", "trend", "seasonal", "ar1", "random_walk")}
 COLORS = ["#087e8b", "#c45b35", "#493b88"]
+TABLE_MODEL_LABELS = {
+    "last_value": "Last value",
+    "seasonal_12": "Seasonal naive (12)",
+    "gaussian_ar1": "Fitted AR(1)",
+}
+TABLE_SCENARIO_LABELS = {
+    "white_noise": "Noise around a fixed level",
+    "trend": "Straight-line trend",
+    "seasonal": "Repeating seasonal cycle",
+    "ar1": "Mean reversion (AR(1))",
+    "random_walk": "Random walk",
+}
+BAND_LETTERS = {"Nails it": "N", "Good": "G", "Struggles": "S", "Fails": "F"}
+# Scenarios whose scores do not depend on the innovation scale: with a zero mean
+# and no drift, a larger sigma only rescales the series and both errors with it.
+SCALE_FREE_SCENARIOS = ("white_noise", "ar1", "random_walk")
+NUMBER_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
+                7: "seven", 8: "eight", 9: "nine", 10: "ten"}
 
 
 def save(fig, directory, name):
@@ -135,7 +154,47 @@ def plot_dependence(results, protocol, directory):
     save(fig, directory, "dependence-score-deltas")
 
 
-def capability_summary(results, protocol):
+def capability_score(unavoidable, avoidable):
+    """Score out of 100 as the package scorecard defines it: 100 matches the answer key."""
+    total = unavoidable + avoidable
+    return 100.0 if total == 0 else 100.0 * unavoidable / total
+
+
+def band_letter(score):
+    """First letter of the scorecard band; the band is read from the rounded score."""
+    return BAND_LETTERS[verdict(score)]
+
+
+def score_cell(score):
+    return f"{score:.0f} {band_letter(score)}"
+
+
+def capability_unavoidable(protocol):
+    """Mean conditional variance of each capability scenario's reference, by (kind, sigma).
+
+    This is the error the answer key itself makes, read from a generated case in the
+    same way as ``unavoidable_mse`` in timegym/scorecard.py. No model is fitted.
+    """
+    task = protocol["capability_task"]
+    first = protocol["capability_seeds"][0]
+    unavoidable = {}
+    for kind in protocol["capability_scenarios"]:
+        for sigma in protocol["capability_sigma"]:
+            scenario = Scenario(kind, parameters={"sigma": sigma},
+                                **{key: task[key] for key in ("context_length", "horizon", "n_targets")})
+            variances = [np.asarray(scenario.generate(seed=seed).reference.variance, dtype=float)
+                         for seed in (first, first + 1)]
+            # The table uses one value per scenario and scale, which is valid only
+            # while the conditional variance does not depend on the observed values.
+            if not np.allclose(variances[0], variances[1], rtol=1e-12, atol=0):
+                raise ValueError(f"Conditional variance of {kind} at sigma={sigma} depends on the seed")
+            unavoidable[kind, sigma] = float(np.mean(variances[0]))
+    return unavoidable
+
+
+def capability_summary(results, protocol, unavoidable=None):
+    if unavoidable is None:
+        unavoidable = capability_unavoidable(protocol)
     summary = []
     for scenario in protocol["capability_scenarios"]:
         for model in protocol["capability_models"]:
@@ -144,10 +203,84 @@ def capability_summary(results, protocol):
                           if r["scenario"] == scenario and r["model"] == model and r["sigma"] == sigma]
                 stat = paired_t_interval(values)
                 mean = stat["mean"]
+                best = unavoidable[scenario, sigma]
                 summary.append({"scenario": scenario, "model": model, "sigma": sigma,
                                 "mean_reference_mse": mean, "ci95_low": stat["ci95"][0],
-                                "ci95_high": stat["ci95"][1], "n": len(values)})
+                                "ci95_high": stat["ci95"][1], "n": len(values),
+                                "unavoidable_mse": best, "score": capability_score(best, mean)})
     return summary
+
+
+def capability_section(summary, protocol):
+    """Subsection text and score table for the capability sweep, checked against the records."""
+    models, scenarios = protocol["capability_models"], protocol["capability_scenarios"]
+    low, high = min(protocol["capability_sigma"]), max(protocol["capability_sigma"])
+    row = {(r["scenario"], r["model"], r["sigma"]): r for r in summary}
+
+    def score(scenario, model, sigma):
+        return row[scenario, model, sigma]["score"]
+
+    def band(scenario, model, sigma):
+        return verdict(score(scenario, model, sigma))
+
+    seeds = protocol["capability_seeds"][1] - protocol["capability_seeds"][0]
+    cases = {r["n"] for r in summary}
+    require_conclusion(cases == {seeds}, "every capability setting has one case per evaluation seed")
+    require_conclusion(all(score_cell(score(kind, model, low)) == score_cell(score(kind, model, high))
+                           and np.isclose(score(kind, model, low), score(kind, model, high), rtol=1e-9, atol=0)
+                           for kind in SCALE_FREE_SCENARIOS for model in models),
+                       "white noise, mean reversion and the random walk score the same at both levels")
+    require_conclusion(all(band(kind, "gaussian_ar1", sigma) == "Nails it"
+                           for kind in ("white_noise", "ar1") for sigma in (low, high)),
+                       "the fitted AR(1) nails white noise and mean reversion at both scales")
+    require_conclusion(all(band("trend", "gaussian_ar1", sigma) == "Fails" for sigma in (low, high)),
+                       "the fitted AR(1) fails on the trend at both scales")
+    require_conclusion(all(row["random_walk", "last_value", sigma]["mean_reference_mse"] < 1e-12
+                           for sigma in protocol["capability_sigma"]),
+                       "the last value is the answer key for the zero-drift random walk")
+    seasonal_low, seasonal_high = score("seasonal", "gaussian_ar1", low), score("seasonal", "gaussian_ar1", high)
+    require_conclusion(band("seasonal", "gaussian_ar1", low) == "Fails"
+                       and band("seasonal", "gaussian_ar1", high) == "Nails it",
+                       "on the seasonal cycle the fitted AR(1) fails at low noise and nails it at high noise")
+    require_conclusion(all(any(score_cell(score(kind, model, low)) != score_cell(score(kind, model, high))
+                               for model in models) for kind in ("trend", "seasonal")),
+                       "noise changes the scores of the trend and the seasonal cycle")
+
+    def words(count):
+        return NUMBER_WORDS.get(count, str(count))
+
+    lines = [
+        r"\subsection{Study 1: capability profiles}",
+        f"The univariate capability sweep uses {seeds} evaluation seeds, "
+        f"{words(len(protocol['capability_sigma']))} innovation scales, {words(len(scenarios))} kinds of series, "
+        f"and {words(len(models))} unmodified models. Table~\\ref{{tab:capability}} scores each model against "
+        "the answer key at the lowest and highest scale: 100 times the unavoidable error over the sum of "
+        "the unavoidable and avoidable errors (Section~\\ref{sec:references}). The full three-scale sweep is in "
+        "\\code{figures/capability-curves.pdf} and \\code{capability-summary.csv} of the reproducibility artifact. "
+        "The fitted AR(1) nails white noise and mean reversion and fails on the trend at both scales. "
+        "For the zero-drift random walk, the last value is the answer key. "
+        "Noise matters where a fixed-size pattern competes with it: on the seasonal cycle the fitted AR(1) "
+        f"scores {seasonal_low:.0f} at low noise and {seasonal_high:.0f} at high noise, where the cycle is "
+        "mostly buried and ignoring it costs little.",
+        r"\begin{table}[htbp]\centering\small",
+        f"\\caption{{Score out of 100 (100 matches the answer key) at low ($\\sigma={low:g}$) and high "
+        f"($\\sigma={high:g}$) innovation noise, over {seeds} cases each. N nails it, G good, S struggles, "
+        "F fails. White noise, mean reversion and the random walk score the same at both levels: with a "
+        "zero mean and no drift, a larger $\\sigma$ only rescales the series. The package's scorecard adds "
+        "measurement noise to tell those levels apart.}",
+        r"\label{tab:capability}",
+        "\n".join([
+            r"\begin{tabular}{@{}l" + "rr" * len(models) + r"@{}}\toprule",
+            " & " + " & ".join(f"\\multicolumn{{2}}{{c}}{{{TABLE_MODEL_LABELS[model]}}}" for model in models) + r" \\",
+            "".join(f"\\cmidrule(lr){{{2 + 2*i}-{3 + 2*i}}}" for i in range(len(models))),
+            "Kind of series & " + " & ".join(["Low & High"] * len(models)) + r" \\ \midrule",
+        ]),
+    ]
+    for kind in scenarios:
+        cells = [score_cell(score(kind, model, sigma)) for model in models for sigma in (low, high)]
+        lines.append(TABLE_SCENARIO_LABELS[kind] + " & " + " & ".join(cells) + r" \\")
+    lines.append(r"\bottomrule\end{tabular}\end{table}")
+    return lines
 
 
 def plot_capability(summary, protocol, directory):
@@ -209,7 +342,7 @@ def render_tex(results, manifest, summary):
     lines = [
         "% Generated by experiments/render_results.py; do not edit numerical tables by hand.",
         r"\subsection{Study 1: fault detection and false alarms}",
-        "Table~\\ref{tab:faults} reports alarms for each selected corruption. "
+        "Table~\\ref{tab:faults} reports alarms for each corruption. "
         "The six explicit output violations were detected in every evaluation case. "
         "Both well-formed ensemble mutations were rejected by the covariance check "
         "in every case.",
@@ -227,7 +360,7 @@ def render_tex(results, manifest, summary):
         f"({100*clean['covariance']['rate']:.1f}\\%; Wilson interval "
         f"[{100*clean['covariance']['ci95'][0]:.1f}, {100*clean['covariance']['ci95'][1]:.1f}]\\%). "
         "The observed rate is above the nominal 5\\% per-check level, with an interval that includes 5\\%. "
-        "No threshold was changed to remove these false alarms. The selected run does not "
+        "No threshold was changed to remove these false alarms. This run does not "
         "establish precise calibration or a family-wise error rate.",
         f"The point-MSE cutoff was {results['mse_threshold']:.4f}, the empirical 95th percentile "
         f"from {protocol['development_seeds'][1]-protocol['development_seeds'][0]} development cases. "
@@ -238,7 +371,7 @@ def render_tex(results, manifest, summary):
         "Disabling an output mutation restored the exact clean output, including its "
         f"sample array. Repaired outputs had zero contract violations and the same "
         f"{repair['count']}/{repair['n']} covariance alarms as the clean control. "
-        "These paired rechecks confirm removal of the selected corruption; they do "
+        "These paired rechecks confirm removal of the corruption; they do "
         "not imply that every repaired case receives a statistical pass.",
         r"\subsection{Study 1: marginal invariance and joint-score response}",
         "Table~\\ref{tab:dependence} varies the proportion of ensemble rows selected "
@@ -246,7 +379,7 @@ def render_tex(results, manifest, summary):
         "at every strength, as checked directly in the runner. The maximum absolute "
         f"CRPS difference across all cases and strengths was {scientific_tex(max_crps)}. "
         "Energy and variogram scores both worsened on average at full permutation; "
-        "their paired intervals exclude zero for this selected setting. Their raw "
+        "their paired intervals exclude zero for this setting. Their raw "
         "effect magnitudes have different units and must not be used to rank their sensitivity.",
         r"\begin{table}[htbp]\centering\small",
         r"\caption{Mutated minus clean score, mean and paired 95\% t interval over 64 independent cases. CRPS differences are floating-point roundoff. Intervals are exploratory and not multiplicity-adjusted.}",
@@ -259,27 +392,9 @@ def render_tex(results, manifest, summary):
         lines.append(f"{strength:.2f} & {scientific_tex(row['crps']['mean'])} & {interval_cell(row['energy'])} & {interval_cell(row['variogram'])}" + r" \\")
     lines.extend([
         r"\bottomrule\end{tabular}\end{table}",
-        r"\subsection{Study 1: capability profiles}",
-        "The univariate capability sweep uses 16 evaluation seeds, three innovation "
-        "scales, five mechanisms, and three unmodified models. Table~\\ref{tab:capability} "
-        "shows the middle scale; the full three-scale sweep is in \\code{figures/capability-curves.pdf} and \\code{capability-summary.csv} of the reproducibility artifact. "
-        "The fitted AR(1) has small mean-reference error on white noise and AR(1), "
-        "but is not the strongest of these models on every scenario. For the "
-        "zero-drift random walk, last-value forecasting is the exact conditional "
-        "mean. These results illustrate mechanism-specific capability, not "
-        "implementation-fault decisions or a general model ranking.",
-        r"\begin{table}[htbp]\centering\small",
-        r"\caption{Mean distance from the conditional mean (MSE), at innovation scale $\sigma=1$, over 16 cases. These scores have no pass/fail threshold.}",
-        r"\label{tab:capability}",
-        r"\begin{tabular}{@{}p{0.34\linewidth}rrr@{}}\toprule",
-        r"Scenario & Last value & Seasonal naive (12) & Fitted AR(1) \\ \midrule",
     ])
-    for scenario in protocol["capability_scenarios"]:
-        values = [next(r["mean_reference_mse"] for r in summary if r["scenario"] == scenario and r["sigma"] == 1.0 and r["model"] == model)
-                  for model in protocol["capability_models"]]
-        lines.append(SCENARIO_LABELS[scenario] + " & " + " & ".join(f"{v:.4f}" for v in values) + r" \\")
+    lines.extend(capability_section(summary, protocol))
     lines.extend([
-        r"\bottomrule\end{tabular}\end{table}",
         r"\subsection{Study 1: an inverse-scaling repair}",
         "A separate predictor standardizes its training context and forecasts the "
         "mean in standardized units. The fault omits the inverse transform; the "

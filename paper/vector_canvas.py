@@ -26,7 +26,9 @@ def tex_text(value):
                     "−": "-", "–": "--", "—": "---", "×": r"\ensuremath{\times}",
                     "ρ": r"\ensuremath{\rho}", "Δ": r"\ensuremath{\Delta}",
                     "≠": r"\ensuremath{\ne}", "≤": r"\ensuremath{\leq}",
-                    "≥": r"\ensuremath{\geq}"}
+                    "≥": r"\ensuremath{\geq}", "→": r"\ensuremath{\rightarrow}",
+                    "·": r"\ensuremath{\cdot}", "✓": r"\ensuremath{\checkmark}",
+                    "✗": r"\ensuremath{\times}"}
     superscripts = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺", "0123456789-+")
     pieces = re.split(r"([⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺]+)", str(value))
     return "".join(r"\textsuperscript{" + piece.translate(superscripts) + "}"

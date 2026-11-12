@@ -189,7 +189,7 @@ def render_tex(results, manifest):
     lines = [
         "% Generated from experiments/results-v2; do not edit numerical statements manually.",
         r"\subsection{Study 2: implementation regressions}",
-        f"Study 2 evaluates {len(model['faults'])} selected implementation regressions "
+        f"Study 2 evaluates {len(model['faults'])} implementation regressions "
         f"under {len(model['conditions'])} fixed conditions, with {model['calibration_cases']} independent clean calibration cases and "
         f"{model['evaluation_cases']} disjoint evaluation cases each ({calibration_count} calibration and "
         f"{clean['n']} evaluation cases in total). The ridge penalty is {model['ridge_alpha']:g} and "
@@ -250,7 +250,7 @@ def render_tex(results, manifest):
         r"\begin{table}[htbp]\centering\small",
         r"\caption{All condition-specific covariance rejections, raw and Holm, out of "
         f"{covariance['independent_suites']} suites. Clean columns and the first shuffled row are negative "
-        "controls; other entries measure power on the selected alternatives.}",
+        "controls; other entries measure power on these alternatives.}",
         r"\label{tab:supplement-covariance}",
         r"\begin{tabular}{@{}p{0.34\linewidth}rrrrrr@{}}\toprule",
         r" & \multicolumn{2}{c}{Clean} & \multicolumn{2}{c}{Partial shuffle} & \multicolumn{2}{c}{Reduced spread} \\",
