@@ -1,39 +1,103 @@
-"""Render manuscript figures from notebook settings and saved study records."""
+"""Render manuscript figures from notebook settings and saved study records.
+
+With no arguments every figure is rendered and the provenance record is
+rewritten. ``--only NAME [NAME ...]`` renders the named figures and replaces
+only their entries in the existing provenance record; the record's top-level
+``inputs_sha256`` and the other figures' entries stay as they are. A partial
+render lets one figure be updated on a machine that cannot reproduce the
+others byte for byte (Matplotlib PNG bytes, and the Study 1 dependence case,
+differ between platforms).
+"""
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
 
-from figure_matrix import build_matrix
-
 ROOT = Path(__file__).resolve().parents[1]
+PAPER = "paper"
+SHARED_INPUTS = [f"{PAPER}/render_figures.py", f"{PAPER}/vector_canvas.py", f"{PAPER}/figure_common.py"]
 
 
-def main():
-    from figure_dependence import build_dependence
-    from figure_evidence import build_ablation
-    from figure_stresses import build_stresses
-    from figure_joint_stresses import build_joint_stresses
-    directory = ROOT / "paper/figures"
-    metadata = {}
-    for name, builder in (("paper-forecast-matrix", lambda: build_matrix(ROOT)),
-                          ("paper-financial-stresses", lambda: build_stresses(ROOT)),
-                          ("paper-joint-stresses", lambda: build_joint_stresses(ROOT)),
-                          ("paper-dependence", lambda: build_dependence(ROOT)),
-                          ("paper-diagnostic-evidence", lambda: build_ablation(ROOT))):
-        canvas, info = builder()
+def _builder(module, function):
+    def build(root):
+        return getattr(__import__(module), function)(root)
+    return build
+
+
+# Name, builder, and the inputs that figure reads besides SHARED_INPUTS.
+FIGURES = {
+    "paper-scorecard": (_builder("figure_scorecard", "build_scorecard"),
+                        [f"{PAPER}/figure_scorecard.py"]),
+    "paper-financial-stresses": (_builder("figure_stresses", "build_stresses"),
+                                 [f"{PAPER}/figure_stresses.py",
+                                  "tutorials/11_composed_and_financial_stresses.ipynb"]),
+    "paper-joint-stresses": (_builder("figure_joint_stresses", "build_joint_stresses"),
+                             [f"{PAPER}/figure_joint_stresses.py",
+                              "tutorials/12_joint_financial_uncertainty.ipynb"]),
+    "paper-dependence": (_builder("figure_dependence", "build_dependence"),
+                         [f"{PAPER}/figure_dependence.py", "experiments/protocol.json",
+                          "experiments/results/results.json", "experiments/results/manifest.json",
+                          "experiments/results-v2/manifest.json"]),
+    "paper-diagnostic-evidence": (_builder("figure_evidence", "build_ablation"),
+                                  [f"{PAPER}/figure_evidence.py", "experiments/protocol-v2.json",
+                                   "experiments/results-v2/results.json",
+                                   "experiments/results-v2/manifest.json"]),
+}
+
+# Fingerprints recorded at the top level of a full render.
+ALL_INPUTS = ["experiments/results/results.json", "experiments/results-v2/results.json",
+              f"{PAPER}/render_figures.py", f"{PAPER}/figure_evidence.py",
+              f"{PAPER}/vector_canvas.py", f"{PAPER}/figure_common.py",
+              f"{PAPER}/figure_scorecard.py", f"{PAPER}/figure_dependence.py", f"{PAPER}/figure_stresses.py",
+              "tutorials/11_composed_and_financial_stresses.ipynb",
+              f"{PAPER}/figure_joint_stresses.py", "tutorials/12_joint_financial_uncertainty.ipynb"]
+
+
+def digests(root: Path, names):
+    return {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names}
+
+
+def figure_inputs(name):
+    return FIGURES[name][1] + SHARED_INPUTS
+
+
+def render(root: Path, figures=FIGURES, only=None):
+    """Render ``only`` (all figures when None) and update the provenance record."""
+    directory = root / PAPER / "figures"
+    provenance = directory / "paper-figure-provenance.json"
+    names = list(figures) if only is None else list(dict.fromkeys(only))
+    unknown = [name for name in names if name not in figures]
+    if unknown:
+        raise SystemExit(f"Unknown figure(s): {', '.join(unknown)}; choose from {', '.join(figures)}")
+    if only is None:
+        metadata = {}
+    else:
+        if not provenance.exists():
+            raise SystemExit(f"--only needs an existing {provenance.relative_to(root)}; run a full render first")
+        metadata = json.loads(provenance.read_text(encoding="utf-8"))
+        # Entries of figures that no longer exist are dropped.
+        metadata = {key: value for key, value in metadata.items()
+                    if key in figures or key == "inputs_sha256"}
+    for name in names:
+        builder, inputs = figures[name]
+        canvas, info = builder(root)
         canvas.render(directory, name)
-        metadata[name] = info
+        metadata[name] = {**info, "inputs_sha256": digests(root, inputs + SHARED_INPUTS)}
         print(f"Rendered {name}: SVG, PNG, TikZ", flush=True)
-    metadata["inputs_sha256"] = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in [ROOT / "experiments/results/results.json", ROOT / "experiments/results-v2/results.json",
-                     Path(__file__), ROOT / "paper/figure_evidence.py",
-                     ROOT / "paper/vector_canvas.py", ROOT / "paper/figure_common.py",
-                     ROOT / "paper/figure_matrix.py", ROOT / "paper/figure_dependence.py", ROOT / "paper/figure_stresses.py",
-                     ROOT / "tutorials/11_composed_and_financial_stresses.ipynb",
-                     ROOT / "paper/figure_joint_stresses.py", ROOT / "tutorials/12_joint_financial_uncertainty.ipynb"]}
-    (directory / "paper-figure-provenance.json").write_text(json.dumps(metadata, indent=2, sort_keys=True, allow_nan=False)+"\n")
+    if only is None:
+        metadata["inputs_sha256"] = digests(root, ALL_INPUTS)
+    provenance.write_text(json.dumps(metadata, indent=2, sort_keys=True, allow_nan=False) + "\n")
+    return metadata
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--only", nargs="+", metavar="NAME", choices=list(FIGURES),
+                        help="render only these figures and keep the other provenance entries")
+    args = parser.parse_args(argv)
+    render(ROOT, only=args.only)
 
 
 if __name__ == "__main__":

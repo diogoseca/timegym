@@ -133,6 +133,85 @@ def test_pilot_conclusions_reject_contradictory_records(change):
         pilot_tex(data, manifest, summary)
 
 
+def test_capability_score_and_band_letters_follow_the_scorecard():
+    from experiments.render_results import band_letter, capability_score, score_cell
+    from timegym.scorecard import verdict
+    assert capability_score(1.0, 0.0) == 100.0
+    assert capability_score(1.0, 1.0) == 50.0
+    assert capability_score(1.0, 3.0) == 25.0
+    assert capability_score(0.0, 0.0) == 100.0
+    for score, letter in [(100, 'N'), (89.6, 'N'), (89.4, 'G'), (69.5, 'G'), (69.4, 'S'), (39.6, 'S'),
+                          (39.4, 'F'), (0, 'F')]:
+        assert band_letter(score) == letter == verdict(score)[0]
+    assert score_cell(50.56) == '51 S'
+    assert score_cell(36.91) == '37 F'
+
+
+def test_capability_summary_scores_a_synthetic_record():
+    protocol = {'capability_scenarios': ['white_noise'], 'capability_models': ['last_value'],
+                'capability_sigma': [0.5, 2.0]}
+    records_ = {'capability_records': [
+        {'scenario': 'white_noise', 'model': 'last_value', 'sigma': sigma, 'seed': seed, 'mean_reference_mse': value}
+        for sigma, values in [(0.5, [0.2, 0.3]), (2.0, [4.0, 4.0])] for seed, value in enumerate(values)]}
+    rows = capability_summary(records_, protocol, unavoidable={('white_noise', 0.5): 0.25, ('white_noise', 2.0): 4.0})
+    assert [row['sigma'] for row in rows] == [0.5, 2.0]
+    assert rows[0]['unavoidable_mse'] == 0.25 and math.isclose(rows[0]['score'], 50.0)
+    assert rows[1]['unavoidable_mse'] == 4.0 and math.isclose(rows[1]['score'], 50.0)
+    assert list(rows[0])[-2:] == ['unavoidable_mse', 'score']
+
+
+def test_capability_unavoidable_reads_the_reference_variance():
+    from experiments.render_results import capability_unavoidable
+    protocol = json.loads((ROOT / 'experiments/protocol.json').read_text())
+    protocol.update(capability_scenarios=['white_noise', 'random_walk'], capability_sigma=[0.5])
+    unavoidable = capability_unavoidable(protocol)
+    assert math.isclose(unavoidable['white_noise', 0.5], 0.25)
+    horizon = protocol['capability_task']['horizon']
+    assert math.isclose(unavoidable['random_walk', 0.5], 0.25 * (horizon + 1) / 2)
+
+
+def test_capability_unavoidable_rejects_seed_dependent_variance(monkeypatch):
+    import numpy as np
+    from experiments import render_results
+    protocol = json.loads((ROOT / 'experiments/protocol.json').read_text())
+    protocol.update(capability_scenarios=['white_noise'], capability_sigma=[1.0])
+    original = render_results.Scenario.generate
+    def generate(self, seed=None, **kwargs):
+        case = original(self, seed=seed, **kwargs)
+        case.reference.variance = np.asarray(case.reference.variance) * (1 + seed % 2)
+        return case
+    monkeypatch.setattr(render_results.Scenario, 'generate', generate)
+    with pytest.raises(ValueError, match='depends on the seed'):
+        render_results.capability_unavoidable(protocol)
+
+
+def test_frozen_capability_table_scores():
+    pilot, manifest = records('results')
+    text = pilot_tex(pilot, manifest, capability_summary(pilot, manifest['protocol']))
+    for line in [r'Noise around a fixed level & 51 S & 51 S & 55 S & 55 S & 99 N & 99 N \\',
+                 r'Straight-line trend & 17 F & 50 S & 4 F & 47 S & 39 F & 18 F \\',
+                 r'Repeating seasonal cycle & 5 F & 46 S & 55 S & 55 S & 9 F & 91 N \\',
+                 r'Mean reversion (AR(1)) & 68 S & 68 S & 40 S & 40 S & 95 N & 95 N \\',
+                 r'Random walk & 100 N & 100 N & 37 F & 37 F & 87 G & 87 G \\']:
+        assert line in text
+    assert r'at low ($\sigma=0.25$) and high ($\sigma=2$) innovation noise, over 16 cases each' in text
+    assert 'scores 9 at low noise and 91 at high noise' in text
+    assert 'no pass/fail threshold' not in text and 'general model ranking' not in text
+
+
+@pytest.mark.parametrize('change', ['equal_levels', 'ar1_trend', 'seasonal', 'random_walk'])
+def test_capability_conclusions_reject_contradictory_records(change):
+    data, manifest = records('results')
+    summary = capability_summary(data, manifest['protocol'])
+    row = {(r['scenario'], r['model'], r['sigma']): r for r in summary}
+    if change == 'equal_levels': row['ar1', 'last_value', 2.0]['score'] += 1
+    if change == 'ar1_trend': row['trend', 'gaussian_ar1', 0.25]['score'] = 75
+    if change == 'seasonal': row['seasonal', 'gaussian_ar1', 2.0]['score'] = 60
+    if change == 'random_walk': row['random_walk', 'last_value', 1.0]['mean_reference_mse'] = 0.1
+    with pytest.raises(ValueError, match='Recorded evidence'):
+        pilot_tex(data, manifest, summary)
+
+
 @pytest.mark.parametrize('variant,key', [('clean', 'holm_any_false_alarm'), ('reduced_spread', 'holm_any_alarm')])
 def test_supplement_conclusions_reject_contradictory_records(variant, key):
     data, manifest = records('results-v2')
