@@ -1,6 +1,6 @@
 # TimeGym publication strategy
 
-Updated 6 November 2026. The author chose a new manuscript for the redesigned package and, on 6 November 2026, to post it as version 2 of [arXiv:2105.01404](https://arxiv.org/abs/2105.01404) rather than as a new submission. The replacement has not been posted yet, and the manuscript has not been submitted to a venue. 1.1.0 was published to PyPI on 5 November 2026.
+Updated 13 November 2026. The author chose a new manuscript for the redesigned package and, on 6 November 2026, to post it as version 2 of [arXiv:2105.01404](https://arxiv.org/abs/2105.01404) rather than as a new submission. The replacement has not been posted yet, and the manuscript has not been submitted to a venue. 1.1.0 was published to PyPI on 5 November 2026.
 
 The paper's central contribution is an executable verification workflow: specify forecast semantics, separate invalid outputs from capability gaps, evaluate conditional references or declared relations, and reproduce a failure before checking a known repair. The mathematical references, notebook-authored software, and controlled studies support that account. Synthetic generators, unit tests, proper scores, and metamorphic testing are established ingredients. Preserve the 2021 source as historical material and attribute each new component to the current version.
 
@@ -9,6 +9,8 @@ For arXiv, a new manuscript does not necessarily mean a new identifier. The pres
 A replacement receives its own date and version number; earlier versions remain accessible, and the unversioned identifier displays the latest version. It does not make new experiments a 2021 contribution. Explain the corrected reference semantics, redesigned software, and new experiments in the replacement comments and manuscript. [Official replacement guidance](https://info.arxiv.org/help/replace.html), [version availability](https://info.arxiv.org/help/versions.html).
 
 Keeping the 2021 identifier gives readers of the existing work continuity.
+
+**Plan decided on 13 November 2026.** Version 2 is posted with the corrections and additions of that date: a capability research question, the statement of which results hold by construction, the exploratory answer-key alarm and the explanations of the random-walk and trend results (recorded under protocol 2.1 in `experiments/results-v2-followup/`), and the added related work. A study of generated mutants of the lag-Ridge code and a study of one nonlinear model, where the shift relations hold only approximately, are kept for the peer-reviewed version; that version also recasts the Limitations as threats to validity (construct, internal, external, conclusion). The target is an empirical software-engineering venue, with a submission of the package to the Journal of Open Source Software.
 
 ## Posting version 2
 

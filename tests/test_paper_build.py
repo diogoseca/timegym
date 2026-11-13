@@ -92,3 +92,14 @@ def test_standalone_tracks_release_identity(paper_tree):
     citation = paper_tree.parent / "CITATION.cff"
     citation.write_text(citation.read_text().replace(f"version: {__version__}", "version: 999.0.1"))
     assert "TimeGym 999.0.1" in build(paper_dir=paper_tree)
+
+
+def test_bibliography_renders_books_with_their_publisher(tmp_path):
+    bibliography = render_bibliography(r"\cite{clements1998forecasting}", ROOT / "paper/references.bib")
+    assert "Michael Clements and David Hendry." in bibliography
+    assert "Cambridge University Press, 1998." in bibliography
+    assert r"\emph{" not in bibliography
+    path = tmp_path / "references.bib"
+    path.write_text("@book{a,\n  author = {B, A},\n  title = {T},\n  year = {2000},\n  url = {https://example.org},\n}\n")
+    with pytest.raises(ValueError, match="Missing publisher"):
+        render_bibliography(r"\cite{a}", path)

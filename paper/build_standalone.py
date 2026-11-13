@@ -25,7 +25,7 @@ def read_bibliography(path: Path) -> dict[str, dict[str, str]]:
         line = line.strip()
         if not line or line.startswith("%"):
             continue
-        start = re.fullmatch(r"@(article|inproceedings|misc|manual)\{([\w-]+),", line)
+        start = re.fullmatch(r"@(article|book|inproceedings|misc|manual)\{([\w-]+),", line)
         field = re.fullmatch(r"(\w+)\s*=\s*\{(.*)\},?", line)
         if start and entry is None:
             key = start[2]
@@ -87,6 +87,10 @@ def render_bibliography(manuscript: str, path: Path) -> str:
                       rf"\href{{{fields['url']}}}{{{fields['title']}}}."])
         venue = fields.get("journal", fields.get("booktitle", ""))
         publication = rf"\emph{{{venue}}}" if venue else ""
+        if fields["type"] == "book":
+            if not fields.get("publisher"):
+                raise ValueError(f"Missing publisher in bibliography entry {key}")
+            publication = fields["publisher"]
         if "volume" in fields:
             publication += f", {fields['volume']}"
         if "number" in fields:

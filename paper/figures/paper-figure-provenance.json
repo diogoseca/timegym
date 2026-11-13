@@ -212,7 +212,8 @@
       "scalar_shift",
       "target_shift",
       "conformance",
-      "loss"
+      "loss",
+      "answer_key"
     ],
     "counterexample": {
       "axis_limits": [
@@ -235,21 +236,30 @@
     "experiment_only_checks": [
       "target_shift",
       "conformance",
-      "loss"
+      "loss",
+      "answer_key"
     ],
+    "exploratory_checks": {
+      "answer_key": "Alarm on the distance from the answer key; exploratory follow-up (protocol 2.1) chosen after the protocol 2.0 results were known"
+    },
     "inputs_sha256": {
+      "experiments/protocol-v2-followup.json": "9ec8e7b2c7b62344d128d0583afaa70b3f166e70edc9fc2be10d8d1f57ccf5dd",
       "experiments/protocol-v2.json": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30",
+      "experiments/results-v2-followup/manifest.json": "2fc83227ebeb2023ae61997c2505ada8a882c98a56f7c26c01b0d54de4a52189",
+      "experiments/results-v2-followup/results.json": "e6601277e17d3cc8781982a29eb7faa79a2f6d7dfe3b8f132aeff8b6154938c1",
       "experiments/results-v2/manifest.json": "1493117a28eb30b0c80ed1eae0745e66caa1f9f660ec28c8e8d4ba919ce9029f",
       "experiments/results-v2/results.json": "13b1228e7124b95f30953c8ee23e5189087e4c45d34de12c509ae9433a90b5b5",
       "paper/figure_common.py": "1e269c4b57bed134ebf33a57f7855e8e52a81b41569980c478059b547bd0209e",
-      "paper/figure_evidence.py": "53bdda53b642fb1b4a5de170b4a71ef1a5d97160fe52798b81a01e6b8979562f",
-      "paper/render_figures.py": "24a5fad5e51d407b6378eff51737b4accd22c933c6795d7cb94fe76a3fbbecd8",
+      "paper/figure_evidence.py": "961e2146f9cd163fda07ddb12c23ba9b9ffbeaed2c78764a848d670f1529bdbc",
+      "paper/render_figures.py": "b86bd2f0a6f1ed68fb9dda1fe548578c1caefac5ec3940f8fb06c9282898679f",
       "paper/vector_canvas.py": "a7ab2b0ab30f8f95f2025bee3c6653c73bc533c182f3525ee64312574dd5e325"
     },
     "plotted_rows": [
       {
+        "answer_key_n": 384,
         "branch": "clean",
         "counts": {
+          "answer_key": 12,
           "conformance": 0,
           "contract": 0,
           "loss": 20,
@@ -260,8 +270,10 @@
         "n": 384
       },
       {
+        "answer_key_n": 384,
         "branch": "reverse_prediction_lags",
         "counts": {
+          "answer_key": 136,
           "conformance": 384,
           "contract": 0,
           "loss": 84,
@@ -272,8 +284,10 @@
         "n": 384
       },
       {
+        "answer_key_n": 384,
         "branch": "stale_recursive_state",
         "counts": {
+          "answer_key": 140,
           "conformance": 384,
           "contract": 0,
           "loss": 80,
@@ -284,8 +298,10 @@
         "n": 384
       },
       {
+        "answer_key_n": 384,
         "branch": "omit_inverse_target_scaling",
         "counts": {
+          "answer_key": 384,
           "conformance": 384,
           "contract": 0,
           "loss": 384,
@@ -296,8 +312,10 @@
         "n": 384
       },
       {
+        "answer_key_n": 384,
         "branch": "swap_recursive_targets",
         "counts": {
+          "answer_key": 383,
           "conformance": 384,
           "contract": 0,
           "loss": 382,
@@ -311,7 +329,10 @@
     "protocol_version": "2.0",
     "purpose": "Complementary diagnostics and a correctness-versus-accuracy counterexample",
     "sources": {
+      "experiments/protocol-v2-followup.json": "9ec8e7b2c7b62344d128d0583afaa70b3f166e70edc9fc2be10d8d1f57ccf5dd",
       "experiments/protocol-v2.json": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30",
+      "experiments/results-v2-followup/manifest.json": "2fc83227ebeb2023ae61997c2505ada8a882c98a56f7c26c01b0d54de4a52189",
+      "experiments/results-v2-followup/results.json": "e6601277e17d3cc8781982a29eb7faa79a2f6d7dfe3b8f132aeff8b6154938c1",
       "experiments/results-v2/manifest.json": "1493117a28eb30b0c80ed1eae0745e66caa1f9f660ec28c8e8d4ba919ce9029f",
       "experiments/results-v2/results.json": "13b1228e7124b95f30953c8ee23e5189087e4c45d34de12c509ae9433a90b5b5"
     }

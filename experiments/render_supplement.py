@@ -151,7 +151,8 @@ def plot_covariance(results, protocol, directory):
     save_figure(fig, directory, "supplement-covariance-holm")
 
 
-def render_tex(results, manifest):
+def render_tex(results, manifest, followup=None):
+    """Study 2 text and tables; ``followup`` adds the exploratory answer-key alarm (protocol 2.1)."""
     protocol = manifest["protocol"]
     model, covariance = protocol["model_study"], protocol["covariance_study"]
     rows = branch_counts(results, protocol)
@@ -206,21 +207,49 @@ def render_tex(results, manifest):
         f"The clean implementation reduced mean realized MSE in {improved}/{len(losses)} condition--fault pairs; "
         f"{intervals_below_zero}/{len(losses)} paired 95\\% t intervals were wholly below zero. "
         "The full paired loss differences, intervals, and numbers of individually improved cases are retained "
-        r"in \code{model-repair-losses.csv}. These exploratory intervals are not adjusted across comparisons.",
+        r"in \code{model-repair-losses.csv}.",
         *repair_counterexamples,
+    ])
+    key_cells = None
+    if followup is not None:
+        from .render_followup import answer_key_cells, check_followup_conclusions
+        check_followup_conclusions(followup)
+        key_cells = answer_key_cells(followup)
+        expected = {(condition["id"], branch) for condition in model["conditions"] for branch in ["clean", *model["faults"]]}
+        require_conclusion(set(key_cells) == expected, "the follow-up covers every Study 2 condition and branch")
+        for (condition, branch), row in {(row["condition"], row["branch"]): row
+                                         for row in followup["answer_key_alarm"]["rows"]}.items():
+            frozen = sum(record["alarms"]["loss"] for record in results["model"]["records"]
+                         if record["condition"] == condition and record["branch"] == branch)
+            require_conclusion(row["loss_alarms"] == frozen, "the follow-up quotes the frozen loss alarms")
+        lines.append(
+            "As an exploratory addition, chosen after these results were known (protocol 2.1, "
+            r"\code{experiments/results-v2-followup/}), an alarm on the distance from the answer key, calibrated "
+            r"in the same way, caught reversed lags or stale state in \AnswerKeySubtleAlarms{} of \SubtleCases{} "
+            r"cases outside the seasonal condition, against \LossSubtleAlarms{} for the realized-loss alarm, with "
+            r"\AnswerKeyCleanAlarms{} rather than \LossCleanAlarms{} false alarms in \CleanNonSeasonalCases{} clean "
+            "cases. It helps most on the autoregressive conditions, where future noise hides these faults, and "
+            "little on trends and random walks, where the clean pipeline's own estimation error varies too much "
+            "from case to case.")
+    columns = "C & S & T & N & L" + (" & K" if key_cells else "")
+    lines.extend([
         r"\begin{table}[p]\centering\scriptsize",
         r"\caption{Complete condition-specific implementation alarm counts. Each entry is out of "
         f"{model['evaluation_cases']} paired cases. C, S, T, N, and L denote contract, scalar shift, target "
-        "shift, NumPy agreement, and calibrated loss respectively. Clean rows are negative controls; "
-        "there is no separate corrected-refit row.}",
+        "shift, NumPy agreement, and calibrated loss respectively. "
+        + ("K is the alarm on the distance from the answer key, an exploratory addition chosen after these "
+           "results were known (protocol 2.1), calibrated like L on the same clean cases. " if key_cells else "")
+        + "Clean rows are negative controls; there is no separate corrected-refit row.}",
         r"\label{tab:supplement-complete}",
-        r"\begin{tabular}{@{}llrrrrr@{}}\toprule",
-        r"Condition & Branch & C & S & T & N & L \\ \midrule",
+        r"\begin{tabular}{@{}ll" + "r" * (len(CHECKS) + bool(key_cells)) + r"@{}}\toprule",
+        r"Condition & Branch & " + columns + r" \\ \midrule",
     ])
     for condition in model["conditions"]:
         records = [row for row in results["model"]["records"] if row["condition"] == condition["id"]]
         for index, branch in enumerate(["clean", *model["faults"]]):
             values = [sum(row["alarms"][check] for row in records if row["branch"] == branch) for check in CHECKS]
+            if key_cells:
+                values.append(key_cells[condition["id"], branch])
             label = "Clean" if branch == "clean" else SHORT_FAULTS[branch]
             lines.append((CONDITION_LABELS[condition["id"]] if index == 0 else "") + " & " + label
                          + " & " + " & ".join(str(v) for v in values) + r" \\")
@@ -272,7 +301,8 @@ def render_tex(results, manifest):
     return "\n\n".join(lines) + "\n"
 
 
-def render_macros(results, manifest, pilot_manifest):
+def render_macros(results, manifest, pilot_manifest, followup=None):
+    """Caption and prose macros; ``followup`` adds those of the exploratory follow-up (protocol 2.1)."""
     selected = next(row for row in results["model"]["loss_summaries"]
                     if row["condition"] == "random_walk_drifts" and row["fault"] == "stale_recursive_state")
     records = results["model"]["records"]
@@ -302,19 +332,39 @@ def render_macros(results, manifest, pilot_manifest):
               "StudyNumPySolves": f"{costs['independent_ridge_solves']:,}",
               "StudyCovarianceChecks": f"{costs['covariance_checks']:,}",
               "StudyCalibrationEnsembles": f"{costs['calibration_ensembles']:,}"}
-    return "% Generated from frozen supplement records; do not edit.\n" + "".join(
+    text = "% Generated from frozen supplement records; do not edit.\n" + "".join(
         f"\\newcommand{{\\{name}}}{{{value}}}\n" for name, value in values.items())
+    if followup is None:
+        return text
+    from .render_followup import followup_macros
+    repair = followup["repair_mechanism"]
+    recorded = next(row for row in results["model"]["loss_summaries"]
+                    if row["condition"] == repair["condition"] and row["fault"] == repair["fault"])
+    require_conclusion(close_statistics(repair["frozen_clean_minus_faulty_reference_mse"],
+                                        recorded["clean_minus_faulty_reference_mse"]),
+                       "the follow-up quotes the frozen clean-minus-faulty distance from the answer key")
+    closer = sum(row["mean_reference_mse"] < clean[(row["condition"], row["seed"])]["mean_reference_mse"]
+                 for row in records if row["condition"] == repair["condition"] and row["branch"] == repair["fault"])
+    require_conclusion(closer == repair["faulty_closer_to_answer_key"],
+                       "the follow-up count of faulty cases closer to the answer key agrees with the frozen records")
+    return text + "% Exploratory follow-up chosen after the Study 2 results were known (protocol 2.1,\n" \
+        "% experiments/results-v2-followup); do not edit.\n" + "".join(
+            f"\\newcommand{{\\{name}}}{{{value}}}\n" for name, value in followup_macros(followup).items())
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-dir", type=Path, default=ROOT / "experiments/results-v2")
     parser.add_argument("--paper-dir", type=Path, default=ROOT / "paper")
+    parser.add_argument("--followup-dir", type=Path, default=None,
+                        help="exploratory follow-up record (default experiments/results-v2-followup)")
     args = parser.parse_args()
     path = args.results_dir / "results.json"
     results = json.loads(path.read_text())
     manifest = json.loads((args.results_dir / "manifest.json").read_text())
     validate_recorded_results(path, results, manifest)
+    from .render_followup import FOLLOWUP_DIR, load_followup
+    followup, _ = load_followup(args.followup_dir if args.followup_dir else FOLLOWUP_DIR)
     directory = args.paper_dir / "figures"
     directory.mkdir(parents=True, exist_ok=True)
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10, "axes.grid": False,
@@ -323,9 +373,9 @@ def main():
     plot_ablation(results, manifest["protocol"], directory)
     plot_covariance(results, manifest["protocol"], directory)
     fragment = args.paper_dir / "generated-supplement.tex"
-    fragment.write_text(render_tex(results, manifest))
+    fragment.write_text(render_tex(results, manifest, followup))
     pilot_manifest = json.loads((ROOT / "experiments/results/manifest.json").read_text())
-    (args.paper_dir / "generated-macros.tex").write_text(render_macros(results, manifest, pilot_manifest))
+    (args.paper_dir / "generated-macros.tex").write_text(render_macros(results, manifest, pilot_manifest, followup))
     print(json.dumps({"tables": str(fragment), "figures": str(directory)}))
 
 

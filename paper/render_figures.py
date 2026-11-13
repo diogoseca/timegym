@@ -43,11 +43,15 @@ FIGURES = {
     "paper-diagnostic-evidence": (_builder("figure_evidence", "build_ablation"),
                                   [f"{PAPER}/figure_evidence.py", "experiments/protocol-v2.json",
                                    "experiments/results-v2/results.json",
-                                   "experiments/results-v2/manifest.json"]),
+                                   "experiments/results-v2/manifest.json",
+                                   "experiments/protocol-v2-followup.json",
+                                   "experiments/results-v2-followup/results.json",
+                                   "experiments/results-v2-followup/manifest.json"]),
 }
 
 # Fingerprints recorded at the top level of a full render.
 ALL_INPUTS = ["experiments/results/results.json", "experiments/results-v2/results.json",
+              "experiments/results-v2-followup/results.json",
               f"{PAPER}/render_figures.py", f"{PAPER}/figure_evidence.py",
               f"{PAPER}/vector_canvas.py", f"{PAPER}/figure_common.py",
               f"{PAPER}/figure_scorecard.py", f"{PAPER}/figure_dependence.py", f"{PAPER}/figure_stresses.py",

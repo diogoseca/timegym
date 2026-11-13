@@ -6,9 +6,11 @@ import sys
 
 import pytest
 
-from experiments import run_study, run_supplement
+from experiments import run_followup, run_study, run_supplement
 from experiments.common import close_statistics, interval_cell, protect_output, sha256
 from experiments.render_results import capability_summary, render_tex as pilot_tex
+from experiments.render_followup import check_followup_conclusions, load_followup, validate_followup
+from experiments.run_followup import answer_key_counts, answer_key_totals
 from experiments.render_supplement import render_macros, render_tex as supplement_tex
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,7 +21,8 @@ def records(directory):
     return json.loads((path / 'results.json').read_text()), json.loads((path / 'manifest.json').read_text())
 
 
-@pytest.mark.parametrize('runner,folder', [(run_study, 'results'), (run_supplement, 'results-v2')])
+@pytest.mark.parametrize('runner,folder', [(run_study, 'results'), (run_supplement, 'results-v2'),
+                                           (run_followup, 'results-v2-followup')])
 def test_cli_refuses_frozen_output_before_running(runner, folder, monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['study', '--output', str(ROOT / 'experiments' / folder)])
     with pytest.raises(FileExistsError, match='results.json'):
@@ -101,21 +104,31 @@ def test_permutation_null_validation_survives_rename_and_rejects_false_null():
 
 
 def test_frozen_fragments_and_macros_are_reproducible():
+    followup, _ = load_followup()
     pilot, manifest = records('results')
-    text = pilot_tex(pilot, manifest, capability_summary(pilot, manifest['protocol']))
+    text = pilot_tex(pilot, manifest, capability_summary(pilot, manifest['protocol']), followup)
     assert text == (ROOT / 'paper/generated-results.tex').read_text()
     assert 'accompanying capability figure' not in text and 'scikit-learn' not in text
+    assert r'the estimate falls to about \TrendARPhiHigh{}' in text
     supplement, manifest = records('results-v2')
-    text = supplement_tex(supplement, manifest)
+    text = supplement_tex(supplement, manifest, followup)
     assert text == (ROOT / 'paper/generated-supplement.tex').read_text()
+    assert r'Condition & Branch & C & S & T & N & L & K \\' in text
+    assert r' & Stale state & 0 & 0 & 0 & 64 & 5 & 28 \\' in text
     assert 'Fresh corrected refit' not in text and 'wall time' not in text
     assert 'Reduced spread & --- & ---' in text
     assert 'clean-minus-faulty mean MSE was +0.5132 [+0.2122, +0.8141]' in text
-    macros = render_macros(supplement, manifest, records('results')[1])
+    macros = render_macros(supplement, manifest, records('results')[1], followup)
     assert macros == (ROOT / 'paper/generated-macros.tex').read_text()
     for macro, value in [('RepairDeltaMean', '0.513'), ('RepairDeltaLow', '0.212'), ('RepairDeltaHigh', '0.814'),
                          ('RepairImproved', '21'), ('CasesPerCondition', '64'), ('CasesPerRow', '384'),
-                         ('StudySklearnFits', '8,448'), ('StudyCalibrationEnsembles', '152,832')]:
+                         ('StudySklearnFits', '8,448'), ('StudyCalibrationEnsembles', '152,832'),
+                         ('AnswerKeySubtleAlarms', '148'), ('LossSubtleAlarms', '36'), ('SubtleCases', '640'),
+                         ('AnswerKeyCleanAlarms', '12'), ('LossCleanAlarms', '13'), ('CleanNonSeasonalCases', '320'),
+                         ('OwnLagSumFirst', '0.95'), ('OwnLagSumSecond', '0.91'), ('ReferenceDeltaMean', '0.354'),
+                         ('ReferenceDeltaLow', '0.242'), ('ReferenceDeltaHigh', '0.467'), ('FaultyCloserCases', '53'),
+                         ('ScorecardNoiseSD', '3'), ('ScorecardMaxSD', '19'), ('ScorecardNoiseScore', '84'),
+                         ('ScorecardNoiseLoss', '16'), ('TrendARPhiHigh', '0.77')]:
         assert rf'\newcommand{{\{macro}}}{{{value}}}' in macros
 
 
@@ -304,3 +317,98 @@ def test_reuse_rejects_unexpected_sample_mutation(monkeypatch):
     monkeypatch.setattr(run_study, 'mutate_forecast', mutate)
     with pytest.raises(AssertionError, match='different samples'):
         run_study.run(protocol)
+
+
+def test_followup_record_matches_its_manifest_and_frozen_inputs():
+    followup, manifest = load_followup()
+    protocol = json.loads(run_followup.PROTOCOL.read_text())
+    run_followup.validate_protocol(protocol)
+    assert manifest['protocol'] == protocol and followup['status'] == 'exploratory'
+    assert '2026-11-13' in protocol['selection'] and 'after the protocol 2.0 results were known' in protocol['selection']
+    for item in protocol['frozen_inputs'].values():
+        assert manifest['frozen_inputs_sha256'][item['path']] == item['sha256'] == sha256(ROOT / item['path'])
+    assert manifest['package_version'] and set(manifest['versions']) == {'numpy', 'pandas', 'scipy', 'scikit-learn'}
+    assert 'experiments/run_followup.py' in manifest['source_files']
+
+
+def test_followup_answer_key_alarm_recomputes_from_stored_distances_and_frozen_records():
+    followup, manifest = load_followup()
+    spec = manifest['protocol']['answer_key_alarm']
+    alarm = followup['answer_key_alarm']
+    assert alarm['largest_calibration_difference'] < spec['reproduction_tolerance']
+    assert all(len(values) == 128 for values in alarm['calibration_distances'].values())
+    supplement, _ = records('results-v2')
+    rows = answer_key_counts(alarm['calibration_distances'], supplement['model']['records'], spec['alpha'],
+                             alarm['conditions'], spec['branches'])
+    stored = [{key: row[key] for key in rows[0]} for row in alarm['rows']]
+    assert rows == stored
+    frozen_loss = {row['condition']: row['loss_calibration_threshold']
+                   for row in supplement['model']['condition_summaries'] if row['check'] == 'loss'}
+    assert all(row['loss_threshold'] == frozen_loss[row['condition']] for row in alarm['rows'])
+    totals = answer_key_totals(rows, spec['summary_faults'], spec['summary_excluded_conditions'])
+    assert totals == alarm['totals']
+    assert (totals['subtle_faults']['answer_key_alarms'], totals['subtle_faults']['loss_alarms'],
+            totals['subtle_faults']['n']) == (148, 36, 640)
+    assert (totals['clean']['answer_key_alarms'], totals['clean']['loss_alarms'], totals['clean']['n']) == (12, 13, 320)
+    cells = {(row['condition'], row['branch']): (row['answer_key_alarms'], row['loss_alarms']) for row in rows}
+    order = ['white_noise_locations', 'ar1_positive', 'ar1_negative', 'opposing_trends', 'seasonal_scales',
+             'random_walk_drifts']
+    assert [cells[c, 'reverse_prediction_lags'] for c in order] == [(5, 2), (42, 5), (23, 6), (0, 2), (64, 64), (2, 5)]
+    assert [cells[c, 'stale_recursive_state'] for c in order] == [(16, 2), (28, 5), (24, 2), (8, 6), (64, 64), (0, 1)]
+
+
+def test_followup_repair_scorecard_and_trend_summaries_agree_with_frozen_records():
+    followup, _ = load_followup()
+    supplement, _ = records('results-v2')
+    repair = followup['repair_mechanism']
+    by = {(row['branch'], row['seed']): row['mean_reference_mse'] for row in supplement['model']['records']
+          if row['condition'] == repair['condition']}
+    seeds = {seed for _, seed in by}
+    assert sum(by[repair['fault'], seed] < by['clean', seed] for seed in seeds) == repair['faulty_closer_to_answer_key'] == 53
+    summary = next(row for row in supplement['model']['loss_summaries']
+                   if row['condition'] == repair['condition'] and row['fault'] == repair['fault'])
+    assert repair['frozen_clean_minus_faulty_reference_mse'] == summary['clean_minus_faulty_reference_mse']
+    assert [round(value, 2) for value in repair['own_lag_coefficient_sum']['mean']] == [0.95, 0.91]
+    assert [round(value, 2) for value in repair['own_lag_coefficient_sum']['min']] == [0.78, 0.66]
+    steps = repair['per_step_squared_distance']
+    assert steps['clean'][0] == steps[repair['fault']][0]
+    assert (round(steps['clean'][-1], 2), round(steps[repair['fault']][-1], 2)) == (0.95, 0.17)
+    precision = followup['scorecard_precision']
+    figure = json.loads((ROOT / 'paper/figures/paper-figure-provenance.json').read_text())['paper-scorecard']
+    shown = {(cell['pattern'], cell['noise']): cell['score'] for cell in figure['cells']}
+    assert len(precision['cells']) == len(shown) == 20
+    for cell in precision['cells']:
+        assert math.isclose(cell['score_first_10'], shown[cell['pattern'], cell['noise']], rel_tol=0, abs_tol=1e-9)
+        assert cell['bootstrap_p2_5'] <= cell['bootstrap_p97_5']
+    sds = [cell['bootstrap_sd'] for cell in precision['cells']]
+    assert (precision['smallest_sd'], precision['largest_sd']) == (min(sds), max(sds))
+    assert (round(min(sds)), round(max(sds))) == (3, 19)
+    pilot, _ = records('results')
+    trend = {row['sigma']: row for row in followup['trend_ar1']['rows']}
+    assert set(trend) == {0.25, 2.0} and all(row['n'] == 16 for row in trend.values())
+    assert round(trend[0.25]['mean_phi'], 3) == 0.995 and round(trend[2.0]['mean_phi'], 2) == 0.77
+    assert round(trend[2.0]['mean_forecast_minus_answer_key'], 1) == -3.9
+    check_followup_conclusions(followup)
+
+
+def test_followup_rejects_changed_records_and_contradictions(tmp_path):
+    followup, manifest = load_followup()
+    path = tmp_path / 'results.json'
+    path.write_text(json.dumps({**followup, 'unrecorded': True}))
+    with pytest.raises(ValueError, match='fingerprint'):
+        validate_followup(path, followup, manifest)
+    changed = deepcopy(followup)
+    changed['answer_key_alarm']['totals']['clean']['answer_key_alarms'] = 20
+    with pytest.raises(ValueError, match='Recorded evidence'):
+        check_followup_conclusions(changed)
+    changed = deepcopy(followup)
+    changed['trend_ar1']['rows'][0]['mean_phi'] = .9
+    with pytest.raises(ValueError, match='Recorded evidence'):
+        check_followup_conclusions(changed)
+
+
+def test_followup_cli_protects_the_frozen_study_directories(monkeypatch):
+    for folder in ('results', 'results-v2'):
+        monkeypatch.setattr(sys, 'argv', ['followup', '--output', str(ROOT / 'experiments' / folder)])
+        with pytest.raises(SystemExit):
+            run_followup.main()

@@ -42,13 +42,17 @@ pipeline's error splits into what it missed and what was unpredictable. A
 scorecard turns that split into a score from 0 to 100 on ten kinds of
 series at low and high noise. TimeGym also checks that forecasts carry the
 requested dates, targets and shape, and that they move correctly when the
-history is shifted. Two controlled studies test these checks. In the
-first, every deliberately corrupted output was caught. In the second, four
-bugs placed inside a fitted lag-Ridge pipeline all produced well-formed
-forecasts: a common shift caught one, per-target shifts caught two, and
-only a second, independent implementation caught all four in every
-condition. Fixing one of these bugs made forecasts worse on a random walk
-with drift, so a correct implementation and an accurate forecast are
+history is shifted. Two controlled studies test these checks. The first
+confirms that each check catches the corruption it is built for. In the
+second, four bugs placed inside a fitted lag-Ridge pipeline all produced
+well-formed forecasts. Which shift check sees which bug follows from the
+equivariance the bug preserves. For the two subtle bugs, an alarm on
+realized error stayed at its false-alarm rate except on a seasonal series;
+the same alarm on the distance from the answer key, an exploratory
+addition, caught about four times as many cases; a second, separately
+written implementation caught all four bugs. Fixing one of these bugs
+made forecasts worse on a random walk with drift, so a correct
+implementation and an accurate forecast are
 different goals. Shuffling sample paths left every per-step distribution,
 and so the CRPS, unchanged while breaking the joint paths; joint scores
 and a covariance check detected it. The studies use selected bugs on
@@ -71,7 +75,8 @@ cannot be predicted by design; the columns are low and high noise. A
 cell's score is $100\times$ unavoidable$/$(unavoidable $+$ avoidable)
 error over ten series; 100 matches the answer key. Panels show one series:
 gray dots are observations, the black line is the answer key, blue crosses
-are the forecast.}
+are the forecast. Section~\ref{sec:grades} reads the figure and defines
+its Mistakes column.}
 \label{fig:scorecard}
 \end{figure}
 
@@ -81,7 +86,10 @@ Reinforcement learning has gyms: standard environments with known rules,
 in which agents are trained and tested~\cite{brockman2016gym}. Forecasting
 benchmarks mostly use real series, where nobody knows the rules and so
 nobody knows the best possible forecast. TimeGym is a gym for forecasting
-pipelines. Its scenarios generate series from known rules, so every test
+pipelines.\footnote{Unrelated to TSGym~\cite{liang2025tsgym}, which
+searches design choices for deep forecasters, and
+TimeSeriesGym~\cite{cai2025timeseriesgym}, a benchmark for
+machine-learning engineering agents; both appeared in 2025.} Its scenarios generate series from known rules, so every test
 case comes with an answer key: the best forecast anyone could make from
 the history alone. A pipeline's error then splits into two parts, what it
 missed and noise nobody could predict, and a scorecard turns that split
@@ -107,7 +115,7 @@ Avoidable error & Mean-reference MSE & How far the forecast is from the answer k
 Unavoidable error & $\operatorname{tr}(\Sigma_F)/K$ & The error the answer key itself makes, because the future noise has not happened yet \\[0.3em]
 Shift check & Declared, behavioral or metamorphic relation & A what-if rule: add 10 to the history and the forecast should rise by 10 \\[0.3em]
 Check & Comparator & Any of the five checks compared in Study 2 \\[0.3em]
-Second implementation & Pseudo-oracle & The same algorithm written again, independently \\[0.3em]
+Second implementation & Pseudo-oracle & The same algorithm written again, separately \\[0.3em]
 Known only to the evaluator & Privileged information & True parameters, future change dates \\[0.3em]
 What the forecast stands for & Estimand, functional & A mean, a median or a quantile \\[0.3em]
 Can't learn it & Capability gap & The model cannot learn the pattern; not a bug \\[0.3em]
@@ -146,14 +154,23 @@ financial and joint scenarios extend the catalog
 (Sections~\ref{sec:protocol} and~\ref{sec:results}). What they found:
 \begin{itemize}
 \item Bugs that keep the output well formed passed every output check.
-Reversed lags and stale recursive state also passed both shift checks.
-Only the independent implementation caught them in all six conditions;
-the loss alarm caught them only on the seasonal one.
-\item Swapping two target columns passed a common shift but failed
-per-target shifts in every case.
+Which shift check sees which bug follows from the equivariance the bug
+preserves: reversed lags and stale recursive state keep the forecast
+translation equivariant and passed both shift checks, and swapping two
+target columns passed a common shift but failed per-target shifts in
+every case.
+\item Only the separately written implementation caught reversed lags and
+stale state in all six conditions; the loss alarm on realized error
+caught them only on the seasonal one. The same alarm on the distance
+from the answer key, an exploratory addition, caught them in
+\AnswerKeySubtleAlarms{} of \SubtleCases{} cases outside the seasonal
+condition, against \LossSubtleAlarms{} for the loss alarm, with about as
+many false alarms (\AnswerKeyCleanAlarms{} against \LossCleanAlarms{} of
+\CleanNonSeasonalCases{}).
 \item Fixing the stale-state bug made the average error worse on a random
 walk with drift ($+$\RepairDeltaMean{} MSE; only \RepairImproved{} of
-\CasesPerCondition{} cases improved).
+\CasesPerCondition{} cases improved), because the fitted lag coefficients
+are biased towards mean reversion near a unit root.
 \item Shuffling sample paths left every per-step distribution, and so the
 CRPS, exactly unchanged, while energy and variogram scores got worse.
 \item Four covariance checks per suite gave at least one false alarm in
@@ -233,11 +250,22 @@ can predict. The scorecard reports their ratio as a score,
 \end{equation}
 where $A$ and $U$ are the avoidable and unavoidable errors averaged over
 the cases of one cell: 100 matches the answer key, and 50 means the
-avoidable error equals the unavoidable one. The avoidable error differs
+avoidable error equals the unavoidable one. The ratio $U/(U+A)$ is the
+answer key's expected squared error divided by the forecast's, a relative
+efficiency: the inverse of the relative MSE of Hyndman and
+Koehler~\cite{hyndman2006another} with the answer key as benchmark, in the
+family of MSE skill scores~\cite{murphy1988skill}. Both terms are
+expectations given the history, so the score carries none of the future
+noise that makes ratios of test-set errors unstable. The avoidable error differs
 from realized test-set MSE, which also contains the future noise. The
 answer key is known only to the evaluator: a learned forecaster must infer
 structure and parameters from a finite history, so a nonzero avoidable
-error alone does not establish an implementation fault.
+error alone does not establish an implementation fault. The right model
+fitted on the same history still loses a few points: the sample mean
+scores about 99 on noise around a fixed level. The 24-lag Ridge of
+Figure~\ref{fig:scorecard} scores \ScorecardNoiseScore{} there; it loses
+those points to estimating 25 coefficients from 96 rows, not to a pattern
+it cannot learn~\cite{clements1998forecasting}.
 
 For level $q\in(0,1)$, the answer key is instead the marginal conditional
 quantile $F_{\theta,hd}^{-1}(q)$, evaluated using pinball loss. A median
@@ -400,11 +428,19 @@ bounded set of checks rather than an exhaustive information-flow
 verifier.
 
 \subsection{Grades, seeds, and reports}
+\label{sec:grades}
 
 The scorecard grades capability without calling it a bug. It turns a
 cell's avoidable error into a score from 0 to 100
 (Equation~\eqref{eq:score}) and a band: 90 or more nails it, 70 good, 40
-struggles, below 40 fails. A band describes what the model can learn. The
+struggles, below 40 fails. The edges at 90, 70 and 40 correspond to an
+avoidable error of 0.11, 0.43 and 1.5 times the unavoidable one. With ten
+instances a cell's score varies between seeds by about
+\ScorecardNoiseSD{} points on the noise rows and by up to
+\ScorecardMaxSD{} on the random-walk rows (bootstrap over 30 instances of
+the Figure~\ref{fig:scorecard} pipeline, an exploratory addition in
+\code{experiments/results-v2-followup/}), so a band is indicative when the
+score lies within a few points of its edge. A band describes what the model can learn. The
 underlying diagnostic still returns \code{INCONCLUSIVE}, because no
 single tolerance separates a weak model from a faulty one. A forecast
 that crashes or fails an output check scores zero. A low score can
@@ -414,6 +450,21 @@ Coverage computed across one path's dependent horizon-target coordinates
 is also descriptive; it does not establish calibration. The report
 identifies the affected property and a reproducible case, not a unique
 source-code cause. Suspected explanations require an intervention.
+
+For a cell scoring below 70, the Mistakes column of
+Figure~\ref{fig:scorecard} names what dominates its avoidable error. Each
+forecast's error against the answer key splits exactly into a constant
+offset, a straight-line drift over the horizon and the remaining shape,
+and their mean squares add up to the avoidable error. A part that carries
+at least a quarter of it is named (a tenth for a drift large enough to see
+against the noise), and an offset with the same sign in 80\% of instances
+is reported as too high or too low. In Figure~\ref{fig:scorecard} the
+Ridge pipeline nails no row: it loses \ScorecardNoiseLoss{} points on pure
+noise to estimating 24 lags, fails the level shift at low noise because
+older history at the old level pulls its forecast down, and misjudges the
+drift of a random walk. The two noise rows score the same because the
+pipeline is shift and scale equivariant; a model that is not would score
+them differently.
 
 \code{Pipeline(model).scorecard()} runs the scenario grid and returns the
 picture together with a machine-readable report (\code{card.report}) and
@@ -502,6 +553,10 @@ trigger it. Failure to reject does not establish equality of covariance
 or distributions. In particular, an ensemble generated by deterministic
 quadrature, dependent Monte Carlo, or a learned parameter estimate does
 not satisfy the stated null merely because it is a useful forecast.
+Its intended use is to test a sampler's code with the true parameters
+injected, the strategy used to validate software for Bayesian
+inference~\cite{geweke2004getting,cook2006validation,modrak2025simulation}.
+A fitted model's ensemble is expected to fail it once the sample is large.
 The Gaussian reference is fully specified in Study 1, which makes
 null simulation feasible but limits direct application to real data.
 
@@ -538,8 +593,11 @@ $y$, the empirical energy score is
 \end{equation}
 The implementation includes diagonal sample pairs and scores the finite
 empirical distribution; it is not the fair-ensemble estimator. Euclidean
-norms are not divided by $K$. The variogram score uses $p=1/2$ and equal
-weights over distinct unordered coordinates:
+norms are not divided by $K$. The variogram score uses $p=1/2$, the
+setting that discriminated best among variogram scores and against the
+energy score in a recent simulation
+comparison~\cite{alexander2024evaluating}, and equal weights over distinct
+unordered coordinates:
 \begin{equation}
  \widehat{\mathrm{VS}}_{p} = \binom K2^{-1}
  \sum_{i<j}\left(|y_i-y_j|^p-
@@ -579,13 +637,17 @@ fault. Study 2 inserts internal regressions into a fitted pipeline and
 evaluates covariance checks under multiplicity. Every fault in both
 studies was chosen by hand to exercise an implemented check. Each study's parameters,
 seeds, transformations, and tolerances are fixed in its own protocol
-before its evaluation run. The studies ask:
+before its evaluation run; the exploratory follow-up to Study 2
+(protocol 2.1) was chosen afterwards and is labelled wherever it is used.
+The studies ask:
 \begin{description}
-\item[RQ1 (Study 1).] Do the output checks and the covariance check
-detect the corruptions, and how often do they alarm on clean
-forecasts?
-\item[RQ2 (Study 1).] Does removing a known corruption restore the
-affected checks without worsening the tested clean behavior?
+\item[RQ1 (Study 1).] Does the score separate patterns a model cannot
+learn from noise nobody can predict, and does that separation hold across
+noise levels?
+\item[RQ2 (Study 1).] Do the output checks and the covariance check
+detect the corruptions, how often do they alarm on clean forecasts, and
+does removing a corruption restore the clean result? The last part is a
+check of the harness.
 \item[RQ3 (Study 1).] Do joint scores respond when every marginal sample
 distribution is preserved?
 \item[RQ4 (Study 2).] Which checks detect internal regressions that
@@ -636,9 +698,9 @@ check.
 
 The output checks provide a baseline for malformed outputs. A
 conventional realized-loss threshold, calibrated on separate clean cases,
-supplies a second comparison. A reported advantage over that threshold
-applies only to the specified calibration and test distribution, not to
-every possible holdout test. We do not report a head-to-head comparison
+supplies a second comparison. Its cutoff, the empirical 95th percentile of
+16 development cases, is a rough baseline; Study 2's conformal rule
+(Equation~\eqref{eq:loss-rank}) is the calibrated one. We do not report a head-to-head comparison
 with sktime conformance tests or the recent synthetic benchmarks.
 
 The sample-dependence experiment begins with correct conditional paths,
@@ -673,11 +735,11 @@ clean calibration cases.
 
 Five checks ask different questions: the output checks; the shift check
 with a common shift of 10; the per-series shift check with
-shifts $(7,-11)$; agreement with an independently implemented NumPy
+shifts $(7,-11)$; agreement with a separately written NumPy
 lag-Ridge, the second implementation; and a calibrated realized-MSE alarm. The common
 shift uses the public diagnostic. Per-series shifts and implementation
-agreement are experimental checks. The NumPy implementation independently
-constructs lag columns and solves augmented normal equations with an
+agreement are experimental checks. The NumPy implementation constructs
+its own lag columns and solves augmented normal equations with an
 unpenalized intercept in the original target units. It receives neither
 the future nor generator parameters and checks algorithm agreement, not
 forecast optimality. Numerical comparisons use fixed absolute tolerance
@@ -708,6 +770,18 @@ Loss intervals use case-level paired differences within a condition.
 Restoring agreement with the clean algorithm need not improve realized
 loss on every noisy future.
 
+\paragraph{What each check can see.} A shift relation detects exactly the
+faults that break the equivariance it states. This pipeline refits its lag
+and target scalers on the shifted context, so reversing the lag window or
+freezing the recursive state leaves the forecast translation equivariant:
+neither shift check can detect them, whatever the data. Swapping the target
+columns commutes with a common shift but not with unequal shifts, and
+omitting the inverse scaling breaks both. A second implementation compared
+at a tolerance of $10^{-8}$ flags any change to the output. The counts in
+columns C, S, T and N of Table~\ref{tab:supplement-complete} therefore
+confirm predictions; the calibrated loss alarm, the exploratory answer-key
+alarm and the paired losses are the measured results.
+
 \subsection{Study 2: covariance conditions and multiplicity}
 
 Study 2 also evaluates 64 independent four-task suites. Each
@@ -723,8 +797,7 @@ family. We report individual rejections, any raw rejection in a suite,
 and any rejection after Holm's step-down adjustment~\cite{holm1979multiple}.
 With sorted valid null $p$-values, Holm compares the $j$th value against
 $0.05/(4-j+1)$ and stops at the first non-rejection. Its family-wise
-guarantee concerns this fixed family; it does not extend to comparisons
-across variants, study sections, or adaptive revisions of the protocol.
+guarantee concerns this fixed family.
 The factorized white-noise shuffle is a negative control: independent
 coordinates remain independent under these sample permutations, so a
 rejection is a false alarm rather than successful defect detection.
@@ -732,9 +805,9 @@ rejection is a false alarm rather than successful defect detection.
 \section{Results}
 \label{sec:results}
 
-The first four subsections report Study 1: fault detection and false
-alarms (RQ1 and RQ2), marginal invariance (RQ3), the capability baselines,
-and the inverse-scaling repair. The last two report Study 2: implementation
+The first four subsections report Study 1: fault detection, false
+alarms and repair rechecks (RQ2), marginal invariance (RQ3), the
+capability baselines (RQ1), and the inverse-scaling repair. The last two report Study 2: implementation
 regressions (RQ4) and covariance checks under multiplicity (RQ5).
 
 % BEGIN GENERATED RESULTS
@@ -753,7 +826,8 @@ six conditions and \CasesPerCondition{} cases per condition
 (\CasesPerRow{} per row). Darker cells mean
 more alarms, including false alarms in the correct-implementation row.
 All four regressions pass the output checks. Asterisks mark experiment-only
-checks.
+checks; the dagger marks the alarm on the distance from the answer key, an
+exploratory addition chosen after the results were known (protocol 2.1).
 Bottom: correcting stale recursion on the random-walk condition with drift restores
 agreement with the declared algorithm, yet increases average realized MSE
 by \RepairDeltaMean{} (paired 95\% t interval
@@ -785,9 +859,15 @@ same specification whose outputs are compared with those of the program
 under test, within a tolerance for numerical programs~\cite{davis1981pseudo}.
 Guderlei and Mayer extended metamorphic relations to programs with random
 output by comparing the output distributions of related executions with
-hypothesis tests~\cite{guderlei2007statistical}. Oracle issues specific to
-machine learning were reviewed in~\cite{seca2021review}. Table~\ref{tab:oracles}
-maps the evidence used in this paper onto these oracle types.
+hypothesis tests~\cite{guderlei2007statistical}. The oracle problem is
+surveyed by Barr et al.~\cite{barr2015oracle}, metamorphic testing by
+Segura et al. and Chen et al.~\cite{segura2016survey,chen2018metamorphic},
+and the testing of machine-learning systems by Zhang
+et al.~\cite{zhang2022machine}. Metamorphic relations for machine-learning
+classifiers go back to Xie et al.~\cite{xie2011testing}, and oracle issues
+specific to machine learning are reviewed in~\cite{seca2021review}.
+Table~\ref{tab:oracles} maps the evidence used in this paper onto these
+oracle types.
 
 Pham et al.'s CRADLE detects bugs in deep-learning libraries by comparing
 the outputs of different backends~\cite{pham2019cradle}. Tolerance-based
@@ -799,6 +879,14 @@ property-based testing, stated beside the code and checked on generated
 inputs~\cite{claessen2000quickcheck}; here the scenario generators supply
 those inputs.
 
+Statistics has a close precedent. Software for Bayesian inference is
+validated by simulating data from known parameters and checking that the
+software's output ranks those parameters
+uniformly~\cite{geweke2004getting,cook2006validation,modrak2025simulation}.
+TimeGym's answer keys and covariance rank check apply the same idea to
+forecasts: the data come from a known law, so the software's output can be
+compared with what that law implies.
+
 \begin{table}[!htb]
 \centering\small
 \begin{tabular}{@{}p{0.26\linewidth}p{0.40\linewidth}p{0.26\linewidth}@{}}
@@ -808,7 +896,7 @@ Oracle type & TimeGym mechanism & Source \\
 Partial oracle & Output checks on shape, dates, finiteness, and quantile order & \cite{weyuker1982testing} \\[0.4em]
 Simplified data with known results & Synthetic scenarios with answer keys & \cite{weyuker1982testing} \\[0.4em]
 Known properties & Shift checks & \cite{weyuker1982testing,claessen2000quickcheck} \\[0.4em]
-Pseudo-oracle & Independent NumPy lag-Ridge implementation (experimental) & \cite{davis1981pseudo,pham2019cradle} \\[0.4em]
+Pseudo-oracle & Separately written NumPy lag-Ridge implementation (experimental) & \cite{davis1981pseudo,pham2019cradle} \\[0.4em]
 Statistical test oracle & Reference-covariance rank check; calibrated loss alarm & \cite{guderlei2007statistical} \\
 \bottomrule
 \end{tabular}
@@ -948,17 +1036,41 @@ CRPS~\cite{gneiting2011comparing}, multivariate rank
 histograms~\cite{gneiting2008assessing} and conditional coverage
 tests~\cite{christoffersen1998evaluating} are outside its scope.
 
+Scoring forecasts against the forecast implied by a known generating
+process is standard in simulation studies of forecasting
+methods~\cite{clements1998forecasting}, and generators with controllable
+features exist for evaluating them~\cite{kang2020gratis,gilpin2021chaos}.
 None of these ingredients is new: the oracle types, metamorphic relations,
 financial stress mechanisms, and proper scores all have the precedents
-cited above. The contribution is their combination into executable
-forecasting checks with recorded assumptions.
+cited above. TimeGym's addition is to state each score against that
+forecast and to pair it with software checks.
 
 \section{Discussion}
 \label{sec:discussion}
 
 \subsection{What the checks establish}
 
-Study 1 confirms the mechanics (RQ1 and RQ2): every corruption
+For RQ1, Table~\ref{tab:capability} and Figure~\ref{fig:scorecard} show
+the score falling where a forecast misses something the history
+determines, not where the noise is large. Each baseline scores highest on
+the kinds of series its structure can follow: the last value is the
+answer key for the random walk, the fitted AR(1) nails white noise and
+mean reversion, and the seasonal naive forecaster leads on the seasonal
+cycle at low noise. On white noise, mean reversion and the random walk
+every score is the same at both noise levels. Where a pattern of fixed size competes with the noise, more
+noise makes ignoring the pattern cheaper, so the scores of the naive
+forecasters on the trend and of the fitted AR(1) on the seasonal cycle
+rise with noise; the fitted AR(1) on the trend is the exception, because
+its estimated coefficient falls with noise (Section~\ref{sec:results}).
+Figure~\ref{fig:scorecard} reads the same way for a fitted pipeline: the
+Ridge pipeline loses points on pure noise only to estimation, and fails
+where older history misleads it or where it must judge a drift
+(Section~\ref{sec:grades}). The separation is built into the score by the
+answer key (Equation~\eqref{eq:risk}); these results show that it reads
+as intended on the families tested, not how the score ranks models on
+real series.
+
+Study 1 confirms the mechanics (RQ2): every corruption
 was detected, and repaired outputs reproduced the clean control exactly,
 including its false alarms. Because the six output corruptions are direct
 violations, this shows that the output checks are implemented correctly,
@@ -976,14 +1088,31 @@ concrete. Reversing lags and retaining stale
 state pass both shift checks even though they disagree with
 the intended algorithm. A common shift also misses a numeric target swap;
 different target shifts expose it.
-Agreement with a second implementation is more discriminating in this
-corpus, but requires a second specification of the intended algorithm
-and does not establish forecasting optimality.
+These outcomes follow from the equivariance each bug preserves
+(Section~\ref{sec:implementation-study}). Agreement with a separately
+written second implementation is more discriminating in this corpus, but
+requires a second specification of the intended algorithm and does not
+establish forecasting optimality. Where no second implementation exists,
+the answer key itself can serve as the check: the exploratory answer-key
+alarm caught \AnswerKeySubtleAlarms{} of \SubtleCases{} reversed-lag and
+stale-state cases outside the seasonal condition, where the loss alarm
+caught \LossSubtleAlarms{}.
 
 The repair counterexample further separates verification from model
 selection. Correcting the stale-state regression restores the declared
 recursive algorithm, while the random-walk condition with drift favors the faulty
-variant's realized loss. A score can therefore reward a specification
+variant's realized loss. The mechanism is known. Near a unit root,
+least-squares lag coefficients are biased towards mean
+reversion~\cite{kendall1954note,dickey1979distribution}; here the fitted
+own-lag coefficients sum to \OwnLagSumFirst{} and \OwnLagSumSecond{} on
+average. The correct recursion compounds that bias over the horizon,
+while the stale branch repeats its one-step value, close to the naive
+random-walk forecast. The faulty branch is also closer to the answer key
+(clean-minus-faulty avoidable error $+$\ReferenceDeltaMean{}, paired 95\%
+interval \ReferenceDeltaLow{}--\ReferenceDeltaHigh{}; \FaultyCloserCases{}
+of \CasesPerCondition{} cases), so the effect is not future noise.
+Iterated multi-step forecasts are known to suffer when the one-step model
+is biased~\cite{marcellino2006comparison,chevillon2007direct}. A score can therefore reward a specification
 violation, just as a conforming model can forecast poorly. A useful report
 retains both observations rather than relabeling one as the other.
 
@@ -1012,11 +1141,13 @@ advance. Detection rates therefore describe this corpus, not the
 frequency or detectability of naturally occurring faults.
 Mutation analysis rests on the coupling of simple seeded faults to real
 ones~\cite{jia2011analysis}. Generated mutants have been found similar
-in detectability to real faults, whereas hand-seeded faults were harder
-to detect~\cite{andrews2005mutation}; in a corpus of 357 real faults, 73\%
-were coupled to common mutants and 17\% to none~\cite{just2014mutants}.
-The present corpus is hand-selected and therefore closer to the
-hand-seeded case. In deep learning, mutation operators have instead been
+in detectability to real faults, whereas hand-seeded faults, seeded to
+resemble real ones, were harder to detect~\cite{andrews2005mutation}; in a
+corpus of 357 real faults, 73\% were coupled to common mutants and 17\% to
+none~\cite{just2014mutants}. Our faults were instead picked to exercise
+particular checks, a selection that favors detection by those checks.
+Neither kind of corpus says how often the checks catch faults found in
+practice. In deep learning, mutation operators have instead been
 derived from a taxonomy of real
 faults~\cite{humbatova2020taxonomy,humbatova2021deepcrime}, and mutant
 killing is defined statistically because retraining alone moves
@@ -1027,7 +1158,10 @@ corresponding statistical role here.
 Study 2 moves beyond output corruption but does not supply an independent
 corpus of naturally occurring defects. The second implementation verifies
 one intended algorithm; it cannot establish that the algorithm is
-appropriate for every forecasting task. These studies assess detection and
+appropriate for every forecasting task. The second implementation was
+written by the same author, who knew the faults; separately written
+versions can share mistakes~\cite{knight1986experimental}. Writing one is
+practical for a short regression, rarely for a neural network. These studies assess detection and
 repair rechecks, not automatic source-code localization or repair
 discovery.
 
@@ -1035,8 +1169,10 @@ discovery.
 Statistical guarantees apply to their stated nulls and sampling units.
 The covariance rank check (Equation~\eqref{eq:mc}) assumes independent
 reference-law samples; the loss rank check (Equation~\eqref{eq:loss-rank})
-assumes exchangeable clean cases within a condition.
-Numerical conformance tolerances are engineering choices. Holm adjustment
+assumes exchangeable clean cases within a condition. The 64 clean Study 1
+cases do not establish precise calibration of the covariance check or a
+family-wise error rate. Numerical conformance tolerances are engineering
+choices. Holm adjustment
 protects only the declared four-check family. Other reported comparisons
 are descriptive, and fresh evaluation seeds do not undo adaptive choice
 of scenarios, mutations, or diagnostics.
@@ -1053,8 +1189,11 @@ then adds supported interactions. Seeds, parameter regions, and compositions
 must be reserved from model development; a synthetic suite can itself be
 overfit. TimeGym can also serve as a training ground: a model can be tuned
 against the scorecard with 20 or 30 instances per cell, so that close
-candidates are told apart, or with \code{seed=None}, so that every
-evaluation draws fresh series. Fresh seeds give new draws of the same
+candidates are told apart (with ten, a cell's score moves between seeds by
+up to \ScorecardMaxSD{} points; Section~\ref{sec:grades}), or with
+\code{seed=None}, so that every evaluation draws fresh series. The score
+uses the true process, so tuning against it selects for the scenarios'
+mechanisms, not for any one real series. Fresh seeds give new draws of the same
 mechanisms, not new mechanisms, so a model tuned this way still needs
 held-out kinds of series and untouched real data. After pipeline selection, untouched real data and rolling forecast
 origins provide a separate transfer assessment.
@@ -1099,12 +1238,21 @@ Both studies ran with Python \StudyPython, NumPy \StudyNumPy, pandas
 \StudyPandas, and SciPy \StudySciPy; Study 2 also used scikit-learn
 \StudySklearn. The retained Study 2 design requires \StudySklearnFits{}
 scikit-learn fits,
-\StudyNumPySolves{} independent NumPy solves, and \StudyCovarianceChecks{}
+\StudyNumPySolves{} NumPy solves of the second implementation, and \StudyCovarianceChecks{}
 covariance checks containing \StudyCalibrationEnsembles{} calibration
 ensembles. Each study's protocol, raw case records, paired score records,
 source and data fingerprints, and summary tables are saved under
 \code{experiments/results/} and \code{experiments/results-v2/}, and every
-table in Section~\ref{sec:results} is generated from them. Following the
+table in Section~\ref{sec:results} is generated from them. An exploratory
+follow-up, chosen on 13 November 2026 after the Study 2 results were known
+(protocol 2.1), is saved separately under
+\code{experiments/results-v2-followup/}. It re-runs only the fits it
+needs (the clean Study 2 calibration cases, the random-walk evaluation
+cases, the Figure~\ref{fig:scorecard} scorecard with 30 instances, and the
+fitted AR(1) on the Study 1 trend), checks each re-run value against the
+frozen records, and supplies the answer-key alarm, the fitted lag
+coefficients of the random-walk condition, the scorecard precision and
+the fitted AR(1) coefficients quoted in the text. Following the
 reporting recommendations for forecasting research, the records give a
 well-defined data-generating process with its seeds, described methods and
 parameterization, software versions, and defined

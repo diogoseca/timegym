@@ -25,6 +25,7 @@ from matplotlib.ticker import PercentFormatter
 import numpy as np
 from timegym.statistics import paired_t_interval
 from timegym import Scenario
+from timegym.grid import NOISE_LOW
 from timegym.scorecard import verdict
 from .common import interval_cell, rate_cell, require_conclusion, scientific_tex, sha256
 
@@ -211,8 +212,12 @@ def capability_summary(results, protocol, unavoidable=None):
     return summary
 
 
-def capability_section(summary, protocol):
-    """Subsection text and score table for the capability sweep, checked against the records."""
+def capability_section(summary, protocol, followup=None):
+    """Subsection text and score table for the capability sweep, checked against the records.
+
+    ``followup`` is the exploratory follow-up record (protocol 2.1); when given, the
+    explanation of the fitted AR(1) on the trend is checked against it as well.
+    """
     models, scenarios = protocol["capability_models"], protocol["capability_scenarios"]
     low, high = min(protocol["capability_sigma"]), max(protocol["capability_sigma"])
     row = {(r["scenario"], r["model"], r["sigma"]): r for r in summary}
@@ -235,6 +240,13 @@ def capability_section(summary, protocol):
                        "the fitted AR(1) nails white noise and mean reversion at both scales")
     require_conclusion(all(band("trend", "gaussian_ar1", sigma) == "Fails" for sigma in (low, high)),
                        "the fitted AR(1) fails on the trend at both scales")
+    require_conclusion(score("trend", "gaussian_ar1", high) < score("trend", "gaussian_ar1", low),
+                       "the fitted AR(1) gets worse with noise on the trend")
+    if followup is not None:
+        from .render_followup import check_followup_conclusions
+        check_followup_conclusions(followup)
+        fitted = {row["sigma"] for row in followup["trend_ar1"]["rows"]}
+        require_conclusion(fitted == {low, high}, "the follow-up fits the AR(1) at the table's two noise levels")
     require_conclusion(all(row["random_walk", "last_value", sigma]["mean_reference_mse"] < 1e-12
                            for sigma in protocol["capability_sigma"]),
                        "the last value is the answer key for the zero-drift random walk")
@@ -257,7 +269,10 @@ def capability_section(summary, protocol):
         "the answer key at the lowest and highest scale: 100 times the unavoidable error over the sum of "
         "the unavoidable and avoidable errors (Section~\\ref{sec:references}). The full three-scale sweep is in "
         "\\code{figures/capability-curves.pdf} and \\code{capability-summary.csv} of the reproducibility artifact. "
-        "The fitted AR(1) nails white noise and mean reversion and fails on the trend at both scales. "
+        "The fitted AR(1) nails white noise and mean reversion and fails on the trend at both scales, "
+        "and gets worse with noise there: at low noise its coefficient is close to 1 and it follows the line, "
+        "while at high noise the estimate falls to about \\TrendARPhiHigh{} and the forecast reverts towards "
+        "the mean of the history, below the trend. "
         "For the zero-drift random walk, the last value is the answer key. "
         "Noise matters where a fixed-size pattern competes with it: on the seasonal cycle the fitted AR(1) "
         f"scores {seasonal_low:.0f} at low noise and {seasonal_high:.0f} at high noise, where the cycle is "
@@ -267,7 +282,8 @@ def capability_section(summary, protocol):
         f"($\\sigma={high:g}$) innovation noise, over {seeds} cases each. N nails it, G good, S struggles, "
         "F fails. White noise, mean reversion and the random walk score the same at both levels: with a "
         "zero mean and no drift, a larger $\\sigma$ only rescales the series. The package's scorecard adds "
-        "measurement noise to tell those levels apart.}",
+        "measurement noise to tell those levels apart. The frozen Study 1 used "
+        f"$\\sigma={low:g}$; the package scorecard's low level is {NOISE_LOW:g}.}}",
         r"\label{tab:capability}",
         "\n".join([
             r"\begin{tabular}{@{}l" + "rr" * len(models) + r"@{}}\toprule",
@@ -309,7 +325,7 @@ def plot_capability(summary, protocol, directory):
     save(fig, directory, "capability-curves")
 
 
-def render_tex(results, manifest, summary):
+def render_tex(results, manifest, summary, followup=None):
     protocol = manifest["protocol"]
     fault = results["fault_summary"]
     clean = fault["clean"]
@@ -360,8 +376,7 @@ def render_tex(results, manifest, summary):
         f"({100*clean['covariance']['rate']:.1f}\\%; Wilson interval "
         f"[{100*clean['covariance']['ci95'][0]:.1f}, {100*clean['covariance']['ci95'][1]:.1f}]\\%). "
         "The observed rate is above the nominal 5\\% per-check level, with an interval that includes 5\\%. "
-        "No threshold was changed to remove these false alarms. This run does not "
-        "establish precise calibration or a family-wise error rate.",
+        "No threshold was changed to remove these false alarms.",
         f"The point-MSE cutoff was {results['mse_threshold']:.4f}, the empirical 95th percentile "
         f"from {protocol['development_seeds'][1]-protocol['development_seeds'][0]} development cases. "
         f"It alarmed on {clean['mse']['count']}/{clean['mse']['n']} clean cases. It detects invalid point "
@@ -370,9 +385,7 @@ def render_tex(results, manifest, summary):
         "the clean alarms and supply no mutation-specific evidence.",
         "Disabling an output mutation restored the exact clean output, including its "
         f"sample array. Repaired outputs had zero contract violations and the same "
-        f"{repair['count']}/{repair['n']} covariance alarms as the clean control. "
-        "These paired rechecks confirm removal of the corruption; they do "
-        "not imply that every repaired case receives a statistical pass.",
+        f"{repair['count']}/{repair['n']} covariance alarms as the clean control.",
         r"\subsection{Study 1: marginal invariance and joint-score response}",
         "Table~\\ref{tab:dependence} varies the proportion of ensemble rows selected "
         "for coordinate-wise permutation. Every empirical marginal is preserved "
@@ -393,7 +406,7 @@ def render_tex(results, manifest, summary):
     lines.extend([
         r"\bottomrule\end{tabular}\end{table}",
     ])
-    lines.extend(capability_section(summary, protocol))
+    lines.extend(capability_section(summary, protocol, followup))
     lines.extend([
         r"\subsection{Study 1: an inverse-scaling repair}",
         "A separate predictor standardizes its training context and forecasts the "
@@ -434,6 +447,8 @@ def main():
     parser.add_argument("--results", type=Path, default=ROOT / "experiments/results/results.json")
     parser.add_argument("--manifest", type=Path, default=ROOT / "experiments/results/manifest.json")
     parser.add_argument("--paper-dir", type=Path, default=ROOT / "paper")
+    parser.add_argument("--followup-dir", type=Path, default=None,
+                        help="exploratory follow-up record (default experiments/results-v2-followup)")
     args = parser.parse_args()
     results = json.loads(args.results.read_text())
     manifest = json.loads(args.manifest.read_text())
@@ -446,6 +461,8 @@ def main():
                          "axes.labelcolor": "#263746", "text.color": "#172b3a",
                          "axes.edgecolor": "#a9b5be", "pdf.fonttype": 42, "ps.fonttype": 42})
     summary = capability_summary(results, protocol)
+    from .render_followup import FOLLOWUP_DIR, load_followup
+    followup, _ = load_followup(args.followup_dir if args.followup_dir else FOLLOWUP_DIR)
     plot_fault_matrix(results, protocol, directory)
     plot_dependence(results, protocol, directory)
     plot_capability(summary, protocol, directory)
@@ -453,7 +470,7 @@ def main():
         writer = csv.DictWriter(handle, fieldnames=list(summary[0]))
         writer.writeheader()
         writer.writerows(summary)
-    (args.paper_dir / "generated-results.tex").write_text(render_tex(results, manifest, summary))
+    (args.paper_dir / "generated-results.tex").write_text(render_tex(results, manifest, summary, followup))
     print(json.dumps({"tables": str(args.paper_dir / "generated-results.tex"), "figures": str(directory)}))
 
 

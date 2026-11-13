@@ -36,6 +36,25 @@
 \newcommand{\StudyNumPySolves}{384}
 \newcommand{\StudyCovarianceChecks}{768}
 \newcommand{\StudyCalibrationEnsembles}{152,832}
+% Exploratory follow-up chosen after the Study 2 results were known (protocol 2.1,
+% experiments/results-v2-followup); do not edit.
+\newcommand{\AnswerKeySubtleAlarms}{148}
+\newcommand{\LossSubtleAlarms}{36}
+\newcommand{\SubtleCases}{640}
+\newcommand{\AnswerKeyCleanAlarms}{12}
+\newcommand{\LossCleanAlarms}{13}
+\newcommand{\CleanNonSeasonalCases}{320}
+\newcommand{\OwnLagSumFirst}{0.95}
+\newcommand{\OwnLagSumSecond}{0.91}
+\newcommand{\ReferenceDeltaMean}{0.354}
+\newcommand{\ReferenceDeltaLow}{0.242}
+\newcommand{\ReferenceDeltaHigh}{0.467}
+\newcommand{\FaultyCloserCases}{53}
+\newcommand{\ScorecardNoiseSD}{3}
+\newcommand{\ScorecardMaxSD}{19}
+\newcommand{\ScorecardNoiseScore}{84}
+\newcommand{\ScorecardNoiseLoss}{16}
+\newcommand{\TrendARPhiHigh}{0.77}
 
 % END GENERATED MACROS
 
@@ -58,13 +77,17 @@ pipeline's error splits into what it missed and what was unpredictable. A
 scorecard turns that split into a score from 0 to 100 on ten kinds of
 series at low and high noise. TimeGym also checks that forecasts carry the
 requested dates, targets and shape, and that they move correctly when the
-history is shifted. Two controlled studies test these checks. In the
-first, every deliberately corrupted output was caught. In the second, four
-bugs placed inside a fitted lag-Ridge pipeline all produced well-formed
-forecasts: a common shift caught one, per-target shifts caught two, and
-only a second, independent implementation caught all four in every
-condition. Fixing one of these bugs made forecasts worse on a random walk
-with drift, so a correct implementation and an accurate forecast are
+history is shifted. Two controlled studies test these checks. The first
+confirms that each check catches the corruption it is built for. In the
+second, four bugs placed inside a fitted lag-Ridge pipeline all produced
+well-formed forecasts. Which shift check sees which bug follows from the
+equivariance the bug preserves. For the two subtle bugs, an alarm on
+realized error stayed at its false-alarm rate except on a seasonal series;
+the same alarm on the distance from the answer key, an exploratory
+addition, caught about four times as many cases; a second, separately
+written implementation caught all four bugs. Fixing one of these bugs
+made forecasts worse on a random walk with drift, so a correct
+implementation and an accurate forecast are
 different goals. Shuffling sample paths left every per-step distribution,
 and so the CRPS, unchanged while breaking the joint paths; joint scores
 and a covariance check detected it. The studies use selected bugs on
@@ -1283,7 +1306,8 @@ cannot be predicted by design; the columns are low and high noise. A
 cell's score is $100\times$ unavoidable$/$(unavoidable $+$ avoidable)
 error over ten series; 100 matches the answer key. Panels show one series:
 gray dots are observations, the black line is the answer key, blue crosses
-are the forecast.}
+are the forecast. Section~\ref{sec:grades} reads the figure and defines
+its Mistakes column.}
 \label{fig:scorecard}
 \end{figure}
 
@@ -1293,7 +1317,10 @@ Reinforcement learning has gyms: standard environments with known rules,
 in which agents are trained and tested~\cite{brockman2016gym}. Forecasting
 benchmarks mostly use real series, where nobody knows the rules and so
 nobody knows the best possible forecast. TimeGym is a gym for forecasting
-pipelines. Its scenarios generate series from known rules, so every test
+pipelines.\footnote{Unrelated to TSGym~\cite{liang2025tsgym}, which
+searches design choices for deep forecasters, and
+TimeSeriesGym~\cite{cai2025timeseriesgym}, a benchmark for
+machine-learning engineering agents; both appeared in 2025.} Its scenarios generate series from known rules, so every test
 case comes with an answer key: the best forecast anyone could make from
 the history alone. A pipeline's error then splits into two parts, what it
 missed and noise nobody could predict, and a scorecard turns that split
@@ -1319,7 +1346,7 @@ Avoidable error & Mean-reference MSE & How far the forecast is from the answer k
 Unavoidable error & $\operatorname{tr}(\Sigma_F)/K$ & The error the answer key itself makes, because the future noise has not happened yet \\[0.3em]
 Shift check & Declared, behavioral or metamorphic relation & A what-if rule: add 10 to the history and the forecast should rise by 10 \\[0.3em]
 Check & Comparator & Any of the five checks compared in Study 2 \\[0.3em]
-Second implementation & Pseudo-oracle & The same algorithm written again, independently \\[0.3em]
+Second implementation & Pseudo-oracle & The same algorithm written again, separately \\[0.3em]
 Known only to the evaluator & Privileged information & True parameters, future change dates \\[0.3em]
 What the forecast stands for & Estimand, functional & A mean, a median or a quantile \\[0.3em]
 Can't learn it & Capability gap & The model cannot learn the pattern; not a bug \\[0.3em]
@@ -1358,14 +1385,23 @@ financial and joint scenarios extend the catalog
 (Sections~\ref{sec:protocol} and~\ref{sec:results}). What they found:
 \begin{itemize}
 \item Bugs that keep the output well formed passed every output check.
-Reversed lags and stale recursive state also passed both shift checks.
-Only the independent implementation caught them in all six conditions;
-the loss alarm caught them only on the seasonal one.
-\item Swapping two target columns passed a common shift but failed
-per-target shifts in every case.
+Which shift check sees which bug follows from the equivariance the bug
+preserves: reversed lags and stale recursive state keep the forecast
+translation equivariant and passed both shift checks, and swapping two
+target columns passed a common shift but failed per-target shifts in
+every case.
+\item Only the separately written implementation caught reversed lags and
+stale state in all six conditions; the loss alarm on realized error
+caught them only on the seasonal one. The same alarm on the distance
+from the answer key, an exploratory addition, caught them in
+\AnswerKeySubtleAlarms{} of \SubtleCases{} cases outside the seasonal
+condition, against \LossSubtleAlarms{} for the loss alarm, with about as
+many false alarms (\AnswerKeyCleanAlarms{} against \LossCleanAlarms{} of
+\CleanNonSeasonalCases{}).
 \item Fixing the stale-state bug made the average error worse on a random
 walk with drift ($+$\RepairDeltaMean{} MSE; only \RepairImproved{} of
-\CasesPerCondition{} cases improved).
+\CasesPerCondition{} cases improved), because the fitted lag coefficients
+are biased towards mean reversion near a unit root.
 \item Shuffling sample paths left every per-step distribution, and so the
 CRPS, exactly unchanged, while energy and variogram scores got worse.
 \item Four covariance checks per suite gave at least one false alarm in
@@ -1445,11 +1481,22 @@ can predict. The scorecard reports their ratio as a score,
 \end{equation}
 where $A$ and $U$ are the avoidable and unavoidable errors averaged over
 the cases of one cell: 100 matches the answer key, and 50 means the
-avoidable error equals the unavoidable one. The avoidable error differs
+avoidable error equals the unavoidable one. The ratio $U/(U+A)$ is the
+answer key's expected squared error divided by the forecast's, a relative
+efficiency: the inverse of the relative MSE of Hyndman and
+Koehler~\cite{hyndman2006another} with the answer key as benchmark, in the
+family of MSE skill scores~\cite{murphy1988skill}. Both terms are
+expectations given the history, so the score carries none of the future
+noise that makes ratios of test-set errors unstable. The avoidable error differs
 from realized test-set MSE, which also contains the future noise. The
 answer key is known only to the evaluator: a learned forecaster must infer
 structure and parameters from a finite history, so a nonzero avoidable
-error alone does not establish an implementation fault.
+error alone does not establish an implementation fault. The right model
+fitted on the same history still loses a few points: the sample mean
+scores about 99 on noise around a fixed level. The 24-lag Ridge of
+Figure~\ref{fig:scorecard} scores \ScorecardNoiseScore{} there; it loses
+those points to estimating 25 coefficients from 96 rows, not to a pattern
+it cannot learn~\cite{clements1998forecasting}.
 
 For level $q\in(0,1)$, the answer key is instead the marginal conditional
 quantile $F_{\theta,hd}^{-1}(q)$, evaluated using pinball loss. A median
@@ -1612,11 +1659,19 @@ bounded set of checks rather than an exhaustive information-flow
 verifier.
 
 \subsection{Grades, seeds, and reports}
+\label{sec:grades}
 
 The scorecard grades capability without calling it a bug. It turns a
 cell's avoidable error into a score from 0 to 100
 (Equation~\eqref{eq:score}) and a band: 90 or more nails it, 70 good, 40
-struggles, below 40 fails. A band describes what the model can learn. The
+struggles, below 40 fails. The edges at 90, 70 and 40 correspond to an
+avoidable error of 0.11, 0.43 and 1.5 times the unavoidable one. With ten
+instances a cell's score varies between seeds by about
+\ScorecardNoiseSD{} points on the noise rows and by up to
+\ScorecardMaxSD{} on the random-walk rows (bootstrap over 30 instances of
+the Figure~\ref{fig:scorecard} pipeline, an exploratory addition in
+\code{experiments/results-v2-followup/}), so a band is indicative when the
+score lies within a few points of its edge. A band describes what the model can learn. The
 underlying diagnostic still returns \code{INCONCLUSIVE}, because no
 single tolerance separates a weak model from a faulty one. A forecast
 that crashes or fails an output check scores zero. A low score can
@@ -1626,6 +1681,21 @@ Coverage computed across one path's dependent horizon-target coordinates
 is also descriptive; it does not establish calibration. The report
 identifies the affected property and a reproducible case, not a unique
 source-code cause. Suspected explanations require an intervention.
+
+For a cell scoring below 70, the Mistakes column of
+Figure~\ref{fig:scorecard} names what dominates its avoidable error. Each
+forecast's error against the answer key splits exactly into a constant
+offset, a straight-line drift over the horizon and the remaining shape,
+and their mean squares add up to the avoidable error. A part that carries
+at least a quarter of it is named (a tenth for a drift large enough to see
+against the noise), and an offset with the same sign in 80\% of instances
+is reported as too high or too low. In Figure~\ref{fig:scorecard} the
+Ridge pipeline nails no row: it loses \ScorecardNoiseLoss{} points on pure
+noise to estimating 24 lags, fails the level shift at low noise because
+older history at the old level pulls its forecast down, and misjudges the
+drift of a random walk. The two noise rows score the same because the
+pipeline is shift and scale equivariant; a model that is not would score
+them differently.
 
 \code{Pipeline(model).scorecard()} runs the scenario grid and returns the
 picture together with a machine-readable report (\code{card.report}) and
@@ -1714,6 +1784,10 @@ trigger it. Failure to reject does not establish equality of covariance
 or distributions. In particular, an ensemble generated by deterministic
 quadrature, dependent Monte Carlo, or a learned parameter estimate does
 not satisfy the stated null merely because it is a useful forecast.
+Its intended use is to test a sampler's code with the true parameters
+injected, the strategy used to validate software for Bayesian
+inference~\cite{geweke2004getting,cook2006validation,modrak2025simulation}.
+A fitted model's ensemble is expected to fail it once the sample is large.
 The Gaussian reference is fully specified in Study 1, which makes
 null simulation feasible but limits direct application to real data.
 
@@ -1937,8 +2011,11 @@ $y$, the empirical energy score is
 \end{equation}
 The implementation includes diagonal sample pairs and scores the finite
 empirical distribution; it is not the fair-ensemble estimator. Euclidean
-norms are not divided by $K$. The variogram score uses $p=1/2$ and equal
-weights over distinct unordered coordinates:
+norms are not divided by $K$. The variogram score uses $p=1/2$, the
+setting that discriminated best among variogram scores and against the
+energy score in a recent simulation
+comparison~\cite{alexander2024evaluating}, and equal weights over distinct
+unordered coordinates:
 \begin{equation}
  \widehat{\mathrm{VS}}_{p} = \binom K2^{-1}
  \sum_{i<j}\left(|y_i-y_j|^p-
@@ -1978,13 +2055,17 @@ fault. Study 2 inserts internal regressions into a fitted pipeline and
 evaluates covariance checks under multiplicity. Every fault in both
 studies was chosen by hand to exercise an implemented check. Each study's parameters,
 seeds, transformations, and tolerances are fixed in its own protocol
-before its evaluation run. The studies ask:
+before its evaluation run; the exploratory follow-up to Study 2
+(protocol 2.1) was chosen afterwards and is labelled wherever it is used.
+The studies ask:
 \begin{description}
-\item[RQ1 (Study 1).] Do the output checks and the covariance check
-detect the corruptions, and how often do they alarm on clean
-forecasts?
-\item[RQ2 (Study 1).] Does removing a known corruption restore the
-affected checks without worsening the tested clean behavior?
+\item[RQ1 (Study 1).] Does the score separate patterns a model cannot
+learn from noise nobody can predict, and does that separation hold across
+noise levels?
+\item[RQ2 (Study 1).] Do the output checks and the covariance check
+detect the corruptions, how often do they alarm on clean forecasts, and
+does removing a corruption restore the clean result? The last part is a
+check of the harness.
 \item[RQ3 (Study 1).] Do joint scores respond when every marginal sample
 distribution is preserved?
 \item[RQ4 (Study 2).] Which checks detect internal regressions that
@@ -2035,9 +2116,9 @@ check.
 
 The output checks provide a baseline for malformed outputs. A
 conventional realized-loss threshold, calibrated on separate clean cases,
-supplies a second comparison. A reported advantage over that threshold
-applies only to the specified calibration and test distribution, not to
-every possible holdout test. We do not report a head-to-head comparison
+supplies a second comparison. Its cutoff, the empirical 95th percentile of
+16 development cases, is a rough baseline; Study 2's conformal rule
+(Equation~\eqref{eq:loss-rank}) is the calibrated one. We do not report a head-to-head comparison
 with sktime conformance tests or the recent synthetic benchmarks.
 
 The sample-dependence experiment begins with correct conditional paths,
@@ -2072,11 +2153,11 @@ clean calibration cases.
 
 Five checks ask different questions: the output checks; the shift check
 with a common shift of 10; the per-series shift check with
-shifts $(7,-11)$; agreement with an independently implemented NumPy
+shifts $(7,-11)$; agreement with a separately written NumPy
 lag-Ridge, the second implementation; and a calibrated realized-MSE alarm. The common
 shift uses the public diagnostic. Per-series shifts and implementation
-agreement are experimental checks. The NumPy implementation independently
-constructs lag columns and solves augmented normal equations with an
+agreement are experimental checks. The NumPy implementation constructs
+its own lag columns and solves augmented normal equations with an
 unpenalized intercept in the original target units. It receives neither
 the future nor generator parameters and checks algorithm agreement, not
 forecast optimality. Numerical comparisons use fixed absolute tolerance
@@ -2107,6 +2188,18 @@ Loss intervals use case-level paired differences within a condition.
 Restoring agreement with the clean algorithm need not improve realized
 loss on every noisy future.
 
+\paragraph{What each check can see.} A shift relation detects exactly the
+faults that break the equivariance it states. This pipeline refits its lag
+and target scalers on the shifted context, so reversing the lag window or
+freezing the recursive state leaves the forecast translation equivariant:
+neither shift check can detect them, whatever the data. Swapping the target
+columns commutes with a common shift but not with unequal shifts, and
+omitting the inverse scaling breaks both. A second implementation compared
+at a tolerance of $10^{-8}$ flags any change to the output. The counts in
+columns C, S, T and N of Table~\ref{tab:supplement-complete} therefore
+confirm predictions; the calibrated loss alarm, the exploratory answer-key
+alarm and the paired losses are the measured results.
+
 \subsection{Study 2: covariance conditions and multiplicity}
 
 Study 2 also evaluates 64 independent four-task suites. Each
@@ -2122,8 +2215,7 @@ family. We report individual rejections, any raw rejection in a suite,
 and any rejection after Holm's step-down adjustment~\cite{holm1979multiple}.
 With sorted valid null $p$-values, Holm compares the $j$th value against
 $0.05/(4-j+1)$ and stops at the first non-rejection. Its family-wise
-guarantee concerns this fixed family; it does not extend to comparisons
-across variants, study sections, or adaptive revisions of the protocol.
+guarantee concerns this fixed family.
 The factorized white-noise shuffle is a negative control: independent
 coordinates remain independent under these sample permutations, so a
 rejection is a false alarm rather than successful defect detection.
@@ -2131,9 +2223,9 @@ rejection is a false alarm rather than successful defect detection.
 \section{Results}
 \label{sec:results}
 
-The first four subsections report Study 1: fault detection and false
-alarms (RQ1 and RQ2), marginal invariance (RQ3), the capability baselines,
-and the inverse-scaling repair. The last two report Study 2: implementation
+The first four subsections report Study 1: fault detection, false
+alarms and repair rechecks (RQ2), marginal invariance (RQ3), the
+capability baselines (RQ1), and the inverse-scaling repair. The last two report Study 2: implementation
 regressions (RQ4) and covariance checks under multiplicity (RQ5).
 
 % BEGIN GENERATED RESULTS
@@ -2173,11 +2265,11 @@ Dependence shuffle & 5/64 [3.4, 17.0] & 0/64 [0.0, 5.7] & 64/64 [94.3, 100.0] \\
 
 \bottomrule\end{tabular}\end{table}
 
-The clean covariance check rejected 6/64 cases (9.4\%; Wilson interval [4.4, 19.0]\%). The observed rate is above the nominal 5\% per-check level, with an interval that includes 5\%. No threshold was changed to remove these false alarms. This run does not establish precise calibration or a family-wise error rate.
+The clean covariance check rejected 6/64 cases (9.4\%; Wilson interval [4.4, 19.0]\%). The observed rate is above the nominal 5\% per-check level, with an interval that includes 5\%. No threshold was changed to remove these false alarms.
 
 The point-MSE cutoff was 4.1853, the empirical 95th percentile from 16 development cases. It alarmed on 5/64 clean cases. It detects invalid point arrays, but ignores index labels, target names, quantiles, and trajectory samples. Where a mutation leaves the point values unchanged, its alarms are identical to the clean alarms and supply no mutation-specific evidence.
 
-Disabling an output mutation restored the exact clean output, including its sample array. Repaired outputs had zero contract violations and the same 6/64 covariance alarms as the clean control. These paired rechecks confirm removal of the corruption; they do not imply that every repaired case receives a statistical pass.
+Disabling an output mutation restored the exact clean output, including its sample array. Repaired outputs had zero contract violations and the same 6/64 covariance alarms as the clean control.
 
 \subsection{Study 1: marginal invariance and joint-score response}
 
@@ -2207,11 +2299,11 @@ Strength & CRPS mean & Energy & Variogram \\ \midrule
 
 \subsection{Study 1: capability profiles}
 
-The univariate capability sweep uses 16 evaluation seeds, three innovation scales, five kinds of series, and three unmodified models. Table~\ref{tab:capability} scores each model against the answer key at the lowest and highest scale: 100 times the unavoidable error over the sum of the unavoidable and avoidable errors (Section~\ref{sec:references}). The full three-scale sweep is in \code{figures/capability-curves.pdf} and \code{capability-summary.csv} of the reproducibility artifact. The fitted AR(1) nails white noise and mean reversion and fails on the trend at both scales. For the zero-drift random walk, the last value is the answer key. Noise matters where a fixed-size pattern competes with it: on the seasonal cycle the fitted AR(1) scores 9 at low noise and 91 at high noise, where the cycle is mostly buried and ignoring it costs little.
+The univariate capability sweep uses 16 evaluation seeds, three innovation scales, five kinds of series, and three unmodified models. Table~\ref{tab:capability} scores each model against the answer key at the lowest and highest scale: 100 times the unavoidable error over the sum of the unavoidable and avoidable errors (Section~\ref{sec:references}). The full three-scale sweep is in \code{figures/capability-curves.pdf} and \code{capability-summary.csv} of the reproducibility artifact. The fitted AR(1) nails white noise and mean reversion and fails on the trend at both scales, and gets worse with noise there: at low noise its coefficient is close to 1 and it follows the line, while at high noise the estimate falls to about \TrendARPhiHigh{} and the forecast reverts towards the mean of the history, below the trend. For the zero-drift random walk, the last value is the answer key. Noise matters where a fixed-size pattern competes with it: on the seasonal cycle the fitted AR(1) scores 9 at low noise and 91 at high noise, where the cycle is mostly buried and ignoring it costs little.
 
 \begin{table}[htbp]\centering\small
 
-\caption{Score out of 100 (100 matches the answer key) at low ($\sigma=0.25$) and high ($\sigma=2$) innovation noise, over 16 cases each. N nails it, G good, S struggles, F fails. White noise, mean reversion and the random walk score the same at both levels: with a zero mean and no drift, a larger $\sigma$ only rescales the series. The package's scorecard adds measurement noise to tell those levels apart.}
+\caption{Score out of 100 (100 matches the answer key) at low ($\sigma=0.25$) and high ($\sigma=2$) innovation noise, over 16 cases each. N nails it, G good, S struggles, F fails. White noise, mean reversion and the random walk score the same at both levels: with a zero mean and no drift, a larger $\sigma$ only rescales the series. The package's scorecard adds measurement noise to tell those levels apart. The frozen Study 1 used $\sigma=0.25$; the package scorecard's low level is 0.5.}
 
 \label{tab:capability}
 
@@ -2268,14 +2360,18 @@ Repair improves MAE at every displayed origin, but the repaired historical mean 
 % Generated vector scene; SVG and PNG use the same plotted geometry.
 \begingroup
 \definecolor{tg18314b}{HTML}{18314b}
+\definecolor{tg19324b}{HTML}{19324b}
 \definecolor{tg19324c}{HTML}{19324c}
 \definecolor{tg626b73}{HTML}{626b73}
 \definecolor{tg808080}{HTML}{808080}
+\definecolor{tga2aeb9}{HTML}{a2aeb9}
+\definecolor{tga4b0bb}{HTML}{a4b0bb}
 \definecolor{tgc2cad2}{HTML}{c2cad2}
 \definecolor{tgc4ccd4}{HTML}{c4ccd4}
 \definecolor{tgc65c16}{HTML}{c65c16}
 \definecolor{tge1e4e7}{HTML}{e1e4e7}
 \definecolor{tge6ebef}{HTML}{e6ebef}
+\definecolor{tgeaeff3}{HTML}{eaeff3}
 \definecolor{tgf1f5f8}{HTML}{f1f5f8}
 \definecolor{tgffffff}{HTML}{ffffff}
 \resizebox{\linewidth}{!}{%
@@ -2283,74 +2379,86 @@ Repair improves MAE at every displayed origin, but the repaired historical mean 
 \path[use as bounding box] (0,0) rectangle (448,328);
 \node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{10bp}{12bp}\selectfont\bfseries}] at (12.000,12.000) {Different checks expose different implementation faults};
 \node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont}] at (12.000,28.000) {Alarms / 384 cases per row: 6 fixed conditions, 64 independent cases per condition.};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (176.800,43.500) {Output};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (176.800,52.500) {checks};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (234.400,43.500) {Scalar};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (234.400,52.500) {shift};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (292.000,43.500) {Target};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (292.000,52.500) {shift*};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (349.600,43.500) {NumPy};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (349.600,52.500) {agreement*};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (407.200,43.500) {Calibrated};
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (407.200,52.500) {MSE*};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (172.000,43.500) {Output};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (172.000,52.500) {checks};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (220.000,43.500) {Scalar};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (220.000,52.500) {shift};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (268.000,43.500) {Target};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (268.000,52.500) {shift*};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (316.000,43.500) {NumPy};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (316.000,52.500) {agreement*};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (364.000,43.500) {Calibrated};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (364.000,52.500) {MSE*};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (412.000,43.500) {Answer};
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont\bfseries}] at (412.000,52.500) {key*†};
 \node[anchor=east,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.4bp}{8.88bp}\selectfont\bfseries}] at (139.000,77.000) {Correct implementation};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,65.700) rectangle (204.900,88.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (176.800,77.000) {0/384};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (206.300,65.700) rectangle (262.500,88.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (234.400,77.000) {0/384};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (263.900,65.700) rectangle (320.100,88.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (292.000,77.000) {0/384};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (321.500,65.700) rectangle (377.700,88.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (349.600,77.000) {0/384};
-\path[fill=tge6ebef,draw=none,line width=0.5bp] (379.100,65.700) rectangle (435.300,88.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (407.200,77.000) {20/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,65.700) rectangle (195.300,88.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (172.000,77.000) {0/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (196.700,65.700) rectangle (243.300,88.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (220.000,77.000) {0/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (244.700,65.700) rectangle (291.300,88.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (268.000,77.000) {0/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (292.700,65.700) rectangle (339.300,88.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (316.000,77.000) {0/384};
+\path[fill=tge6ebef,draw=none,line width=0.5bp] (340.700,65.700) rectangle (387.300,88.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (364.000,77.000) {20/384};
+\path[fill=tgeaeff3,draw=none,line width=0.5bp] (388.700,65.700) rectangle (435.300,88.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (412.000,77.000) {12/384};
 \node[anchor=east,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.4bp}{8.88bp}\selectfont}] at (139.000,101.000) {Reversed prediction lags};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,89.700) rectangle (204.900,112.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (176.800,101.000) {0/384};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (206.300,89.700) rectangle (262.500,112.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (234.400,101.000) {0/384};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (263.900,89.700) rectangle (320.100,112.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (292.000,101.000) {0/384};
-\path[fill=tg18314b,draw=none,line width=0.5bp] (321.500,89.700) rectangle (377.700,112.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (349.600,101.000) {384/384};
-\path[fill=tgc2cad2,draw=none,line width=0.5bp] (379.100,89.700) rectangle (435.300,112.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (407.200,101.000) {84/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,89.700) rectangle (195.300,112.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (172.000,101.000) {0/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (196.700,89.700) rectangle (243.300,112.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (220.000,101.000) {0/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (244.700,89.700) rectangle (291.300,112.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (268.000,101.000) {0/384};
+\path[fill=tg18314b,draw=none,line width=0.5bp] (292.700,89.700) rectangle (339.300,112.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (316.000,101.000) {384/384};
+\path[fill=tgc2cad2,draw=none,line width=0.5bp] (340.700,89.700) rectangle (387.300,112.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (364.000,101.000) {84/384};
+\path[fill=tga4b0bb,draw=none,line width=0.5bp] (388.700,89.700) rectangle (435.300,112.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (412.000,101.000) {136/384};
 \node[anchor=east,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.4bp}{8.88bp}\selectfont}] at (139.000,125.000) {Stale recursive state};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,113.700) rectangle (204.900,136.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (176.800,125.000) {0/384};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (206.300,113.700) rectangle (262.500,136.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (234.400,125.000) {0/384};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (263.900,113.700) rectangle (320.100,136.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (292.000,125.000) {0/384};
-\path[fill=tg18314b,draw=none,line width=0.5bp] (321.500,113.700) rectangle (377.700,136.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (349.600,125.000) {384/384};
-\path[fill=tgc4ccd4,draw=none,line width=0.5bp] (379.100,113.700) rectangle (435.300,136.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (407.200,125.000) {80/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,113.700) rectangle (195.300,136.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (172.000,125.000) {0/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (196.700,113.700) rectangle (243.300,136.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (220.000,125.000) {0/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (244.700,113.700) rectangle (291.300,136.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (268.000,125.000) {0/384};
+\path[fill=tg18314b,draw=none,line width=0.5bp] (292.700,113.700) rectangle (339.300,136.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (316.000,125.000) {384/384};
+\path[fill=tgc4ccd4,draw=none,line width=0.5bp] (340.700,113.700) rectangle (387.300,136.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (364.000,125.000) {80/384};
+\path[fill=tga2aeb9,draw=none,line width=0.5bp] (388.700,113.700) rectangle (435.300,136.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (412.000,125.000) {140/384};
 \node[anchor=east,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.4bp}{8.88bp}\selectfont}] at (139.000,149.000) {Missing inverse scaling};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,137.700) rectangle (204.900,160.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (176.800,149.000) {0/384};
-\path[fill=tg18314b,draw=none,line width=0.5bp] (206.300,137.700) rectangle (262.500,160.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (234.400,149.000) {384/384};
-\path[fill=tg18314b,draw=none,line width=0.5bp] (263.900,137.700) rectangle (320.100,160.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (292.000,149.000) {384/384};
-\path[fill=tg18314b,draw=none,line width=0.5bp] (321.500,137.700) rectangle (377.700,160.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (349.600,149.000) {384/384};
-\path[fill=tg18314b,draw=none,line width=0.5bp] (379.100,137.700) rectangle (435.300,160.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (407.200,149.000) {384/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,137.700) rectangle (195.300,160.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (172.000,149.000) {0/384};
+\path[fill=tg18314b,draw=none,line width=0.5bp] (196.700,137.700) rectangle (243.300,160.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (220.000,149.000) {384/384};
+\path[fill=tg18314b,draw=none,line width=0.5bp] (244.700,137.700) rectangle (291.300,160.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (268.000,149.000) {384/384};
+\path[fill=tg18314b,draw=none,line width=0.5bp] (292.700,137.700) rectangle (339.300,160.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (316.000,149.000) {384/384};
+\path[fill=tg18314b,draw=none,line width=0.5bp] (340.700,137.700) rectangle (387.300,160.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (364.000,149.000) {384/384};
+\path[fill=tg18314b,draw=none,line width=0.5bp] (388.700,137.700) rectangle (435.300,160.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (412.000,149.000) {384/384};
 \node[anchor=east,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{7.4bp}{8.88bp}\selectfont}] at (139.000,173.000) {Swapped recursive targets};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,161.700) rectangle (204.900,184.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (176.800,173.000) {0/384};
-\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (206.300,161.700) rectangle (262.500,184.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (234.400,173.000) {0/384};
-\path[fill=tg18314b,draw=none,line width=0.5bp] (263.900,161.700) rectangle (320.100,184.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (292.000,173.000) {384/384};
-\path[fill=tg18314b,draw=none,line width=0.5bp] (321.500,161.700) rectangle (377.700,184.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (349.600,173.000) {384/384};
-\path[fill=tg19324c,draw=none,line width=0.5bp] (379.100,161.700) rectangle (435.300,184.300);
-\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (407.200,173.000) {382/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (148.700,161.700) rectangle (195.300,184.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (172.000,173.000) {0/384};
+\path[fill=tgf1f5f8,draw=none,line width=0.5bp] (196.700,161.700) rectangle (243.300,184.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont}] at (220.000,173.000) {0/384};
+\path[fill=tg18314b,draw=none,line width=0.5bp] (244.700,161.700) rectangle (291.300,184.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (268.000,173.000) {384/384};
+\path[fill=tg18314b,draw=none,line width=0.5bp] (292.700,161.700) rectangle (339.300,184.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (316.000,173.000) {384/384};
+\path[fill=tg19324c,draw=none,line width=0.5bp] (340.700,161.700) rectangle (387.300,184.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (364.000,173.000) {382/384};
+\path[fill=tg19324b,draw=none,line width=0.5bp] (388.700,161.700) rectangle (435.300,184.300);
+\node[anchor=center,inner sep=0pt,outer sep=0pt,text=tgffffff,font={\sffamily\fontsize{8bp}{9.6bp}\selectfont\bfseries}] at (412.000,173.000) {383/384};
 \draw[color=tg808080,line width=0.65bp,line cap=round] (12.000,89.000) -- (436.000,89.000);
-\node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7bp}{8.4bp}\selectfont}] at (12.000,199.000) {* Checks used only in this experiment. Counts are descriptive; dark cells mean more alarms.};
-\node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7bp}{8.4bp}\selectfont}] at (12.000,213.000) {The clean row retains statistical false alarms; the output checks accept all four faults.};
+\node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7bp}{8.4bp}\selectfont}] at (12.000,199.000) {* Checks used only in this experiment. † Exploratory addition, chosen after the results were known.};
+\node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7bp}{8.4bp}\selectfont}] at (12.000,213.000) {Dark cells mean more alarms. The clean row retains false alarms; the output checks accept all four faults.};
 \draw[color=tge1e4e7,line width=0.6bp,line cap=round] (12.000,225.000) -- (436.000,225.000);
 \node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg18314b,font={\sffamily\fontsize{8.5bp}{10.2bp}\selectfont\bfseries}] at (12.000,240.000) {Restoring the intended algorithm can still increase forecast error};
 \node[anchor=west,inner sep=0pt,outer sep=0pt,text=tg626b73,font={\sffamily\fontsize{7.5bp}{9bp}\selectfont}] at (12.000,255.000) {Random walk with drift / stale recursive state};
@@ -2384,7 +2492,8 @@ six conditions and \CasesPerCondition{} cases per condition
 (\CasesPerRow{} per row). Darker cells mean
 more alarms, including false alarms in the correct-implementation row.
 All four regressions pass the output checks. Asterisks mark experiment-only
-checks.
+checks; the dagger marks the alarm on the distance from the answer key, an
+exploratory addition chosen after the results were known (protocol 2.1).
 Bottom: correcting stale recursion on the random-walk condition with drift restores
 agreement with the declared algorithm, yet increases average realized MSE
 by \RepairDeltaMean{} (paired 95\% t interval
@@ -2405,89 +2514,91 @@ Study 2 evaluates 4 implementation regressions under 6 fixed conditions, with 12
 
 Across the fixed condition--fault pairs, the calibrated loss alarm changed from no alarm to alarm in 861 paired comparisons and from alarm to no alarm in 11. The same clean case appears once per fault in these descriptive paired counts; they are not independent replicates of a pooled statistical test.
 
-The clean implementation reduced mean realized MSE in 22/24 condition--fault pairs; 18/24 paired 95\% t intervals were wholly below zero. The full paired loss differences, intervals, and numbers of individually improved cases are retained in \code{model-repair-losses.csv}. These exploratory intervals are not adjusted across comparisons.
+The clean implementation reduced mean realized MSE in 22/24 condition--fault pairs; 18/24 paired 95\% t intervals were wholly below zero. The full paired loss differences, intervals, and numbers of individually improved cases are retained in \code{model-repair-losses.csv}.
 
 For random walk with drift with stale state, clean-minus-faulty mean MSE was +0.5132 [+0.2122, +0.8141] (paired 95\% t interval); only 21/64 realized forecasts improved. Restoring the declared algorithm can therefore worsen forecast accuracy on a particular condition.
 
+As an exploratory addition, chosen after these results were known (protocol 2.1, \code{experiments/results-v2-followup/}), an alarm on the distance from the answer key, calibrated in the same way, caught reversed lags or stale state in \AnswerKeySubtleAlarms{} of \SubtleCases{} cases outside the seasonal condition, against \LossSubtleAlarms{} for the realized-loss alarm, with \AnswerKeyCleanAlarms{} rather than \LossCleanAlarms{} false alarms in \CleanNonSeasonalCases{} clean cases. It helps most on the autoregressive conditions, where future noise hides these faults, and little on trends and random walks, where the clean pipeline's own estimation error varies too much from case to case.
+
 \begin{table}[p]\centering\scriptsize
 
-\caption{Complete condition-specific implementation alarm counts. Each entry is out of 64 paired cases. C, S, T, N, and L denote contract, scalar shift, target shift, NumPy agreement, and calibrated loss respectively. Clean rows are negative controls; there is no separate corrected-refit row.}
+\caption{Complete condition-specific implementation alarm counts. Each entry is out of 64 paired cases. C, S, T, N, and L denote contract, scalar shift, target shift, NumPy agreement, and calibrated loss respectively. K is the alarm on the distance from the answer key, an exploratory addition chosen after these results were known (protocol 2.1), calibrated like L on the same clean cases. Clean rows are negative controls; there is no separate corrected-refit row.}
 
 \label{tab:supplement-complete}
 
-\begin{tabular}{@{}llrrrrr@{}}\toprule
+\begin{tabular}{@{}llrrrrrr@{}}\toprule
 
-Condition & Branch & C & S & T & N & L \\ \midrule
+Condition & Branch & C & S & T & N & L & K \\ \midrule
 
-White noise & Clean & 0 & 0 & 0 & 0 & 1 \\
+White noise & Clean & 0 & 0 & 0 & 0 & 1 & 3 \\
 
- & Reversed lags & 0 & 0 & 0 & 64 & 2 \\
+ & Reversed lags & 0 & 0 & 0 & 64 & 2 & 5 \\
 
- & Stale state & 0 & 0 & 0 & 64 & 2 \\
+ & Stale state & 0 & 0 & 0 & 64 & 2 & 16 \\
 
- & No inverse scale & 0 & 64 & 64 & 64 & 64 \\
+ & No inverse scale & 0 & 64 & 64 & 64 & 64 & 64 \\
 
- & Target swap & 0 & 0 & 64 & 64 & 64 \\
-
-\addlinespace
-
-Positive AR(1) & Clean & 0 & 0 & 0 & 0 & 3 \\
-
- & Reversed lags & 0 & 0 & 0 & 64 & 5 \\
-
- & Stale state & 0 & 0 & 0 & 64 & 5 \\
-
- & No inverse scale & 0 & 64 & 64 & 64 & 64 \\
-
- & Target swap & 0 & 0 & 64 & 64 & 64 \\
+ & Target swap & 0 & 0 & 64 & 64 & 64 & 64 \\
 
 \addlinespace
 
-Negative AR(1) & Clean & 0 & 0 & 0 & 0 & 1 \\
+Positive AR(1) & Clean & 0 & 0 & 0 & 0 & 3 & 5 \\
 
- & Reversed lags & 0 & 0 & 0 & 64 & 6 \\
+ & Reversed lags & 0 & 0 & 0 & 64 & 5 & 42 \\
 
- & Stale state & 0 & 0 & 0 & 64 & 2 \\
+ & Stale state & 0 & 0 & 0 & 64 & 5 & 28 \\
 
- & No inverse scale & 0 & 64 & 64 & 64 & 64 \\
+ & No inverse scale & 0 & 64 & 64 & 64 & 64 & 64 \\
 
- & Target swap & 0 & 0 & 64 & 64 & 64 \\
-
-\addlinespace
-
-Opposing trends & Clean & 0 & 0 & 0 & 0 & 3 \\
-
- & Reversed lags & 0 & 0 & 0 & 64 & 2 \\
-
- & Stale state & 0 & 0 & 0 & 64 & 6 \\
-
- & No inverse scale & 0 & 64 & 64 & 64 & 64 \\
-
- & Target swap & 0 & 0 & 64 & 64 & 64 \\
+ & Target swap & 0 & 0 & 64 & 64 & 64 & 64 \\
 
 \addlinespace
 
-Seasonal scales & Clean & 0 & 0 & 0 & 0 & 7 \\
+Negative AR(1) & Clean & 0 & 0 & 0 & 0 & 1 & 3 \\
 
- & Reversed lags & 0 & 0 & 0 & 64 & 64 \\
+ & Reversed lags & 0 & 0 & 0 & 64 & 6 & 23 \\
 
- & Stale state & 0 & 0 & 0 & 64 & 64 \\
+ & Stale state & 0 & 0 & 0 & 64 & 2 & 24 \\
 
- & No inverse scale & 0 & 64 & 64 & 64 & 64 \\
+ & No inverse scale & 0 & 64 & 64 & 64 & 64 & 64 \\
 
- & Target swap & 0 & 0 & 64 & 64 & 64 \\
+ & Target swap & 0 & 0 & 64 & 64 & 64 & 64 \\
 
 \addlinespace
 
-Random walk with drift & Clean & 0 & 0 & 0 & 0 & 5 \\
+Opposing trends & Clean & 0 & 0 & 0 & 0 & 3 & 1 \\
 
- & Reversed lags & 0 & 0 & 0 & 64 & 5 \\
+ & Reversed lags & 0 & 0 & 0 & 64 & 2 & 0 \\
 
- & Stale state & 0 & 0 & 0 & 64 & 1 \\
+ & Stale state & 0 & 0 & 0 & 64 & 6 & 8 \\
 
- & No inverse scale & 0 & 64 & 64 & 64 & 64 \\
+ & No inverse scale & 0 & 64 & 64 & 64 & 64 & 64 \\
 
- & Target swap & 0 & 0 & 64 & 64 & 62 \\
+ & Target swap & 0 & 0 & 64 & 64 & 64 & 64 \\
+
+\addlinespace
+
+Seasonal scales & Clean & 0 & 0 & 0 & 0 & 7 & 0 \\
+
+ & Reversed lags & 0 & 0 & 0 & 64 & 64 & 64 \\
+
+ & Stale state & 0 & 0 & 0 & 64 & 64 & 64 \\
+
+ & No inverse scale & 0 & 64 & 64 & 64 & 64 & 64 \\
+
+ & Target swap & 0 & 0 & 64 & 64 & 64 & 64 \\
+
+\addlinespace
+
+Random walk with drift & Clean & 0 & 0 & 0 & 0 & 5 & 0 \\
+
+ & Reversed lags & 0 & 0 & 0 & 64 & 5 & 2 \\
+
+ & Stale state & 0 & 0 & 0 & 64 & 1 & 0 \\
+
+ & No inverse scale & 0 & 64 & 64 & 64 & 64 & 64 \\
+
+ & Target swap & 0 & 0 & 64 & 64 & 62 & 63 \\
 
 \addlinespace
 
@@ -2556,9 +2667,15 @@ same specification whose outputs are compared with those of the program
 under test, within a tolerance for numerical programs~\cite{davis1981pseudo}.
 Guderlei and Mayer extended metamorphic relations to programs with random
 output by comparing the output distributions of related executions with
-hypothesis tests~\cite{guderlei2007statistical}. Oracle issues specific to
-machine learning were reviewed in~\cite{seca2021review}. Table~\ref{tab:oracles}
-maps the evidence used in this paper onto these oracle types.
+hypothesis tests~\cite{guderlei2007statistical}. The oracle problem is
+surveyed by Barr et al.~\cite{barr2015oracle}, metamorphic testing by
+Segura et al. and Chen et al.~\cite{segura2016survey,chen2018metamorphic},
+and the testing of machine-learning systems by Zhang
+et al.~\cite{zhang2022machine}. Metamorphic relations for machine-learning
+classifiers go back to Xie et al.~\cite{xie2011testing}, and oracle issues
+specific to machine learning are reviewed in~\cite{seca2021review}.
+Table~\ref{tab:oracles} maps the evidence used in this paper onto these
+oracle types.
 
 Pham et al.'s CRADLE detects bugs in deep-learning libraries by comparing
 the outputs of different backends~\cite{pham2019cradle}. Tolerance-based
@@ -2570,6 +2687,14 @@ property-based testing, stated beside the code and checked on generated
 inputs~\cite{claessen2000quickcheck}; here the scenario generators supply
 those inputs.
 
+Statistics has a close precedent. Software for Bayesian inference is
+validated by simulating data from known parameters and checking that the
+software's output ranks those parameters
+uniformly~\cite{geweke2004getting,cook2006validation,modrak2025simulation}.
+TimeGym's answer keys and covariance rank check apply the same idea to
+forecasts: the data come from a known law, so the software's output can be
+compared with what that law implies.
+
 \begin{table}[!htb]
 \centering\small
 \begin{tabular}{@{}p{0.26\linewidth}p{0.40\linewidth}p{0.26\linewidth}@{}}
@@ -2579,7 +2704,7 @@ Oracle type & TimeGym mechanism & Source \\
 Partial oracle & Output checks on shape, dates, finiteness, and quantile order & \cite{weyuker1982testing} \\[0.4em]
 Simplified data with known results & Synthetic scenarios with answer keys & \cite{weyuker1982testing} \\[0.4em]
 Known properties & Shift checks & \cite{weyuker1982testing,claessen2000quickcheck} \\[0.4em]
-Pseudo-oracle & Independent NumPy lag-Ridge implementation (experimental) & \cite{davis1981pseudo,pham2019cradle} \\[0.4em]
+Pseudo-oracle & Separately written NumPy lag-Ridge implementation (experimental) & \cite{davis1981pseudo,pham2019cradle} \\[0.4em]
 Statistical test oracle & Reference-covariance rank check; calibrated loss alarm & \cite{guderlei2007statistical} \\
 \bottomrule
 \end{tabular}
@@ -2719,17 +2844,41 @@ CRPS~\cite{gneiting2011comparing}, multivariate rank
 histograms~\cite{gneiting2008assessing} and conditional coverage
 tests~\cite{christoffersen1998evaluating} are outside its scope.
 
+Scoring forecasts against the forecast implied by a known generating
+process is standard in simulation studies of forecasting
+methods~\cite{clements1998forecasting}, and generators with controllable
+features exist for evaluating them~\cite{kang2020gratis,gilpin2021chaos}.
 None of these ingredients is new: the oracle types, metamorphic relations,
 financial stress mechanisms, and proper scores all have the precedents
-cited above. The contribution is their combination into executable
-forecasting checks with recorded assumptions.
+cited above. TimeGym's addition is to state each score against that
+forecast and to pair it with software checks.
 
 \section{Discussion}
 \label{sec:discussion}
 
 \subsection{What the checks establish}
 
-Study 1 confirms the mechanics (RQ1 and RQ2): every corruption
+For RQ1, Table~\ref{tab:capability} and Figure~\ref{fig:scorecard} show
+the score falling where a forecast misses something the history
+determines, not where the noise is large. Each baseline scores highest on
+the kinds of series its structure can follow: the last value is the
+answer key for the random walk, the fitted AR(1) nails white noise and
+mean reversion, and the seasonal naive forecaster leads on the seasonal
+cycle at low noise. On white noise, mean reversion and the random walk
+every score is the same at both noise levels. Where a pattern of fixed size competes with the noise, more
+noise makes ignoring the pattern cheaper, so the scores of the naive
+forecasters on the trend and of the fitted AR(1) on the seasonal cycle
+rise with noise; the fitted AR(1) on the trend is the exception, because
+its estimated coefficient falls with noise (Section~\ref{sec:results}).
+Figure~\ref{fig:scorecard} reads the same way for a fitted pipeline: the
+Ridge pipeline loses points on pure noise only to estimation, and fails
+where older history misleads it or where it must judge a drift
+(Section~\ref{sec:grades}). The separation is built into the score by the
+answer key (Equation~\eqref{eq:risk}); these results show that it reads
+as intended on the families tested, not how the score ranks models on
+real series.
+
+Study 1 confirms the mechanics (RQ2): every corruption
 was detected, and repaired outputs reproduced the clean control exactly,
 including its false alarms. Because the six output corruptions are direct
 violations, this shows that the output checks are implemented correctly,
@@ -2747,14 +2896,31 @@ concrete. Reversing lags and retaining stale
 state pass both shift checks even though they disagree with
 the intended algorithm. A common shift also misses a numeric target swap;
 different target shifts expose it.
-Agreement with a second implementation is more discriminating in this
-corpus, but requires a second specification of the intended algorithm
-and does not establish forecasting optimality.
+These outcomes follow from the equivariance each bug preserves
+(Section~\ref{sec:implementation-study}). Agreement with a separately
+written second implementation is more discriminating in this corpus, but
+requires a second specification of the intended algorithm and does not
+establish forecasting optimality. Where no second implementation exists,
+the answer key itself can serve as the check: the exploratory answer-key
+alarm caught \AnswerKeySubtleAlarms{} of \SubtleCases{} reversed-lag and
+stale-state cases outside the seasonal condition, where the loss alarm
+caught \LossSubtleAlarms{}.
 
 The repair counterexample further separates verification from model
 selection. Correcting the stale-state regression restores the declared
 recursive algorithm, while the random-walk condition with drift favors the faulty
-variant's realized loss. A score can therefore reward a specification
+variant's realized loss. The mechanism is known. Near a unit root,
+least-squares lag coefficients are biased towards mean
+reversion~\cite{kendall1954note,dickey1979distribution}; here the fitted
+own-lag coefficients sum to \OwnLagSumFirst{} and \OwnLagSumSecond{} on
+average. The correct recursion compounds that bias over the horizon,
+while the stale branch repeats its one-step value, close to the naive
+random-walk forecast. The faulty branch is also closer to the answer key
+(clean-minus-faulty avoidable error $+$\ReferenceDeltaMean{}, paired 95\%
+interval \ReferenceDeltaLow{}--\ReferenceDeltaHigh{}; \FaultyCloserCases{}
+of \CasesPerCondition{} cases), so the effect is not future noise.
+Iterated multi-step forecasts are known to suffer when the one-step model
+is biased~\cite{marcellino2006comparison,chevillon2007direct}. A score can therefore reward a specification
 violation, just as a conforming model can forecast poorly. A useful report
 retains both observations rather than relabeling one as the other.
 
@@ -2783,11 +2949,13 @@ advance. Detection rates therefore describe this corpus, not the
 frequency or detectability of naturally occurring faults.
 Mutation analysis rests on the coupling of simple seeded faults to real
 ones~\cite{jia2011analysis}. Generated mutants have been found similar
-in detectability to real faults, whereas hand-seeded faults were harder
-to detect~\cite{andrews2005mutation}; in a corpus of 357 real faults, 73\%
-were coupled to common mutants and 17\% to none~\cite{just2014mutants}.
-The present corpus is hand-selected and therefore closer to the
-hand-seeded case. In deep learning, mutation operators have instead been
+in detectability to real faults, whereas hand-seeded faults, seeded to
+resemble real ones, were harder to detect~\cite{andrews2005mutation}; in a
+corpus of 357 real faults, 73\% were coupled to common mutants and 17\% to
+none~\cite{just2014mutants}. Our faults were instead picked to exercise
+particular checks, a selection that favors detection by those checks.
+Neither kind of corpus says how often the checks catch faults found in
+practice. In deep learning, mutation operators have instead been
 derived from a taxonomy of real
 faults~\cite{humbatova2020taxonomy,humbatova2021deepcrime}, and mutant
 killing is defined statistically because retraining alone moves
@@ -2798,7 +2966,10 @@ corresponding statistical role here.
 Study 2 moves beyond output corruption but does not supply an independent
 corpus of naturally occurring defects. The second implementation verifies
 one intended algorithm; it cannot establish that the algorithm is
-appropriate for every forecasting task. These studies assess detection and
+appropriate for every forecasting task. The second implementation was
+written by the same author, who knew the faults; separately written
+versions can share mistakes~\cite{knight1986experimental}. Writing one is
+practical for a short regression, rarely for a neural network. These studies assess detection and
 repair rechecks, not automatic source-code localization or repair
 discovery.
 
@@ -2806,8 +2977,10 @@ discovery.
 Statistical guarantees apply to their stated nulls and sampling units.
 The covariance rank check (Equation~\eqref{eq:mc}) assumes independent
 reference-law samples; the loss rank check (Equation~\eqref{eq:loss-rank})
-assumes exchangeable clean cases within a condition.
-Numerical conformance tolerances are engineering choices. Holm adjustment
+assumes exchangeable clean cases within a condition. The 64 clean Study 1
+cases do not establish precise calibration of the covariance check or a
+family-wise error rate. Numerical conformance tolerances are engineering
+choices. Holm adjustment
 protects only the declared four-check family. Other reported comparisons
 are descriptive, and fresh evaluation seeds do not undo adaptive choice
 of scenarios, mutations, or diagnostics.
@@ -2824,8 +2997,11 @@ then adds supported interactions. Seeds, parameter regions, and compositions
 must be reserved from model development; a synthetic suite can itself be
 overfit. TimeGym can also serve as a training ground: a model can be tuned
 against the scorecard with 20 or 30 instances per cell, so that close
-candidates are told apart, or with \code{seed=None}, so that every
-evaluation draws fresh series. Fresh seeds give new draws of the same
+candidates are told apart (with ten, a cell's score moves between seeds by
+up to \ScorecardMaxSD{} points; Section~\ref{sec:grades}), or with
+\code{seed=None}, so that every evaluation draws fresh series. The score
+uses the true process, so tuning against it selects for the scenarios'
+mechanisms, not for any one real series. Fresh seeds give new draws of the same
 mechanisms, not new mechanisms, so a model tuned this way still needs
 held-out kinds of series and untouched real data. After pipeline selection, untouched real data and rolling forecast
 origins provide a separate transfer assessment.
@@ -2870,12 +3046,21 @@ Both studies ran with Python \StudyPython, NumPy \StudyNumPy, pandas
 \StudyPandas, and SciPy \StudySciPy; Study 2 also used scikit-learn
 \StudySklearn. The retained Study 2 design requires \StudySklearnFits{}
 scikit-learn fits,
-\StudyNumPySolves{} independent NumPy solves, and \StudyCovarianceChecks{}
+\StudyNumPySolves{} NumPy solves of the second implementation, and \StudyCovarianceChecks{}
 covariance checks containing \StudyCalibrationEnsembles{} calibration
 ensembles. Each study's protocol, raw case records, paired score records,
 source and data fingerprints, and summary tables are saved under
 \code{experiments/results/} and \code{experiments/results-v2/}, and every
-table in Section~\ref{sec:results} is generated from them. Following the
+table in Section~\ref{sec:results} is generated from them. An exploratory
+follow-up, chosen on 13 November 2026 after the Study 2 results were known
+(protocol 2.1), is saved separately under
+\code{experiments/results-v2-followup/}. It re-runs only the fits it
+needs (the clean Study 2 calibration cases, the random-walk evaluation
+cases, the Figure~\ref{fig:scorecard} scorecard with 30 instances, and the
+fitted AR(1) on the Study 1 trend), checks each re-run value against the
+frozen records, and supplies the answer-key alarm, the fitted lag
+coefficients of the random-walk condition, the scorecard precision and
+the fitted AR(1) coefficients quoted in the text. Following the
 reporting recommendations for forecasting research, the records give a
 well-defined data-generating process with its seeds, described methods and
 parameterization, software versions, and defined
@@ -2888,7 +3073,12 @@ in the experiment manifests.
 
 % The standalone builder renders references.bib into a BibTeX-free inline list.
 % BEGIN GENERATED BIBLIOGRAPHY
-\begin{thebibliography}{54}
+\begin{thebibliography}{75}
+\bibitem{alexander2024evaluating}
+C. Alexander, M. Coulon, Y. Han and X. Meng.
+\href{https://doi.org/10.1007/s10479-022-04611-9}{Evaluating the discrimination ability of proper multi-variate scoring rules}.
+\emph{Annals of Operations Research}, 334(1--3), pp. 857--883, 2024.
+
 \bibitem{amershi2019software}
 Saleema Amershi, Andrew Begel, Christian Bird, Robert DeLine, Harald Gall, Ece Kamar, Nachiappan Nagappan, Besmira Nushi and Thomas Zimmermann.
 \href{https://doi.org/10.1109/ICSE-SEIP.2019.00042}{Software Engineering for Machine Learning: A Case Study}.
@@ -2903,6 +3093,11 @@ J. H. Andrews, L. C. Briand and Y. Labiche.
 Andrea Arcuri and Lionel Briand.
 \href{https://doi.org/10.1145/1985793.1985795}{A practical guide for using statistical tests to assess randomized algorithms in software engineering}.
 \emph{Proceedings of the 33rd International Conference on Software Engineering (ICSE 2011)}, pp. 1--10, 2011.
+
+\bibitem{barr2015oracle}
+Earl T. Barr, Mark Harman, Phil McMinn, Muzammil Shahbaz and Shin Yoo.
+\href{https://doi.org/10.1109/TSE.2014.2372785}{The Oracle Problem in Software Testing: A Survey}.
+\emph{IEEE Transactions on Software Engineering}, 41(5), pp. 507--525, 2015.
 
 \bibitem{bergmeir2018note}
 Christoph Bergmeir, Rob J. Hyndman and Bonsoo Koo.
@@ -2929,6 +3124,22 @@ Greg Brockman, Vicki Cheung, Ludwig Pettersson, Jonas Schneider, John Schulman, 
 \href{https://arxiv.org/abs/1606.01540v1}{{OpenAI Gym}}.
 arXiv:1606.01540v1, 2016.
 
+\bibitem{cai2025timeseriesgym}
+Yifu Cai, Xinyu Li, Mononito Goswami, Micha{\l} Wili{\'n}ski, Gus Welter and Artur Dubrawski.
+\href{https://arxiv.org/abs/2505.13291v1}{{TimeSeriesGym}: A Scalable Benchmark for (Time Series) Machine Learning Engineering Agents}.
+arXiv:2505.13291v1, 2025.
+Preprint.
+
+\bibitem{chen2018metamorphic}
+Tsong Yueh Chen, Fei-Ching Kuo, Huai Liu, Pak-Lok Poon, Dave Towey, T. H. Tse and Zhi Quan Zhou.
+\href{https://doi.org/10.1145/3143561}{Metamorphic Testing: A Review of Challenges and Opportunities}.
+\emph{ACM Computing Surveys}, 51(1), pp. 1--27, 2018.
+
+\bibitem{chevillon2007direct}
+Guillaume Chevillon.
+\href{https://doi.org/10.1111/j.1467-6419.2007.00518.x}{Direct Multi-Step Estimation and Forecasting}.
+\emph{Journal of Economic Surveys}, 21(4), pp. 746--785, 2007.
+
 \bibitem{christoffersen1998evaluating}
 Peter F. Christoffersen.
 \href{https://doi.org/10.2307/2527341}{Evaluating Interval Forecasts}.
@@ -2939,10 +3150,25 @@ Koen Claessen and John Hughes.
 \href{https://doi.org/10.1145/351240.351266}{{QuickCheck}: a lightweight tool for random testing of {Haskell} programs}.
 \emph{Proceedings of the Fifth ACM SIGPLAN International Conference on Functional Programming (ICFP 2000)}, pp. 268--279, 2000.
 
+\bibitem{clements1998forecasting}
+Michael Clements and David Hendry.
+\href{https://doi.org/10.1017/CBO9780511599286}{Forecasting Economic Time Series}.
+Cambridge University Press, 1998.
+
+\bibitem{cook2006validation}
+Samantha R. Cook, Andrew Gelman and Donald B. Rubin.
+\href{https://doi.org/10.1198/106186006X136976}{Validation of Software for {Bayesian} Models Using Posterior Quantiles}.
+\emph{Journal of Computational and Graphical Statistics}, 15(3), pp. 675--692, 2006.
+
 \bibitem{davis1981pseudo}
 Martin D. Davis and Elaine J. Weyuker.
 \href{https://doi.org/10.1145/800175.809889}{Pseudo-oracles for non-testable programs}.
 \emph{Proceedings of the ACM '81 Conference}, pp. 254--257, 1981.
+
+\bibitem{dickey1979distribution}
+David A. Dickey and Wayne A. Fuller.
+\href{https://doi.org/10.1080/01621459.1979.10482531}{Distribution of the Estimators for Autoregressive Time Series with a Unit Root}.
+\emph{Journal of the American Statistical Association}, 74(366a), pp. 427--431, 1979.
 
 \bibitem{dutta2020detecting}
 Saikat Dutta, August Shi, Rutvik Choudhary, Zhekun Zhang, Aryaman Jain and Sasa Misailovic.
@@ -2964,11 +3190,21 @@ Jo{\~a}o Gama, Indr{\.e} {\v{Z}}liobait{\.e}, Albert Bifet, Mykola Pechenizkiy a
 \href{https://doi.org/10.1145/2523813}{A survey on concept drift adaptation}.
 \emph{ACM Computing Surveys}, 46(4), Article 44, 37 pages, 2014.
 
+\bibitem{geweke2004getting}
+John Geweke.
+\href{https://doi.org/10.1198/016214504000001132}{Getting It Right: Joint Distribution Tests of Posterior Simulators}.
+\emph{Journal of the American Statistical Association}, 99(467), pp. 799--804, 2004.
+
 \bibitem{ghoroghchian2026simpletimebench}
 Nafiseh Ghoroghchian, Haipeng Zhang, Shuyi Han, Alex Labach and George Stein.
 \href{https://arxiv.org/abs/2610.02058v1}{Foundations without Fundamentals: Zero-Shot Blind Spots in Time Series {FMs}}.
 arXiv:2610.02058v1, 2026.
 Preprint; introduces SimpleTimeBench.
+
+\bibitem{gilpin2021chaos}
+William Gilpin.
+\href{https://arxiv.org/abs/2110.05266v1}{Chaos as an interpretable benchmark for forecasting and data-driven modelling}.
+arXiv:2110.05266v1, 2021.
 
 \bibitem{gneiting2011point}
 Tilmann Gneiting.
@@ -3050,6 +3286,11 @@ Nargiz Humbatova, Gunel Jahangirova and Paolo Tonella.
 \href{https://doi.org/10.1145/3460319.3464825}{{DeepCrime}: mutation testing of deep learning systems based on real faults}.
 \emph{Proceedings of the 30th ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA 2021)}, pp. 67--78, 2021.
 
+\bibitem{hyndman2006another}
+Rob J. Hyndman and Anne B. Koehler.
+\href{https://doi.org/10.1016/j.ijforecast.2006.03.001}{Another look at measures of forecast accuracy}.
+\emph{International Journal of Forecasting}, 22(4), pp. 679--688, 2006.
+
 \bibitem{jahangirova2020empirical}
 Gunel Jahangirova and Paolo Tonella.
 \href{https://doi.org/10.1109/ICST46399.2020.00018}{An Empirical Evaluation of Mutation Operators for Deep Learning Systems}.
@@ -3070,15 +3311,41 @@ R. E. Kalman.
 \href{https://doi.org/10.1115/1.3662552}{A New Approach to Linear Filtering and Prediction Problems}.
 \emph{Journal of Basic Engineering}, 82(1), pp. 35--45, 1960.
 
+\bibitem{kang2020gratis}
+Yanfei Kang, Rob J. Hyndman and Feng Li.
+\href{https://doi.org/10.1002/sam.11461}{{GRATIS}: {GeneRAting} {TIme} Series with diverse and controllable characteristics}.
+\emph{Statistical Analysis and Data Mining: The ASA Data Science Journal}, 13(4), pp. 354--376, 2020.
+
+\bibitem{kendall1954note}
+M. G. Kendall.
+\href{https://doi.org/10.1093/biomet/41.3-4.403}{Note on Bias in the Estimation of Autocorrelation}.
+\emph{Biometrika}, 41(3--4), pp. 403--404, 1954.
+
+\bibitem{knight1986experimental}
+John C. Knight and Nancy G. Leveson.
+\href{https://doi.org/10.1109/TSE.1986.6312924}{An experimental evaluation of the assumption of independence in multiversion programming}.
+\emph{IEEE Transactions on Software Engineering}, SE-12(1), pp. 96--109, 1986.
+
 \bibitem{lei2018conformal}
 Jing Lei, Max G'Sell, Alessandro Rinaldo, Ryan J. Tibshirani and Larry Wasserman.
 \href{https://doi.org/10.1080/01621459.2017.1307116}{Distribution-Free Predictive Inference for Regression}.
 \emph{Journal of the American Statistical Association}, 113(523), pp. 1094--1111, 2018.
 
+\bibitem{liang2025tsgym}
+Shuang Liang, Chaochuan Hou, Xu Yao, Shiping Wang, Minqi Jiang, Songqiao Han and Hailiang Huang.
+\href{https://arxiv.org/abs/2509.17063v1}{{TSGym}: Design Choices for Deep Multivariate Time-Series Forecasting}.
+arXiv:2509.17063v1, 2025.
+Preprint.
+
 \bibitem{makridakis2018objectivity}
 Spyros Makridakis, Vassilios Assimakopoulos and Evangelos Spiliotis.
 \href{https://doi.org/10.1016/j.ijforecast.2018.05.001}{Objectivity, reproducibility and replicability in forecasting research}.
 \emph{International Journal of Forecasting}, 34(4), pp. 835--838, 2018.
+
+\bibitem{marcellino2006comparison}
+Massimiliano Marcellino, James H. Stock and Mark W. Watson.
+\href{https://doi.org/10.1016/j.jeconom.2005.07.020}{A comparison of direct and iterated multistep {AR} methods for forecasting macroeconomic time series}.
+\emph{Journal of Econometrics}, 135(1--2), pp. 499--526, 2006.
 
 \bibitem{matheson1976scoring}
 James E. Matheson and Robert L. Winkler.
@@ -3089,6 +3356,16 @@ James E. Matheson and Robert L. Winkler.
 Robert C. Merton.
 \href{https://doi.org/10.1016/0304-405X(76)90022-2}{Option pricing when underlying stock returns are discontinuous}.
 \emph{Journal of Financial Economics}, 3(1--2), pp. 125--144, 1976.
+
+\bibitem{modrak2025simulation}
+Martin Modr{\'a}k, Angie H. Moon, Shinyoung Kim, Paul B{\"u}rkner, Niko Huurre, Kate{\v{r}}ina Faltejskov{\'a}, Andrew Gelman and Aki Vehtari.
+\href{https://doi.org/10.1214/23-BA1404}{Simulation-Based Calibration Checking for {Bayesian} Computation: The Choice of Test Quantities Shapes Sensitivity}.
+\emph{Bayesian Analysis}, 20(2), pp. 461--488, 2025.
+
+\bibitem{murphy1988skill}
+Allan H. Murphy.
+\href{https://doi.org/10.1175/1520-0493(1988)116<2417:SSBOTM>2.0.CO;2}{Skill Scores Based on the Mean Square Error and Their Relationships to the Correlation Coefficient}.
+\emph{Monthly Weather Review}, 116(12), pp. 2417--2424, 1988.
 
 \bibitem{nejadgholi2019study}
 Mahdi Nejadgholi and Jinqiu Yang.
@@ -3126,6 +3403,11 @@ Diogo Seca.
 \href{https://arxiv.org/abs/2105.01404v1}{{TimeGym}: Debugging for Time Series Modeling in Python}.
 arXiv:2105.01404v1, 2021.
 
+\bibitem{segura2016survey}
+Sergio Segura, Gordon Fraser, Ana B. Sanchez and Antonio Ruiz-Cortes.
+\href{https://doi.org/10.1109/TSE.2016.2532875}{A Survey on Metamorphic Testing}.
+\emph{IEEE Transactions on Software Engineering}, 42(9), pp. 805--824, 2016.
+
 \bibitem{sktimeConformance}
 {sktime developers}.
 \href{https://www.sktime.net/docs/api-reference/sktimeutilsestimator-checkscheck-estimator/}{Estimator {API} conformance: check\_estimator}.
@@ -3158,10 +3440,20 @@ Elaine J. Weyuker.
 \href{https://doi.org/10.1093/comjnl/25.4.465}{On Testing Non-Testable Programs}.
 \emph{The Computer Journal}, 25(4), pp. 465--470, 1982.
 
+\bibitem{xie2011testing}
+Xiaoyuan Xie, Joshua W. K. Ho, Christian Murphy, Gail Kaiser, Baowen Xu and Tsong Yueh Chen.
+\href{https://doi.org/10.1016/j.jss.2010.11.920}{Testing and validating machine learning classifiers by metamorphic testing}.
+\emph{Journal of Systems and Software}, 84(4), pp. 544--558, 2011.
+
 \bibitem{yule1927method}
 G. Udny Yule.
 \href{https://doi.org/10.1098/rsta.1927.0007}{On a Method of Investigating Periodicities in Disturbed Series, with Special Reference to {Wolfer's} Sunspot Numbers}.
 \emph{Philosophical Transactions of the Royal Society of London. Series A}, 226, pp. 267--298, 1927.
+
+\bibitem{zhang2022machine}
+Jie M. Zhang, Mark Harman, Lei Ma and Yang Liu.
+\href{https://doi.org/10.1109/TSE.2019.2962027}{Machine Learning Testing: Survey, Landscapes and Horizons}.
+\emph{IEEE Transactions on Software Engineering}, 48(1), pp. 1--36, 2022.
 
 \end{thebibliography}
 % END GENERATED BIBLIOGRAPHY

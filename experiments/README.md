@@ -126,6 +126,43 @@ The supplement renderer also emits `paper/generated-macros.tex` for caption
 numbers (`RepairDeltaMean`, `RepairDeltaLow`, `RepairDeltaHigh`, `RepairImproved`,
 `CasesPerCondition`, and `CasesPerRow`). It checks these against paired raw losses.
 
+## Exploratory follow-up to Study 2 (protocol 2.1)
+
+`protocol-v2-followup.json` declares four analyses chosen on 13 November 2026,
+after the protocol 2.0 results were known. They are exploratory, and the paper
+labels every number from them as such. The runner imports the frozen Study 1
+and Study 2 code, re-runs only the fits it needs, checks each re-run value
+against the frozen records (within 1e-9), and never writes to `results/` or
+`results-v2/`:
+
+```bash
+.venv/bin/python -m experiments.run_followup --output /tmp/timegym-followup-repeat
+cmp experiments/results-v2-followup/results.json /tmp/timegym-followup-repeat/results.json
+```
+
+It takes well under a minute on one CPU thread. The record answers:
+
+- **Answer-key alarm.** The 768 clean Study 2 calibration fits are re-run; the
+  same conformal rule at 5% is applied to each case's mean squared distance
+  from the answer key, and the threshold to the frozen evaluation records'
+  `mean_reference_mse`. Counts appear beside the frozen loss alarm in
+  column K of the complete Study 2 table and in the diagnostic-evidence figure.
+- **Repair mechanism** on the random walk with drift: own-lag coefficient sums
+  of the clean fit, the per-step distance from the answer key of the clean and
+  stale-state branches, and the frozen paired distance from the answer key.
+- **Scorecard precision:** the Figure 1 pipeline with 30 instances per cell and
+  a bootstrap of ten-instance scores.
+- **Fitted AR(1) on the trend** in the Study 1 capability setting: its mean
+  coefficient and its mean offset from the answer key.
+
+The `results-v2-followup/` output contains `results.json` (including the 768
+stored calibration distances) and `manifest.json` (protocol, results and
+frozen-input digests, source digests, Python, library and package versions).
+`experiments/render_followup.py` validates the record and supplies its macros
+and table column to `render_results` and `render_supplement`; both accept
+`--followup-dir`. The tests recompute the thresholds and counts from the stored
+distances and the frozen records without re-running any fit.
+
 ### Frozen-record migration
 
 The 30 October 2026 update did not rerun either study. `migrate_frozen.py` removed
