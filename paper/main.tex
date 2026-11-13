@@ -209,7 +209,11 @@ version also argued that fresh synthetic series make multiple-testing
 corrections unnecessary, and that a pattern learned on synthetic series
 will be learned on real data. Fresh draws do not remove the need for
 those corrections, and synthetic tests speak only about the mechanisms
-they contain. Everything described here is new work.
+they contain. That limit is the one accepted in code verification for
+numerical simulation, where a benchmark with a known solution need not be
+realistic because verification is a mathematical
+exercise~\cite{roache2002code}; whether a model suits a real series is a
+separate question of validation. Everything described here is new work.
 
 \section{Forecasting tasks and answer keys}
 \label{sec:references}
@@ -265,7 +269,11 @@ fitted on the same history still loses a few points: the sample mean
 scores about 99 on noise around a fixed level. The 24-lag Ridge of
 Figure~\ref{fig:scorecard} scores \ScorecardNoiseScore{} there; it loses
 those points to estimating 25 coefficients from 96 rows, not to a pattern
-it cannot learn~\cite{clements1998forecasting}.
+it cannot learn~\cite{clements1998forecasting}. For a fitted autoregression
+this estimation loss is of order $1/n$ in the history
+length~\cite{fuller1981properties}, and comparisons of nested forecasting
+models adjust for it when the extra parameters are truly
+zero~\cite{clark2007approximately}.
 
 For level $q\in(0,1)$, the answer key is instead the marginal conditional
 quantile $F_{\theta,hd}^{-1}(q)$, evaluated using pinball loss. A median
@@ -555,7 +563,7 @@ quadrature, dependent Monte Carlo, or a learned parameter estimate does
 not satisfy the stated null merely because it is a useful forecast.
 Its intended use is to test a sampler's code with the true parameters
 injected, the strategy used to validate software for Bayesian
-inference~\cite{geweke2004getting,cook2006validation,modrak2025simulation}.
+inference~\cite{geweke2004getting,cook2006validation,talts2020validating,modrak2025simulation}.
 A fitted model's ensemble is expected to fail it once the sample is large.
 The Gaussian reference is fully specified in Study 1, which makes
 null simulation feasible but limits direct application to real data.
@@ -882,10 +890,19 @@ those inputs.
 Statistics has a close precedent. Software for Bayesian inference is
 validated by simulating data from known parameters and checking that the
 software's output ranks those parameters
-uniformly~\cite{geweke2004getting,cook2006validation,modrak2025simulation}.
+uniformly~\cite{geweke2004getting,cook2006validation,talts2020validating,modrak2025simulation}.
+Talts et al. replaced the earlier quantile test, which raises false
+alarms on finite, correlated samples, with rank
+statistics~\cite{talts2020validating}.
 TimeGym's answer keys and covariance rank check apply the same idea to
 forecasts: the data come from a known law, so the software's output can be
 compared with what that law implies.
+
+A review of testing for scientific software found no empirical study of
+how well pseudo-oracles and analytical solutions detect subtle faults, and
+notes that an analytical solution can expose an error that two
+implementations share~\cite{kanewala2014testing}. The answer keys and the
+second implementation are complementary for that reason.
 
 \begin{table}[!htb]
 \centering\small
@@ -916,6 +933,9 @@ errors. SimpleTimeBench uses elementary patterns and leading covariates
 to diagnose time-series foundation
 models~\cite{ghoroghchian2026simpletimebench}; it describes the ideal
 forecast for each process and scores models against naive baselines.
+SynForecast, a library of 32 controllable generators released in November
+2026, covers the generator side alone: it reports no optimal forecast for
+its series~\cite{sprangers2026synforecast}.
 
 For the financial scenarios in the catalog
 (Appendix~\ref{app:extended}), the direct prior work is
@@ -1040,10 +1060,21 @@ Scoring forecasts against the forecast implied by a known generating
 process is standard in simulation studies of forecasting
 methods~\cite{clements1998forecasting}, and generators with controllable
 features exist for evaluating them~\cite{kang2020gratis,gilpin2021chaos}.
+The distance from an optimal forecast has also been reported directly, for
+transformers trained on linear dynamical systems, as the squared difference
+from the Kalman filter~\cite{akram2026transformers}. On real series, where
+the floor is unknown, Feng et al. estimate a lower bound on linear forecast
+error from the spectrum, arguing that standard metrics mix a model's
+performance with the data's own unpredictability~\cite{feng2026beyond}.
+Ecological forecasting draws the same line between intrinsic and realized
+predictability~\cite{pennekamp2019intrinsic}, and Diebold and Kilian
+measure predictability itself as a ratio of expected
+losses~\cite{diebold2001measuring}.
 None of these ingredients is new: the oracle types, metamorphic relations,
 financial stress mechanisms, and proper scores all have the precedents
-cited above. TimeGym's addition is to state each score against that
-forecast and to pair it with software checks.
+cited above. TimeGym's addition is to state every score of a test suite
+against that forecast, on stationary and non-stationary series alike, and
+to pair the score with software checks.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -1089,7 +1120,10 @@ state pass both shift checks even though they disagree with
 the intended algorithm. A common shift also misses a numeric target swap;
 different target shifts expose it.
 These outcomes follow from the equivariance each bug preserves
-(Section~\ref{sec:implementation-study}). Agreement with a separately
+(Section~\ref{sec:implementation-study}). A weak showing for target shifts
+has precedent: over 4,430 mutants of linear-regression code, relations
+that shift the dependent variable detected fewer faults than relations on
+the inputs~\cite{luu2021testing}. Agreement with a separately
 written second implementation is more discriminating in this corpus, but
 requires a second specification of the intended algorithm and does not
 establish forecasting optimality. Where no second implementation exists,

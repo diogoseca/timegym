@@ -1440,7 +1440,11 @@ version also argued that fresh synthetic series make multiple-testing
 corrections unnecessary, and that a pattern learned on synthetic series
 will be learned on real data. Fresh draws do not remove the need for
 those corrections, and synthetic tests speak only about the mechanisms
-they contain. Everything described here is new work.
+they contain. That limit is the one accepted in code verification for
+numerical simulation, where a benchmark with a known solution need not be
+realistic because verification is a mathematical
+exercise~\cite{roache2002code}; whether a model suits a real series is a
+separate question of validation. Everything described here is new work.
 
 \section{Forecasting tasks and answer keys}
 \label{sec:references}
@@ -1496,7 +1500,11 @@ fitted on the same history still loses a few points: the sample mean
 scores about 99 on noise around a fixed level. The 24-lag Ridge of
 Figure~\ref{fig:scorecard} scores \ScorecardNoiseScore{} there; it loses
 those points to estimating 25 coefficients from 96 rows, not to a pattern
-it cannot learn~\cite{clements1998forecasting}.
+it cannot learn~\cite{clements1998forecasting}. For a fitted autoregression
+this estimation loss is of order $1/n$ in the history
+length~\cite{fuller1981properties}, and comparisons of nested forecasting
+models adjust for it when the extra parameters are truly
+zero~\cite{clark2007approximately}.
 
 For level $q\in(0,1)$, the answer key is instead the marginal conditional
 quantile $F_{\theta,hd}^{-1}(q)$, evaluated using pinball loss. A median
@@ -1786,7 +1794,7 @@ quadrature, dependent Monte Carlo, or a learned parameter estimate does
 not satisfy the stated null merely because it is a useful forecast.
 Its intended use is to test a sampler's code with the true parameters
 injected, the strategy used to validate software for Bayesian
-inference~\cite{geweke2004getting,cook2006validation,modrak2025simulation}.
+inference~\cite{geweke2004getting,cook2006validation,talts2020validating,modrak2025simulation}.
 A fitted model's ensemble is expected to fail it once the sample is large.
 The Gaussian reference is fully specified in Study 1, which makes
 null simulation feasible but limits direct application to real data.
@@ -2690,10 +2698,19 @@ those inputs.
 Statistics has a close precedent. Software for Bayesian inference is
 validated by simulating data from known parameters and checking that the
 software's output ranks those parameters
-uniformly~\cite{geweke2004getting,cook2006validation,modrak2025simulation}.
+uniformly~\cite{geweke2004getting,cook2006validation,talts2020validating,modrak2025simulation}.
+Talts et al. replaced the earlier quantile test, which raises false
+alarms on finite, correlated samples, with rank
+statistics~\cite{talts2020validating}.
 TimeGym's answer keys and covariance rank check apply the same idea to
 forecasts: the data come from a known law, so the software's output can be
 compared with what that law implies.
+
+A review of testing for scientific software found no empirical study of
+how well pseudo-oracles and analytical solutions detect subtle faults, and
+notes that an analytical solution can expose an error that two
+implementations share~\cite{kanewala2014testing}. The answer keys and the
+second implementation are complementary for that reason.
 
 \begin{table}[!htb]
 \centering\small
@@ -2724,6 +2741,9 @@ errors. SimpleTimeBench uses elementary patterns and leading covariates
 to diagnose time-series foundation
 models~\cite{ghoroghchian2026simpletimebench}; it describes the ideal
 forecast for each process and scores models against naive baselines.
+SynForecast, a library of 32 controllable generators released in November
+2026, covers the generator side alone: it reports no optimal forecast for
+its series~\cite{sprangers2026synforecast}.
 
 For the financial scenarios in the catalog
 (Appendix~\ref{app:extended}), the direct prior work is
@@ -2848,10 +2868,21 @@ Scoring forecasts against the forecast implied by a known generating
 process is standard in simulation studies of forecasting
 methods~\cite{clements1998forecasting}, and generators with controllable
 features exist for evaluating them~\cite{kang2020gratis,gilpin2021chaos}.
+The distance from an optimal forecast has also been reported directly, for
+transformers trained on linear dynamical systems, as the squared difference
+from the Kalman filter~\cite{akram2026transformers}. On real series, where
+the floor is unknown, Feng et al. estimate a lower bound on linear forecast
+error from the spectrum, arguing that standard metrics mix a model's
+performance with the data's own unpredictability~\cite{feng2026beyond}.
+Ecological forecasting draws the same line between intrinsic and realized
+predictability~\cite{pennekamp2019intrinsic}, and Diebold and Kilian
+measure predictability itself as a ratio of expected
+losses~\cite{diebold2001measuring}.
 None of these ingredients is new: the oracle types, metamorphic relations,
 financial stress mechanisms, and proper scores all have the precedents
-cited above. TimeGym's addition is to state each score against that
-forecast and to pair it with software checks.
+cited above. TimeGym's addition is to state every score of a test suite
+against that forecast, on stationary and non-stationary series alike, and
+to pair the score with software checks.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -2897,7 +2928,10 @@ state pass both shift checks even though they disagree with
 the intended algorithm. A common shift also misses a numeric target swap;
 different target shifts expose it.
 These outcomes follow from the equivariance each bug preserves
-(Section~\ref{sec:implementation-study}). Agreement with a separately
+(Section~\ref{sec:implementation-study}). A weak showing for target shifts
+has precedent: over 4,430 mutants of linear-regression code, relations
+that shift the dependent variable detected fewer faults than relations on
+the inputs~\cite{luu2021testing}. Agreement with a separately
 written second implementation is more discriminating in this corpus, but
 requires a second specification of the intended algorithm and does not
 establish forecasting optimality. Where no second implementation exists,
@@ -3073,7 +3107,13 @@ in the experiment manifests.
 
 % The standalone builder renders references.bib into a BibTeX-free inline list.
 % BEGIN GENERATED BIBLIOGRAPHY
-\begin{thebibliography}{75}
+\begin{thebibliography}{86}
+\bibitem{akram2026transformers}
+Usman Akram and Haris Vikalo.
+\href{https://arxiv.org/abs/2410.16546v3}{Transformers as Implicit State Estimators: In-Context Learning in Dynamical Systems}.
+arXiv:2410.16546v3, 2026.
+Preprint.
+
 \bibitem{alexander2024evaluating}
 C. Alexander, M. Coulon, Y. Han and X. Meng.
 \href{https://doi.org/10.1007/s10479-022-04611-9}{Evaluating the discrimination ability of proper multi-variate scoring rules}.
@@ -3150,6 +3190,11 @@ Koen Claessen and John Hughes.
 \href{https://doi.org/10.1145/351240.351266}{{QuickCheck}: a lightweight tool for random testing of {Haskell} programs}.
 \emph{Proceedings of the Fifth ACM SIGPLAN International Conference on Functional Programming (ICFP 2000)}, pp. 268--279, 2000.
 
+\bibitem{clark2007approximately}
+Todd E. Clark and Kenneth D. West.
+\href{https://doi.org/10.1016/j.jeconom.2006.05.023}{Approximately normal tests for equal predictive accuracy in nested models}.
+\emph{Journal of Econometrics}, 138(1), pp. 291--311, 2007.
+
 \bibitem{clements1998forecasting}
 Michael Clements and David Hendry.
 \href{https://doi.org/10.1017/CBO9780511599286}{Forecasting Economic Time Series}.
@@ -3170,6 +3215,11 @@ David A. Dickey and Wayne A. Fuller.
 \href{https://doi.org/10.1080/01621459.1979.10482531}{Distribution of the Estimators for Autoregressive Time Series with a Unit Root}.
 \emph{Journal of the American Statistical Association}, 74(366a), pp. 427--431, 1979.
 
+\bibitem{diebold2001measuring}
+Francis X. Diebold and Lutz Kilian.
+\href{https://doi.org/10.1002/jae.619}{Measuring predictability: theory and macroeconomic applications}.
+\emph{Journal of Applied Econometrics}, 16(6), pp. 657--669, 2001.
+
 \bibitem{dutta2020detecting}
 Saikat Dutta, August Shi, Rutvik Choudhary, Zhekun Zhang, Aryaman Jain and Sasa Misailovic.
 \href{https://doi.org/10.1145/3395363.3397366}{Detecting flaky tests in probabilistic and machine learning applications}.
@@ -3184,6 +3234,17 @@ Anurag Dwarakanath, Manish Ahuja, Sanjay Podder, Silja Vinu, Arijit Naskar and {
 Robert F. Engle.
 \href{https://doi.org/10.2307/1912773}{Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of {United Kingdom} Inflation}.
 \emph{Econometrica}, 50(4), pp. 987--1007, 1982.
+
+\bibitem{feng2026beyond}
+Wanjin Feng, Yuan Yuan, Jingtao Ding and Yong Li.
+\href{https://arxiv.org/abs/2509.23074v3}{Beyond Model Ranking: Predictability-Aligned Evaluation for Time Series Forecasting}.
+arXiv:2509.23074v3, 2026.
+Preprint.
+
+\bibitem{fuller1981properties}
+Wayne A. Fuller and David P. Hasza.
+\href{https://doi.org/10.1080/01621459.1981.10477622}{Properties of Predictors for Autoregressive Time Series}.
+\emph{Journal of the American Statistical Association}, 76(373), pp. 155--161, 1981.
 
 \bibitem{gama2014drift}
 Jo{\~a}o Gama, Indr{\.e} {\v{Z}}liobait{\.e}, Albert Bifet, Mykola Pechenizkiy and Abdelhamid Bouchachia.
@@ -3311,6 +3372,11 @@ R. E. Kalman.
 \href{https://doi.org/10.1115/1.3662552}{A New Approach to Linear Filtering and Prediction Problems}.
 \emph{Journal of Basic Engineering}, 82(1), pp. 35--45, 1960.
 
+\bibitem{kanewala2014testing}
+Upulee Kanewala and James M. Bieman.
+\href{https://doi.org/10.1016/j.infsof.2014.05.006}{Testing scientific software: A systematic literature review}.
+\emph{Information and Software Technology}, 56(10), pp. 1219--1232, 2014.
+
 \bibitem{kang2020gratis}
 Yanfei Kang, Rob J. Hyndman and Feng Li.
 \href{https://doi.org/10.1002/sam.11461}{{GRATIS}: {GeneRAting} {TIme} Series with diverse and controllable characteristics}.
@@ -3336,6 +3402,11 @@ Shuang Liang, Chaochuan Hou, Xu Yao, Shiping Wang, Minqi Jiang, Songqiao Han and
 \href{https://arxiv.org/abs/2509.17063v1}{{TSGym}: Design Choices for Deep Multivariate Time-Series Forecasting}.
 arXiv:2509.17063v1, 2025.
 Preprint.
+
+\bibitem{luu2021testing}
+Quang-Hung Luu, Man F. Lau, Sebastian P. H. Ng and Tsong Yueh Chen.
+\href{https://doi.org/10.1016/j.jss.2021.111062}{Testing multiple linear regression systems with metamorphic testing}.
+\emph{Journal of Systems and Software}, 182, Article 111062, 2021.
 
 \bibitem{makridakis2018objectivity}
 Spyros Makridakis, Vassilios Assimakopoulos and Evangelos Spiliotis.
@@ -3372,6 +3443,11 @@ Mahdi Nejadgholi and Jinqiu Yang.
 \href{https://doi.org/10.1109/ASE.2019.00078}{A Study of Oracle Approximations in Testing Deep Learning Libraries}.
 \emph{2019 34th IEEE/ACM International Conference on Automated Software Engineering (ASE)}, pp. 785--796, 2019.
 
+\bibitem{pennekamp2019intrinsic}
+Frank Pennekamp, Alison C. Iles, Joshua Garland, Georgina Brennan, Ulrich Brose, Ursula Gaedke, Ute Jacob, Pavel Kratina, Blake Matthews, Stephan Munch, Mark Novak, Gian Marco Palamara, Bj{\"o}rn C. Rall, Benjamin Rosenbaum, Andrea Tabi, Colette Ward, Richard Williams, Hao Ye and Owen L. Petchey.
+\href{https://doi.org/10.1002/ecm.1359}{The intrinsic predictability of ecological time series and its potential to guide forecasting}.
+\emph{Ecological Monographs}, 89(2), Article e01359, 2019.
+
 \bibitem{pham2019cradle}
 Hung Viet Pham, Thibaud Lutellier, Weizhen Qi and Lin Tan.
 \href{https://doi.org/10.1109/ICSE.2019.00107}{{CRADLE}: Cross-Backend Validation to Detect and Localize Bugs in Deep Learning Libraries}.
@@ -3387,6 +3463,11 @@ Xiangfei Qiu, Jilin Hu, Lekui Zhou, Xingjian Wu, Junyang Du, Buang Zhang, Chenju
 \href{https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/AirPassengers.html}{{AirPassengers}: Monthly Airline Passenger Numbers 1949--1960}.
 2026.
 R datasets documentation; accessed 30 October 2026.
+
+\bibitem{roache2002code}
+Patrick J. Roache.
+\href{https://doi.org/10.1115/1.1436090}{Code Verification by the Method of Manufactured Solutions}.
+\emph{Journal of Fluids Engineering}, 124(1), pp. 4--10, 2002.
 
 \bibitem{scheuerer2015variogram}
 Michael Scheuerer and Thomas M. Hamill.
@@ -3419,10 +3500,22 @@ Evangelos Spiliotis, Andreas Kouloumos, Vassilios Assimakopoulos and Spyros Makr
 \href{https://doi.org/10.1016/j.ijforecast.2018.12.007}{Are forecasting competitions data representative of the reality?}.
 \emph{International Journal of Forecasting}, 36(1), pp. 37--53, 2020.
 
+\bibitem{sprangers2026synforecast}
+Olivier Sprangers, Cristian Challu, Jan Rathfelder, Han Wang and Max Mergenthaler Canseco.
+\href{https://arxiv.org/abs/2611.02802v1}{{SynForecast}: Controlled Synthetic Time Series for Forecasting Research}.
+arXiv:2611.02802v1, 2026.
+Preprint.
+
 \bibitem{sun2026finstressts}
 Jiaze Sun, Kelvin J. L. Koa, Ruiyang Ni, Yize Liu, Haonan Chen and Ke-Wei Huang.
 \href{https://doi.org/10.1145/3770855.3817578}{{FinStressTS}: A Parametric Synthetic Benchmark for Time-Series Forecasting in Finance}.
 \emph{Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining}, 2, pp. 9836--9847, 2026.
+
+\bibitem{talts2020validating}
+Sean Talts, Michael Betancourt, Daniel Simpson, Aki Vehtari and Andrew Gelman.
+\href{https://arxiv.org/abs/1804.06788v2}{Validating {Bayesian} Inference Algorithms with Simulation-Based Calibration}.
+arXiv:1804.06788v2, 2020.
+Preprint.
 
 \bibitem{tan2025syntsbench}
 Qitai Tan, Yiyun Chen, Mo Li, Ruiwen Gu, Yilin Su and Xiao-Ping Zhang.
