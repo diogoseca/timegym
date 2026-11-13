@@ -1,0 +1,144 @@
+{
+  "frozen_inputs_sha256": {
+    "experiments/protocol-v2-followup.json": "9ec8e7b2c7b62344d128d0583afaa70b3f166e70edc9fc2be10d8d1f57ccf5dd",
+    "experiments/protocol-v2.json": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30",
+    "experiments/results-v2/results.json": "13b1228e7124b95f30953c8ee23e5189087e4c45d34de12c509ae9433a90b5b5"
+  },
+  "package_version": "1.4.0",
+  "platform": "Linux-6.18.44-fc-v445-x86_64-with-glibc2.39",
+  "protocol": {
+    "chosen_on": "2026-11-13",
+    "extends": "experiments/protocol-v2-followup.json",
+    "frozen_inputs": {
+      "follow_up_protocol": {
+        "path": "experiments/protocol-v2-followup.json",
+        "sha256": "9ec8e7b2c7b62344d128d0583afaa70b3f166e70edc9fc2be10d8d1f57ccf5dd"
+      },
+      "study_2_protocol": {
+        "path": "experiments/protocol-v2.json",
+        "sha256": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30"
+      },
+      "study_2_results": {
+        "path": "experiments/results-v2/results.json",
+        "sha256": "13b1228e7124b95f30953c8ee23e5189087e4c45d34de12c509ae9433a90b5b5"
+      }
+    },
+    "paired_answer_key": {
+      "alpha": 0.05,
+      "conditions": "All six Study 2 model conditions, in protocol 2.0 order.",
+      "difference": "For each condition, fault and evaluation seed i: d_i = mean_reference_mse(fault, i) - mean_reference_mse(clean, i).",
+      "evaluation_seed_counts": [
+        64,
+        30,
+        10
+      ],
+      "faults": [
+        "reverse_prediction_lags",
+        "stale_recursive_state",
+        "omit_inverse_target_scaling",
+        "swap_recursive_targets"
+      ],
+      "inputs": "model.records of experiments/results-v2/results.json: mean_reference_mse of every evaluation case.",
+      "multiplicity": "Holm step-down across the 24 pairs of condition and fault, with experiments.run_supplement.holm_rejections.",
+      "null": "The faulty branch is no further from the answer key than the clean one: the paired differences are symmetric about zero.",
+      "purpose": "Ask whether each faulty branch is further from the answer key than the clean pipeline on the same series.",
+      "seed_order": "The first n evaluation seeds of each condition in ascending order. 64 is the full protocol 2.0 evaluation set; 30 and 10 are a sensitivity check of the sample size.",
+      "summaries": [
+        "mean distance of the clean branch",
+        "mean difference",
+        "cases with a positive difference",
+        "p-value",
+        "Holm decision",
+        "pairs flagged and pairs not flagged"
+      ],
+      "test": {
+        "draw": "generator.choice([-1, 1], size=(flips, n)) for each pair",
+        "flips": 9999,
+        "generator": "numpy.random.default_rng",
+        "kind": "one-sided sign-flip test of the mean difference",
+        "order": "One generator shared by every pair: the evaluation-seed counts in the order below, then conditions in protocol 2.0 order, then faults in the order above.",
+        "p_value": "(1 + number of flipped means >= the observed mean) / (flips + 1)",
+        "seed": 0
+      }
+    },
+    "protocol_version": "2.2",
+    "selection": "These analyses were chosen on 2026-11-13, after the protocol 2.0 results and the protocol 2.1 follow-up were known. They are exploratory: none of them was declared before the Study 2 evaluation run, and their tests, families and summaries were chosen with those results in view. They read only values stored in experiments/results-v2/results.json and refit nothing. They add numbers to the paper; they do not replace or revise protocol 2.0 or protocol 2.1, whose records stay frozen.",
+    "status": "exploratory",
+    "study_id": "study-2-exploratory-addendum",
+    "suite_multiplicity": {
+      "alpha": 0.05,
+      "family": "The four condition checks of one suite and variant, in protocol 2.0 condition order, as declared by protocol 2.0.",
+      "frozen_decision_check": "A raw rejection is p <= alpha. Holm is recomputed with experiments.run_supplement.holm_rejections; both must equal the stored raw_alarm and holm_alarm of every record, and the run fails otherwise.",
+      "global_methods": [
+        "simes",
+        "fisher"
+      ],
+      "inputs": "covariance.records of experiments/results-v2/results.json: p_value, raw_alarm, holm_alarm and null_true of each suite, variant and condition.",
+      "interval": "timegym.statistics.wilson_interval (Wilson 95%) over the 64 independent suites of a variant.",
+      "methods": {
+        "fisher": "Fisher's combination: X = -2 sum log p, referred to a chi-square law with 2m degrees of freedom, whose survival function for even degrees of freedom is exp(-X/2) sum_{k<m} (X/2)^k/k!. Reject the suite-level null if that probability is <= alpha.",
+        "hochberg": "Hochberg step-up: find the largest j with the jth sorted p-value <= alpha/(m - j + 1) and reject the j smallest. Valid for independent checks.",
+        "holm": "Holm step-down: with sorted p-values, compare the jth against alpha/(m - j + 1) and stop at the first non-rejection.",
+        "raw": "Reject each check with p <= alpha; no adjustment.",
+        "simes": "Simes' global test: reject the suite-level null that all four conditions hold if some jth sorted p-value <= j alpha/m."
+      },
+      "per_check_methods": [
+        "raw",
+        "holm",
+        "hochberg"
+      ],
+      "purpose": "Ask of each covariance suite both which condition failed and whether the suite contains any failure, from the stored p-values of its four condition checks.",
+      "summaries": [
+        "suites with any rejection for each method",
+        "suites with any rejection of a true null for each method",
+        "rejections per condition for the per-check methods"
+      ],
+      "true_nulls": "The stored null_true flag: all four conditions in the clean variant, the factorized white-noise condition under the partial shuffle, none under the reduced spread. A global test rejects a true null only in a variant where every condition is a true null.",
+      "variants": [
+        "clean",
+        "partial_shuffle",
+        "reduced_spread"
+      ]
+    },
+    "uncertainty": "Wilson 95% intervals for suite-level counts only. The paired check reports p-values and Holm decisions; no interval is attached to its mean differences. No multiplicity claim spans the two analyses, the variants, or the earlier records."
+  },
+  "protocol_sha256": "122cd540a0131353090c4332782d7d496a2f250c8abeacc99fdd71f7a1c72428",
+  "python": "3.13.18",
+  "results_sha256": "49d6cf4865c4d7527b6775aa2d7259fcaa2ddb4fe725a30ca3d7ce54009b3ad4",
+  "source_files": {
+    "experiments/common.py": "cedd7261786543de5651ed127c295135dfc3487750736295ef4fa1036432b5e7",
+    "experiments/protocol-v2-addendum.json": "122cd540a0131353090c4332782d7d496a2f250c8abeacc99fdd71f7a1c72428",
+    "experiments/run_addendum.py": "39bf99a4ba8f82253d1f93219c2143055035e2865159071d65adee5b49829777",
+    "experiments/run_supplement.py": "906dfb09a99e8750c1e2e337be9cf68842504d78053865dd2e06ba9ab1d2c153",
+    "timegym/__init__.py": "06448f6093ae54860842f84220a408f52ea44be1f9d5d5c9f43c9641f688e937",
+    "timegym/_internal.py": "9e55fb4b2b29a95c4f4d616be7f375dd2602a17b9d2e94553bb422c92ff98b08",
+    "timegym/_process_common.py": "87a50c56d688b115b0cdcbedbc4496d44a112d67a8fea47b76990075c5680271",
+    "timegym/checks.py": "550947c5717e6d63f613fbef9a417c80139a46d39e5b2892a63e1d18eadd9fea",
+    "timegym/contracts.py": "8ca5e8af47bb68e20b0f4c44dc6ba98a3c81ca04d19c0173acfa34c4af264d24",
+    "timegym/data/real.py": "1717283eaf18e2dfe2673c358bc863d70caf90b1c139ea538764e1601525e8fa",
+    "timegym/data/synthetic.py": "b358f97f4905d54abe31e4a8fc49b1a0c41d22a7cb1ca7b5513418a61176eaab",
+    "timegym/diagnostics.py": "9a48abf20cdc03a813642eb90cbd50c305f3a43d2ff006dbb2a5912a0d7a074e",
+    "timegym/evaluation.py": "d45d4b3a8936e3f645be730ea326a26f7a52c2f3c94987e2133efefb25dcec50",
+    "timegym/features.py": "5ba1a5ffc1e7bbb185a837e88669159b701104ada2e486ee7b1d83bb1c98fe36",
+    "timegym/grid.py": "28992f3f6575c9cb3b74d2cb500128077f4c6cd97ad535b191afef13fec0203f",
+    "timegym/joint_processes.py": "c72fccfb1e4a0be7c7d1c388188343268ee10ff37969a6d343ea76bd14f70dd4",
+    "timegym/metrics.py": "5e3a7431bff3d46d1a31dc2bda8ddcb9c142a2301cedfab180948252528fcd4c",
+    "timegym/models.py": "a60dabc3dbc07d34eef65ee801efaf5553de79d9501a1743946d192430bc4f57",
+    "timegym/mutations.py": "966d7a10ef209c8946ffbf11a2f7e619dfa58e8c64849d17472051a00155c715",
+    "timegym/pipeline.py": "540c552d27b84c7e203647519bbd24b4395ed9b76f520ff9270cf902bcfe4dfe",
+    "timegym/plotting.py": "bbcd53545e39eab4dac0299686c664b7c189ec55f3d6106a499c6e620a055da2",
+    "timegym/processes.py": "200004e591799c3552938442274deee81458826e0dfe0bf76dd32801ed09def6",
+    "timegym/provenance.py": "066f9230d241429bb313f1c997a67c8a27c3b8f040f1458cc37ac32c68faba93",
+    "timegym/reporting.py": "5810631ae4f3dda7f1dd35c28a9004fd89821a11366a01b1fdc56d96ceee3f9e",
+    "timegym/scenarios.py": "215d007b8e9d18cb412783bc8d2bdb85c3f231b053fc9c9593b35a2db97a241e",
+    "timegym/scorecard.py": "318362b5914fb81e22d959e379b45a9b6c85d5f2ca202ed16634a34794856169",
+    "timegym/smoothing.py": "677da64f01cb0ac4823a8032ef1f3409e012534aab49e1651cb978ac2dd7e93a",
+    "timegym/statistics.py": "d66c136ba2b2b513973e9157aff4ab491409249ef9ee5b4cb59839ca82b7bfb0",
+    "timegym/target.py": "81d98749d726c4af1f3fab7cd756f04333f569e668b39c0065f7be4f75bdd1c1"
+  },
+  "source_note": "Hashes identify the working source, including generated package files. The addendum was chosen after the protocol 2.0 results and the protocol 2.1 follow-up were known, reads only stored values and is exploratory.",
+  "versions": {
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  }
+}

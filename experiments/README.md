@@ -163,6 +163,44 @@ and table column to `render_results` and `render_supplement`; both accept
 `--followup-dir`. The tests recompute the thresholds and counts from the stored
 distances and the frozen records without re-running any fit.
 
+## Second exploratory record for Study 2 (protocol 2.2)
+
+`protocol-v2-addendum.json` declares two analyses chosen on 13 November 2026,
+after the protocol 2.0 results and the protocol 2.1 follow-up were known. They
+are exploratory and read only values stored in `results-v2/results.json`;
+nothing is refitted, and the runner never writes to `results/`, `results-v2/`
+or `results-v2-followup/`:
+
+```bash
+.venv/bin/python -m experiments.run_addendum --output /tmp/timegym-addendum-repeat
+cmp experiments/results-v2-addendum/results.json /tmp/timegym-addendum-repeat/results.json
+```
+
+It takes a few seconds. The record answers:
+
+- **Suite-level multiplicity.** From the stored p-values of the four condition
+  checks in each of the 64 suites, per variant: Holm at 0.05 (recomputed, and
+  required to equal every stored `holm_alarm`), Hochberg's step-up procedure,
+  Simes' global test and Fisher's combination (chi-square with 8 degrees of
+  freedom, in closed form). It stores suites with any rejection and suites
+  rejecting a true null for each method, with Wilson 95% intervals, and
+  per-condition rejection counts for raw, Holm and Hochberg decisions.
+- **Paired answer-key check.** For each of the 24 pairs of condition and fault,
+  the paired differences of the stored `mean_reference_mse` against the clean
+  branch on the same seeds, a one-sided sign-flip test with 9,999 flips (seed 0,
+  declared in the protocol), and Holm across the 24 pairs. The same analysis on
+  the first 30 and the first 10 evaluation seeds is a sensitivity check.
+
+The `results-v2-addendum/` output contains `results.json` (including every
+suite's p-values and decisions) and `manifest.json` (protocol, results and
+frozen-input digests, source digests, Python, library and package versions).
+`experiments/render_addendum.py` validates the record, checks the statements
+the manuscript makes from it (`check_addendum_conclusions`) and supplies its
+macros to `render_supplement`, which accepts `--addendum-dir`. The tests
+recompute both analyses from the frozen records. The `research-smoke` job of
+the checks workflow re-runs the follow-up and this record and checks their
+conclusions on the fresh output.
+
 ### Frozen-record migration
 
 The 30 October 2026 update did not rerun either study. `migrate_frozen.py` removed

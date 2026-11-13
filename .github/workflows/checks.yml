@@ -133,6 +133,19 @@ jobs:
         run: |
           python -m experiments.compare_results --results /tmp/timegym-study/results.json --manifest experiments/results/manifest.json --report /tmp/timegym-pilot-hash.json --warn
           python -m experiments.compare_results --results /tmp/timegym-supplement/results.json --manifest experiments/results-v2/manifest.json --report /tmp/timegym-supplement-hash.json --warn
+      - run: python -m experiments.run_followup --output /tmp/timegym-followup
+      - run: python -m experiments.run_addendum --output /tmp/timegym-addendum
+      # These check the statements the manuscript makes, not file hashes, so they fail the job.
+      - name: Check the exploratory records' conclusions on the fresh runs
+        run: |
+          python - <<'PY'
+          import json
+          from experiments.render_addendum import check_addendum_conclusions
+          from experiments.render_followup import check_followup_conclusions
+          check_followup_conclusions(json.load(open("/tmp/timegym-followup/results.json")))
+          check_addendum_conclusions(json.load(open("/tmp/timegym-addendum/results.json")))
+          print("Follow-up (2.1) and addendum (2.2) conclusions hold on the fresh runs")
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: research-linux-hashes

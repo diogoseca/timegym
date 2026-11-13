@@ -301,8 +301,12 @@ def render_tex(results, manifest, followup=None):
     return "\n\n".join(lines) + "\n"
 
 
-def render_macros(results, manifest, pilot_manifest, followup=None):
-    """Caption and prose macros; ``followup`` adds those of the exploratory follow-up (protocol 2.1)."""
+def render_macros(results, manifest, pilot_manifest, followup=None, addendum=None):
+    """Caption and prose macros.
+
+    ``followup`` adds those of the exploratory follow-up (protocol 2.1) and
+    ``addendum`` those of the second exploratory record (protocol 2.2).
+    """
     selected = next(row for row in results["model"]["loss_summaries"]
                     if row["condition"] == "random_walk_drifts" and row["fault"] == "stale_recursive_state")
     records = results["model"]["records"]
@@ -322,6 +326,11 @@ def render_macros(results, manifest, pilot_manifest, followup=None):
                        and all(pilot_manifest["versions"][name] == manifest["versions"][name] for name in shared),
                        "both studies ran with the same Python, NumPy, pandas and SciPy versions")
     costs = {**results["model"]["cost_counts"], **results["covariance"]["cost_counts"]}
+    suites = {row["variant"]: row for row in results["covariance"]["suite_summaries"]}
+    intervals = {"CleanRawAny": suites["clean"]["raw_any_false_alarm"],
+                 "CleanHolmAny": suites["clean"]["holm_any_false_alarm"],
+                 "SpreadRawAny": suites["reduced_spread"]["raw_any_alarm"],
+                 "SpreadHolmAny": suites["reduced_spread"]["holm_any_alarm"]}
     values = {"RepairDeltaMean": f"{delta['mean']:.3f}", "RepairDeltaLow": f"{delta['ci95'][0]:.3f}",
               "RepairDeltaHigh": f"{delta['ci95'][1]:.3f}", "RepairImproved": improved,
               "CasesPerCondition": selected["n"], "CasesPerRow": len(clean),
@@ -332,10 +341,19 @@ def render_macros(results, manifest, pilot_manifest, followup=None):
               "StudyNumPySolves": f"{costs['independent_ridge_solves']:,}",
               "StudyCovarianceChecks": f"{costs['covariance_checks']:,}",
               "StudyCalibrationEnsembles": f"{costs['calibration_ensembles']:,}"}
+    for name, stat in intervals.items():
+        values[name + "Low"], values[name + "High"] = (f"{100 * bound:.0f}" for bound in stat["ci95"])
     text = "% Generated from frozen supplement records; do not edit.\n" + "".join(
         f"\\newcommand{{\\{name}}}{{{value}}}\n" for name, value in values.items())
     if followup is None:
         return text
+    text += followup_text(results, records, clean, followup)
+    if addendum is None:
+        return text
+    return text + addendum_text(results, addendum)
+
+
+def followup_text(results, records, clean, followup):
     from .render_followup import followup_macros
     repair = followup["repair_mechanism"]
     recorded = next(row for row in results["model"]["loss_summaries"]
@@ -347,9 +365,26 @@ def render_macros(results, manifest, pilot_manifest, followup=None):
                  for row in records if row["condition"] == repair["condition"] and row["branch"] == repair["fault"])
     require_conclusion(closer == repair["faulty_closer_to_answer_key"],
                        "the follow-up count of faulty cases closer to the answer key agrees with the frozen records")
-    return text + "% Exploratory follow-up chosen after the Study 2 results were known (protocol 2.1,\n" \
+    return "% Exploratory follow-up chosen after the Study 2 results were known (protocol 2.1,\n" \
         "% experiments/results-v2-followup); do not edit.\n" + "".join(
             f"\\newcommand{{\\{name}}}{{{value}}}\n" for name, value in followup_macros(followup).items())
+
+
+def addendum_text(results, addendum):
+    from .render_addendum import addendum_macros, variant_summaries
+    frozen = {row["variant"]: row for row in results["covariance"]["suite_summaries"]}
+    def count(stat):
+        return None if stat is None else (stat["count"], stat["n"])
+
+    for variant, row in variant_summaries(addendum).items():
+        detected, false = row["suites_with_any_rejection"], row["suites_rejecting_a_true_null"]
+        require_conclusion(all(count(ours[method]) == count(frozen[variant][key])
+                               for ours, kind in ((detected, "alarm"), (false, "false_alarm"))
+                               for method in ("raw", "holm") for key in [f"{method}_any_{kind}"]),
+                           f"the addendum's raw and Holm suite counts for {variant} equal the frozen ones")
+    return "% Second exploratory record, chosen after the Study 2 results and the follow-up were known\n" \
+        "% (protocol 2.2, experiments/results-v2-addendum); do not edit.\n" + "".join(
+            f"\\newcommand{{\\{name}}}{{{value}}}\n" for name, value in addendum_macros(addendum).items())
 
 
 def main():
@@ -358,6 +393,8 @@ def main():
     parser.add_argument("--paper-dir", type=Path, default=ROOT / "paper")
     parser.add_argument("--followup-dir", type=Path, default=None,
                         help="exploratory follow-up record (default experiments/results-v2-followup)")
+    parser.add_argument("--addendum-dir", type=Path, default=None,
+                        help="second exploratory record (default experiments/results-v2-addendum)")
     args = parser.parse_args()
     path = args.results_dir / "results.json"
     results = json.loads(path.read_text())
@@ -365,6 +402,8 @@ def main():
     validate_recorded_results(path, results, manifest)
     from .render_followup import FOLLOWUP_DIR, load_followup
     followup, _ = load_followup(args.followup_dir if args.followup_dir else FOLLOWUP_DIR)
+    from .render_addendum import ADDENDUM_DIR, load_addendum
+    addendum, _ = load_addendum(args.addendum_dir if args.addendum_dir else ADDENDUM_DIR)
     directory = args.paper_dir / "figures"
     directory.mkdir(parents=True, exist_ok=True)
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10, "axes.grid": False,
@@ -375,7 +414,8 @@ def main():
     fragment = args.paper_dir / "generated-supplement.tex"
     fragment.write_text(render_tex(results, manifest, followup))
     pilot_manifest = json.loads((ROOT / "experiments/results/manifest.json").read_text())
-    (args.paper_dir / "generated-macros.tex").write_text(render_macros(results, manifest, pilot_manifest, followup))
+    (args.paper_dir / "generated-macros.tex").write_text(render_macros(results, manifest, pilot_manifest, followup,
+                                                                             addendum))
     print(json.dumps({"tables": str(fragment), "figures": str(directory)}))
 
 

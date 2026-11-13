@@ -1,0 +1,56 @@
+{
+  "protocol_version": "2.2",
+  "study_id": "study-2-exploratory-addendum",
+  "status": "exploratory",
+  "chosen_on": "2026-11-13",
+  "extends": "experiments/protocol-v2-followup.json",
+  "selection": "These analyses were chosen on 2026-11-13, after the protocol 2.0 results and the protocol 2.1 follow-up were known. They are exploratory: none of them was declared before the Study 2 evaluation run, and their tests, families and summaries were chosen with those results in view. They read only values stored in experiments/results-v2/results.json and refit nothing. They add numbers to the paper; they do not replace or revise protocol 2.0 or protocol 2.1, whose records stay frozen.",
+  "frozen_inputs": {
+    "study_2_protocol": {"path": "experiments/protocol-v2.json", "sha256": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30"},
+    "study_2_results": {"path": "experiments/results-v2/results.json", "sha256": "13b1228e7124b95f30953c8ee23e5189087e4c45d34de12c509ae9433a90b5b5"},
+    "follow_up_protocol": {"path": "experiments/protocol-v2-followup.json", "sha256": "9ec8e7b2c7b62344d128d0583afaa70b3f166e70edc9fc2be10d8d1f57ccf5dd"}
+  },
+  "suite_multiplicity": {
+    "purpose": "Ask of each covariance suite both which condition failed and whether the suite contains any failure, from the stored p-values of its four condition checks.",
+    "inputs": "covariance.records of experiments/results-v2/results.json: p_value, raw_alarm, holm_alarm and null_true of each suite, variant and condition.",
+    "family": "The four condition checks of one suite and variant, in protocol 2.0 condition order, as declared by protocol 2.0.",
+    "alpha": 0.05,
+    "variants": ["clean", "partial_shuffle", "reduced_spread"],
+    "frozen_decision_check": "A raw rejection is p <= alpha. Holm is recomputed with experiments.run_supplement.holm_rejections; both must equal the stored raw_alarm and holm_alarm of every record, and the run fails otherwise.",
+    "methods": {
+      "raw": "Reject each check with p <= alpha; no adjustment.",
+      "holm": "Holm step-down: with sorted p-values, compare the jth against alpha/(m - j + 1) and stop at the first non-rejection.",
+      "hochberg": "Hochberg step-up: find the largest j with the jth sorted p-value <= alpha/(m - j + 1) and reject the j smallest. Valid for independent checks.",
+      "simes": "Simes' global test: reject the suite-level null that all four conditions hold if some jth sorted p-value <= j alpha/m.",
+      "fisher": "Fisher's combination: X = -2 sum log p, referred to a chi-square law with 2m degrees of freedom, whose survival function for even degrees of freedom is exp(-X/2) sum_{k<m} (X/2)^k/k!. Reject the suite-level null if that probability is <= alpha."
+    },
+    "per_check_methods": ["raw", "holm", "hochberg"],
+    "global_methods": ["simes", "fisher"],
+    "true_nulls": "The stored null_true flag: all four conditions in the clean variant, the factorized white-noise condition under the partial shuffle, none under the reduced spread. A global test rejects a true null only in a variant where every condition is a true null.",
+    "summaries": ["suites with any rejection for each method", "suites with any rejection of a true null for each method", "rejections per condition for the per-check methods"],
+    "interval": "timegym.statistics.wilson_interval (Wilson 95%) over the 64 independent suites of a variant."
+  },
+  "paired_answer_key": {
+    "purpose": "Ask whether each faulty branch is further from the answer key than the clean pipeline on the same series.",
+    "inputs": "model.records of experiments/results-v2/results.json: mean_reference_mse of every evaluation case.",
+    "conditions": "All six Study 2 model conditions, in protocol 2.0 order.",
+    "faults": ["reverse_prediction_lags", "stale_recursive_state", "omit_inverse_target_scaling", "swap_recursive_targets"],
+    "difference": "For each condition, fault and evaluation seed i: d_i = mean_reference_mse(fault, i) - mean_reference_mse(clean, i).",
+    "null": "The faulty branch is no further from the answer key than the clean one: the paired differences are symmetric about zero.",
+    "test": {
+      "kind": "one-sided sign-flip test of the mean difference",
+      "flips": 9999,
+      "generator": "numpy.random.default_rng",
+      "seed": 0,
+      "draw": "generator.choice([-1, 1], size=(flips, n)) for each pair",
+      "order": "One generator shared by every pair: the evaluation-seed counts in the order below, then conditions in protocol 2.0 order, then faults in the order above.",
+      "p_value": "(1 + number of flipped means >= the observed mean) / (flips + 1)"
+    },
+    "alpha": 0.05,
+    "multiplicity": "Holm step-down across the 24 pairs of condition and fault, with experiments.run_supplement.holm_rejections.",
+    "evaluation_seed_counts": [64, 30, 10],
+    "seed_order": "The first n evaluation seeds of each condition in ascending order. 64 is the full protocol 2.0 evaluation set; 30 and 10 are a sensitivity check of the sample size.",
+    "summaries": ["mean distance of the clean branch", "mean difference", "cases with a positive difference", "p-value", "Holm decision", "pairs flagged and pairs not flagged"]
+  },
+  "uncertainty": "Wilson 95% intervals for suite-level counts only. The paired check reports p-values and Holm decisions; no interval is attached to its mean differences. No multiplicity claim spans the two analyses, the variants, or the earlier records."
+}

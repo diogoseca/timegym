@@ -36,6 +36,14 @@
 \newcommand{\StudyNumPySolves}{384}
 \newcommand{\StudyCovarianceChecks}{768}
 \newcommand{\StudyCalibrationEnsembles}{152,832}
+\newcommand{\CleanRawAnyLow}{14}
+\newcommand{\CleanRawAnyHigh}{33}
+\newcommand{\CleanHolmAnyLow}{2}
+\newcommand{\CleanHolmAnyHigh}{13}
+\newcommand{\SpreadRawAnyLow}{92}
+\newcommand{\SpreadRawAnyHigh}{100}
+\newcommand{\SpreadHolmAnyLow}{35}
+\newcommand{\SpreadHolmAnyHigh}{59}
 % Exploratory follow-up chosen after the Study 2 results were known (protocol 2.1,
 % experiments/results-v2-followup); do not edit.
 \newcommand{\AnswerKeySubtleAlarms}{148}
@@ -55,6 +63,23 @@
 \newcommand{\ScorecardNoiseScore}{84}
 \newcommand{\ScorecardNoiseLoss}{16}
 \newcommand{\TrendARPhiHigh}{0.77}
+% Second exploratory record, chosen after the Study 2 results and the follow-up were known
+% (protocol 2.2, experiments/results-v2-addendum); do not edit.
+\newcommand{\FisherSpreadSuites}{63}
+\newcommand{\HolmSpreadSuites}{30}
+\newcommand{\FisherCleanSuites}{5}
+\newcommand{\HolmCleanSuites}{3}
+\newcommand{\HochbergSpreadSuites}{35}
+\newcommand{\SimesSpreadSuites}{41}
+\newcommand{\HochbergCleanSuites}{3}
+\newcommand{\SimesCleanSuites}{3}
+\newcommand{\SuitesPerVariant}{64}
+\newcommand{\FisherCleanLow}{3}
+\newcommand{\FisherCleanHigh}{17}
+\newcommand{\SuiteAlphaPercent}{5}
+\newcommand{\PairedFlagged}{21}
+\newcommand{\PairedPairs}{24}
+\newcommand{\PairedFlips}{9,999}
 
 % END GENERATED MACROS
 
@@ -1405,8 +1430,13 @@ are biased towards mean reversion near a unit root.
 \item Shuffling sample paths left every per-step distribution, and so the
 CRPS, exactly unchanged, while energy and variogram scores got worse.
 \item Four covariance checks per suite gave at least one false alarm in
-14 of 64 clean suites (22\%). Holm's correction cut that to 3 of 64 but
-also cut detection of shrunken spread from 63 to 30 of 64.
+14 of 64 clean suites (22\%; 95\% interval
+\CleanRawAnyLow{}\% to \CleanRawAnyHigh{}\%). Holm's correction cut that
+to 3 of 64 (\CleanHolmAnyLow{}\% to \CleanHolmAnyHigh{}\%) but also cut
+detection of shrunken spread from 63 to 30 of 64
+(\SpreadRawAnyLow{}\% to \SpreadRawAnyHigh{}\%, against
+\SpreadHolmAnyLow{}\% to \SpreadHolmAnyHigh{}\%); a single global test on
+the same values detected \FisherSpreadSuites{} (exploratory).
 \end{itemize}
 \end{itemize}
 
@@ -1462,9 +1492,14 @@ knows the fixed DGP parameters $\theta$. Its reference distribution is
 \end{equation}
 Future innovations are integrated out, not exposed to the forecaster.
 The ordinary adapter receives neither the realized future nor the
-answer key. Declared change schedules are also known only to the
+answer key, so look-ahead inside a test case cannot occur. Declared change schedules are also known only to the
 evaluator. Controls that are deliberately given this information, to test
 the evaluator itself, are identified separately.
+The leakage that undermines many studies in machine-learning-based
+science~\cite{kapoor2023leakage}, such as normalizing training and test
+rows together~\cite{yang2022data}, arises when users prepare their own
+data, and TimeGym does not test for it. Tuning a model on the suite's own
+seeds is the form of leakage that remains (Section~\ref{sec:broader}).
 
 For a conditional-mean forecast, the answer key at lead $h$ and target $d$ is
 $m_{hd}=\E_\theta[Y_{L+h-1,d}\mid y_{0:L-1}]$, with $h=1,\ldots,H$.
@@ -1713,7 +1748,10 @@ error plot describe the same execution without refitting.
 \code{Pipeline.test} returns the report alone. Each run takes one seed:
 instance $i$ of every kind of series uses \code{seed + i}, so the noise
 levels are a paired comparison, and \code{seed=None} draws a fresh seed
-and records it. Reproducibility requires more than a seed: the
+and records it.
+Setting a seed in a test is often a workaround for flakiness, not a
+solution~\cite{dutta2022seed}; TimeGym records seeds so that a case can be
+replayed, and the studies calibrate their alarms over many seeds. Reproducibility requires more than a seed: the
 case parameters, model identification, forecast dimensions, implementation
 and environment versions, diagnostic settings, and all outcomes must be
 retained. Experiment artifacts record these together with the generated
@@ -1788,7 +1826,12 @@ Insufficient rank resolution for the requested level is
 
 This is a reference-sampling consistency check, not a test of all forms of
 forecast calibration. Variance errors as well as dependence errors can
-trigger it. Failure to reject does not establish equality of covariance
+trigger it.
+Calibration checks targeted at one kind of error (location, scale or
+dependence) largely separate that error, where omnibus multivariate rank
+histograms do not~\cite{allen2024assessing}; this check targets scale and
+dependence together, and the coordinate shuffle of Study 1 is a
+dependence-only defect. Failure to reject does not establish equality of covariance
 or distributions. In particular, an ensemble generated by deterministic
 quadrature, dependent Monte Carlo, or a learned parameter estimate does
 not satisfy the stated null merely because it is a useful forecast.
@@ -1798,6 +1841,11 @@ inference~\cite{geweke2004getting,cook2006validation,talts2020validating,modrak2
 A fitted model's ensemble is expected to fail it once the sample is large.
 The Gaussian reference is fully specified in Study 1, which makes
 null simulation feasible but limits direct application to real data.
+The statistic $T$ is a plug-in Frobenius distance, scaled by the norm of
+the reference covariance and calibrated by Monte Carlo. For Gaussian data, a U-statistic test built on an unbiased
+estimate of the squared Frobenius distance to a fixed target is minimax
+rate optimal when the dimension grows at most in proportion to the sample
+size~\cite{cai2013optimal}.
 
 \subsection{Scores and a dependence counterexample}
 
@@ -2064,7 +2112,8 @@ evaluates covariance checks under multiplicity. Every fault in both
 studies was chosen by hand to exercise an implemented check. Each study's parameters,
 seeds, transformations, and tolerances are fixed in its own protocol
 before its evaluation run; the exploratory follow-up to Study 2
-(protocol 2.1) was chosen afterwards and is labelled wherever it is used.
+(protocols 2.1 and 2.2) was chosen afterwards and is labelled wherever it
+is used.
 The studies ask:
 \begin{description}
 \item[RQ1 (Study 1).] Does the score separate patterns a model cannot
@@ -2098,6 +2147,12 @@ misses, unsupported cases, exceptions, and clean false alarms. Statistical
 uncertainty is computed over independent cases, as recommended for
 randomized procedures~\cite{arcuri2011practical}, and each protocol records
 its exact convention with the results.
+
+The 64 cases per condition were not chosen from a target precision, as
+is recommended~\cite{morris2019using,koehler2009assessment}. They give a
+95\% interval of about $\pm$10 points at a rate of 22\% and $\pm$12 points
+near 50\%: enough to separate 63 of 64 from 30 of 64, not to rank checks
+that differ by a few cases.
 
 \subsection{Study 1: output corruptions and dependence permutation}
 
@@ -2151,7 +2206,15 @@ six-lag recursive lag-Ridge predictor uses an unpenalized intercept, penalty 1, 
 Four branches reverse the prediction-time lag order, retain stale
 recursive state, omit inverse target scaling, or silently swap the two
 numeric target columns while preserving their labels. Each changes an
-implementation operation and returns a well-shaped forecast. The repair
+implementation operation and returns a well-shaped forecast.
+Bugs of this kind are a documented class. Tambon et al. call a bug silent
+when it leads to wrong behavior without a crash, a hang or an error
+message; among 1,168 closed issues labelled as Keras bugs in the
+TensorFlow repository they found 77 reproducible silent bugs, most often a
+wrong calculation~\cite{tambon2024silent}. In a study of 1,000 bugs in four
+deep-learning frameworks, 24.3\% showed incorrect functionality without a
+crash, a symptom the authors tie to the test oracle
+problem~\cite{chen2023toward}. The repair
 is the clean implementation fitted to the identical context.
 
 Six fixed conditions cover white noise with unequal target locations,
@@ -2224,9 +2287,27 @@ and any rejection after Holm's step-down adjustment~\cite{holm1979multiple}.
 With sorted valid null $p$-values, Holm compares the $j$th value against
 $0.05/(4-j+1)$ and stops at the first non-rejection. Its family-wise
 guarantee concerns this fixed family.
+With $B=199$ the $p$-values are multiples of 0.005, so the first two
+thresholds, 0.0125 and 0.0167, act as 0.010 and 0.015; the last two are
+attained exactly, and $B=239$ would make all four exact. The
+$(1+\cdot)/(B+1)$ form keeps each $p$-value valid, which matters once
+several are combined, and the only penalty for a small $B$ is a loss of
+power~\cite{phipson2010permutation}; J\"ockel bounds the power of a Monte
+Carlo test against that of the exact test~\cite{jockel1986finite}.
 The factorized white-noise shuffle is a negative control: independent
 coordinates remain independent under these sample permutations, so a
 rejection is a false alarm rather than successful defect detection.
+A second exploratory record, chosen on 13 November 2026 after the Study 2
+results and the follow-up were known (protocol 2.2), adds two analyses
+that read only stored values and refit nothing: beside Holm, Hochberg's step-up
+procedure~\cite{hochberg1988sharper}, Simes' global
+test~\cite{simes1986improved} and Fisher's
+combination~\cite{fisher1932statistical} of the four $p$-values of each
+suite; and, for each bug and condition of
+Section~\ref{sec:implementation-study}, a one-sided sign-flip test with
+\PairedFlips{} flips of whether the faulty branch is further from the answer key
+than the clean one on the same series, with Holm's correction across the
+pairs.
 
 \section{Results}
 \label{sec:results}
@@ -2686,9 +2767,15 @@ Table~\ref{tab:oracles} maps the evidence used in this paper onto these
 oracle types.
 
 Pham et al.'s CRADLE detects bugs in deep-learning libraries by comparing
-the outputs of different backends~\cite{pham2019cradle}. Tolerance-based
+the outputs of different backends~\cite{pham2019cradle}.
+Comparing nominally identical algorithms across libraries is harder: in a
+differential test of classifiers from four frameworks, configurations
+that are the same in another framework often could not be
+determined~\cite{herbold2023differential}. Tolerance-based
 assertions are common in those libraries' test suites and a recurring
-source of flaky tests~\cite{nejadgholi2019study,dutta2020detecting}; the
+source of flaky tests~\cite{nejadgholi2019study,dutta2020detecting}, and
+the bound of such an assertion can be chosen by trading fault detection
+against flakiness~\cite{xia2023balancing}; the
 explicit \code{INCONCLUSIVE} outcome keeps a tolerance choice from being
 reported as a verdict. Shift checks are properties in the sense of
 property-based testing, stated beside the code and checked on generated
@@ -2705,6 +2792,10 @@ statistics~\cite{talts2020validating}.
 TimeGym's answer keys and covariance rank check apply the same idea to
 forecasts: the data come from a known law, so the software's output can be
 compared with what that law implies.
+Tests of sampler code show the same two limits found here: a buggy
+algorithm can still make sensible-looking predictions, and the
+integration test that detects a bug gives no indication of where it
+is~\cite{grosse2014testing}.
 
 A review of testing for scientific software found no empirical study of
 how well pseudo-oracles and analytical solutions detect subtle faults, and
@@ -2768,6 +2859,10 @@ hand-picked faults do not provide. TimeGym adds answer keys and separate
 checks for marginal and joint forecasts to that testing workflow; it does
 not introduce forecasting metamorphic testing, and it implements far
 fewer relations.
+Metamorphic tests of machine-learning models in hydrology found that the
+magnitude and even the sign of the response to a modified input can
+depend on the training data~\cite{reichert2024metamorphic}, so a relation
+has to be established for a learner before it is used as a check.
 
 Framework conformance and evaluation practice also matter. The sktime
 \code{check\_estimator} utility runs tests appropriate to an estimator's
@@ -2868,21 +2963,21 @@ Scoring forecasts against the forecast implied by a known generating
 process is standard in simulation studies of forecasting
 methods~\cite{clements1998forecasting}, and generators with controllable
 features exist for evaluating them~\cite{kang2020gratis,gilpin2021chaos}.
-The distance from an optimal forecast has also been reported directly, for
-transformers trained on linear dynamical systems, as the squared difference
-from the Kalman filter~\cite{akram2026transformers}. On real series, where
-the floor is unknown, Feng et al. estimate a lower bound on linear forecast
-error from the spectrum, arguing that standard metrics mix a model's
-performance with the data's own unpredictability~\cite{feng2026beyond}.
-Ecological forecasting draws the same line between intrinsic and realized
-predictability~\cite{pennekamp2019intrinsic}, and Diebold and Kilian
-measure predictability itself as a ratio of expected
-losses~\cite{diebold2001measuring}.
+A naive forecast, as in MASE and skill
+scores~\cite{hyndman2006another,murphy1988skill}, removes the scale of a
+series. An estimated floor, such as a spectral bound~\cite{feng2026beyond}
+or permutation entropy~\cite{pennekamp2019intrinsic}, removes
+unpredictability as far as the series reveals it, and predictability
+itself has been measured as a ratio of expected
+losses~\cite{diebold2001measuring}. An exact optimum removes it entirely,
+and has been reported for one model class at a time: the Kalman filter on
+linear-Gaussian systems~\cite{akram2026transformers} and SynTSBench's
+theoretical optimum~\cite{tan2025syntsbench}.
 None of these ingredients is new: the oracle types, metamorphic relations,
 financial stress mechanisms, and proper scores all have the precedents
-cited above. TimeGym's addition is to state every score of a test suite
-against that forecast, on stationary and non-stationary series alike, and
-to pair the score with software checks.
+cited above. TimeGym states every score of a test suite against the exact
+optimum of each scenario, on stationary and non-stationary series alike,
+and pairs the score with software checks.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -2914,6 +3009,10 @@ was detected, and repaired outputs reproduced the clean control exactly,
 including its false alarms. Because the six output corruptions are direct
 violations, this shows that the output checks are implemented correctly,
 not that they find subtle faults.
+Simple checks are not weak ones: in a mutation study of 40 Python
+projects, property-based tests that look for exceptions, collection
+membership or types were the most effective
+kind~\cite{ravi2025empirical}.
 
 For probabilistic forecasts (RQ3), marginal-preserving permutations isolate a
 blind spot without relying on a noisy difference in marginal quality.
@@ -2938,7 +3037,16 @@ establish forecasting optimality. Where no second implementation exists,
 the answer key itself can serve as the check: the exploratory answer-key
 alarm caught \AnswerKeySubtleAlarms{} of \SubtleCases{} reversed-lag and
 stale-state cases outside the seasonal condition, where the loss alarm
-caught \LossSubtleAlarms{}.
+caught \LossSubtleAlarms{}. The answer key can also grade a change.
+Paired on the same series, a one-sided sign-flip test of the avoidable
+error, with Holm's correction across the \PairedPairs{} pairs of bug and
+condition, flagged \PairedFlagged{} as worse than the clean pipeline
+(exploratory, protocol 2.2). The three it did not flag are the two
+conditions where reversing the lags leaves the error almost unchanged,
+white noise and opposing trends, and the stale state on the random walk
+with drift, where the faulty branch is closer to the answer key. A team's
+last trusted version can stand in for the clean pipeline: it is a second
+implementation that already exists.
 
 The repair counterexample further separates verification from model
 selection. Correcting the stale-state regression restores the declared
@@ -2961,7 +3069,23 @@ retains both observations rather than relabeling one as the other.
 For RQ5, the covariance results (Tables~\ref{tab:supplement-familywise}
 and~\ref{tab:supplement-covariance}) also show why per-check rejection and
 suite-level false alarms must be reported separately, together with the
-power lost after multiplicity adjustment.
+power lost after multiplicity adjustment. Holm answers which condition
+failed. Whether a suite contains any failure is a different question,
+answered by one global test. In an exploratory analysis of the stored
+$p$-values (protocol 2.2), Fisher's combination of the four independent
+$p$-values detected the shrunken spread in \FisherSpreadSuites{} of
+\SuitesPerVariant{} suites, against \HolmSpreadSuites{} for Holm, with
+\FisherCleanSuites{} false alarms in \SuitesPerVariant{} clean suites
+against \HolmCleanSuites{} (for Fisher's combination, 95\% interval
+\FisherCleanLow{}\% to \FisherCleanHigh{}\%, against a nominal
+\SuiteAlphaPercent{}\%).
+Hochberg's procedure and Simes' test detected \HochbergSpreadSuites{} and
+\SimesSpreadSuites{}, with \HochbergCleanSuites{} and \SimesCleanSuites{}
+clean false alarms. Herbold and Tunkel took the opposite position in a
+differential test of machine-learning libraries: they applied no
+correction, because one would depend on the number of tests executed, and
+so accepted a 5\% false-positive rate for each
+test~\cite{herbold2023differential}.
 
 \subsection{Limitations}
 
@@ -2992,17 +3116,31 @@ Neither kind of corpus says how often the checks catch faults found in
 practice. In deep learning, mutation operators have instead been
 derived from a taxonomy of real
 faults~\cite{humbatova2020taxonomy,humbatova2021deepcrime}, and mutant
-killing is defined statistically because retraining alone moves
-accuracy~\cite{jahangirova2020empirical}; no comparable taxonomy of
-forecasting-pipeline faults informs the present selection, and the
-calibrated loss alarm of Section~\ref{sec:implementation-study} plays the
-corresponding statistical role here.
+killing is defined statistically because retraining alone moves accuracy~\cite{jahangirova2020empirical}; the calibrated loss alarm
+of Section~\ref{sec:implementation-study} plays the corresponding
+statistical role here. No comparable taxonomy of forecasting-pipeline
+faults informs the present selection: the nearest bug studies are of
+deep-learning frameworks~\cite{tambon2024silent,chen2023toward}, and we
+found none for a forecasting library.
 Study 2 moves beyond output corruption but does not supply an independent
 corpus of naturally occurring defects. The second implementation verifies
 one intended algorithm; it cannot establish that the algorithm is
-appropriate for every forecasting task. The second implementation was
-written by the same author, who knew the faults; separately written
-versions can share mistakes~\cite{knight1986experimental}. Writing one is
+appropriate for every forecasting task. The second implementation was written by the same author, who knew the
+faults. Study 2 placed its bugs in the pipeline only, so it measures
+faults in one version, the easy case for a second implementation. It
+cannot measure faults that both versions share. In an experiment with 27
+separately developed versions of one program, inputs on which more than
+one version failed were substantially more frequent than independence
+would predict~\cite{knight1986experimental,brilliant1990analysis}, and
+Eckhardt and Lee give a probabilistic model of such coincident
+errors~\cite{eckhardt1985theoretical}. In a theoretical model, forcing the
+versions to differ in method lowers that
+risk~\cite{littlewood1989conceptual}; here they differ in how the lag
+columns are built (one sliding window per row against one block of
+columns per lag), in the units of the targets in the solve (standardized
+in the pipeline, original in the second implementation) and in the
+solver (scikit-learn's \code{Ridge} against a NumPy solve of the normal
+equations). Writing one is
 practical for a short regression, rarely for a neural network. These studies assess detection and
 repair rechecks, not automatic source-code localization or repair
 discovery.
@@ -3013,20 +3151,36 @@ The covariance rank check (Equation~\eqref{eq:mc}) assumes independent
 reference-law samples; the loss rank check (Equation~\eqref{eq:loss-rank})
 assumes exchangeable clean cases within a condition. The 64 clean Study 1
 cases do not establish precise calibration of the covariance check or a
-family-wise error rate. Numerical conformance tolerances are engineering
-choices. Holm adjustment
+family-wise error rate. Two correct implementations need not agree to the last bit, so numerical
+comparisons use tolerances, whose values are engineering choices. Where
+versions make decisions by comparing finite-precision results, the
+consistency of correct versions cannot be guaranteed at
+all~\cite{brilliant1989consistent}. Holm adjustment
 protects only the declared four-check family. Other reported comparisons
 are descriptive, and fresh evaluation seeds do not undo adaptive choice
-of scenarios, mutations, or diagnostics.
+of scenarios, mutations, or diagnostics, a known route to overoptimistic
+results in simulation studies~\cite{pawel2024pitfalls}.
 
 \subsection{Toward a broader evaluation}
+\label{sec:broader}
 
 AirPassengers supplies one known preprocessing repair at four origins
 from one real series (Table~\ref{tab:real}). It does not establish
 synthetic-to-real transfer. The scenario families were chosen for
 transparent references, not for representativeness; even forecasting
 benchmark collections differ from the distribution of real
-series~\cite{spiliotis2020forecasting}. A useful development sequence isolates mechanisms, compares matched pairs,
+series~\cite{spiliotis2020forecasting}.
+Other fields have found that conclusions from synthetic data need not
+carry over. Evaluations of causal-discovery algorithms on synthetic data
+can rank them differently from evaluations on empirical interventional
+data~\cite{gentzel2019case}, and a change-point benchmark was built from
+annotated real series because simulated data and a few reused real series
+gave too little insight into comparative
+performance~\cite{vandenburg2020evaluation}. In forecasting, adding daily
+cycles to SynForecast's synthetic pretraining corpus cut the zero-shot
+error of two models on real hourly series by 43\% to
+63\%~\cite{sprangers2026synforecast}: the missing mechanism explained most
+of the failure at that frequency. TimeGym ranks no models for that reason. A useful development sequence isolates mechanisms, compares matched pairs,
 then adds supported interactions. Seeds, parameter regions, and compositions
 must be reserved from model development; a synthetic suite can itself be
 overfit. TimeGym can also serve as a training ground: a model can be tuned
@@ -3094,7 +3248,11 @@ cases, the Figure~\ref{fig:scorecard} scorecard with 30 instances, and the
 fitted AR(1) on the Study 1 trend), checks each re-run value against the
 frozen records, and supplies the answer-key alarm, the fitted lag
 coefficients of the random-walk condition, the scorecard precision and
-the fitted AR(1) coefficients quoted in the text. Following the
+the fitted AR(1) coefficients quoted in the text. A second exploratory
+record (protocol 2.2), chosen on the same date after the follow-up was
+known, is saved under \code{experiments/results-v2-addendum/}; it reads
+only stored Study 2 values and supplies the suite-level tests and the
+paired answer-key check. Following the
 reporting recommendations for forecasting research, the records give a
 well-defined data-generating process with its seeds, described methods and
 parameterization, software versions, and defined
@@ -3107,7 +3265,7 @@ in the experiment manifests.
 
 % The standalone builder renders references.bib into a BibTeX-free inline list.
 % BEGIN GENERATED BIBLIOGRAPHY
-\begin{thebibliography}{86}
+\begin{thebibliography}{112}
 \bibitem{akram2026transformers}
 Usman Akram and Haris Vikalo.
 \href{https://arxiv.org/abs/2410.16546v3}{Transformers as Implicit State Estimators: In-Context Learning in Dynamical Systems}.
@@ -3118,6 +3276,11 @@ Preprint.
 C. Alexander, M. Coulon, Y. Han and X. Meng.
 \href{https://doi.org/10.1007/s10479-022-04611-9}{Evaluating the discrimination ability of proper multi-variate scoring rules}.
 \emph{Annals of Operations Research}, 334(1--3), pp. 857--883, 2024.
+
+\bibitem{allen2024assessing}
+Sam Allen, Johanna Ziegel and David Ginsbourger.
+\href{https://doi.org/10.1002/qj.4647}{Assessing the calibration of multivariate probabilistic forecasts}.
+\emph{Quarterly Journal of the Royal Meteorological Society}, 150(760), pp. 1315--1335, 2024.
 
 \bibitem{amershi2019software}
 Saleema Amershi, Andrew Begel, Christian Bird, Robert DeLine, Harald Gall, Ece Kamar, Nachiappan Nagappan, Besmira Nushi and Thomas Zimmermann.
@@ -3159,16 +3322,36 @@ Eric Breck, Shanqing Cai, Eric Nielsen, Michael Salib and D. Sculley.
 \href{https://doi.org/10.1109/BigData.2017.8258038}{The {ML} test score: A rubric for {ML} production readiness and technical debt reduction}.
 \emph{2017 IEEE International Conference on Big Data (Big Data)}, pp. 1123--1132, 2017.
 
+\bibitem{brilliant1990analysis}
+S.S. Brilliant, J.C. Knight and N.G. Leveson.
+\href{https://doi.org/10.1109/32.44387}{Analysis of faults in an N-version software experiment}.
+\emph{IEEE Transactions on Software Engineering}, 16(2), pp. 238--247, 1990.
+
+\bibitem{brilliant1989consistent}
+S.S. Brilliant, J.C. Knight and N.G. Leveson.
+\href{https://doi.org/10.1109/32.41339}{The consistent comparison problem in N-version software}.
+\emph{IEEE Transactions on Software Engineering}, 15(11), pp. 1481--1485, 1989.
+
 \bibitem{brockman2016gym}
 Greg Brockman, Vicki Cheung, Ludwig Pettersson, Jonas Schneider, John Schulman, Jie Tang and Wojciech Zaremba.
 \href{https://arxiv.org/abs/1606.01540v1}{{OpenAI Gym}}.
 arXiv:1606.01540v1, 2016.
+
+\bibitem{cai2013optimal}
+T. Tony Cai and Zongming Ma.
+\href{https://doi.org/10.3150/12-BEJ455}{Optimal hypothesis testing for high dimensional covariance matrices}.
+\emph{Bernoulli}, 19(5B), pp. 2359--2388, 2013.
 
 \bibitem{cai2025timeseriesgym}
 Yifu Cai, Xinyu Li, Mononito Goswami, Micha{\l} Wili{\'n}ski, Gus Welter and Artur Dubrawski.
 \href{https://arxiv.org/abs/2505.13291v1}{{TimeSeriesGym}: A Scalable Benchmark for (Time Series) Machine Learning Engineering Agents}.
 arXiv:2505.13291v1, 2025.
 Preprint.
+
+\bibitem{chen2023toward}
+Junjie Chen, Yihua Liang, Qingchao Shen, Jiajun Jiang and Shuochuan Li.
+\href{https://doi.org/10.1145/3587155}{Toward Understanding Deep Learning Framework Bugs}.
+\emph{ACM Transactions on Software Engineering and Methodology}, 32(6), pp. 1--31, 2023.
 
 \bibitem{chen2018metamorphic}
 Tsong Yueh Chen, Fei-Ching Kuo, Huai Liu, Pak-Lok Poon, Dave Towey, T. H. Tse and Zhi Quan Zhou.
@@ -3220,6 +3403,11 @@ Francis X. Diebold and Lutz Kilian.
 \href{https://doi.org/10.1002/jae.619}{Measuring predictability: theory and macroeconomic applications}.
 \emph{Journal of Applied Econometrics}, 16(6), pp. 657--669, 2001.
 
+\bibitem{dutta2022seed}
+Saikat Dutta, Anshul Arunachalam and Sasa Misailovic.
+\href{https://doi.org/10.1109/ICST53961.2022.00026}{To Seed or Not to Seed? An Empirical Analysis of Usage of Seeds for Testing in Machine Learning Projects}.
+\emph{2022 IEEE Conference on Software Testing, Verification and Validation (ICST)}, pp. 151--161, 2022.
+
 \bibitem{dutta2020detecting}
 Saikat Dutta, August Shi, Rutvik Choudhary, Zhekun Zhang, Aryaman Jain and Sasa Misailovic.
 \href{https://doi.org/10.1145/3395363.3397366}{Detecting flaky tests in probabilistic and machine learning applications}.
@@ -3229,6 +3417,11 @@ Saikat Dutta, August Shi, Rutvik Choudhary, Zhekun Zhang, Aryaman Jain and Sasa 
 Anurag Dwarakanath, Manish Ahuja, Sanjay Podder, Silja Vinu, Arijit Naskar and {Koushik MV}.
 \href{https://doi.org/10.1109/MET.2019.00014}{Metamorphic Testing of a Deep Learning based Forecaster}.
 \emph{2019 IEEE/ACM 4th International Workshop on Metamorphic Testing (MET)}, 2019.
+
+\bibitem{eckhardt1985theoretical}
+D.E. Eckhardt and L.D. Lee.
+\href{https://doi.org/10.1109/TSE.1985.231895}{A Theoretical Basis for the Analysis of Multiversion Software Subject to Coincident Errors}.
+\emph{IEEE Transactions on Software Engineering}, SE-11(12), pp. 1511--1517, 1985.
 
 \bibitem{engle1982autoregressive}
 Robert F. Engle.
@@ -3241,6 +3434,11 @@ Wanjin Feng, Yuan Yuan, Jingtao Ding and Yong Li.
 arXiv:2509.23074v3, 2026.
 Preprint.
 
+\bibitem{fisher1932statistical}
+R. A. Fisher.
+Statistical Methods for Research Workers.
+4th edition, Oliver and Boyd, Edinburgh, 1932.
+
 \bibitem{fuller1981properties}
 Wayne A. Fuller and David P. Hasza.
 \href{https://doi.org/10.1080/01621459.1981.10477622}{Properties of Predictors for Autoregressive Time Series}.
@@ -3250,6 +3448,11 @@ Wayne A. Fuller and David P. Hasza.
 Jo{\~a}o Gama, Indr{\.e} {\v{Z}}liobait{\.e}, Albert Bifet, Mykola Pechenizkiy and Abdelhamid Bouchachia.
 \href{https://doi.org/10.1145/2523813}{A survey on concept drift adaptation}.
 \emph{ACM Computing Surveys}, 46(4), Article 44, 37 pages, 2014.
+
+\bibitem{gentzel2019case}
+Amanda Gentzel, Dan Garant and David Jensen.
+\href{https://arxiv.org/abs/1910.05387}{The Case for Evaluating Causal Models Using Interventional Measures and Empirical Data}.
+\emph{33rd Conference on Neural Information Processing Systems (NeurIPS 2019)}, arXiv:1910.05387, 2019.
 
 \bibitem{geweke2004getting}
 John Geweke.
@@ -3307,6 +3510,12 @@ Paul Goodwin and Richard Lawton.
 \href{https://doi.org/10.1016/S0169-2070(99)00007-2}{On the asymmetry of the symmetric {MAPE}}.
 \emph{International Journal of Forecasting}, 15(4), pp. 405--408, 1999.
 
+\bibitem{grosse2014testing}
+Roger B. Grosse and David K. Duvenaud.
+\href{https://arxiv.org/abs/1412.5218}{Testing {MCMC} code}.
+arXiv:1412.5218, 2014.
+Preprint.
+
 \bibitem{guderlei2007statistical}
 Ralph Guderlei and Johannes Mayer.
 \href{https://doi.org/10.1109/QSIC.2007.4385527}{Statistical Metamorphic Testing: Testing Programs with Random Output by Means of Statistical Hypothesis Tests and Metamorphic Testing}.
@@ -3317,10 +3526,20 @@ James D. Hamilton.
 \href{https://doi.org/10.2307/1912559}{A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle}.
 \emph{Econometrica}, 57(2), pp. 357--384, 1989.
 
+\bibitem{herbold2023differential}
+Steffen Herbold and Steffen Tunkel.
+\href{https://doi.org/10.1007/s10664-022-10273-9}{Differential testing for machine learning: an analysis for classification algorithms beyond deep learning}.
+\emph{Empirical Software Engineering}, 28(2), Article 34, 2023.
+
 \bibitem{hersbach2000decomposition}
 Hans Hersbach.
 \href{https://doi.org/10.1175/1520-0434(2000)015%3C0559:DOTCRP%3E2.0.CO;2}{Decomposition of the Continuous Ranked Probability Score for Ensemble Prediction Systems}.
 \emph{Weather and Forecasting}, 15(5), pp. 559--570, 2000.
+
+\bibitem{hochberg1988sharper}
+Yosef Hochberg.
+\href{https://doi.org/10.1093/biomet/75.4.800}{A sharper {Bonferroni} procedure for multiple tests of significance}.
+\emph{Biometrika}, 75(4), pp. 800--802, 1988.
 
 \bibitem{holm1979multiple}
 Sture Holm.
@@ -3362,6 +3581,11 @@ Yue Jia and Mark Harman.
 \href{https://doi.org/10.1109/TSE.2010.62}{An Analysis and Survey of the Development of Mutation Testing}.
 \emph{IEEE Transactions on Software Engineering}, 37(5), pp. 649--678, 2011.
 
+\bibitem{jockel1986finite}
+Karl-Heinz J{\"o}ckel.
+\href{https://doi.org/10.1214/aos/1176349860}{Finite Sample Properties and Asymptotic Efficiency of {Monte Carlo} Tests}.
+\emph{The Annals of Statistics}, 14(1), pp. 336--347, 1986.
+
 \bibitem{just2014mutants}
 Ren{\'e} Just, Darioush Jalali, Laura Inozemtseva, Michael D. Ernst, Reid Holmes and Gordon Fraser.
 \href{https://doi.org/10.1145/2635868.2635929}{Are mutants a valid substitute for real faults in software testing?}.
@@ -3382,6 +3606,11 @@ Yanfei Kang, Rob J. Hyndman and Feng Li.
 \href{https://doi.org/10.1002/sam.11461}{{GRATIS}: {GeneRAting} {TIme} Series with diverse and controllable characteristics}.
 \emph{Statistical Analysis and Data Mining: The ASA Data Science Journal}, 13(4), pp. 354--376, 2020.
 
+\bibitem{kapoor2023leakage}
+Sayash Kapoor and Arvind Narayanan.
+\href{https://doi.org/10.1016/j.patter.2023.100804}{Leakage and the reproducibility crisis in machine-learning-based science}.
+\emph{Patterns}, 4(9), Article 100804, 2023.
+
 \bibitem{kendall1954note}
 M. G. Kendall.
 \href{https://doi.org/10.1093/biomet/41.3-4.403}{Note on Bias in the Estimation of Autocorrelation}.
@@ -3391,6 +3620,11 @@ M. G. Kendall.
 John C. Knight and Nancy G. Leveson.
 \href{https://doi.org/10.1109/TSE.1986.6312924}{An experimental evaluation of the assumption of independence in multiversion programming}.
 \emph{IEEE Transactions on Software Engineering}, SE-12(1), pp. 96--109, 1986.
+
+\bibitem{koehler2009assessment}
+Elizabeth Koehler, Elizabeth Brown and Sebastien J.-P. A. Haneuse.
+\href{https://doi.org/10.1198/tast.2009.0030}{On the Assessment of {Monte Carlo} Error in Simulation-Based Statistical Analyses}.
+\emph{The American Statistician}, 63(2), pp. 155--162, 2009.
 
 \bibitem{lei2018conformal}
 Jing Lei, Max G'Sell, Alessandro Rinaldo, Ryan J. Tibshirani and Larry Wasserman.
@@ -3402,6 +3636,11 @@ Shuang Liang, Chaochuan Hou, Xu Yao, Shiping Wang, Minqi Jiang, Songqiao Han and
 \href{https://arxiv.org/abs/2509.17063v1}{{TSGym}: Design Choices for Deep Multivariate Time-Series Forecasting}.
 arXiv:2509.17063v1, 2025.
 Preprint.
+
+\bibitem{littlewood1989conceptual}
+B. Littlewood and D.R. Miller.
+\href{https://doi.org/10.1109/32.58771}{Conceptual modeling of coincident failures in multiversion software}.
+\emph{IEEE Transactions on Software Engineering}, 15(12), pp. 1596--1614, 1989.
 
 \bibitem{luu2021testing}
 Quang-Hung Luu, Man F. Lau, Sebastian P. H. Ng and Tsong Yueh Chen.
@@ -3433,6 +3672,11 @@ Martin Modr{\'a}k, Angie H. Moon, Shinyoung Kim, Paul B{\"u}rkner, Niko Huurre, 
 \href{https://doi.org/10.1214/23-BA1404}{Simulation-Based Calibration Checking for {Bayesian} Computation: The Choice of Test Quantities Shapes Sensitivity}.
 \emph{Bayesian Analysis}, 20(2), pp. 461--488, 2025.
 
+\bibitem{morris2019using}
+Tim P. Morris, Ian R. White and Michael J. Crowther.
+\href{https://doi.org/10.1002/sim.8086}{Using simulation studies to evaluate statistical methods}.
+\emph{Statistics in Medicine}, 38(11), pp. 2074--2102, 2019.
+
 \bibitem{murphy1988skill}
 Allan H. Murphy.
 \href{https://doi.org/10.1175/1520-0493(1988)116<2417:SSBOTM>2.0.CO;2}{Skill Scores Based on the Mean Square Error and Their Relationships to the Correlation Coefficient}.
@@ -3442,6 +3686,11 @@ Allan H. Murphy.
 Mahdi Nejadgholi and Jinqiu Yang.
 \href{https://doi.org/10.1109/ASE.2019.00078}{A Study of Oracle Approximations in Testing Deep Learning Libraries}.
 \emph{2019 34th IEEE/ACM International Conference on Automated Software Engineering (ASE)}, pp. 785--796, 2019.
+
+\bibitem{pawel2024pitfalls}
+Samuel Pawel, Lucas Kook and Kelly Reeve.
+\href{https://doi.org/10.1002/bimj.202200091}{Pitfalls and potentials in simulation studies: Questionable research practices in comparative simulation studies allow for spurious claims of superiority of any method}.
+\emph{Biometrical Journal}, 66(1), Article 2200091, 2024.
 
 \bibitem{pennekamp2019intrinsic}
 Frank Pennekamp, Alison C. Iles, Joshua Garland, Georgina Brennan, Ulrich Brose, Ursula Gaedke, Ute Jacob, Pavel Kratina, Blake Matthews, Stephan Munch, Mark Novak, Gian Marco Palamara, Bj{\"o}rn C. Rall, Benjamin Rosenbaum, Andrea Tabi, Colette Ward, Richard Williams, Hao Ye and Owen L. Petchey.
@@ -3453,6 +3702,12 @@ Hung Viet Pham, Thibaud Lutellier, Weizhen Qi and Lin Tan.
 \href{https://doi.org/10.1109/ICSE.2019.00107}{{CRADLE}: Cross-Backend Validation to Detect and Localize Bugs in Deep Learning Libraries}.
 \emph{2019 IEEE/ACM 41st International Conference on Software Engineering (ICSE)}, pp. 1027--1038, 2019.
 
+\bibitem{phipson2010permutation}
+Belinda Phipson and Gordon K Smyth.
+\href{https://doi.org/10.2202/1544-6115.1585}{Permutation {P}-values Should Never Be Zero: Calculating Exact {P}-values When Permutations Are Randomly Drawn}.
+\emph{Statistical Applications in Genetics and Molecular Biology}, 9(1), 2010.
+Article 39.
+
 \bibitem{qiu2024tfb}
 Xiangfei Qiu, Jilin Hu, Lekui Zhou, Xingjian Wu, Junyang Du, Buang Zhang, Chenjuan Guo, Aoying Zhou, Christian S. Jensen, Zhenli Sheng and Bin Yang.
 \href{https://doi.org/10.14778/3665844.3665863}{{TFB}: Towards Comprehensive and Fair Benchmarking of Time Series Forecasting Methods}.
@@ -3463,6 +3718,16 @@ Xiangfei Qiu, Jilin Hu, Lekui Zhou, Xingjian Wu, Junyang Du, Buang Zhang, Chenju
 \href{https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/AirPassengers.html}{{AirPassengers}: Monthly Airline Passenger Numbers 1949--1960}.
 2026.
 R datasets documentation; accessed 30 October 2026.
+
+\bibitem{ravi2025empirical}
+Savitha Ravi and Michael Coblenz.
+\href{https://doi.org/10.1145/3764068}{An Empirical Evaluation of Property-Based Testing in {Python}}.
+\emph{Proceedings of the ACM on Programming Languages}, 9(OOPSLA2), pp. 3897--3923, 2025.
+
+\bibitem{reichert2024metamorphic}
+Peter Reichert, Kai Ma, Marvin H{\"o}ge, Fabrizio Fenicia, Marco Baity-Jesi, Dapeng Feng and Chaopeng Shen.
+\href{https://doi.org/10.5194/hess-28-2505-2024}{Metamorphic testing of machine learning and conceptual hydrologic models}.
+\emph{Hydrology and Earth System Sciences}, 28(11), pp. 2505--2529, 2024.
 
 \bibitem{roache2002code}
 Patrick J. Roache.
@@ -3488,6 +3753,11 @@ arXiv:2105.01404v1, 2021.
 Sergio Segura, Gordon Fraser, Ana B. Sanchez and Antonio Ruiz-Cortes.
 \href{https://doi.org/10.1109/TSE.2016.2532875}{A Survey on Metamorphic Testing}.
 \emph{IEEE Transactions on Software Engineering}, 42(9), pp. 805--824, 2016.
+
+\bibitem{simes1986improved}
+R. J. Simes.
+\href{https://doi.org/10.1093/biomet/73.3.751}{An improved {Bonferroni} procedure for multiple tests of significance}.
+\emph{Biometrika}, 73(3), pp. 751--754, 1986.
 
 \bibitem{sktimeConformance}
 {sktime developers}.
@@ -3517,6 +3787,11 @@ Sean Talts, Michael Betancourt, Daniel Simpson, Aki Vehtari and Andrew Gelman.
 arXiv:1804.06788v2, 2020.
 Preprint.
 
+\bibitem{tambon2024silent}
+Florian Tambon, Amin Nikanjam, Le An, Foutse Khomh and Giuliano Antoniol.
+\href{https://doi.org/10.1007/s10664-023-10389-6}{Silent bugs in deep learning frameworks: an empirical study of {Keras} and {TensorFlow}}.
+\emph{Empirical Software Engineering}, 29(1), Article 10, 2024.
+
 \bibitem{tan2025syntsbench}
 Qitai Tan, Yiyun Chen, Mo Li, Ruiwen Gu, Yilin Su and Xiao-Ping Zhang.
 \href{https://doi.org/10.52202/085713-4860}{{SynTSBench}: Rethinking Temporal Pattern Learning in Deep Learning Models for Time Series}.
@@ -3528,15 +3803,31 @@ Leonard J. Tashman.
 \href{https://doi.org/10.1016/S0169-2070(00)00065-0}{Out-of-sample tests of forecasting accuracy: an analysis and review}.
 \emph{International Journal of Forecasting}, 16(4), pp. 437--450, 2000.
 
+\bibitem{vandenburg2020evaluation}
+Gerrit J. J. van den Burg and Christopher K. I. Williams.
+\href{https://arxiv.org/abs/2003.06222}{An Evaluation of Change Point Detection Algorithms}.
+arXiv:2003.06222, 2020.
+Version 3, 2022.
+
 \bibitem{weyuker1982testing}
 Elaine J. Weyuker.
 \href{https://doi.org/10.1093/comjnl/25.4.465}{On Testing Non-Testable Programs}.
 \emph{The Computer Journal}, 25(4), pp. 465--470, 1982.
 
+\bibitem{xia2023balancing}
+Chunqiu Steven Xia, Saikat Dutta, Sasa Misailovic, Darko Marinov and Lingming Zhang.
+\href{https://doi.org/10.1109/ICSE48619.2023.00154}{Balancing Effectiveness and Flakiness of Non-Deterministic Machine Learning Tests}.
+\emph{2023 IEEE/ACM 45th International Conference on Software Engineering (ICSE)}, pp. 1801--1813, 2023.
+
 \bibitem{xie2011testing}
 Xiaoyuan Xie, Joshua W. K. Ho, Christian Murphy, Gail Kaiser, Baowen Xu and Tsong Yueh Chen.
 \href{https://doi.org/10.1016/j.jss.2010.11.920}{Testing and validating machine learning classifiers by metamorphic testing}.
 \emph{Journal of Systems and Software}, 84(4), pp. 544--558, 2011.
+
+\bibitem{yang2022data}
+Chenyang Yang, Rachel A Brower-Sinning, Grace Lewis and Christian K{\"a}stner.
+\href{https://doi.org/10.1145/3551349.3556918}{Data Leakage in Notebooks: Static Detection and Better Processes}.
+\emph{Proceedings of the 37th IEEE/ACM International Conference on Automated Software Engineering}, pp. 1--12, 2022.
 
 \bibitem{yule1927method}
 G. Udny Yule.
