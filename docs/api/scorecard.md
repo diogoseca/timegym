@@ -20,7 +20,9 @@ card.save("scorecard.png") # or .svg / .pdf
 `PATTERNS` is ten kinds of series, in plain words. Each `Pattern` carries a
 `title`, an `aka` (the textbook name), and two sentences: `predictable`, what a
 forecaster that knew the process could get right, and `unpredictable`, what no
-forecaster can get right by design.
+forecaster can get right by design. `build(noise, context_length, horizon)`
+returns the row's `Scenario`, and `fitted()` an estimator of the generator's own
+model family (see [What a fitted model could score](#what-a-fitted-model-could-score)).
 
 | Key | Title | What can be predicted | What cannot, by design |
 | --- | --- | --- | --- |
@@ -96,6 +98,77 @@ and a paler badge.
 The interval only knows the series the card drew. With ten series it is rough
 and tends to be too narrow; raise `instances` to tighten it.
 
+## What a fitted model could score
+
+The answer key knows the true parameters; a model fitted to the history has to
+estimate them, so even one of exactly the right kind falls short of 100 on
+average. `card.table` has a column
+`attainable` for that: the score that the pattern's own model family, fitted to
+each history, reaches on 200 fresh series of the row, with seeds 1,000,000 to
+1,000,199, pooled as a cell is pooled:
+
+    attainable = 100 * mean unavoidable / (mean unavoidable + mean avoidable)
+
+over those 200 series. Every numeric parameter is estimated; everything
+structural is given: the period, that there is exactly one break, the number
+of lags, that there is measurement noise. The value belongs to the row
+(pattern, noise level, history length and horizon), not to the series a card
+happens to draw, so on ten series a model of the right kind can land a little
+above it. The value is itself an estimate from 200 series, good to about a
+point: across blocks of 200 series it moves with a standard deviation of 0.1
+to 0.7 points on most rows and 1.1 on the random walk with drift at low noise.
+
+| Pattern | Model family fitted to each history | Low noise | High noise |
+| --- | --- | --- | --- |
+| `noise` | sample mean | 99.1 | 99.1 |
+| `level` | sample mean | 99.1 | 99.1 |
+| `trend` | least-squares line | 95.3 | 95.3 |
+| `seasonal` | constant + sine wave of period 12, least squares | 97.5 | 97.5 |
+| `trend_seasonal` | line + sine wave of period 12, least squares | 93.9 | 93.9 |
+| `level_shift` | mean after one break, dated by least squares | 96.7 | 96.7 |
+| `mean_reverting` | AR(1) + measurement noise, maximum likelihood | 93.0 | 95.8 |
+| `cycles` | AR(2) + measurement noise, maximum likelihood | 92.6 | 92.9 |
+| `random_walk` | random walk + measurement noise, maximum likelihood | 99.8 | 98.9 |
+| `random_walk_drift` | random walk with drift + measurement noise, maximum likelihood | 87.3 | 90.2 |
+
+Read it beside the score. 100 minus the attainable score is what the row's own
+model family loses to estimating its parameters from the history. The
+attainable score minus the model's score is what this model loses beyond that,
+and that is the part worth investigating.
+
+```python
+table = card.table
+table.assign(lost_on_top=table["attainable"] - table["score"])[
+    ["title", "noise", "score", "attainable", "lost_on_top"]]
+```
+
+Each `Pattern` carries the estimator as `fitted`, a factory with no arguments.
+The estimator is an ordinary model with `fit(context)` and `predict(future_index)`,
+so it can be scored like any other:
+
+```python
+from timegym import PATTERNS, Pipeline
+
+Pipeline(PATTERNS["trend"].fitted()).scorecard(["trend"])
+```
+
+The four maximum-likelihood fits run a Kalman filter with the scale and the
+mean (or the drift) solved for in closed form. A `Pattern` without `fitted`
+(`None`) has no attainable score (NaN). On the image the attainable score is a
+small triangle above each score's line.
+
+The 20 values of the default grid are stored; `tools/attainable_table.py`
+recomputes them. Any other noise level, history length or horizon gets NaN and
+no triangle, unless you ask for it:
+
+```python
+card = pipeline.scorecard(noise_levels=3, attainable=True)
+```
+
+`attainable=True` simulates each missing value once and keeps it for the
+session. Each autoregressive or random-walk cell takes about 3 to 5 seconds,
+the others well under a second; nothing is simulated without it.
+
 ## Mistakes and checks
 
 Cells that struggle or fail (a shown score below 70) name up to two **mistakes**. Each instance's error
@@ -137,7 +210,7 @@ close models.
 ## The Scorecard
 
 `Scorecard` keeps `title`, `table` (one row per pattern and noise level with
-`score`, `score_low`, `score_high`, `verdict`, `settled`, `mistakes`,
+`score`, `score_low`, `score_high`, `verdict`, `settled`, `attainable`, `mistakes`,
 `unavoidable_mse`, `avoidable_mse`, `mse`, `instances` and `failed_checks`),
 `run` (the `ForecastRun` with every series and forecast), `cells`, `seed` and
 `instances`. `good_at` lists patterns scoring at least 70 at every noise level,

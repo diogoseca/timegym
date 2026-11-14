@@ -410,6 +410,7 @@ class Pipeline:
         context_length=120,
         horizon=24,
         title=None,
+        attainable=False,
     ):
         """Score the model on a grid of patterns and noise levels; returns a Scorecard.
 
@@ -422,6 +423,14 @@ class Pipeline:
         table is a 95% percentile bootstrap interval over the cell's series; with
         ten series it is rough and tends to be too narrow, so raise ``instances``
         to tighten it. ``seed=None`` picks a fresh seed, kept on the result.
+
+        ``attainable`` in the table is what the pattern's own model family,
+        fitted to each history, scores on 200 fresh series of the row. The
+        default grid's values are stored. Off the default grid (another noise
+        level, ``context_length`` or ``horizon``) the column is NaN unless
+        ``attainable=True``, which simulates the missing values once per
+        session: about 3 to 5 seconds for each autoregressive or random-walk
+        cell and well under a second for the others.
         """
         from timegym.scorecard import _scorecard
 
@@ -434,6 +443,7 @@ class Pipeline:
             context_length=context_length,
             horizon=horizon,
             title=title,
+            attainable=attainable,
         )
 
     def plot_tests(

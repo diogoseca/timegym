@@ -13,6 +13,26 @@
   how many instances to try. The image draws each interval as a short line
   beside its score and gives an unsettled verdict a question mark and a paler
   badge.
+- Added what a fitted model could score to every scorecard row. `card.table`
+  has a new column `attainable`, after `settled`: the score that the pattern's
+  own model family, fitted to each history, reaches on 200 fresh series of the
+  row. 100 minus it is what the row's own model family loses to estimating its
+  parameters from the history; the distance from a model's score up to it is
+  what that model loses beyond that. It is itself an estimate, good to about a
+  point, and a model can land above it on a given card. The image marks it
+  with a small triangle above each score's line, also when a cell has no
+  interval. Scores, intervals and verdicts are unchanged.
+- Each `Pattern` has a new field `fitted`, a factory for an estimator of the
+  generator's own model family (a sample mean, a least-squares line, a
+  sinusoid of known period, a mean after one estimated break, or AR(1),
+  AR(2) and random-walk models with measurement noise fitted by maximum
+  likelihood). It defaults to `None`, so existing six-argument `Pattern(...)`
+  calls still work.
+- The default grid's attainable scores are stored. Off the default grid
+  (another noise level, history length or horizon) `attainable` is NaN unless
+  you pass `scorecard(attainable=True)`, which simulates the missing values
+  once per session: about 3 to 5 seconds for each autoregressive or
+  random-walk cell and well under a second for the others.
 
 ## 1.4.1 — 2026-11-14
 
