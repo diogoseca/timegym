@@ -327,8 +327,8 @@ def test_plain_install_brings_plots_and_the_sklearn_adapter():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     names = {requirement.split(">")[0].split("=")[0] for requirement in project["dependencies"]}
     assert {"matplotlib", "scikit-learn"} <= names
-    # Old install commands keep working.
-    assert project["optional-dependencies"]["plots"] == project["optional-dependencies"]["sklearn"] == []
+    # The empty extras that 1.2.0 kept for older install commands are gone.
+    assert not {"plots", "sklearn"} & project["optional-dependencies"].keys()
 
 
 def test_scorecard_text_counts_one_of_a_kind_and_compact_headers_fit():

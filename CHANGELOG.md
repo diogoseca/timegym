@@ -43,6 +43,11 @@
   `runtime_provenance`, `diagnostic_settings`, `transform_config`,
   `transform_from_config`, `fresh_model`, `is_sklearn_regressor` and
   `exception_evidence`. They still import without a warning.
+- Removed the empty `plots` and `sklearn` extras. They have installed nothing
+  since 1.2.0, when Matplotlib and scikit-learn became core dependencies. An
+  install command that still names one, such as `pip install "timegym[plots]"`,
+  installs the same packages as before and pip warns that the extra is unknown;
+  drop the extra from the command.
 
 ## 1.4.0 — 2026-11-12
 
