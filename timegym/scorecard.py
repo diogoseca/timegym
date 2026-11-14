@@ -69,6 +69,46 @@ def _score(best, avoidable):
     return 100.0 if total == 0 else 100.0 * best / total
 
 
+# Bootstrap resamples behind each cell's interval.
+_RESAMPLES = 2000
+
+
+def _interval(pairs, valid, score, seed):
+    """95% percentile bootstrap interval of a cell score over its series, or two NaNs.
+
+    ``pairs`` holds each scorable instance's (unavoidable, avoidable) error, in
+    instance order, with (0, 0) for one that crashed or failed an output check;
+    ``valid`` marks the instances that passed. Every resample draws the
+    instances with replacement and applies the cell score formula to them.
+    The generator depends only on ``seed`` and the number of instances, so a
+    cell's interval does not depend on which other cells were scored.
+    """
+    count = len(pairs)
+    if count < 2 or not np.isfinite(score):
+        return np.nan, np.nan
+    unavoidable, avoidable = np.asarray(pairs, dtype=float).T
+    draws = np.random.default_rng([int(seed), count]).integers(
+        0, count, size=(_RESAMPLES, count)
+    )
+    scores = _resampled_scores(
+        unavoidable, avoidable, np.asarray(valid, dtype=bool), draws
+    )
+    low, high = np.percentile(scores, [2.5, 97.5])
+    # Percentiles of a few series can miss the score itself; the interval always holds it.
+    return float(min(low, score)), float(max(high, score))
+
+
+def _resampled_scores(unavoidable, avoidable, valid, draws):
+    """The cell score of every row of instance positions in ``draws``."""
+    count = draws.shape[1]
+    passed = valid[draws].sum(axis=1)
+    best, worse = unavoidable[draws].sum(axis=1), avoidable[draws].sum(axis=1)
+    total = best + worse
+    # As in _score: 100 when both errors are zero; a resample with no valid instance scores 0.
+    ratio = np.divide(best, total, out=np.ones_like(total), where=total > 0)
+    return 100.0 * ratio * passed / count
+
+
 # %% ../source/13_scorecard.ipynb #scorecard-mistakes
 def _detrend(values):
     """Split rows of ``values`` into mean, slope per step and what remains."""
@@ -233,6 +273,30 @@ def _model_title(pipeline):
     return type(model).__name__
 
 
+def _instance_pairs(entries):
+    """Each scorable instance's (unavoidable, avoidable) error and whether it passed, in instance order.
+
+    An instance that crashed or failed an output check counts as (0, 0) and did not pass.
+    """
+    pairs, valid = [], []
+    for entry in entries:
+        numbers = _case_numbers(entry)
+        if numbers is not None:
+            pairs.append(numbers[:2])
+            valid.append(True)
+        elif not all(_case_checks(entry.result).values()):
+            pairs.append((0.0, 0.0))
+            valid.append(False)
+    return pairs, valid
+
+
+def _settled(low, high):
+    """True when both ends of a score's interval fall in the band printed for it."""
+    return bool(
+        np.isfinite(low) and np.isfinite(high) and verdict(low) == verdict(high)
+    )
+
+
 def _scorecard(
     pipeline,
     patterns=None,
@@ -271,6 +335,7 @@ def _scorecard(
             if numbers
             else (0.0 if broken else np.nan)
         )
+        low, high = _interval(*_instance_pairs(entries), score, run.metadata["seed"])
         mistakes = _check_problems(entries)
         if numbers and round(score) < 70:  # as the verdict reads it
             mistakes += _mistakes(numbers)
@@ -286,7 +351,10 @@ def _scorecard(
                 "noise": cell.noise,
                 "noise_sd": cell.noise_sd,
                 "score": score,
+                "score_low": low,
+                "score_high": high,
                 "verdict": verdict(score),
+                "settled": _settled(low, high),
                 "mistakes": "; ".join(mistakes),
                 "unavoidable_mse": best,
                 "avoidable_mse": avoidable,
@@ -338,11 +406,19 @@ class Scorecard:
     """What a forecaster gets right and wrong across kinds of series and noise.
 
     ``table`` has one row per pattern and noise level: the 0-100 ``score``,
-    its ``verdict``, named ``mistakes``, the unavoidable and avoidable mean
-    squared errors behind the score, and the mean squared error against what
-    happened (``mse``). ``run`` keeps every series and forecast for plots;
+    ``score_low`` and ``score_high`` around it, its ``verdict``, whether that
+    verdict is ``settled``, named ``mistakes``, the unavoidable and avoidable
+    mean squared errors behind the score, and the mean squared error against
+    what happened (``mse``). ``run`` keeps every series and forecast for plots;
     ``report`` is the JSON-ready TestReport. In a notebook a Scorecard shows
     as its image; ``print`` gives Markdown and ``save`` writes the image.
+
+    ``score_low`` to ``score_high`` is a 95% percentile bootstrap interval
+    over the cell's series: each resample draws the series with replacement
+    and scores them as the cell is scored. With ten series it is rough and
+    tends to be too narrow; raise ``instances`` to tighten it. Fewer than two
+    series give no interval (NaN). A verdict is ``settled`` when both ends of
+    the interval fall in its band; ``unsettled`` lists the rows that are not.
     """
 
     title: str
@@ -389,6 +465,12 @@ class Scorecard:
         ]
 
     @property
+    def unsettled(self):
+        """The rows whose interval crosses 90, 70 or 40, or that have too few series for one."""
+        table = self.table
+        return table[table["score"].notna() & ~table["settled"].astype(bool)]
+
+    @property
     def checks(self):
         """Output checks with pass/fail counts, as in ``TestReport.checks``."""
         return self.report.checks
@@ -416,7 +498,7 @@ class Scorecard:
         for key, rows in self.table.groupby("pattern", sort=False):
             cells = [
                 (
-                    f"{row.score:.0f} {row.verdict}"
+                    f"{row.score:.0f} {row.verdict}{'' if row.settled else '?'}"
                     if np.isfinite(row.score)
                     else "not scored"
                 )
@@ -443,8 +525,13 @@ class Scorecard:
                 for row in self.checks
             ),
             "",
-            _LEGEND,
+            _LEGEND + " " + _UNSETTLED_LEGEND,
         ]
+        closing = _unsettled_line(
+            len(self.unsettled), int(self.table["score"].notna().sum()), self.instances
+        )
+        if closing:
+            lines += ["", closing]
         return "\n".join(lines)
 
     def __str__(self):
@@ -482,6 +569,20 @@ _LEGEND = (
     "Score: 100 = as close as a forecaster that knows the true process; 50 = its avoidable error "
     "equals the unavoidable noise. Bands: 90+ nails it, 70+ good, 40+ struggles, below 40 fails."
 )
+_UNSETTLED_LEGEND = "A question mark means the verdict is not settled: the score's 95% interval reaches into another band."
+
+
+def _unsettled_line(count, total, instances):
+    """``12 of 20 verdicts are not settled at 10 instances. ...``, or "" when every verdict is settled."""
+    if not count:
+        return ""
+    more = 30 if instances < 30 else 3 * instances
+    return (
+        f"{count} of {total} {'verdict' if total == 1 else 'verdicts'} {'is' if count == 1 else 'are'} "
+        f"not settled at {_count(instances, 'instance', 'instances')}. "
+        f"Run scorecard(instances={more}) to narrow {'it' if count == 1 else 'them'}."
+    )
+
 
 # %% ../source/13_scorecard.ipynb #scorecard-plot
 # The palette and band colors come from timegym.plotting, shared by every figure.
@@ -501,7 +602,66 @@ def _badge(row):
         return "✗ broken", _BAND_COLORS[None]
     if not np.isfinite(row.score):
         return "not scored", _BAND_COLORS[None]
+    if not row.settled:
+        return f"{row.score:.0f}  {row.verdict}?", (
+            _pale(_BAND_COLORS[row.verdict][0]),
+            _MUTED,
+        )
     return f"{row.score:.0f}  {row.verdict}", _BAND_COLORS[row.verdict]
+
+
+def _pale(color, alpha=0.3):
+    """``color`` at ``alpha`` over the surface, as one solid color, so every file format shows the same."""
+    from matplotlib.colors import to_hex, to_rgb
+
+    return to_hex(
+        alpha * np.asarray(to_rgb(color)) + (1 - alpha) * np.asarray(to_rgb(_SURFACE))
+    )
+
+
+def _has_interval(row):
+    """A scored cell with a finite interval; broken and unscored cells show none."""
+    return row.failed_checks != row.instances and bool(
+        np.isfinite(row.score_low) and np.isfinite(row.score_high)
+    )
+
+
+def _whisker(ax, row, left, right, y, color, track, transform=None):
+    """Draw a cell's interval on a 0-100 line from ``left`` to ``right`` (axes x), ticked at 40, 70 and 90."""
+    if not _has_interval(row):
+        return
+    transform = transform or ax.transAxes
+
+    def at(value):
+        return left + (right - left) * value / 100
+
+    style = {"transform": transform, "clip_on": False, "solid_capstyle": "butt"}
+    ax.plot([left, right], [y, y], color=track, linewidth=0.6, **style)
+    ax.plot(
+        [at(floor) for floor, _ in VERDICTS[:-1]],
+        [y] * 3,
+        "|",
+        color=track,
+        markersize=5,
+        markeredgewidth=0.6,
+        **style,
+    )
+    ax.plot(
+        [at(row.score_low), at(row.score_high)],
+        [y, y],
+        color=color,
+        linewidth=1.4,
+        **style,
+    )
+    ax.plot(
+        [at(row.score)],
+        [y],
+        "o",
+        color=color,
+        markersize=3.2,
+        markeredgewidth=0,
+        **style,
+    )
 
 
 def _example(ax, entry, row):
@@ -563,6 +723,7 @@ def _example(ax, entry, row):
 
 def _plot_scorecard(card, *, compact=False):
     import matplotlib.pyplot as plt
+    from matplotlib.transforms import offset_copy
 
     table = card.table
     keys = list(dict.fromkeys(table["pattern"]))
@@ -642,7 +803,19 @@ def _plot_scorecard(card, *, compact=False):
                 _wrap(line, int(width * 13)) for line in verdict_lines
             )
             checks_at = 0.95 + 0.24 * (verdict_text.count("\n") + 1) + 0.1
-            height = checks_at + 0.75 + 1.5 * len(keys) + 0.45
+            legend = _wrap(
+                _LEGEND
+                + " The line beside each score is its 95% interval on a 0 to 100 scale, "
+                "ticked at 40, 70 and 90; a question mark means it reaches into another band. "
+                "Panels show instance 1: gray dots are observations, the black line is the "
+                "answer key, blue crosses are the forecast.",
+                int(width * 15),
+            )
+            legend_at = 0.05 + 0.135 * (
+                legend.count("\n") + 1
+            )  # inches from the bottom, 8 pt lines
+            bottom = legend_at + 0.13
+            height = checks_at + 0.75 + 1.5 * len(keys) + bottom
             figure = plt.figure(figsize=(width, height))
             top = 1 - (checks_at + 0.45) / height
             grid = figure.add_gridspec(
@@ -651,7 +824,7 @@ def _plot_scorecard(card, *, compact=False):
                 left=0.012,
                 right=0.99,
                 top=top,
-                bottom=0.45 / height,
+                bottom=bottom / height,
                 hspace=0.42,
                 wspace=0.08,
                 width_ratios=[4.6] + [3.3] * len(levels) + [3.0],
@@ -680,16 +853,7 @@ def _plot_scorecard(card, *, compact=False):
                 color=_MUTED,
             )
             figure.text(
-                0.012,
-                0.32 / height,
-                _wrap(
-                    _LEGEND + " Panels show instance 1: gray dots are "
-                    "observations, the black line is the answer key, blue crosses are the forecast.",
-                    int(width * 15),
-                ),
-                fontsize=8,
-                va="top",
-                color=_MUTED,
+                0.012, legend_at / height, legend, fontsize=8, va="top", color=_MUTED
             )
         noise_headers = [f"{level} (sd {sd:g})" for level, sd in zip(levels, sds)]
         if compact and any(len(header) > 18 for header in noise_headers):
@@ -742,7 +906,7 @@ def _plot_scorecard(card, *, compact=False):
                     )
                     ax.text(
                         0.5,
-                        0.5,
+                        0.6 if _has_interval(row) else 0.5,
                         label,
                         transform=ax.transAxes,
                         ha="center",
@@ -750,6 +914,15 @@ def _plot_scorecard(card, *, compact=False):
                         color=ink,
                         fontsize=9,
                         weight="bold",
+                    )
+                    _whisker(
+                        ax,
+                        row,
+                        0.1,
+                        0.9,
+                        0.27,
+                        ink,
+                        _pale(ink, 0.5) if ink != _MUTED else _HAIRLINE,
                     )
                 else:
                     _example(ax, first[index], row)
@@ -768,6 +941,13 @@ def _plot_scorecard(card, *, compact=False):
                             "edgecolor": "none",
                             "boxstyle": "round,pad=0.25",
                         },
+                    )
+                    # On the badge's line, right of it: the interval on a 0-100 scale.
+                    beside = offset_copy(
+                        ax.transAxes, fig=figure, y=4.5, units="points"
+                    )
+                    _whisker(
+                        ax, row, 0.55, 1.0, 1.03, _INK, _HAIRLINE, transform=beside
                     )
             ax = figure.add_subplot(grid[row_number, len(levels) + 1])
             ax.set_axis_off()

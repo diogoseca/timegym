@@ -53,8 +53,10 @@ forecasts were as close as those of a forecaster that knows exactly how the
 series was made; 50 means the model's avoidable error is as large as the noise
 nobody could avoid. The bands read "Nails it" from 90, "Good" from 70,
 "Struggles" from 40 and "Fails" below that. The last-value forecaster scores
-51: it nails the random walk and fails trends and seasons. In a notebook, `card`
-on its own shows the picture.
+51: it nails the random walk and fails trends and seasons. The short line beside
+each score is its 95% interval on a 0 to 100 scale, and a question mark means
+that interval reaches into another band; `pipeline.scorecard(instances=30)`
+narrows it. In a notebook, `card` on its own shows the picture.
 
 ### Scorecard, test and report
 
@@ -83,10 +85,12 @@ print(card)
 
 | Pattern | Low noise | High noise | Mistakes |
 |---|---|---|---|
-| Pure noise | 56 Struggles | 56 Struggles | Misreads the current level |
-| Straight-line trend | 10 Fails | 43 Struggles | Low: Forecasts too low; Trend too flat · High: Misreads the current level |
-| Random walk: shocks never fade | 99 Nails it | 87 Good | none found |
+| Pure noise | 56 Struggles? | 56 Struggles? | Misreads the current level |
+| Straight-line trend | 10 Fails | 43 Struggles? | Low: Forecasts too low; Trend too flat · High: Misreads the current level |
+| Random walk: shocks never fade | 99 Nails it | 87 Good? | none found |
 …
+
+14 of 20 verdicts are not settled at 10 instances. Run scorecard(instances=30) to narrow them.
 ```
 
 Zoom in on one row:

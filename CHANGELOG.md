@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Added an interval to every scorecard score. `card.table` has new columns
+  `score_low` and `score_high`, a 95% percentile bootstrap interval over the
+  cell's series, and `settled`, True when both ends fall in the score's band;
+  `card.unsettled` lists the rows that are not settled. With the default ten
+  series the interval is rough and tends to be too narrow; raise `instances`
+  to tighten it. Scores and verdicts are unchanged.
+- The printed scorecard marks a verdict that is not settled with a question
+  mark (`56 Struggles?`) and ends with how many verdicts are not settled and
+  how many instances to try. The image draws each interval as a short line
+  beside its score and gives an unsettled verdict a question mark and a paler
+  badge.
+
 ## 1.4.1 — 2026-11-14
 
 - Deprecated these names. Each still works as in 1.4.0, warns with a
