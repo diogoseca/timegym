@@ -477,6 +477,19 @@ def test_addendum_sign_flip_pvalue_bounds():
     assert 1 / 10000 <= p < 0.002
 
 
+def _same_up_to_roundoff(computed, stored, rel_tol=1e-12):
+    """Equal nested records, with floats compared up to roundoff across library versions."""
+    if isinstance(stored, dict):
+        return (isinstance(computed, dict) and computed.keys() == stored.keys()
+                and all(_same_up_to_roundoff(computed[key], stored[key], rel_tol) for key in stored))
+    if isinstance(stored, list):
+        return (isinstance(computed, list) and len(computed) == len(stored)
+                and all(_same_up_to_roundoff(a, b, rel_tol) for a, b in zip(computed, stored)))
+    if isinstance(stored, float) and isinstance(computed, float):
+        return math.isclose(computed, stored, rel_tol=rel_tol, abs_tol=0.0)
+    return computed == stored
+
+
 def test_addendum_multiplicity_recomputes_from_frozen_p_values():
     from scipy import stats
     addendum, manifest = load_addendum()
@@ -485,7 +498,7 @@ def test_addendum_multiplicity_recomputes_from_frozen_p_values():
     supplement, supplement_manifest = records('results-v2')
     conditions = [c['id'] for c in supplement_manifest['protocol']['covariance_study']['conditions']]
     covariance = supplement['covariance']['records']
-    assert run_addendum.suite_multiplicity(spec, conditions, covariance) == stored
+    assert _same_up_to_roundoff(run_addendum.suite_multiplicity(spec, conditions, covariance), stored)
     assert stored['frozen_decisions_checked'] == len(covariance) == 768
     by = {(row['variant'], row['suite'], row['condition']): row for row in covariance}
     expected = {'clean': (14, 3, 3, 3, 5), 'partial_shuffle': (64,) * 5, 'reduced_spread': (63, 30, 35, 41, 63)}
@@ -535,7 +548,7 @@ def test_addendum_paired_check_recomputes_from_frozen_records():
     supplement, supplement_manifest = records('results-v2')
     conditions = [c['id'] for c in supplement_manifest['protocol']['model_study']['conditions']]
     model = supplement['model']['records']
-    assert run_addendum.paired_answer_key(spec, conditions, model) == stored
+    assert _same_up_to_roundoff(run_addendum.paired_answer_key(spec, conditions, model), stored)
     distance = {(r['condition'], r['branch'], r['seed']): r['mean_reference_mse'] for r in model}
     generator = np.random.default_rng(spec['test']['seed'])
     flagged = {}
