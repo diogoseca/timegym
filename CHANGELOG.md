@@ -2,12 +2,21 @@
 
 ## Unreleased
 
-- Added an interval to every scorecard score. `card.table` has new columns
-  `score_low` and `score_high`, a 95% percentile bootstrap interval over the
-  cell's series, and `settled`, True when both ends fall in the score's band;
-  `card.unsettled` lists the rows that are not settled. With the default ten
-  series the interval is rough and tends to be too narrow; raise `instances`
-  to tighten it. Scores and verdicts are unchanged.
+- Added a confidence interval to every scorecard score. `card.table` has new
+  columns `score_low` and `score_high`, and `settled`, True when both ends fall
+  in the score's band; `card.unsettled` lists the rows that are not settled.
+  With other series of the same kind a score would come out a little different,
+  and the interval shows by how much. `interval_level`, a new argument of
+  `Pipeline.scorecard`, sets its confidence level: 0.95 by default, and for
+  example 0.99 for a wider, more cautious interval. The card keeps it in the
+  new field `Scorecard.interval_level`. With the default ten series the
+  interval is wide and still tends to hold the long-run score a little less
+  often than its level says; raise `instances` to tighten it. It only knows the
+  series the card drew, not kinds of series the card did not draw. For the
+  statistics: each series is left out in turn and the rest are scored, and the
+  spread of those scores on the log-odds scale, times a Student t quantile,
+  gives the interval; nothing is drawn at random. Scores and verdicts are
+  unchanged.
 - The printed scorecard marks a verdict that is not settled with a question
   mark (`56 Struggles?`) and ends with how many verdicts are not settled and
   how many instances to try. The image draws each interval as a short line

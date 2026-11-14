@@ -56,10 +56,11 @@ nobody could avoid. The bands read "Nails it" from 90, "Good" from 70,
 51: it nails the random walk and fails trends and seasons. The short line beside
 each score is its 95% interval on a 0 to 100 scale, and a question mark means
 that interval reaches into another band; `pipeline.scorecard(instances=30)`
-narrows it. The small triangle above that line is what the right kind of model,
-fitted to the same history, would score: the distance from the score up to the
-triangle is what your model loses beyond estimating the parameters. In a
-notebook, `card` on its own shows the picture.
+narrows it, and `interval_level=0.99` asks for a wider, more cautious one. The
+small triangle above that line is what the right kind of model, fitted to the
+same history, would score: the distance from the score up to the triangle is
+what your model loses beyond estimating the parameters. In a notebook, `card`
+on its own shows the picture.
 
 ### Scorecard, test and report
 

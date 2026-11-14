@@ -1,5 +1,8 @@
 """The scorecard grid, its exact references, seeding, scores, mistakes and checks."""
+import math
+import re
 import tomllib
+import warnings
 from pathlib import Path
 
 import matplotlib
@@ -391,21 +394,127 @@ def test_a_cell_has_the_same_interval_whichever_other_patterns_are_scored(last_v
     np.testing.assert_allclose(alone[["score_low", "score_high"]], shared[["score_low", "score_high"]])
 
 
-def test_the_interval_is_a_bootstrap_of_the_cell_score_over_its_series(last_value_card):
-    from timegym.scorecard import _RESAMPLES, _case_numbers
+def _interval_by_definition(pairs, valid, level=0.95):
+    """The cell score and its interval, written out from the definition one value at a time."""
+    from scipy.stats import t as student_t
 
-    card, index = last_value_card, 4  # random walk, low noise
-    pairs = np.array([_case_numbers(entry)[:2] for entry in card.run.cases if entry.scenario_index == index])
-    n = len(pairs)
-    draws = np.random.default_rng([card.seed, n]).integers(0, n, size=(_RESAMPLES, n))
-    scores = [100 * pairs[pick, 0].sum() / pairs[pick].sum() for pick in draws]
-    low, high = np.percentile(scores, [2.5, 97.5])
-    row = card.table.loc[index]
-    assert row["pattern"] == "random_walk"
-    assert (row["score_low"], row["score_high"]) == pytest.approx((min(low, row["score"]),
-                                                                    max(high, row["score"])))
-    # The same formula on the series as drawn gives the score itself.
-    assert 100 * pairs[:, 0].sum() / pairs.sum() == pytest.approx(row["score"])
+    pairs, valid, n = np.asarray(pairs, dtype=float), np.asarray(valid, dtype=bool), len(pairs)
+
+    def cell_score(keep):
+        best, total = pairs[keep, 0].sum(), pairs[keep].sum()
+        return 100 * (1.0 if total == 0 else best / total) * valid[keep].sum() / len(keep)
+
+    def spread(values):
+        mean = sum(values) / n
+        return math.sqrt((n - 1) / n * sum((value - mean) ** 2 for value in values))
+
+    def logit(x):
+        return math.log(x / (100 - x))
+
+    score = cell_score(list(range(n)))
+    left_out = [cell_score([j for j in range(n) if j != i]) for i in range(n)]
+    q = student_t.ppf(0.5 + level / 2, n - 1)
+    if 0 < score < 100 and all(0 < s < 100 for s in left_out):
+        centre, half = logit(score), q * spread([logit(s) for s in left_out])
+        low, high = 100 / (1 + math.exp(-(centre - half))), 100 / (1 + math.exp(-(centre + half)))
+        scale = "log-odds"
+    else:
+        half = q * spread(left_out)
+        low, high = max(score - half, 0.0), min(score + half, 100.0)
+        scale = "score"
+    return score, min(low, score), max(high, score), scale
+
+
+# Five series with different avoidable errors, all scored: the log-odds case.
+SPREAD_OUT = [(1.0, 0.2), (0.8, 1.5), (1.2, 0.1), (0.9, 3.0), (1.1, 0.7)]
+
+
+@pytest.mark.parametrize("level", [0.8, 0.95, 0.99])
+def test_the_interval_of_a_hand_made_cell_follows_its_definition(level):
+    from timegym.scorecard import _interval
+
+    score, low, high, scale = _interval_by_definition(SPREAD_OUT, [True] * 5, level)
+    assert scale == "log-odds" and 0 < low < score < high < 100
+    assert _interval(SPREAD_OUT, [True] * 5, score, level) == pytest.approx((low, high), rel=1e-9)
+
+
+def test_the_interval_of_a_drawn_cell_follows_its_definition(last_value_card):
+    from timegym.scorecard import _instance_pairs
+
+    card = last_value_card
+    for index, row in card.table.iterrows():
+        pairs, valid = _instance_pairs([entry for entry in card.run.cases if entry.scenario_index == index])
+        score, low, high, _ = _interval_by_definition(pairs, valid)
+        assert score == pytest.approx(row["score"], rel=1e-9)
+        assert (row["score_low"], row["score_high"]) == pytest.approx((low, high), rel=1e-9)
+
+
+@pytest.mark.parametrize("pairs, valid, expected", [
+    ([(0.0, 0.0)] * 4, [False] * 4, (0.0, 0.0)),            # every instance failed its output checks
+    ([(1.0, 0.0)] * 4, [True] * 4, (100.0, 100.0)),         # a perfect forecaster
+    ([(1.0, 0.0)] * 3 + [(1.0, 2.0)], [True] * 4, None),     # leaving the last one out scores exactly 100
+    ([(1.0, 0.5)] + [(0.0, 0.0)] * 3, [True] + [False] * 3, None),  # one valid instance among failed ones
+    ([(1.0, 0.0), (0.0, 0.0)], [True, False], None),        # two instances: one perfect, one failed
+])
+def test_a_score_of_0_or_100_in_a_cell_falls_back_to_the_score_scale(pairs, valid, expected):
+    from timegym.scorecard import _interval
+
+    score, low, high, scale = _interval_by_definition(pairs, valid)
+    assert scale == "score"
+    got = _interval(pairs, valid, score)
+    assert all(np.isfinite(got)) and 0 <= got[0] <= score <= got[1] <= 100
+    assert got == pytest.approx((low, high), rel=1e-9, abs=1e-12)
+    if expected is not None:
+        assert got == pytest.approx(expected)
+
+
+def test_fewer_than_two_instances_or_no_score_give_no_interval():
+    from timegym.scorecard import _interval
+
+    assert all(np.isnan(_interval([(1.0, 0.5)], [True], 66.7)))
+    assert all(np.isnan(_interval([], [], np.nan)))
+    assert all(np.isnan(_interval(SPREAD_OUT, [True] * 5, np.nan)))
+
+
+def test_a_higher_level_gives_an_interval_that_holds_the_lower_one(last_value_card):
+    from timegym.scorecard import _instance_pairs, _interval
+
+    card = last_value_card
+    cells = [_instance_pairs([entry for entry in card.run.cases if entry.scenario_index == index])
+             for index in range(len(card.table))] + [(SPREAD_OUT, [True] * 5)]
+    scores = list(card.table["score"]) + [_interval_by_definition(SPREAD_OUT, [True] * 5)[0]]
+    for (pairs, valid), score in zip(cells, scores):
+        ends = [_interval(pairs, valid, score, level) for level in (0.5, 0.8, 0.9, 0.95, 0.99, 0.999)]
+        for (low, high), (wider_low, wider_high) in zip(ends, ends[1:]):
+            assert wider_low <= low <= score <= high <= wider_high
+        assert ends[-1][1] - ends[-1][0] > ends[0][1] - ends[0][0]
+    wide = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=3,
+                                                   interval_level=0.99).table
+    assert (wide["score_low"] <= card.table["score_low"]).all()
+    assert (wide["score_high"] >= card.table["score_high"]).all()
+    pd.testing.assert_series_equal(wide["score"], card.table["score"])
+
+
+def test_the_interval_does_not_depend_on_the_seed_argument_given_the_same_series(monkeypatch,
+                                                                               last_value_card):
+    import inspect
+
+    from timegym.scorecard import _interval
+
+    assert "seed" not in inspect.signature(_interval).parameters
+    original = Pipeline.run
+
+    def same_series(self, scenarios=None, seeds=None, *, seed=0, instances=None, **options):
+        run = original(self, scenarios, seeds, seed=3, instances=instances, **options)
+        run.metadata["seed"] = seed  # the card records the seed it was given; the series are those of seed 3
+        return run
+
+    monkeypatch.setattr(Pipeline, "run", same_series)
+    relabelled = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10,
+                                                        seed=99)
+    assert relabelled.seed == 99
+    columns = ["score", "score_low", "score_high", "settled"]
+    pd.testing.assert_frame_equal(relabelled.table[columns], last_value_card.table[columns])
 
 
 def test_the_answer_key_is_settled_at_100_everywhere():
@@ -440,11 +549,11 @@ def test_failed_output_checks_pull_the_interval_down_and_always_failing_settles_
     broken = card.table
     assert (0 < broken["failed_checks"]).all() and (broken["failed_checks"] < 10).all()
     assert (broken["score_low"] < healthy["score_low"]).all()
-    # Resampling the series exactly as drawn gives the score, broken instances included.
-    from timegym.scorecard import _instance_pairs, _resampled_scores
+    # Scoring the series exactly as drawn gives the score, broken instances included.
+    from timegym.scorecard import _instance_pairs, _subset_scores
 
     pairs, valid = _instance_pairs([entry for entry in card.run.cases if entry.scenario_index == 0])
-    as_drawn = _resampled_scores(*np.array(pairs).T, np.array(valid), np.arange(10)[None, :])
+    as_drawn = _subset_scores(*np.array(pairs).T, np.array(valid), np.arange(10)[None, :])
     assert as_drawn[0] == pytest.approx(card.table.loc[0, "score"])
     cells = scenario_grid(["trend"])
     dates = Pipeline(AnswerKey(_answer_keys(cells, 0, 2), date_shift=-1)).scorecard(["trend"], instances=2)
@@ -484,6 +593,86 @@ def test_the_picture_marks_unsettled_verdicts_in_both_modes(last_value_card):
         texts = [text.get_text().strip() for ax in figure.axes for text in ax.texts]
         assert label in texts and f"{settled['score']:.0f}  {settled['verdict']}" in texts
         plt.close(figure)
+
+
+@pytest.mark.parametrize("bad", [True, False, "0.95", float("nan"), float("inf"), 0, 1, 0.0, 1.0, 95, -0.5,
+                                 None])
+def test_interval_level_must_be_a_number_between_0_and_1(monkeypatch, bad):
+    from timegym.scorecard import _scorecard
+    from timegym.scorecard import scorecard as deprecated_scorecard
+
+    def never(*args, **kwargs):
+        raise AssertionError("the level is checked before any series is drawn")
+
+    monkeypatch.setattr(Pipeline, "run", never)
+    message = f"interval_level must be a number between 0 and 1, such as 0.95; got {bad!r}"
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        Pipeline(NaiveForecaster()).scorecard(["trend"], instances=3, interval_level=bad)
+    with pytest.raises(ValueError, match="interval_level must be a number between 0 and 1"):
+        _scorecard(Pipeline(NaiveForecaster()), ["trend"], instances=3, interval_level=bad)
+    with pytest.warns(DeprecationWarning), pytest.raises(ValueError, match="interval_level must be"):
+        deprecated_scorecard(Pipeline(NaiveForecaster()), ["trend"], instances=3, interval_level=bad)
+
+
+def test_the_card_keeps_its_interval_level_and_older_constructions_still_work(last_value_card):
+    from timegym.scorecard import Scorecard
+    from timegym.scorecard import scorecard as deprecated_scorecard
+
+    assert last_value_card.interval_level == 0.95
+    card = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=3, interval_level=np.float32(0.9))
+    assert type(card.interval_level) is float and card.interval_level == pytest.approx(0.9)
+    with pytest.warns(DeprecationWarning):
+        old = deprecated_scorecard(Pipeline(NaiveForecaster()), ["trend"], instances=3, interval_level=0.99)
+    assert old.interval_level == 0.99
+    fields = last_value_card
+    rebuilt = Scorecard(fields.title, fields.table, fields.run, fields.cells, fields.seed, fields.instances)
+    assert rebuilt.interval_level == 0.95 and str(rebuilt) == str(last_value_card)
+
+
+def _caption(figure):
+    return " ".join(text.get_text() for text in figure.texts).replace("\n", " ")
+
+
+@pytest.mark.parametrize("level, words", [(0.9, "90%"), (0.95, "95%"), (0.99, "99%"), (0.995, "99.5%")])
+def test_the_level_is_written_as_a_percent(level, words):
+    from timegym.scorecard import _percent
+
+    assert _percent(level) == words
+
+
+def test_the_printed_card_and_the_image_name_the_card_s_level(last_value_card):
+    default = "the score's 95% interval reaches into another band."
+    figure = last_value_card.plot()
+    assert "The line beside each score is its 95% interval on a 0 to 100 scale, ticked at 40, 70 and 90" in (
+        _caption(figure))
+    plt.close(figure)
+    assert default in str(last_value_card)
+    wide = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=3, interval_level=0.99)
+    text = str(wide)
+    assert ("A question mark means the verdict is not settled: the score's 99% interval reaches into "
+            "another band.") in text and "95%" not in text
+    figure = wide.plot()
+    caption = _caption(figure)
+    assert "The line beside each score is its 99% interval on a 0 to 100 scale" in caption
+    assert "95%" not in caption
+    plt.close(figure)
+
+
+def test_scoring_an_ordinary_card_raises_no_warning():
+    from timegym.scorecard import _interval
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        card = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "seasonal", "random_walk"],
+                                                     instances=5, interval_level=0.99)
+        str(card)
+        plt.close(card.plot())
+        for pairs, valid in [([(0.0, 0.0)] * 3, [False] * 3), ([(1.0, 0.0)] * 3, [True] * 3),
+                             ([(1.0, 0.0), (0.0, 0.0)], [True, False]), (SPREAD_OUT, [True] * 5),
+                             ([(1.0, 1e-300), (1.0, 1e300)], [True, True])]:
+            score = _interval_by_definition(pairs, valid)[0]
+            _interval(pairs, valid, score, 0.999)
+    assert card.table["score_low"].notna().all()
 
 
 # --- What a fitted model could score ----------------------------------------------------------

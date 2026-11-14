@@ -71,15 +71,14 @@ the mean of the cell scores. `VERDICTS` names the bands on the rounded score:
 
 ## How sure a score is
 
-Ten series per cell are a small sample, so every score comes with an interval.
-`card.table` has three columns for it:
+Ten series per cell are a small sample, so every score comes with a confidence
+interval. `card.table` has three columns for it:
 
-- `score_low` and `score_high`: a 95% percentile bootstrap interval over the
-  cell's series. The cell is scored again on 2,000 resamples of its series,
-  drawn with replacement; an instance that crashed or failed an output check
-  scores zero in every resample that draws it. The interval always contains
-  the score. The same seed gives the same interval, whichever other patterns
-  were scored. With fewer than two series there is no interval (NaN).
+- `score_low` and `score_high`: the interval around the score. With other
+  series of the same kind the score would come out a little different, and the
+  interval shows by how much. Its confidence level is `interval_level`, 95% by
+  default. The interval always contains the score. With fewer than two series
+  there is no interval (NaN).
 - `settled`: True when both ends of the interval fall in the band printed for
   the score.
 
@@ -95,8 +94,35 @@ image, a short line beside each score draws its interval on a 0 to 100 scale,
 ticked at 40, 70 and 90; a verdict that is not settled gets a question mark
 and a paler badge.
 
-The interval only knows the series the card drew. With ten series it is rough
-and tends to be too narrow; raise `instances` to tighten it.
+A higher confidence level gives a wider, more cautious interval. Pass
+`interval_level` for another level, for example
+`pipeline.scorecard(interval_level=0.99)`. The card keeps it as `card.interval_level`, and the printed
+card and the image name it. It is a number between 0 and 1, so `95` raises
+`ValueError`.
+
+With ten series the interval is wide, and it still tends to hold the score you
+would get from a very large number of series a little less often than its
+level says. Raise `instances` to tighten it.
+
+The interval only knows the series the card drew. It cannot see a model that
+fails on a kind of series that the card did not happen to draw, and it says
+nothing about data that the patterns do not resemble
+([What TimeGym tests, and what it does not](../concepts/scope.md)).
+
+### How the interval is computed
+
+This part is for readers who want the statistics.
+
+Each series is left out in turn and the rest are scored as the cell is scored.
+How far those scores spread, times a Student t quantile with one degree of
+freedom fewer than the series, gives the half-width (a jackknife). This is
+done on the log-odds of the score, so both ends stay between 0 and 100. When
+the score, or a score with one series left out, is exactly 0 or 100 (every
+instance failed, a perfect forecaster, one instance that passed among failed
+ones), the same is done on the score itself and cut to 0 to 100. An instance
+that crashed or failed an output check scores zero wherever it is kept.
+Nothing is drawn at random, so a cell's interval depends only on its own
+series and the level, whichever other patterns were scored.
 
 ## What a fitted model could score
 
@@ -340,8 +366,8 @@ Compared with scorecard-baseline.json (30 series per cell)
 `Scorecard` keeps `title`, `table` (one row per pattern and noise level with
 `score`, `score_low`, `score_high`, `verdict`, `settled`, `attainable`, `mistakes`,
 `unavoidable_mse`, `avoidable_mse`, `mse`, `instances` and `failed_checks`),
-`run` (the `ForecastRun` with every series and forecast), `cells`, `seed` and
-`instances`. `good_at` lists patterns scoring at least 70 at every noise level,
+`run` (the `ForecastRun` with every series and forecast), `cells`, `seed`,
+`instances` and `interval_level`. `good_at` lists patterns scoring at least 70 at every noise level,
 `fails_at` those below 40 at some level and `noise_sensitive` those that lose
 25 points or more from low to high noise. `unsettled` holds the table rows
 whose verdict is not settled.

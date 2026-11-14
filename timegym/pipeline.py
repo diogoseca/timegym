@@ -411,6 +411,7 @@ class Pipeline:
         horizon=24,
         title=None,
         attainable=False,
+        interval_level=0.95,
     ):
         """Score the model on a grid of patterns and noise levels; returns a Scorecard.
 
@@ -420,9 +421,12 @@ class Pipeline:
         cell. A cell's score is ``100 * unavoidable / (unavoidable + avoidable)``
         mean squared error, pooled over its instances; instances that crash or
         fail an output check score zero. ``score_low`` to ``score_high`` in the
-        table is a 95% percentile bootstrap interval over the cell's series; with
-        ten series it is rough and tends to be too narrow, so raise ``instances``
-        to tighten it. ``seed=None`` picks a fresh seed, kept on the result.
+        table is the interval around the score: with other series of the same
+        kind the score would come out a little different, and the interval shows
+        by how much. ``interval_level`` says how cautious it is (0.95 by default;
+        0.99 gives a wider interval). With ten series it is wide, so raise
+        ``instances`` to tighten it. ``seed=None`` picks a fresh seed, kept on the
+        result.
 
         ``attainable`` in the table is what the pattern's own model family,
         fitted to each history, scores on 200 fresh series of the row. The
@@ -444,6 +448,7 @@ class Pipeline:
             horizon=horizon,
             title=title,
             attainable=attainable,
+            interval_level=interval_level,
         )
 
     def plot_tests(
