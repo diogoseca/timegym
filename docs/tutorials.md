@@ -39,8 +39,7 @@ python -m jupyterlab tutorials
 
 Select the Python kernel belonging to that environment and use **Restart Kernel
 and Run All Cells**. Each notebook runs in its own kernel. The real-data
-notebook reads the included AirPassengers CSV; no notebook uses the network
-([Market data](api/market-data.md) covers the optional fetch helper).
+notebook reads the included AirPassengers CSV; no notebook uses the network.
 
 The tutorials live in `tutorials/` ([tutorials guide](../tutorials/README.md)).
 The 15 source notebooks in `source/` are the package's code, not tutorials: they

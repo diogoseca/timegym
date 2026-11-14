@@ -19,9 +19,7 @@ them. Their scalar manifests retain scalar values, accepting a one-target
 `correlation` without adding dependence fields. All random draws use local generators.
 
 `Case` is defined in `timegym.contracts` and is also importable from `timegym` and
-`timegym.scenarios`. Direct `generate_process(...)` calls resolve raw parameters;
-`generate_joint_process(...)` accepts parameters already returned by
-`resolve_process(...)`.
+`timegym.scenarios`.
 
 `scenario.display_name` provides the same parameter-aware name used in plots.
 Configurations and reports record the identifiers, not the display names.
@@ -79,10 +77,9 @@ the exact Kalman-filter prediction given the noisy context, and
 `noise`, `ar1` and `random_walk` keep their analytic references and manifests.
 
 The five core families are listed by `timegym.scenarios.CORE_KINDS`, derived from
-the scenario defaults. `timegym.data.synthetic.default_scenarios(context_length=120,
+the scenario defaults. `timegym.scenarios.default_scenarios(context_length=120,
 horizon=12, *, n_targets=1, seed=0)` creates fresh specifications for those families.
-`Pipeline.run()` uses that helper; `Pipeline.plot_tests()` requests the same families
-with a context length of 240 and horizon of 80.
+`Pipeline.run()` uses that helper.
 
 ## Signatures
 
@@ -95,3 +92,5 @@ with a context length of 240 and horizon of 80.
 ::: timegym.SimulationReference
 
 ::: timegym.scenarios.scenario_label
+
+::: timegym.scenarios.default_scenarios

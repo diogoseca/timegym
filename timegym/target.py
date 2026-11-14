@@ -5,7 +5,7 @@ from typing import TypeVar
 from numpy.typing import NDArray
 import numpy as np
 import pandas as pd
-from ._internal import positive_int
+from ._internal import positive_int, _deprecated
 import dataclasses
 from collections.abc import Sequence
 from scipy import optimize, special, stats
@@ -35,6 +35,11 @@ _Pandas = TypeVar("_Pandas", pd.Series, pd.DataFrame)
 
 # %% ../source/05_target_engineering.ipynb #05_target_engineerin-07
 
+_RECIPE = (
+    "the package has no replacement; the recipe stays in the source notebook chapter "
+    '"Target engineering" (source/05_target_engineering.ipynb)'
+)
+
 
 # %% ../source/05_target_engineering.ipynb #05_target_engineerin-09
 def multioutput_target(
@@ -48,6 +53,14 @@ def multioutput_target(
     the index and incomplete tail labels. Existing generated names raise.
     This constructs labels, not a multioutput forecasting adapter.
     """
+    _deprecated("multioutput_target", _RECIPE)
+    return _multioutput_target(df, horizon, dropna)
+
+
+def _multioutput_target(
+    df: pd.DataFrame, horizon: int = 10, dropna: bool = True
+) -> pd.DataFrame:
+    """Append future labels without a deprecation warning, for the helpers below."""
     if not isinstance(df, pd.DataFrame):
         raise TypeError("df must be a pandas DataFrame")
     if not df.columns.is_unique:
@@ -70,7 +83,8 @@ def onestep_target(df: pd.DataFrame, dropna: bool = True) -> pd.DataFrame:
     A recursive forecaster can train on these labels; the helper itself does
     not fit a model or feed predictions back into future inputs.
     """
-    return multioutput_target(df, horizon=1, dropna=dropna)
+    _deprecated("onestep_target", _RECIPE)
+    return _multioutput_target(df, horizon=1, dropna=dropna)
 
 
 # %% ../source/05_target_engineering.ipynb #05_target_engineerin-13
@@ -84,6 +98,7 @@ def step_ahead_target(
     Generated names must not collide. This supplies labels for a chosen horizon,
     not a direct forecasting adapter.
     """
+    _deprecated("step_ahead_target", _RECIPE)
     if not isinstance(df, pd.DataFrame):
         raise TypeError("df must be a pandas DataFrame")
     if not df.columns.is_unique:
@@ -105,6 +120,12 @@ def fractional_weights(d: float, lags: int) -> NDArray[np.float64]:
     d may be any finite real order; lags includes the current observation's
     coefficient 1. The array is a finite truncation, not an infinite filter.
     """
+    _deprecated("fractional_weights", _RECIPE)
+    return _fractional_weights(d, lags)
+
+
+def _fractional_weights(d: float, lags: int) -> NDArray[np.float64]:
+    """Fractional difference weights without a deprecation warning, for the helpers below."""
     lags = positive_int(lags, "lags")
     if isinstance(d, (bool, np.bool_)):
         raise ValueError("d must be finite and real")
@@ -129,6 +150,14 @@ def fractional_differencing(
     never mutate the input. Order zero returns a copy without trimming.
     Restore the original target scale in the model before forecast evaluation.
     """
+    _deprecated("fractional_differencing", _RECIPE)
+    return _fractional_differencing(series, order, fractional_coefficients, lag=lag)
+
+
+def _fractional_differencing(
+    series: _Pandas, order: float, fractional_coefficients: int, *, lag: int = 1
+) -> _Pandas:
+    """Fractional differences without a deprecation warning, for ``differencing``."""
     if not isinstance(series, (pd.Series, pd.DataFrame)):
         raise TypeError("series must be a pandas Series or DataFrame")
     if isinstance(order, (bool, np.bool_)):
@@ -140,7 +169,7 @@ def fractional_differencing(
         raise ValueError("order must be finite and nonnegative")
     if order == 0:
         return series.copy()
-    weights = fractional_weights(order, count)[:, 0]
+    weights = _fractional_weights(order, count)[:, 0]
     result = sum(weights[k] * series.shift(k * lag) for k in range(count))
     return result.iloc[(count - 1) * lag :]
 
@@ -176,7 +205,12 @@ def differencing(
         for _ in range(int(order)):
             result = result.diff(periods=lag)
         return result.iloc[int(order) * lag :]
-    return fractional_differencing(series, order, fractional_coefficients, lag=lag)
+    _deprecated(
+        "differencing with a noninteger order, and its fractional_coefficients argument,",
+        "integer orders keep working; the fractional recipe stays in the source notebook chapter "
+        '"Target engineering" (source/05_target_engineering.ipynb)',
+    )
+    return _fractional_differencing(series, order, fractional_coefficients, lag=lag)
 
 
 # %% ../source/05_target_engineering.ipynb #target-transforms-imports

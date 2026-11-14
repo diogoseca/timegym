@@ -166,6 +166,7 @@ MOVED_PAGES = {
     "notebooks/26_composed_and_financial_stresses/": "tutorials/11_composed_and_financial_stresses/",
     "notebooks/27_joint_financial_uncertainty/": "tutorials/12_joint_financial_uncertainty/",
     "docs/notebooks/": "docs/tutorials/",
+    "docs/api/market-data/": "docs/reference/",
 }
 
 _REDIRECT = """<!doctype html>

@@ -220,7 +220,7 @@ def test_sklearn_clone_uses_constructor_parameters_without_fitted_state():
 def test_replay_rejects_raw_dicts_instead_of_bypassing_report_validation():
     payload = Pipeline().test([Scenario("trend", context_length=12, horizon=2)], seeds=[0]).to_dict()
     payload["cases"][0]["diagnostics"][0]["status"] = "PASSED"
-    with pytest.raises(TypeError, match="requires a TestReport"):
+    with pytest.warns(DeprecationWarning, match="report.replay_case"), pytest.raises(TypeError, match="requires a TestReport"):
         replay_case(payload)
     with pytest.raises(ValueError, match="diagnostic status"):
         TestReport.from_dict(payload)

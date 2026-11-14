@@ -245,8 +245,8 @@ def test_plot_style_is_local_and_pipeline_plots_return_figures():
     scenarios = [Scenario("white_noise", context_length=10, horizon=3)]
     before = dict(plt.rcParams)
     pipeline = Pipeline()
-    first = pipeline.plot_tests(scenarios, seeds=[4])
-    second = pipeline.plot_errors(scenarios, seeds=[4, 5], metric="mse")
+    first = pipeline.run(scenarios, seeds=[4]).plot_forecasts()
+    second = pipeline.run(scenarios, seeds=[4, 5]).plot_errors(metric="mse")
     assert len(first.axes) == len(second.axes) == 1
     assert dict(plt.rcParams) == before
 

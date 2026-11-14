@@ -5,6 +5,7 @@ from enum import Enum
 import math
 import traceback
 from typing import Any
+import warnings
 import numpy as np
 
 __all__ = ["positive_int", "nonnegative_int"]
@@ -46,6 +47,20 @@ def _real_array(value: Any, name: str) -> np.ndarray:
     if _has_complex_values(array):
         raise ValueError(f"{name} must contain real-valued numbers")
     return np.asarray(array, dtype=float)
+
+
+def _levels(levels) -> np.ndarray:
+    """Probability levels as a 1-D array, finite, inside (0, 1) and increasing."""
+    probabilities = _real_array(levels, "levels")
+    if probabilities.ndim != 1 or probabilities.size == 0:
+        raise ValueError("levels must be a nonempty one-dimensional sequence")
+    if not np.isfinite(probabilities).all() or np.any(
+        (probabilities <= 0) | (probabilities >= 1)
+    ):
+        raise ValueError("levels must be finite and strictly between zero and one")
+    if np.any(np.diff(probabilities) <= 0):
+        raise ValueError("levels must be unique and increasing")
+    return probabilities
 
 
 # %% ../source/12_package.ipynb #10_reports_and_repla-09
@@ -92,3 +107,13 @@ def _json_safe(value):
     if hasattr(value, "isoformat"):
         return str(value.isoformat())
     return repr(value)
+
+
+# %% ../source/12_package.ipynb #shared-deprecation
+def _deprecated(name: str, instead: str) -> None:
+    """Warn at the caller's line that ``name`` leaves in TimeGym 2.0, and say what to use instead."""
+    warnings.warn(
+        f"{name} is deprecated and will be removed in TimeGym 2.0; {instead}",
+        DeprecationWarning,
+        stacklevel=3,
+    )

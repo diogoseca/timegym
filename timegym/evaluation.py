@@ -37,8 +37,7 @@ class ForecastRun:
     not embed contexts, observations, or forecast arrays. ``titles``
     optionally names each scenario position in plain words for the plots (a
     scorecard sets them to the pattern and noise level); they are not saved
-    in the report. Plotting requires Matplotlib, imported only when a plot is
-    drawn.
+    in the report.
     """
 
     cases: list[EvaluatedCase]
@@ -53,14 +52,7 @@ class ForecastRun:
         )
 
     def plot_forecasts(self, *, show_quantiles=False, figsize=None, history=None):
-        """Plot scenario/target rows by seed columns, using retained outputs.
-
-        Gray dots are observations, the black line is the answer key and blue
-        crosses are the forecast, with each case's score above its panel.
-        ``history`` is how many past steps to show (four times the horizon by
-        default, ``"all"`` for everything). Optional bands use explicit
-        marginal quantiles; samples never imply a point forecast.
-        """
+        """Draw ``timegym.plotting.plot_forecasts`` for this run's retained forecasts."""
         from timegym.plotting import plot_forecasts
 
         return plot_forecasts(
@@ -70,12 +62,7 @@ class ForecastRun:
     def plot_errors(
         self, metric="mean_reference_mse", *, bins=None, missing="raise", figsize=None
     ):
-        """Plot per-scenario score distributions without rerunning a model.
-
-        Missing/nonfinite scores raise by default. Set ``missing='annotate'``
-        to show their counts and diagnostic reasons explicitly in each panel.
-        Each score is one whole-case metric from the existing report.
-        """
+        """Draw ``timegym.plotting.plot_errors`` for this run's retained scores."""
         from timegym.plotting import plot_errors
 
         return plot_errors(

@@ -5,7 +5,7 @@ from numbers import Real
 from typing import TypeVar
 import math
 import pandas as pd
-from ._internal import positive_int, nonnegative_int
+from ._internal import positive_int, nonnegative_int, _deprecated
 
 __all__ = ["simple_moving_average", "exponential_moving_average"]
 
@@ -13,6 +13,10 @@ __all__ = ["simple_moving_average", "exponential_moving_average"]
 
 
 _Pandas = TypeVar("_Pandas", pd.Series, pd.DataFrame)
+_RECIPE = (
+    "the package has no replacement; the recipe stays in the source notebook chapter "
+    '"Smoothing" (source/03_smoothing.ipynb)'
+)
 
 
 # %% ../source/03_smoothing.ipynb #03_smoothing-07
@@ -27,6 +31,7 @@ def simple_moving_average(
     Missing values are skipped; insufficient observations yield NaN. Shift the
     result by one row if used as a feature predicting the current observation.
     """
+    _deprecated("simple_moving_average", _RECIPE)
     if not isinstance(df, (pd.Series, pd.DataFrame)):
         raise TypeError("df must be a pandas Series or DataFrame")
     window_length = positive_int(window_length, "window_length")
@@ -53,6 +58,7 @@ def exponential_moving_average(
     is included, so shift before using this as a contemporaneous predictor.
     Only statistic='mean' is supported.
     """
+    _deprecated("exponential_moving_average", _RECIPE)
     if not isinstance(df, (pd.Series, pd.DataFrame)):
         raise TypeError("df must be a pandas Series or DataFrame")
     if statistic != "mean":

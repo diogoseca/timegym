@@ -62,9 +62,8 @@ GitHub for files the site does not render. The tutorial groups are listed in
 [tutorials page](tutorials.md); `tests/test_docs_navigation.py` keeps the four
 in step.
 
-Each API page except Market data ends with a Signatures section that
-mkdocstrings generates from the docstrings; `default_scenarios` and `get_stock`
-keep hand-written descriptions because griffe cannot load `timegym.data`. The
+Each API page ends with a Signatures section that
+mkdocstrings generates from the docstrings. The
 docstrings live in the source notebooks, so edit the owning
 notebook and export it; never edit `timegym/*.py`. Members without a docstring
 are left out of the page, so `tests/test_docs_signatures.py` fails when a public

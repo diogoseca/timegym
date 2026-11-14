@@ -6,7 +6,7 @@ import textwrap
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
-from ._internal import positive_int
+from ._internal import positive_int, _deprecated
 from .contracts import _describe_shift, _index_shift
 from .evaluation import ForecastRun
 from .grid import PATTERNS, GridCell, scenario_grid
@@ -233,7 +233,7 @@ def _model_title(pipeline):
     return type(model).__name__
 
 
-def scorecard(
+def _scorecard(
     pipeline,
     patterns=None,
     *,
@@ -244,16 +244,7 @@ def scorecard(
     horizon=24,
     title=None,
 ):
-    """Run ``pipeline`` on the pattern-by-noise grid and score every cell.
-
-    Each cell is ``instances`` independent series (seeds ``seed + i``, the
-    same draws in every cell, so the noise columns are a paired comparison).
-    A cell's score is ``100 * unavoidable / (unavoidable + avoidable)`` mean
-    squared error, pooled over its instances: 100 is as close as a forecaster
-    that knows the process; 50 means the avoidable error equals the
-    unavoidable noise. Instances that crash or fail an output check score
-    zero. ``seed=None`` picks a fresh seed, kept on the result.
-    """
+    """Run ``pipeline`` on the pattern-by-noise grid and score every cell (``Pipeline.scorecard``)."""
     instances = positive_int(instances, "instances")
     cells = scenario_grid(
         patterns, noise_levels, context_length=context_length, horizon=horizon
@@ -311,6 +302,33 @@ def scorecard(
         cells=cells,
         seed=run.metadata["seed"],
         instances=instances,
+    )
+
+
+def scorecard(
+    pipeline,
+    patterns=None,
+    *,
+    noise_levels=2,
+    instances=10,
+    seed=0,
+    context_length=120,
+    horizon=24,
+    title=None,
+):
+    """Score ``pipeline`` on the pattern-by-noise grid; the same as ``pipeline.scorecard(...)``."""
+    _deprecated(
+        "timegym.scorecard.scorecard", "use Pipeline(model).scorecard(...) instead"
+    )
+    return _scorecard(
+        pipeline,
+        patterns,
+        noise_levels=noise_levels,
+        instances=instances,
+        seed=seed,
+        context_length=context_length,
+        horizon=horizon,
+        title=title,
     )
 
 

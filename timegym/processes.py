@@ -6,6 +6,7 @@ import numpy as np
 from scipy.special import logsumexp
 from scipy.stats import poisson
 from . import joint_processes
+from ._internal import _deprecated
 from timegym._process_common import (
     PROCESS_KINDS,
     resolve_process,
@@ -32,7 +33,7 @@ __all__ = ["PROCESS_KINDS", "resolve_process", "process_label", "generate_proces
 
 
 # %% ../source/14_controlled_processes.ipynb #controlled-fn-process-label
-def process_label(kind, parameters=None, *, target_index=None):
+def _process_label(kind, parameters=None, *, target_index=None):
     """Human-readable mechanism and output units, retaining stable kind IDs."""
     if kind not in PROCESS_KINDS:
         return kind
@@ -88,6 +89,16 @@ def process_label(kind, parameters=None, *, target_index=None):
         )
     units = {"price": "price", "log_price": "log price", "log_return": "log returns"}
     return f'{labels[kind]} ({units[p["output"]]})'
+
+
+def process_label(kind, parameters=None, *, target_index=None):
+    """Human-readable mechanism and output units, retaining stable kind IDs."""
+    _deprecated(
+        "process_label",
+        "use timegym.scenarios.scenario_label(kind, parameters) instead, "
+        "which gives the same label for these process kinds",
+    )
+    return _process_label(kind, parameters, target_index=target_index)
 
 
 # %% ../source/14_controlled_processes.ipynb #controlled-fn-jump-increment
@@ -527,6 +538,11 @@ def generate_process(kind, parameters, context_length, horizon, n_targets=1, see
     Hidden states, future shocks and schedules remain evaluator-only.
     Scenario uses the same builders with its already-resolved parameters.
     """
+    _deprecated(
+        "generate_process",
+        "use Scenario(kind, context_length, horizon, parameters, n_targets, seed)"
+        ".generate() instead",
+    )
     resolved = resolve_process(
         kind, parameters, context_length, horizon, n_targets, seed
     )

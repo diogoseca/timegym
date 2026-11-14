@@ -60,26 +60,17 @@ def _sample_output(result):
 
 
 def _index_shift(result, rng, strength):
-    """Shift an integer forecast index forward by one.
-
-    Requires an integer index; ignores rng and strength.
-    """
+    """Shift an integer forecast index forward by one."""
     result.index = result.index + 1
 
 
 def _target_swap(result, rng, strength):
-    """Reverse target labels without moving the forecast values.
-
-    Requires at least two targets; ignores rng and strength.
-    """
+    """Reverse target labels without moving the forecast values."""
     result.target_names = tuple(reversed(result.target_names))
 
 
 def _horizon_truncation(result, rng, strength):
-    """Drop the final horizon from the index and every supplied output.
-
-    Has no additional precondition; ignores rng and strength.
-    """
+    """Drop the final horizon from the index and every supplied output."""
     result.index = result.index[:-1]
     for attr in ("point", "quantiles"):
         value = getattr(result, attr)
@@ -90,34 +81,22 @@ def _horizon_truncation(result, rng, strength):
 
 
 def _nonfinite_point(result, rng, strength):
-    """Replace the first point forecast with NaN.
-
-    Requires nonempty explicit points; ignores rng and strength.
-    """
+    """Replace the first point forecast with NaN."""
     result.point[0, 0] = np.nan
 
 
 def _quantile_crossing(result, rng, strength):
-    """Reverse the quantile axis while keeping the declared levels.
-
-    Requires distinct ordered quantiles; ignores rng and strength.
-    """
+    """Reverse the quantile axis while keeping the declared levels."""
     result.quantiles = result.quantiles[..., ::-1].copy()
 
 
 def _sample_axis_swap(result, rng, strength):
-    """Transpose the sample and horizon axes.
-
-    Requires different sample and horizon counts; ignores rng and strength.
-    """
+    """Transpose the sample and horizon axes."""
     result.samples = result.samples.transpose(1, 0, 2)
 
 
 def _variance_shrink(result, rng, strength):
-    """Scale sample and quantile deviations by 1 - 0.75 * strength.
-
-    Requires point, sample, and quantile outputs; ignores rng.
-    """
+    """Scale sample and quantile deviations by 1 - 0.75 * strength."""
     if strength == 0:
         return
     factor = 1 - 0.75 * strength
@@ -128,10 +107,7 @@ def _variance_shrink(result, rng, strength):
 
 
 def _dependence_shuffle(result, rng, strength):
-    """Independently permute a fraction of samples in each coordinate.
-
-    Requires samples; rng and strength control permutations, preserving marginals.
-    """
+    """Independently permute a fraction of samples in each coordinate, preserving marginals."""
     count, horizon, targets = result.samples.shape
     selected = int(round(count * strength))
     for i in range(horizon):

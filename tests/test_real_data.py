@@ -7,6 +7,9 @@ import pytest
 
 from timegym.data.real import get_stock
 
+# get_stock is deprecated until TimeGym 2.0; tests/test_deprecations.py checks its warning.
+pytestmark = pytest.mark.filterwarnings(r"ignore:.* is deprecated and will be removed in TimeGym 2\.0:DeprecationWarning")
+
 
 @pytest.fixture
 def stock_history(monkeypatch):

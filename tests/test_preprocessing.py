@@ -20,6 +20,9 @@ from timegym.target import (
     step_ahead_target,
 )
 
+# These helpers are deprecated until TimeGym 2.0; tests/test_deprecations.py checks their warnings.
+pytestmark = pytest.mark.filterwarnings(r"ignore:.* is deprecated and will be removed in TimeGym 2\.0:DeprecationWarning")
+
 
 @pytest.fixture
 def frame():

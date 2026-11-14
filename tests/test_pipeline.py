@@ -223,8 +223,7 @@ def test_metamorphic_tolerances_must_be_declared_valid_values():
 
 
 def test_default_run_uses_the_public_core_scenario_suite():
-    from timegym.data.synthetic import default_scenarios
-    from timegym.scenarios import CORE_KINDS
+    from timegym.scenarios import CORE_KINDS, default_scenarios
 
     specifications = default_scenarios()
     assert tuple(scenario.kind for scenario in specifications) == CORE_KINDS

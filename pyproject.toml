@@ -22,10 +22,6 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-# Matplotlib and scikit-learn are core dependencies; these two names stay so
-# that older install commands keep working.
-sklearn = []
-plots = []
 features = ["tsfel>=0.1.9", "tqdm>=4.66"]
 market-data = ["yfinance>=0.2.54"]
 dev = ["pytest>=8", "build>=1.2", "nbdev==3.3.26", "black==26.10.1", "nbformat>=5.10", "PyYAML>=6,<7"]
