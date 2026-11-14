@@ -3,7 +3,7 @@
 from __future__ import annotations
 from collections.abc import Sequence
 from copy import deepcopy
-from ._internal import positive_int, nonnegative_int, _real_array
+from ._internal import positive_int, nonnegative_int, _levels
 import numpy as np
 import pandas as pd
 from .contracts import DEFAULT_LEVELS, Forecast
@@ -189,15 +189,7 @@ class GaussianAR1Forecaster(_ConfiguredForecaster):
         if n_samples < 2:
             raise ValueError("n_samples must be an integer >= 2")
         seed = None if seed is None else nonnegative_int(seed, "seed")
-        probabilities = _real_array(levels, "levels")
-        if probabilities.ndim != 1 or not probabilities.size:
-            raise ValueError("levels must be a nonempty one-dimensional sequence")
-        if not np.isfinite(probabilities).all() or np.any(
-            (probabilities <= 0) | (probabilities >= 1)
-        ):
-            raise ValueError("levels must be finite and strictly between zero and one")
-        if np.any(np.diff(probabilities) <= 0):
-            raise ValueError("levels must be unique and increasing")
+        probabilities = _levels(levels)
         self.n_samples, self.seed = n_samples, seed
         self.levels = tuple(float(value) for value in probabilities)
 

@@ -4,11 +4,11 @@ from __future__ import annotations
 import numpy as np
 from scipy.special import logsumexp
 from scipy.stats import poisson
+from ._internal import _deprecated
 from timegym._process_common import (
     _PROCESS_REGISTRY,
     _CHANGE_FIELDS,
     _TAIL_TOLERANCE,
-    _finite,
     _exp,
     _factor,
     _emission_law,
@@ -433,6 +433,11 @@ def _joint_markov(p, length, horizon, d, seed):
 # %% ../source/15_joint_processes.ipynb #joint-generate-joint-process
 def generate_joint_process(kind, parameters, context_length, horizon, n_targets, seed):
     """Build a joint case from parameters already returned by resolve_process."""
+    _deprecated(
+        "generate_joint_process",
+        "use Scenario(kind, context_length, horizon, parameters, n_targets, seed)"
+        ".generate() instead",
+    )
     builder = globals()[_PROCESS_REGISTRY[kind]["joint"]]
     return _build_case(
         builder, kind, parameters, context_length, horizon, n_targets, seed

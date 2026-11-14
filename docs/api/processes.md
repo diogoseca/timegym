@@ -1,8 +1,8 @@
 # Composed and joint processes
 
 The four additional scenario kinds, for one target and for several: `Scenario`
-and `SimulationReference` from `timegym`, with low-level generators in
-`timegym.processes` and `timegym.joint_processes`.
+and `SimulationReference` from `timegym`, with `PROCESS_KINDS` and
+`resolve_process` in `timegym.processes`.
 
 ## Composed and financial processes
 
@@ -142,9 +142,3 @@ all higher-order dependence.
 ## Signatures
 
 ::: timegym.processes.resolve_process
-
-::: timegym.processes.generate_process
-
-::: timegym.processes.process_label
-
-::: timegym.joint_processes.generate_joint_process

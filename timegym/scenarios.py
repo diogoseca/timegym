@@ -7,16 +7,17 @@ import numpy as np
 import pandas as pd
 from .contracts import Case, ForecastTask, Reference, MANIFEST_SCHEMA_VERSION
 from ._internal import _real_array
+from ._process_common import _correlation
 from .processes import (
     PROCESS_KINDS,
     resolve_process,
     _generate_resolved_process,
-    process_label,
+    _process_label,
 )
 from ._internal import positive_int
 from ._internal import nonnegative_int
 
-__all__ = ["Case", "CORE_KINDS", "scenario_label", "Scenario"]
+__all__ = ["Case", "CORE_KINDS", "scenario_label", "Scenario", "default_scenarios"]
 
 # %% ../source/01_synthetic_data.ipynb #01_synthetic_data-05
 
@@ -56,7 +57,7 @@ def scenario_label(kind: str, parameters=None, *, target_index=None) -> str:
     kinds are returned unchanged.
     """
     if kind in PROCESS_KINDS:
-        return process_label(
+        return _process_label(
             kind, {} if parameters is None else parameters, target_index=target_index
         )
     parameters = {} if parameters is None else parameters
@@ -210,7 +211,7 @@ class Scenario:
     def display_name(self) -> str:
         """Parameter-aware label; ``kind`` remains the stable scenario identifier."""
         if self.kind in PROCESS_KINDS:
-            return process_label(self.kind, self._resolved_parameters)
+            return _process_label(self.kind, self._resolved_parameters)
         parameters, _, _, _, _ = self._resolve()
         return scenario_label(self.kind, parameters)
 
@@ -234,30 +235,7 @@ class Scenario:
                 f"Unsupported parameters for {self.kind}: {sorted(unsupported)}"
             )
         parameters = {**_DEFAULTS[self.kind], **self.parameters}
-        correlation = _real_array(parameters.pop("correlation", 0.0), "correlation")
-        if correlation.ndim == 0:
-            rho = float(correlation)
-            lower = -1.0 / (dimensions - 1) if dimensions > 1 else -1.0
-            if not np.isfinite(rho) or not lower <= rho <= 1.0:
-                raise ValueError(f"Scalar correlation must be between {lower} and 1")
-            correlation = np.full((dimensions, dimensions), rho)
-            np.fill_diagonal(correlation, 1.0)
-        if (
-            correlation.shape != (dimensions, dimensions)
-            or not np.isfinite(correlation).all()
-        ):
-            raise ValueError(
-                "correlation must have shape (n_targets, n_targets) and finite entries"
-            )
-        if not np.allclose(correlation, correlation.T, atol=1e-12, rtol=1e-10):
-            raise ValueError("correlation must be symmetric")
-        if (
-            not np.allclose(np.diag(correlation), 1.0, atol=1e-12, rtol=1e-10)
-            or np.linalg.eigvalsh(correlation).min() < -1e-10
-        ):
-            raise ValueError(
-                "correlation must have unit diagonal and be positive semidefinite"
-            )
+        correlation = _correlation(parameters.pop("correlation", 0.0), dimensions)
         resolved: dict[str, Any] = {}
         for name, raw in parameters.items():
             value = _real_array(raw, name)
@@ -472,3 +450,23 @@ class Scenario:
             conditioning=conditioning,
         )
         return Case(ForecastTask(context, future_index), observed, reference, manifest)
+
+
+# %% ../source/01_synthetic_data.ipynb #01_synthetic_data-18
+def default_scenarios(context_length=120, horizon=12, *, n_targets=1, seed=0):
+    """Return fresh specifications for the five core families.
+
+    Call ``generate`` on each specification to draw a case. The same supplied
+    seed is recorded in each specification. Use independent replicate seeds
+    when aggregating experimental results.
+    """
+    return [
+        Scenario(
+            kind,
+            context_length=context_length,
+            horizon=horizon,
+            n_targets=n_targets,
+            seed=seed,
+        )
+        for kind in CORE_KINDS
+    ]

@@ -462,6 +462,6 @@ class TestReport:
 
     def replay_case(self, case_index=0):
         """Re-evaluate one case when its built-in model configuration is replayable."""
-        from timegym.pipeline import replay_case
+        from timegym.pipeline import _replay_case
 
-        return replay_case(self, case_index)
+        return _replay_case(self, case_index)

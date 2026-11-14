@@ -11,6 +11,9 @@ from timegym.features import add_lagged_target, add_time_features, add_tsfel_fea
 from timegym.smoothing import exponential_moving_average
 from timegym.target import differencing, fractional_differencing, fractional_weights, multioutput_target
 
+# These helpers are deprecated until TimeGym 2.0; tests/test_deprecations.py checks their warnings.
+pytestmark = pytest.mark.filterwarnings(r"ignore:.* is deprecated and will be removed in TimeGym 2\.0:DeprecationWarning")
+
 
 def test_cycles_do_not_collapse_last_label_onto_first():
     cosine, sine = cyclical_encoding([0, 6, 7], period=7, min_value=0)

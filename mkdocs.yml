@@ -127,7 +127,6 @@ nav:
       - Scores and diagnostics: docs/api/diagnostics.md
       - Fault fixtures: docs/api/fault-fixtures.md
       - Data preparation: docs/api/data-preparation.md
-      - Market data: docs/api/market-data.md
   - Develop:
       - Contributing: docs/contributing.md
       - Releasing: docs/release.md

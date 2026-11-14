@@ -2,8 +2,7 @@
 
 Running a scenario suite and reading, saving and replaying its report:
 `Pipeline`, `ForecastRun`, `TestReport` and the result types from `timegym`,
-with `replay_case` in `timegym.pipeline`, plots in `timegym.plotting`, and
-schema constants in `timegym.provenance` and `timegym.reporting`.
+with plots in `timegym.plotting` and schema constants in `timegym.provenance` and `timegym.reporting`.
 
 `Pipeline(model=None, window_length=12, reduction="recursive", *, model_factory=None,
 target_transform=None)` uses a last-value baseline by default. Native model
@@ -65,10 +64,6 @@ words for both plots; a scorecard's run sets them to the pattern and noise
 level, so `card.run.plot_forecasts()` zooms into its rows. Neither method refits models. Matplotlib is installed with
 TimeGym and imported only when a plot is drawn.
 
-`pipeline.plot_tests(...)` and `pipeline.plot_errors(...)` are convenient one-call
-experiments; both take `seed` and `instances` (20 by default for `plot_errors`). Each creates a fresh run. Use `run()` when multiple views must share
-exactly the same predictions, especially for stochastic models.
-
 `.to_config()` describes the configured model and `.from_config(config)` can
 restore allowlisted built-in models with a bundled target transform or none.
 Factories, custom models, sklearn steps and other target transforms are
@@ -122,7 +117,7 @@ adequate. A pass is always scoped to a check.
 `timegym.reporting.REPORT_SCHEMA_VERSION = "2.0"` identifies the report envelope.
 `timegym.provenance.PIPELINE_CONFIG_SCHEMA_VERSION = 3` identifies current
 pipeline configuration writes, which add `target_transform` (`null` or a
-`transform_config` description). Schema 2 configurations, written without that
+description of the transform). Schema 2 configurations, written without that
 field, remain readable; schema 1 configurations, which used `strategy`, are
 rejected. Scenario manifests use integer version 1,
 named by `timegym.scenarios.MANIFEST_SCHEMA_VERSION`. These are independent
@@ -146,16 +141,6 @@ manifest versions are integers.
 ::: timegym.DiagnosticStatus
 
 ::: timegym.DiagnosticCategory
-
-::: timegym.pipeline.replay_case
-
-::: timegym.provenance.pipeline_config
-
-::: timegym.provenance.pipeline_from_config
-
-::: timegym.provenance.runtime_provenance
-
-::: timegym.provenance.diagnostic_settings
 
 ::: timegym.plotting.plot_forecasts
 

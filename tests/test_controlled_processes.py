@@ -5,14 +5,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from timegym import Scenario
 from timegym.processes import (
-    PROCESS_KINDS, generate_process, process_label, resolve_process,
+    PROCESS_KINDS, resolve_process,
     _filter_regimes,
 )
+from timegym.scenarios import scenario_label
 
 
 def case(kind, parameters=None, length=24, horizon=4, seed=19):
-    return generate_process(kind, parameters or {}, length, horizon, 1, seed)
+    return Scenario(kind, length, horizon, parameters or {}, 1, seed).generate()
 
 
 def assert_simulation_moments(reference, n=40_000):
@@ -36,8 +38,8 @@ def test_replay_prefix_and_rng_isolation(kind):
     np.testing.assert_allclose(short.reference.covariance, longer.reference.covariance[:2, :2])
     assert short.reference.conditioning['future_observations_used'] is False
     manifest = json.loads(json.dumps(short.manifest, allow_nan=False))
-    replay = generate_process(**{key: manifest[key] for key in (
-        'kind', 'parameters', 'context_length', 'horizon', 'n_targets', 'seed')})
+    replay = Scenario(**{key: manifest[key] for key in (
+        'kind', 'parameters', 'context_length', 'horizon', 'n_targets', 'seed')}).generate()
     pd.testing.assert_frame_equal(short.observed, replay.observed)
     assert short.reference.forecast(n_samples=40, seed=2).validate(short.task) == []
     np.testing.assert_array_equal(short.reference.sample(30, 2), replay.reference.sample(30, 2))
@@ -220,7 +222,7 @@ def test_invalid_parameters_fail_explicitly(kind, parameters):
 
 @pytest.mark.parametrize('kind', PROCESS_KINDS)
 def test_extended_processes_support_joint_targets_and_reject_unknown_fields(kind):
-    assert generate_process(kind, {}, 20, 4, 2, 1).reference.mean.shape == (4, 2)
+    assert Scenario(kind, 20, 4, {}, 2, 1).generate().reference.mean.shape == (4, 2)
     with pytest.raises(ValueError, match='Unsupported'):
         case(kind, {'typo': 3})
     for seed in (True, -1, 1.5):
@@ -236,11 +238,11 @@ def test_nonfinite_outputs_are_rejected_instead_of_clipped():
 
 
 def test_process_labels_separate_seasonality_accumulation_and_parameter_change():
-    assert process_label('composite', {'amplitude': 2.}) == 'Seasonality + white noise'
-    assert 'accumulated shocks' in process_label('composite', {'amplitude': 2., 'residual': 'random_walk'})
-    assert 'parameter change' in process_label('composite', {'change_point': 10, 'changes': {'sigma': 2.}})
-    assert process_label('markov_switching', {'regime_jump_rate': [0., 2.]}) == 'Hidden regimes + jumps (log returns)'
-    assert process_label('merton_jump_diffusion') == 'Merton jump diffusion (price)'
+    assert scenario_label('composite', {'amplitude': 2.}) == 'Seasonality + white noise'
+    assert 'accumulated shocks' in scenario_label('composite', {'amplitude': 2., 'residual': 'random_walk'})
+    assert 'parameter change' in scenario_label('composite', {'change_point': 10, 'changes': {'sigma': 2.}})
+    assert scenario_label('markov_switching', {'regime_jump_rate': [0., 2.]}) == 'Hidden regimes + jumps (log returns)'
+    assert scenario_label('merton_jump_diffusion') == 'Merton jump diffusion (price)'
 
 
 def test_fresh_and_accumulated_residuals_share_innovations_at_fixed_seed():
@@ -277,8 +279,8 @@ def test_hidden_regime_joint_moments_against_exhaustive_path_enumeration(output)
 
 
 def test_merton_zero_jump_label_makes_the_gbm_reduction_explicit():
-    assert process_label('merton_jump_diffusion', {'jump_rate': 0., 'output': 'log_price'}) == 'Geometric Brownian motion (log price)'
-    assert process_label('merton_jump_diffusion', {'jump_rate': .1, 'output': 'price'}) == 'Merton jump diffusion (price)'
+    assert scenario_label('merton_jump_diffusion', {'jump_rate': 0., 'output': 'log_price'}) == 'Geometric Brownian motion (log price)'
+    assert scenario_label('merton_jump_diffusion', {'jump_rate': .1, 'output': 'price'}) == 'Merton jump diffusion (price)'
 
 
 @pytest.mark.parametrize('output', ['price', 'log_price', 'log_return'])

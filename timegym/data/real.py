@@ -7,10 +7,17 @@ import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 import pandas as pd
+from .._internal import _deprecated
 
 __all__ = ["get_stock"]
 
 # %% ../../source/02_real_data.ipynb #02_real_data-05
+
+
+_RECIPE = (
+    "the package has no replacement; the downloader stays as a worked example in the source "
+    'notebook chapter "Real data" (source/02_real_data.ipynb)'
+)
 
 
 # %% ../../source/02_real_data.ipynb #02_real_data-07
@@ -48,6 +55,7 @@ def get_stock(
     propagate and empty histories raise ValueError. Snapshots freeze retrieved
     data, not the historical information available at each forecast origin.
     """
+    _deprecated("get_stock", _RECIPE)
     if not isinstance(ticker, str) or not ticker.strip():
         raise ValueError("ticker must be a nonempty string")
     ticker = ticker.strip().upper()

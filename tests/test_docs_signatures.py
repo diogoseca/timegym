@@ -14,9 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = ROOT / "docs" / "reference.md"
 API = ROOT / "docs" / "api"
 # mkdocstrings reads source statically with griffe, which does not load modules
-# from a directory without __init__.py, such as timegym/data. Their pages keep
-# hand-written descriptions only.
-STATIC_LOADER_GAPS = {"timegym.data.synthetic.default_scenarios", "timegym.data.real.get_stock"}
+# from a directory without __init__.py, such as timegym/data. No documented name
+# lives there now; a name added there would need a hand-written description.
+STATIC_LOADER_GAPS = set()
 
 
 def public_surface():

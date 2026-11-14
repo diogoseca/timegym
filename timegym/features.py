@@ -6,7 +6,7 @@ from numpy.typing import ArrayLike, NDArray
 import numpy as np
 import pandas as pd
 from ._internal import _real_array
-from ._internal import positive_int, nonnegative_int
+from ._internal import positive_int, nonnegative_int, _deprecated
 
 __all__ = [
     "add_lagged_target",
@@ -19,6 +19,11 @@ __all__ = [
 
 
 # %% ../source/04_feature_engineering.ipynb #04_feature_engineeri-07
+
+_RECIPE = (
+    "the package has no replacement; the recipe stays in the source notebook chapter "
+    '"Feature engineering" (source/04_feature_engineering.ipynb)'
+)
 
 
 # %% ../source/04_feature_engineering.ipynb #04_feature_engineeri-09
@@ -33,6 +38,7 @@ def add_lagged_target(
     retains the original index and the missing warmup values. Zero lags adds
     no columns. The input is never mutated and name collisions raise.
     """
+    _deprecated("add_lagged_target", _RECIPE)
     if not isinstance(df, pd.DataFrame):
         raise TypeError("df must be a pandas DataFrame")
     if not df.columns.is_unique:
@@ -64,6 +70,19 @@ def cyclical_encoding(
     imply period 7. The period is never estimated from the observed sample.
     With scaled=True, values already express fractions of a full cycle.
     """
+    _deprecated("cyclical_encoding", _RECIPE)
+    return _cyclical_encoding(values, scaled, min_value, max_value, period=period)
+
+
+def _cyclical_encoding(
+    values: ArrayLike,
+    scaled: bool = False,
+    min_value: float | None = None,
+    max_value: float | None = None,
+    *,
+    period: float | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Cosine/sine features without a deprecation warning, for ``add_time_features``."""
     values = _real_array(values, "cyclical values")
     if not np.isfinite(values).all():
         raise ValueError("cyclical values must be finite")
@@ -100,6 +119,7 @@ def add_time_features(df: pd.DataFrame) -> pd.DataFrame:
     Preserve the input columns and index; reject generated-name collisions.
     No statistic is fitted on the sample and the input is never mutated.
     """
+    _deprecated("add_time_features", _RECIPE)
     if not isinstance(df, pd.DataFrame):
         raise TypeError("df must be a pandas DataFrame")
     if not df.columns.is_unique:
@@ -139,11 +159,11 @@ def add_time_features(df: pd.DataFrame) -> pd.DataFrame:
         ("microsecond", index.microsecond, 1_000_000, 0),
     )
     for name, values, period, origin in components:
-        df[f"{name}_cos"], df[f"{name}_sin"] = cyclical_encoding(
+        df[f"{name}_cos"], df[f"{name}_sin"] = _cyclical_encoding(
             values, period=period, min_value=origin
         )
     fraction_of_month = (index.day - 1) / index.days_in_month
-    df["day_adj_cos"], df["day_adj_sin"] = cyclical_encoding(
+    df["day_adj_cos"], df["day_adj_sin"] = _cyclical_encoding(
         fraction_of_month, scaled=True
     )
     return df
@@ -170,6 +190,7 @@ def add_tsfel_features(
     dropna=True removes rows missing any selected or extracted value; False
     keeps warmup rows with missing features. Name collisions raise.
     """
+    _deprecated("add_tsfel_features", _RECIPE)
     if not isinstance(df, pd.DataFrame):
         raise TypeError("df must be a pandas DataFrame")
     if not df.columns.is_unique:

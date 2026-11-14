@@ -349,7 +349,8 @@ def test_joint_entry_points_share_manifest_keyword_vocabulary_and_resolved_build
         raise AssertionError('resolved builder must not validate parameters again')
 
     monkeypatch.setattr(common, 'resolve_process', unexpected_validation)
-    direct = joint.generate_joint_process(**{**arguments, 'parameters': resolved})
+    with pytest.warns(DeprecationWarning, match='generate_joint_process is deprecated'):
+        direct = joint.generate_joint_process(**{**arguments, 'parameters': resolved})
     expected = generate(kind, arguments['parameters'], length=12, horizon=2, seed=9)
     assert direct.manifest == expected.manifest
     np.testing.assert_array_equal(direct.reference.sample(8, 2), expected.reference.sample(8, 2))

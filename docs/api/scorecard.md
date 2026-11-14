@@ -3,7 +3,7 @@
 One call that tells you what a forecaster can and cannot do:
 `Pipeline.scorecard()` and `Scorecard` from `timegym`, the grid itself
 (`PATTERNS`, `GridCell`, `scenario_grid`) from `timegym`, and the lower-level
-`scorecard`, `verdict`, `VERDICTS`, `Pattern`, `noise_levels`, `NOISE_LOW` and
+`verdict`, `VERDICTS`, `Pattern`, `noise_levels`, `NOISE_LOW` and
 `NOISE_HIGH` from `timegym.scorecard` and `timegym.grid`.
 
 ```python
@@ -123,8 +123,6 @@ Matplotlib figure; `compact=True` draws only the colored scores.
 ::: timegym.scenario_grid
 
 ::: timegym.GridCell
-
-::: timegym.scorecard.scorecard
 
 ::: timegym.scorecard.verdict
 

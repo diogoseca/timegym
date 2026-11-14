@@ -524,7 +524,9 @@ def plot_errors(
     These are distributions over evaluated cases, not over predictive sample
     draws or dependent coordinates. A black line marks each row's median.
     Scenario positions remain distinct even when their kind strings match.
-    Missing scores are never silently dropped.
+    Missing or nonfinite scores raise by default; ``missing='annotate'``
+    shows their counts and diagnostic reasons in each panel instead, so they
+    are never silently dropped.
     """
     groups = _groups(run)
     if not isinstance(metric, str) or not metric:

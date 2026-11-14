@@ -54,7 +54,6 @@ forecast is the distribution the observation is drawn from
 | --- | --- | --- | --- |
 | `pinball(observed, quantiles, levels)` | Mean quantile (pinball) loss over coordinates and levels, without the optional factor of two; levels must increase strictly in (0, 1) and quantiles must not cross | The quantile at each level: pinball loss at level α is minimized in expectation by the α-quantile | With a quantile output |
 | `crps(observed, samples)` | Mean marginal CRPS of the finite empirical ensemble: the expected absolute error of a draw minus half the expected absolute difference between two draws, diagonal pairs included | Each coordinate's whole marginal distribution, as a proper scoring rule; it is unchanged when samples are permuted independently per coordinate, so it cannot see dependence | With a sample output |
-| `empirical_crps` | The same function as `crps` | As `crps` | Recorded as `crps` |
 | `energy_score(observed, samples, chunk_size=128)` | Energy score of the whole flattened horizon-target vector with the Euclidean norm, not divided by the number of coordinates; diagonal pairs included | The whole joint distribution, as a proper scoring rule for multivariate forecasts; with one coordinate it equals CRPS | With a sample output |
 | `variogram_score(observed, samples, exponent=0.5)` | Mean squared difference between the realized and the expected `abs(x_i - x_j) ** exponent` over all distinct coordinate pairs, equally weighted; `exponent` lies in (0, 2) | Pairwise dependence between coordinates; it ignores a shift shared by all coordinates and is not strictly proper over unrestricted joint distributions | With a sample output; undefined for one coordinate |
 
@@ -114,8 +113,8 @@ time. A row without a threshold is descriptive and returns `INCONCLUSIVE`.
 | `shift_equivariance` | `metamorphic` | `PASS`, `FAIL`, `UNSUPPORTED`, `ERROR` | `atol` and `rtol` | Known properties |
 | `model_execution` | `execution` | `ERROR` | Any exception | Execution record |
 
-Exception evidence is `exception_type`, `exception_message` and `traceback`, as
-returned by `exception_evidence`. `reference` evidence appears only with a
+Exception evidence is `exception_type`, `exception_message` and `traceback`.
+`reference` evidence appears only with a
 `SimulationReference` and holds its `kind` and capability entries. The `<code>`
 in `contract_<code>` is one of `index_type`, `index_missing`, `index_nonfinite`,
 `index_empty`, `index_duplicate`, `index_order`, `index_mismatch`,
@@ -243,8 +242,6 @@ The t interval is for continuous score differences, not differences in alarm rat
 ::: timegym.diagnostics.evaluate_forecast
 
 ::: timegym.diagnostics.covariance_dependence_check
-
-::: timegym.diagnostics.exception_evidence
 
 ::: timegym.checks.check_shift_equivariance
 

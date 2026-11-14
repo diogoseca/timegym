@@ -1,5 +1,49 @@
 # Changelog
 
+## Unreleased
+
+- Deprecated these names. Each still works as in 1.4.0, warns with a
+  `DeprecationWarning` that says what to use instead, and leaves in TimeGym
+  2.0; the documentation no longer lists them.
+  - `timegym.smoothing`: `simple_moving_average`, `exponential_moving_average`;
+    `timegym.features`: `add_lagged_target`, `cyclical_encoding`,
+    `add_time_features`, `add_tsfel_features`; `timegym.target`:
+    `multioutput_target`, `onestep_target`, `step_ahead_target`,
+    `fractional_weights`, `fractional_differencing`, and noninteger orders of
+    `differencing` with its `fractional_coefficients` argument. The package has
+    no replacement: source notebooks 03, 04 and 05 keep the recipes as worked
+    examples, and `differencing` with whole orders stays.
+  - `timegym.data.real.get_stock`, with its API page. The package has no
+    replacement; source notebook 02 keeps it as a worked example. The
+    `features` and `market-data` extras stay until 2.0.
+  - `Pipeline.plot_tests(...)`: use `pipeline.run(...).plot_forecasts()`.
+    `Pipeline.plot_errors(...)`: use `pipeline.run(...).plot_errors()`, with
+    `instances=20` for the same 20 draws.
+  - `timegym.processes.generate_process` and
+    `timegym.joint_processes.generate_joint_process`: use
+    `Scenario(kind, context_length, horizon, parameters, n_targets, seed).generate()`.
+    `timegym.processes.process_label`: use `timegym.scenarios.scenario_label`.
+  - `timegym.metrics.empirical_crps`: use `crps`.
+  - `timegym.scorecard.scorecard(pipeline, ...)`: use `pipeline.scorecard(...)`.
+  - `timegym.pipeline.replay_case(report, i)`: use `report.replay_case(i)`.
+- `default_scenarios` is now defined in `timegym.scenarios`. The old import,
+  `from timegym.data.synthetic import default_scenarios`, keeps working until
+  2.0.
+- `Scenario` checks `correlation` with the same check as the composed and
+  financial processes. Error messages for an invalid correlation are worded
+  differently, the tolerances for symmetry, unit diagonal and positive
+  semidefiniteness are slightly stricter, and a matrix that is symmetric only
+  to rounding error is made exactly symmetric before drawing. Scalar
+  correlations draw the same series as before.
+- Run and report metadata no longer repeat the NumPy and pandas versions as
+  top-level `numpy` and `pandas` keys; read them from
+  `metadata["dependencies"]`, as before.
+- The API reference no longer documents nine helpers that pipelines and
+  reports use internally: `pipeline_config`, `pipeline_from_config`,
+  `runtime_provenance`, `diagnostic_settings`, `transform_config`,
+  `transform_from_config`, `fresh_model`, `is_sklearn_regressor` and
+  `exception_evidence`. They still import without a warning.
+
 ## 1.4.0 — 2026-11-12
 
 - Added `LastValueForecaster`, the last-value baseline under its own name: the
