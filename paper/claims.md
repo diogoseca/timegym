@@ -37,6 +37,7 @@ Evidence reviewed 28 October 2026; citation identifiers and the financial-source
 | A repair can restore the intended algorithm without improving forecast loss. | `experiments/results-v2/model-repair-losses.csv`: the corrected stale-state branch worsens average realized MSE for the random-walk condition with drift while restoring implementation agreement. The generated manuscript retains the paired effect and interval, not only the improved cases. | Verification and predictive model selection are distinct objectives. Repairs are specified, not discovered. |
 | Marginal and family-wise error rates answer different questions. | `experiments/results-v2/covariance-conditions.csv` and suite records: clean, partial-shuffle, and reduced-spread variants retain raw and Holm decisions. Factorized white noise under permutation remains a true null. The declared family contains four checks within one suite and variant. | Theoretical control relies on valid null p-values; observed counts and Wilson intervals do not prove calibration. Power losses after adjustment remain visible. |
 | Reports and experiments support replay and inspection. | Scenario specifications, model identifiers, dimensions, seeds, settings, and outcomes are recorded. `tests/test_replay.py` checks scenario reconstruction; experiment manifests record the code/environment and generated artifacts. Reproducing arbitrary external training requires that model's own source and environment. | Reproducibility of the specified case and controlled studies; no blanket determinism claim. |
+| A rerun elsewhere can give other result digests without changing any conclusion. | The `research-smoke` job of `.github/workflows/checks.yml` reruns both studies on another platform than the one that made the stored records and fails when a conclusion the renderers require does not hold. The digests identify the stored records only. | One sentence in “Code and data availability”; no claim that a rerun reproduces the digests. |
 | The 2021 manuscript is corrected and extended. | Original source available from [arXiv:2105.01404v1](https://arxiv.org/abs/2105.01404v1); current manuscript gives corrected conditioning, metrics, uncertainty and scope. | Explicit historical relationship. |
 
 ## Claims excluded from this version
@@ -77,14 +78,14 @@ record are retained where neither applies.
 | `gneiting2007proper` | https://doi.org/10.1198/016214506000001437 | Proper distributional scoring; energy score and CRPS. |
 | `scheuerer2015variogram` | https://doi.org/10.1175/MWR-D-14-00269.1 | Variogram scores complement energy scores when evaluating dependence. |
 | `rAirPassengers` | https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/AirPassengers.html | Official provenance for the single historical real-series repair example. |
-| `gama2014drift` | https://doi.org/10.1145/2523813 | The distinction between process drift and changes in the generating parameters or predictive relationship in “Seasonality, process drift, and changing mechanisms” (`main.tex`, Appendix A). It does not make every changing latent state concept drift. |
-| `merton1976jumps` | https://doi.org/10.1016/0304-405X(76)90022-2 | The Merton construction in “Financial stress mechanisms and non-Gaussian references” (`main.tex`, Appendix A): continuous diffusion plus compound-Poisson jumps. TimeGym specifies a physical drift, not an option-pricing validation. |
-| `bollerslev1986garch` | https://doi.org/10.1016/0304-4076(86)90063-1 | The GARCH(1,1) conditional-variance recursion and its parameter restrictions in “Financial stress mechanisms and non-Gaussian references” (`main.tex`, Appendix A). |
-| `hamilton1989regimes` | https://doi.org/10.2307/1912559 | The hidden-regime principle in “Financial stress mechanisms and non-Gaussian references” (`main.tex`, Appendix A): inference integrates over an unobserved Markov state; the terminal regime is not observed forecaster input. |
+| `gama2014drift` | https://doi.org/10.1145/2523813 | The distinction between process drift and changes in the generating parameters or predictive relationship in Appendix A (`main.tex`) and `docs/scenario-equations.md`. It does not make every changing latent state concept drift. |
+| `merton1976jumps` | https://doi.org/10.1016/0304-405X(76)90022-2 | The Merton construction in Appendix A (`main.tex`) and `docs/scenario-equations.md`: continuous diffusion plus compound-Poisson jumps. TimeGym specifies a physical drift, not an option-pricing validation. |
+| `bollerslev1986garch` | https://doi.org/10.1016/0304-4076(86)90063-1 | The GARCH(1,1) conditional-variance recursion and its parameter restrictions in `docs/scenario-equations.md`, cited in Appendix A (`main.tex`). |
+| `hamilton1989regimes` | https://doi.org/10.2307/1912559 | The hidden-regime principle in Appendix A (`main.tex`) and `docs/scenario-equations.md`: inference integrates over an unobserved Markov state; the terminal regime is not observed forecaster input. |
 | `sun2026finstressts` | https://doi.org/10.1145/3770855.3817578 | The related-work paragraph on the financial scenarios (`main.tex`): a synthetic benchmark of 30 environments from six mechanism families, including volatility, heavy tails, regimes, and jumps, on which 15 models are compared. Read in full (arXiv:2606.03184v1, first posted 2 June 2026) on 12 November 2026. FinStressTS is direct prior work for the financial scenarios in the catalog only: TimeGym dates from 2021 and tests one pipeline, whereas FinStressTS is a benchmark for comparing models. Financial composition alone is not a novelty claim. |
 | `hu2026fintsb` | https://doi.org/10.1007/s11704-026-51064-5 | The related-work sentence about market constraints and transaction costs in financial evaluation (`main.tex`). The present synthetic tests do not establish trading performance. |
-| `bollerslev1990ccc` | https://doi.org/10.2307/2109358 | The constant conditional correlation construction (CCC-GARCH) in “Joint mechanisms and dependence-aware uncertainty” (`main.tex`, Appendix A). It supplies the model precedent, not a claim of exact multi-step cross-moments or arbitrary dynamic correlations. |
-| `weyuker1982testing` | https://doi.org/10.1093/comjnl/25.4.465 | The oracle-problem framing in “The oracle problem” (`main.tex`) and Table “oracles”: non-testable programs, partial oracles, simplified data with known results, and known properties. Read in full. |
+| `bollerslev1990ccc` | https://doi.org/10.2307/2109358 | The constant conditional correlation construction (CCC-GARCH) in Appendix A (`main.tex`) and `docs/scenario-equations.md`. It supplies the model precedent, not a claim of exact multi-step cross-moments or arbitrary dynamic correlations. |
+| `weyuker1982testing` | https://doi.org/10.1093/comjnl/25.4.465 | The oracle-problem framing in “The oracle problem” (`main.tex`) and its sentence that maps the evidence onto oracle types: non-testable programs, partial oracles, simplified data with known results, and known properties. Read in full. |
 | `davis1981pseudo` | https://doi.org/10.1145/800175.809889 | The pseudo-oracle: an independent implementation compared within a tolerance. Supports calling the experimental NumPy comparator a pseudo-oracle; it does not make that comparator a public diagnostic. Read in full. |
 | `guderlei2007statistical` | https://doi.org/10.1109/QSIC.2007.4385527 | Statistical metamorphic testing: relations between output distributions checked by hypothesis tests. Names the class of the covariance rank check and the calibrated loss alarm. Read in full. |
 | `seca2021review` | https://arxiv.org/abs/2105.01407v1 | Earlier review of oracle issues in machine learning by the author; cited for context only. |
@@ -214,9 +215,6 @@ Hidden regimes plus jumps use numerical filtering; the covariance rank check
 is unsupported for that approximate sampler. No hidden terminal regime or
 future realized volatility is supplied as observed information.
 
-The financial matrix reads configurations directly from tutorial 11 (composed
-and financial stresses) and records its 18 illustrative cases in the figure provenance file.
-
 ## Joint controlled processes
 
 All four additional families support dependent targets. The declared laws use
@@ -242,6 +240,6 @@ Validation includes independent hidden-state-path enumeration, multivariate
 Gaussian forward-filter calculations, direct cumulant calculations,
 Gauss-Hermite integration of two-step GARCH cross-moments, conditional simulation,
 shape/parameter boundaries, retained scalar behavior, and public report replay.
-The joint financial uncertainty tutorial (`tutorials/12_joint_financial_uncertainty.ipynb`) and the joint figure demonstrate re-pairing whole target trajectories:
+The joint financial uncertainty tutorial (`tutorials/12_joint_financial_uncertainty.ipynb`) demonstrates re-pairing whole target trajectories:
 per-target marginal distributions and temporal paths remain unchanged while
 cross-series dependence and aggregate uncertainty change.

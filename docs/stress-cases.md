@@ -57,7 +57,8 @@ errors across draws does not.
 ## Composed and financial scenarios
 
 Four more recipes combine or extend the core ones. Each works for one series or
-for several correlated series.
+for several correlated series. [Scenario equations](scenario-equations.md) gives
+the generating equations and the answer key of each.
 
 | Scenario | What it adds | What it tests |
 | --- | --- | --- |

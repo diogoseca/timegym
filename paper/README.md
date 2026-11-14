@@ -18,25 +18,17 @@ Unsupported bibliography syntax or missing cited entries fails the build.
 
 Rendering consumes saved records; it does not rerun experiments. The standalone output, `timegym.tex`, includes the generated tables and bibliography, so the single-file standalone build needs no additional source files or BibTeX pass. Compile `main.tex` from this directory using LaTeX, BibTeX, and two further LaTeX passes (`plain` bibliography style).
 
-To compile the standalone PDF, run `latexmk -pdf -outdir=build timegym.tex` from this directory. It needs latexmk, the standard LaTeX and TikZ packages, and the cm-super fonts; MacTeX includes them all, and on Debian or Ubuntu they are `apt-get install latexmk texlive-latex-recommended texlive-pictures texlive-fonts-recommended cm-super`. Without cm-super the T1-encoded fonts fall back to Metafont bitmaps, which can fail to build. The `paper` job in the checks workflow compiles the same file on every push and uploads `timegym.pdf` as the `paper-pdf` artifact.
+To compile the standalone PDF, run `latexmk -pdf -outdir=build timegym.tex` from this directory. It needs latexmk, the standard LaTeX and TikZ packages, and the cm-super fonts; MacTeX includes them all, and on Debian or Ubuntu they are `apt-get install latexmk texlive-latex-recommended texlive-pictures texlive-fonts-recommended cm-super`. Without cm-super the T1-encoded fonts fall back to Metafont bitmaps, which can fail to build. The `paper` job in the checks workflow compiles the same file when `paper/`, `CITATION.cff` or the workflow changed, and on every release, and uploads `timegym.pdf` as the `paper-pdf` artifact.
 
-Study 1 exports three scientific figures in both PNG and vector PDF under `figures/`:
+Study 1 exports one scientific figure in both PNG and vector PDF under `figures/`:
 
-- `fault-alarm-matrix`: observed alarms for each selected fixture, with unsupported covariance cells visibly masked. The clean row shows false alarms.
-- `dependence-score-deltas`: paired score changes against permutation strength, with 95% t intervals across independent seeds. Panels have different scales; marginal CRPS differences are numerical roundoff.
 - `capability-curves`: mean-reference MSE across three innovation scales, five scenario families, and three unmodified models. Curves are descriptive means over 16 cases; panel scales differ. `capability-summary.csv` includes the means and seed-level intervals, and for each row the unavoidable error and the 0 to 100 score that the manuscript's capability table prints at the lowest and highest scale.
 
-Study 2 adds `supplement-implementation-ablation` (complementary checks on the selected implementation regressions) and `supplement-covariance-holm` (raw versus Holm-adjusted suite rejection rates), also in PNG and PDF. The generated tables retain per-condition counts so the aggregate ablation cannot conceal differences among conditions.
-
-The manuscript embeds five vector figures, designed at print width; figures 4
-and 5 are in Appendix A:
+The manuscript embeds three vector figures, designed at print width:
 
 1. [Scorecard (SVG)](figures/paper-scorecard.svg): the package scorecard of the quick start's Ridge pipeline (`Pipeline(window_length=24)` with `StandardScaler` and `Ridge(alpha=1.0)`), redrawn in print style. It uses the scorecard defaults: ten kinds of series by two noise levels (sd 0.5 and 2), 10 instances per cell, seed 0. Each row gives the package's sentences on what can and cannot be predicted, one panel per noise level with the cell's score and verdict and the series of instance 1 (gray observation dots, black answer key, blue forecast crosses, dashed forecast origin), and the mistakes the package names. Every number and label is read from the `Scorecard` object.
-2. [Marginal versus joint dependence (SVG)](figures/paper-dependence.svg): the first predefined Study 1 case, identical empirical marginals, different joint sample clouds, and saved paired score changes over all 64 evaluation cases.
+2. [Marginal versus joint dependence (SVG)](figures/paper-dependence.svg): the first predefined Study 1 case, identical empirical marginals, different joint sample clouds.
 3. [Diagnostic evidence (SVG)](figures/paper-diagnostic-evidence.svg): the implementation ablation with clean controls, including the exploratory answer-key alarm of the Study 2 follow-up (marked with a dagger), and the random-walk-with-drift counterexample where correcting an algorithm worsens forecast loss.
-
-4. [Financial stress matrix (SVG)](figures/paper-financial-stresses.svg): six univariate configurations from tutorial 11 (composed and financial stresses), three series each (their fixed seeds are recorded in the provenance file), showing diffusion, jumps, GARCH, hidden regimes, and combined regimes/jumps. Filter approximation and output units are explicit. These are illustrative software cases; neither Gaussian fault-study protocol is expanded.
-5. [Joint financial uncertainty (SVG)](figures/paper-joint-stresses.svg): tutorial 12 (joint financial uncertainty) preserves each target trajectory while breaking cross-series pairing, revealing changes in joint and aggregate uncertainty. This is a controlled reference demonstration.
 
 `render_figures.py` generates editable SVGs, PNG previews, and self-contained
 TikZ scenes from shared plotted coordinates; TikZ type is set by the document. It regenerates the

@@ -115,6 +115,7 @@ nav:
       - How TimeGym decides: docs/concepts/how-timegym-decides.md
       - Capability map: docs/concepts/capability-map.md
       - Synthetic scenarios: docs/stress-cases.md
+      - Scenario equations: docs/scenario-equations.md
   - API reference:
       - Overview: docs/reference.md
       - Tasks and forecasts: docs/api/tasks-and-forecasts.md

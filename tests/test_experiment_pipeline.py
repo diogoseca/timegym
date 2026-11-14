@@ -118,7 +118,7 @@ def test_frozen_fragments_and_macros_are_reproducible():
     assert r'Condition & Branch & C & S & T & N & L & K \\' in text
     assert r' & Stale state & 0 & 0 & 0 & 64 & 5 & 28 \\' in text
     assert 'Fresh corrected refit' not in text and 'wall time' not in text
-    assert 'Reduced spread & --- & ---' in text
+    assert 'Reduced spread & ---' not in text and 'reduced-spread suites have none and are omitted' in text
     assert 'clean-minus-faulty mean MSE was +0.5132 [+0.2122, +0.8141]' in text
     addendum, _ = load_addendum()
     macros = render_macros(supplement, manifest, records('results')[1], followup, addendum)

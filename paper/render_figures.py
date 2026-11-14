@@ -30,12 +30,6 @@ def _builder(module, function):
 FIGURES = {
     "paper-scorecard": (_builder("figure_scorecard", "build_scorecard"),
                         [f"{PAPER}/figure_scorecard.py"]),
-    "paper-financial-stresses": (_builder("figure_stresses", "build_stresses"),
-                                 [f"{PAPER}/figure_stresses.py",
-                                  "tutorials/11_composed_and_financial_stresses.ipynb"]),
-    "paper-joint-stresses": (_builder("figure_joint_stresses", "build_joint_stresses"),
-                             [f"{PAPER}/figure_joint_stresses.py",
-                              "tutorials/12_joint_financial_uncertainty.ipynb"]),
     "paper-dependence": (_builder("figure_dependence", "build_dependence"),
                          [f"{PAPER}/figure_dependence.py", "experiments/protocol.json",
                           "experiments/results/results.json", "experiments/results/manifest.json",
@@ -54,9 +48,7 @@ ALL_INPUTS = ["experiments/results/results.json", "experiments/results-v2/result
               "experiments/results-v2-followup/results.json",
               f"{PAPER}/render_figures.py", f"{PAPER}/figure_evidence.py",
               f"{PAPER}/vector_canvas.py", f"{PAPER}/figure_common.py",
-              f"{PAPER}/figure_scorecard.py", f"{PAPER}/figure_dependence.py", f"{PAPER}/figure_stresses.py",
-              "tutorials/11_composed_and_financial_stresses.ipynb",
-              f"{PAPER}/figure_joint_stresses.py", "tutorials/12_joint_financial_uncertainty.ipynb"]
+              f"{PAPER}/figure_scorecard.py", f"{PAPER}/figure_dependence.py"]
 
 
 def digests(root: Path, names):

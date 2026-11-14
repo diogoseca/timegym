@@ -19,9 +19,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.patches import Rectangle
-from matplotlib.ticker import PercentFormatter
 import numpy as np
 from timegym.statistics import paired_t_interval
 from timegym import Scenario
@@ -75,84 +72,6 @@ def save(fig, directory, name):
         options = {"dpi": 200} if ext == "png" else {"metadata": {"CreationDate": None, "ModDate": None}}
         fig.savefig(directory / f"{name}.{ext}", bbox_inches="tight", facecolor="white", **options)
     plt.close(fig)
-
-
-def plot_fault_matrix(results, protocol, directory):
-    names = ["clean", *protocol["mutations"]]
-    columns = ["mse", "contract", "covariance", "combined"]
-    values = np.array([[np.nan if results["fault_summary"][name][key] is None
-                        else results["fault_summary"][name][key]["rate"] for key in columns]
-                       for name in names])
-    cmap = LinearSegmentedColormap.from_list("timegym", ["#f4f8fa", "#a4ced8", "#164e63"])
-    cmap.set_bad("#eeeeef")
-    fig, ax = plt.subplots(figsize=(10, 6.5))
-    heat = ax.imshow(np.ma.masked_invalid(values), vmin=0, vmax=1, cmap=cmap, aspect="auto")
-    for i, name in enumerate(names):
-        for j, key in enumerate(columns):
-            stat = results["fault_summary"][name][key]
-            if stat is None:
-                ax.add_patch(Rectangle((j-.5, i-.5), 1, 1, facecolor="none", edgecolor="#c5c5c7", hatch="///", linewidth=0))
-                text = "not run"
-            else:
-                text = f"{stat['count']}/{stat['n']}  ·  {stat['rate']:.1%}"
-            ax.text(j, i, text, ha="center", va="center", fontsize=10,
-                    color="white" if stat and stat["rate"] > .65 else "#172b3a")
-    ax.set_xticks(range(4), ["Point-MSE\nalarm", "Output\ncontract", "Reference\ncovariance", "Contract or\ncovariance"])
-    ax.xaxis.tick_top()
-    labels = [FAULT_LABELS[name] for name in names]
-    labels[0] += " (false alarms)"
-    ax.set_yticks(range(len(names)), labels)
-    ax.tick_params(length=0, pad=10)
-    ax.set_xticks(np.arange(-.5, 4, 1), minor=True)
-    ax.set_yticks(np.arange(-.5, len(names), 1), minor=True)
-    ax.grid(which="minor", color="white", linewidth=2)
-    ax.tick_params(which="minor", length=0)
-    ax.axhline(.5, color="#172b3a", linewidth=1.2)
-    ax.axhline(6.5, color="#172b3a", linewidth=1.2)
-    for spine in ax.spines.values():
-        spine.set_visible(False)
-    colorbar = fig.colorbar(heat, ax=ax, pad=.035, fraction=.035)
-    colorbar.ax.yaxis.set_major_formatter(PercentFormatter(1))
-    colorbar.set_label("Alarm rate")
-    fig.suptitle("Selected faults require different checks", x=.04, ha="left", fontsize=17, fontweight="bold")
-    fig.text(.04, .018, "Each row uses the same 64 independent cases. Hatched cells are unsupported after a contract failure.\n"
-             "Point-MSE ignores labels and non-point outputs; this is not a comparison with a complete validation framework.",
-             fontsize=9.5, color="#425466")
-    fig.subplots_adjust(left=.30, right=.91, top=.83, bottom=.13)
-    save(fig, directory, "fault-alarm-matrix")
-
-
-def plot_dependence(results, protocol, directory):
-    strengths = protocol["dependence_strengths"]
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4.2))
-    titles = {"crps": "Marginal CRPS", "energy": "Joint energy score", "variogram": "Joint variogram score"}
-    for ax, key, color in zip(axes, titles, COLORS):
-        stats = [results["dependence_summary"][str(float(x))][key] for x in strengths]
-        means = np.array([x["mean"] for x in stats])
-        low = np.array([x["ci95"][0] for x in stats])
-        high = np.array([x["ci95"][1] for x in stats])
-        ax.axhline(0, color="#77838e", linestyle="--", linewidth=1)
-        ax.errorbar(strengths, means, yerr=np.array([means-low, high-means]), color=color,
-                    marker="o", capsize=3, linewidth=1.8, markersize=5)
-        ax.set_title(titles[key], loc="left", fontsize=12, fontweight="bold")
-        ax.set_xlabel("Permutation strength")
-        ax.set_xticks(strengths)
-        ax.set_xlim(-.04, 1.04)
-        ax.grid(axis="y", alpha=.18)
-        ax.spines[["top", "right"]].set_visible(False)
-        if key == "crps":
-            ax.set_ylim(-2e-16, 2e-16)
-            ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-            ax.text(.04, .93, "Numerical roundoff only", transform=ax.transAxes, fontsize=9,
-                    va="top", color="#425466")
-        ax.set_ylabel("Mutated minus clean score")
-    fig.suptitle("Changing trajectory pairing leaves marginal scores unchanged", x=.04, ha="left",
-                 fontsize=16, fontweight="bold")
-    fig.text(.04, .015, "Means and paired 95% t intervals over 64 independent cases; exploratory, without multiplicity correction.\n"
-             "Each panel uses its own score scale. Positive differences indicate worse scores after mutation.",
-             fontsize=9.5, color="#425466")
-    fig.tight_layout(rect=(.02, .12, 1, .9), w_pad=2)
-    save(fig, directory, "dependence-score-deltas")
 
 
 def capability_score(unavoidable, avoidable):
@@ -265,9 +184,8 @@ def capability_section(summary, protocol, followup=None):
         r"\subsection{Study 1: capability profiles}",
         f"The univariate capability sweep uses {seeds} evaluation seeds, "
         f"{words(len(protocol['capability_sigma']))} innovation scales, {words(len(scenarios))} kinds of series, "
-        f"and {words(len(models))} unmodified models. Table~\\ref{{tab:capability}} scores each model against "
-        "the answer key at the lowest and highest scale: 100 times the unavoidable error over the sum of "
-        "the unavoidable and avoidable errors (Section~\\ref{sec:references}). The full three-scale sweep is in "
+        f"and {words(len(models))} unmodified models. Table~\\ref{{tab:capability}} gives each model's "
+        "score (Equation~\\eqref{eq:score}) at the lowest and highest scale. The full three-scale sweep is in "
         "\\code{figures/capability-curves.pdf} and \\code{capability-summary.csv} of the reproducibility artifact. "
         "The fitted AR(1) nails white noise and mean reversion and fails on the trend at both scales, "
         "and gets worse with noise there: at low noise its coefficient is close to 1 and it follows the line, "
@@ -395,14 +313,14 @@ def render_tex(results, manifest, summary, followup=None):
         "their paired intervals exclude zero for this setting. Their raw "
         "effect magnitudes have different units and must not be used to rank their sensitivity.",
         r"\begin{table}[htbp]\centering\small",
-        r"\caption{Mutated minus clean score, mean and paired 95\% t interval over 64 independent cases. CRPS differences are floating-point roundoff. Intervals are exploratory and not multiplicity-adjusted.}",
+        r"\caption{Mutated minus clean score, mean and paired 95\% t interval over 64 independent cases. CRPS is unchanged at every strength up to floating-point roundoff and is not tabulated. Intervals are exploratory and not multiplicity-adjusted.}",
         r"\label{tab:dependence}",
-        r"\begin{tabular}{@{}rccc@{}}\toprule",
-        r"Strength & CRPS mean & Energy & Variogram \\ \midrule",
+        r"\begin{tabular}{@{}rcc@{}}\toprule",
+        r"Strength & Energy & Variogram \\ \midrule",
     ])
     for strength in protocol["dependence_strengths"]:
         row = results["dependence_summary"][str(float(strength))]
-        lines.append(f"{strength:.2f} & {scientific_tex(row['crps']['mean'])} & {interval_cell(row['energy'])} & {interval_cell(row['variogram'])}" + r" \\")
+        lines.append(f"{strength:.2f} & {interval_cell(row['energy'])} & {interval_cell(row['variogram'])}" + r" \\")
     lines.extend([
         r"\bottomrule\end{tabular}\end{table}",
     ])
@@ -463,8 +381,6 @@ def main():
     summary = capability_summary(results, protocol)
     from .render_followup import FOLLOWUP_DIR, load_followup
     followup, _ = load_followup(args.followup_dir if args.followup_dir else FOLLOWUP_DIR)
-    plot_fault_matrix(results, protocol, directory)
-    plot_dependence(results, protocol, directory)
     plot_capability(summary, protocol, directory)
     with (directory / "capability-summary.csv").open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(summary[0]))

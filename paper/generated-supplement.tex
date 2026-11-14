@@ -2,13 +2,13 @@
 
 \subsection{Study 2: implementation regressions}
 
-Study 2 evaluates 4 implementation regressions under 6 fixed conditions, with 128 independent clean calibration cases and 64 disjoint evaluation cases each (768 calibration and 384 evaluation cases in total). The ridge penalty is 1 and the lag window is 6. Figure~\ref{fig:diagnostic-evidence} gives the pooled alarm counts, and Table~\ref{tab:supplement-complete} gives them for each condition. The paired comparison is clean-minus-faulty, with no separate repaired arm. Any output-contract violation terminates the study.
+Figure~\ref{fig:diagnostic-evidence} gives the pooled alarm counts, and Table~\ref{tab:supplement-complete} gives them for each condition. The paired comparison is clean-minus-faulty, with no separate repaired arm. Any output-contract violation terminates the study.
 
 Across the fixed condition--fault pairs, the calibrated loss alarm changed from no alarm to alarm in 861 paired comparisons and from alarm to no alarm in 11. The same clean case appears once per fault in these descriptive paired counts; they are not independent replicates of a pooled statistical test.
 
 The clean implementation reduced mean realized MSE in 22/24 condition--fault pairs; 18/24 paired 95\% t intervals were wholly below zero. The full paired loss differences, intervals, and numbers of individually improved cases are retained in \code{model-repair-losses.csv}.
 
-For random walk with drift with stale state, clean-minus-faulty mean MSE was +0.5132 [+0.2122, +0.8141] (paired 95\% t interval); only 21/64 realized forecasts improved. Restoring the declared algorithm can therefore worsen forecast accuracy on a particular condition.
+For random walk with drift with stale state, clean-minus-faulty mean MSE was +0.5132 [+0.2122, +0.8141] (paired 95\% t interval); only 21/64 realized forecasts improved.
 
 As an exploratory addition, chosen after these results were known (protocol 2.1, \code{experiments/results-v2-followup/}), an alarm on the distance from the answer key, calibrated in the same way, caught reversed lags or stale state in \AnswerKeySubtleAlarms{} of \SubtleCases{} cases outside the seasonal condition, against \LossSubtleAlarms{} for the realized-loss alarm, with \AnswerKeyCleanAlarms{} rather than \LossCleanAlarms{} false alarms in \CleanNonSeasonalCases{} clean cases. It helps most on the autoregressive conditions, where future noise hides these faults, and little on trends and random walks, where the clean pipeline's own estimation error varies too much from case to case.
 
@@ -98,11 +98,11 @@ Random walk with drift & Clean & 0 & 0 & 0 & 0 & 5 & 0 \\
 
 \subsection{Study 2: covariance checks under multiplicity}
 
-For clean suites, any false alarm occurred in 14/64 raw suites versus 3/64 after Holm correction. For reduced-spread suites, detection of at least one altered condition fell from 63/64 to 30/64. The correction thus reduces family-wise false alarms at a substantial power cost in this setting.
+For clean suites, any false alarm occurred in 14/64 raw suites versus 3/64 after Holm correction. For reduced-spread suites, detection of at least one altered condition fell from 63/64 ([\SpreadRawAnyLow{}, \SpreadRawAnyHigh{}]\%) to 30/64 ([\SpreadHolmAnyLow{}, \SpreadHolmAnyHigh{}]\%).
 
 \begin{table}[htbp]\centering\small
 
-\caption{Any false alarm per four-check suite, counts and Wilson 95\% intervals (percent). Clean suites have four true nulls, partial-shuffle suites one, and reduced-spread suites none. --- denotes an undefined result, not a negative result.}
+\caption{Any false alarm per four-check suite, counts and Wilson 95\% intervals (percent). Clean suites have four true nulls and partial-shuffle suites one; reduced-spread suites have none and are omitted.}
 
 \label{tab:supplement-familywise}
 
@@ -113,8 +113,6 @@ Variant & Raw & Holm \\ \midrule
 Exact-reference control & 14/64 [13.5, 33.4] & 3/64 [1.6, 12.9] \\
 
 Partial dependence shuffle & 4/64 [2.5, 15.0] & 4/64 [2.5, 15.0] \\
-
-Reduced spread & --- & --- \\
 
 \bottomrule\end{tabular}\end{table}
 
