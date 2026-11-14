@@ -44,19 +44,7 @@ on the code.
 
 ## Develop the package here
 
-The package is exported with nbdev 3.3.26's modular exporter. Save notebook
-edits, then build explicitly:
-
-```bash
-python tools/export_notebooks.py
-python tools/export_notebooks.py --check
-python -m pytest
-```
-
-Export reads selected source cells; it does not execute them or include ordinary
-demonstration cells. Normal notebook execution does not write package files.
-Generated modules should be changed through their source notebooks. See
-[contributing](../docs/contributing.md) and the [build guide](../tools/README.md).
+Save notebook edits, then follow [Contributing](../docs/contributing.md) and the [build guide](../tools/README.md): export, check, test.
 
 ## Execute and review
 

@@ -1,6 +1,6 @@
 # Python examples
 
-This folder has three terminal examples. The Jupyter tutorials are in
+This folder has two terminal examples. The Jupyter tutorials are in
 [`tutorials/`](../tutorials/README.md): start with
 [01 · Quick start](../tutorials/01_quick_start.ipynb), then
 [02 · Write and test a custom model](../tutorials/02_custom_model.ipynb).
@@ -9,15 +9,12 @@ This folder has three terminal examples. The Jupyter tutorials are in
   diagnostic report.
 - [`reproduce_report.py`](reproduce_report.py): replay a saved report case for a
   supported built-in model.
-- [`scorecard.py`](scorecard.py): print and save the last-value forecaster's
-  scorecard.
 
 From the project root:
 
 ```bash
 python examples/quickstart.py
 python examples/reproduce_report.py report.json --case-index 0
-python examples/scorecard.py scorecard.png
 ```
 
 The README's figures are redrawn by

@@ -11,9 +11,6 @@ columns as the context's series. Before scoring, TimeGym runs the output checks
 right shape, no NaN or infinity, and quantiles that do not cross. A forecast
 that fails one fails the test with a named reason and is not scored.
 
-What a model receives and what it must return: `ForecastTask` and `Forecast`,
-imported from `timegym`.
-
 `ForecastTask(context, future_index)` validates a finite pandas DataFrame, unique
 ordered target names, increasing unique time labels, and a future index after the
 context. Context is all that ordinary models may use to fit. Future targets and
@@ -52,8 +49,6 @@ an evaluation needs them. Shapes, finite values, index alignment, target order a
 quantile monotonicity are checked before any score is calculated.
 
 ## Signatures
-
-Generated from the docstrings in the code.
 
 ::: timegym.ForecastTask
 

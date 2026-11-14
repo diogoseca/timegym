@@ -9,31 +9,11 @@ before changing library code. The 15 source notebooks in `source/` are the
 library; the 12 notebooks in `tutorials/` only use it, the way a user would. Paper result fragments and `paper/timegym.tex`
 are generated too; edit their inputs and run their builders.
 
-Create the environment with `python3 -m venv .venv` and
-`.venv/bin/pip install -e '.[dev]'`; use `.venv/bin/python` thereafter. Add
-`.[notebooks]` to execute notebooks, `.[docs]` for documentation, and `.[release]`
-for distribution checks. Before handoff run the exporter check, `python -m
-pytest -q`, and `python -m mkdocs build --strict` when documentation changes.
-Use the venv interpreter for each command.
+Create the environment with `python3 -m venv .venv` and `.venv/bin/pip install -e '.[dev]'`; use `.venv/bin/python` for every command. Add `.[notebooks]` to execute notebooks, `.[docs]` for documentation, and `.[release]` for distribution checks.
 
 ## Version policy
 
-The version is `major.features.fixes`: three independent counters, not a
-decimal number. The leading zero in the former `0.X.Y` was the major version;
-this round starts `1.0.0`. Each merged pull request labelled `feature` adds one
-to X and each labelled `fix` adds one to Y. Increasing X must not reset Y: for
-example, a feature after `1.2.7` becomes `1.3.7`, and a fix then becomes `1.3.8`.
-Only Diogo Seca decides when to change the major version. Do not infer a major
-bump from another project's versioning convention.
-
-The authoritative version string is `__version__` in source notebook 12's package cell,
-exported to `timegym/__init__.py`; flit reads it dynamically. Do not edit it,
-the CITATION.cff version/date or the leading CHANGELOG heading in a pull
-request: `tag-release.yml` writes them in its release pull request. Label every
-pull request you open `feature` or `fix` when it changes the package, or leave
-it unlabelled for documentation, paper and tooling work. Put user-facing notes
-under `## Unreleased` at the top of CHANGELOG.md. Never invent a DOI. Follow
-`docs/release.md` for DOI registration and publication.
+Versions are `major.features.fixes`, as `docs/release.md` describes; a feature never resets the fix counter, and only Diogo Seca changes the major version. Do not edit `__version__` (source notebook 12), the CITATION.cff version/date or the leading CHANGELOG heading in a pull request: `tag-release.yml` writes them. Label every pull request you open `feature` or `fix` when it changes the package, or leave it unlabelled for documentation, paper and tooling work. Put user-facing notes under `## Unreleased` at the top of CHANGELOG.md. Never invent a DOI.
 
 ## Compatibility policy
 

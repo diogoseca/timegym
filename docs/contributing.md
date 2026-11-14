@@ -22,10 +22,7 @@ python -m pytest
 python examples/quickstart.py
 ```
 
-The explicit export command validates declared module ownership and syntax
-before replacing files. Check mode reports drift without writing. Do not make
-lasting edits directly in generated modules: the next export replaces them.
-See [the build guide](../tools/README.md) for directives and ownership rules.
+Do not edit generated modules; the next export replaces them. The [build guide](../tools/README.md) gives the directives, ownership rules and what check mode compares.
 
 Within a chapter, restart and Run All after implementation edits so the development
 bindings and nearby experiments use the new definitions. To use a change from
@@ -35,14 +32,7 @@ reads saved source cells, not kernel state or stored outputs.
 
 ## Verify notebooks and plots
 
-```bash
-python tools/check_notebooks.py --group source
-python tools/check_notebooks.py --group tutorials
-python tools/check_notebooks.py --write --html-dir /tmp/timegym-notebooks
-```
-
-The [source guide](../source/README.md#execute-and-review) describes the
-checker. Successful execution does not
+Run every notebook in a fresh kernel with the checker the [source guide](../source/README.md#execute-and-review) describes. Successful execution does not
 prove that labels, scales or explanations are useful, so inspect the rendered
 plots and explanations. Seeded results are reproducible within an environment,
 while numerical and rendering versions can affect output. Use discrete markers

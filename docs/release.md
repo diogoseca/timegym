@@ -3,9 +3,7 @@
 TimeGym is a PyPI package. The Dockerfile is a development image: it installs
 `requirements-study.txt` first, then the package with `--no-deps`, preserving
 the recorded scientific stack. The canonical study reproduction uses
-Python 3.13 as recorded in [the paper guide](../paper/README.md). Updating the
-Docker interpreter does not rewrite that historical lock or establish that a
-new interpreter reproduces old numerical records.
+Python 3.13 as recorded in [the study guide](../experiments/README.md).
 
 <!-- BEGIN PYTHON SUPPORT -->
 Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
@@ -36,7 +34,7 @@ the entry lists the labeled pull request titles. GitHub generates the
 release-page notes. To check the release metadata by hand:
 
 ```bash
-.venv/bin/python tools/sync_citation.py --check --tag v1.1.0
+.venv/bin/python tools/sync_citation.py --check
 .venv/bin/python paper/build_standalone.py --check
 ```
 
@@ -48,46 +46,13 @@ The release workflow commits generated sources along with their inputs before ta
 
 ## One-time PyPI setup
 
-Nothing reaches PyPI without a `v*` tag: `release.yml` is the only publishing
-path, and it runs only for a tag, which `tag-release.yml` creates and
-dispatches when its release pull request is merged. The package uses
-[trusted publishing](https://docs.pypi.org/trusted-publishers/), so no API token
-or repository secret is involved; an account-wide `twine` token is not needed.
-
-1. Sign in to PyPI and open the `timegym` project's **Manage → Publishing** page.
-2. Choose the **GitHub** publisher with owner `diogoseca`, repository
-   `timegym`, workflow name `release.yml`, and environment name `pypi`.
-   The filename is not `.github/workflows/release.yml`.
-3. In the GitHub repository, open [Settings → Environments → New
-   environment](https://github.com/diogoseca/timegym/settings/environments/new),
-   name it `pypi`, and save. Under **Deployment branches and tags** choose
-   **Selected branches and tags** and add a rule of type **Tag** with pattern
-   `v*`. Leave **Required reviewers** unticked: the `authorize` job in
-   `release.yml` lets a release publish only when the repository owner merged
-   or approved its release pull request, pushed its tag, or started or re-ran
-   its run. Tick **Required reviewers** and add the author instead if every
-   release should wait for a click; that is also the only gate that a
-   collaborator with write access cannot get around by editing the workflow.
-   The workflow's publish job uses this environment and requests
-   `id-token: write` for OIDC authentication.
-4. Under **Settings → Actions → General**, allow the actions used by these
-   workflows and, under **Workflow permissions**, enable **Allow GitHub Actions
-   to create and approve pull requests** for the release pull request and the
-   compatibility bot. Workflows declare their own minimal permissions. The
-   `feature`, `fix` and `python-compatibility` labels are created the first time
-   a pull request uses them.
-5. The ruleset on `main` requires pull requests, so `tag-release.yml` never
-   pushes to `main`: it proposes each version as a pull request and pushes
-   only the release branch and the tag, which the ruleset does not cover.
-
-These fields must match the [PyPI trusted publisher configuration](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
+Done before 1.1.0; redo it only if the project moves. PyPI's trusted publisher for `timegym` is the **GitHub** publisher with owner `diogoseca`, repository `timegym`, workflow name `release.yml` (the file name, not its path) and environment `pypi`. The GitHub environment `pypi` admits tags matching `v*` only. **Required reviewers** is unticked, so the `authorize` job is the gate (see Automatic releases); tick it and add the author if every release should wait for a click, which is also the only gate a collaborator with write access cannot get around by editing the workflow. Actions may create and approve pull requests, and because the ruleset on `main` requires pull requests, `tag-release.yml` pushes only the `release` branch and tags. No API token or repository secret is involved.
 
 ## One-time Zenodo setup and DOI lifecycle
 
 1. Sign in to Zenodo, connect the author's GitHub account, and grant access to
    `diogoseca/timegym`. Under the profile menu choose **GitHub**, select **Sync
-   now**, find `diogoseca/timegym`, and enable its slider. Do this before the
-   next GitHub release; v1.1.0 is already published. See [Zenodo's repository setup](https://help.zenodo.org/docs/github/enable-repository/).
+   now**, find `diogoseca/timegym`, and enable its slider. See [Zenodo's repository setup](https://help.zenodo.org/docs/github/enable-repository/).
 2. Keep `CITATION.cff` at the repository root. Avoid adding `.zenodo.json` unless
    deliberately switching metadata sources: it overrides CFF. The CFF includes
    the software version/date and the 2021 arXiv manuscript as a reference, not
@@ -113,7 +78,7 @@ cannot contain its own newly minted DOI through the GitHub integration alone.
 follow-up CFF correction does not rewrite the tag or the PyPI files. If a DOI
 must be inside the immutable artifacts, reserve a DOI in a manual Zenodo deposit
 before building and use that deposit as the release archive instead of creating
-a second archive through the GitHub integration. Do not fabricate an identifier.
+a second archive through the GitHub integration.
 Replace the arXiv manuscript manually at substantive milestones; this workflow
 does not submit or replace arXiv papers.
 
@@ -165,8 +130,6 @@ Only then does the GitHub job attach the distributions, PDF and standalone TeX
 to a draft release and publish it, triggering Zenodo.
 The release date is the `date-released` that `tag-release.yml` wrote to
 `CITATION.cff` when it last rebuilt the release pull request.
-All artifacts identify the tagged source; study records retain their original
-execution provenance.
 
 For an interrupted run, rerun failed jobs from the same tag. PyPI's action skips
 already uploaded files, and the GitHub step reuses an existing draft/release.
@@ -185,12 +148,4 @@ CI, the Docker base and the marked documentation ranges. The proposal leaves
 the version alone and is labeled `fix`, so merging it adds one to the fix
 counter in the next release pull request. The study lock is retained.
 
-The proposal runs tests, notebooks, examples, replay, export/citation/paper
-checks, strict docs, distribution validation, and the pinned development image
-on the newest interpreter before opening a PR. A failed dependency installation
-or check leaves the scheduled run red for inspection and opens no passing PR.
-A bot-created PR may not trigger another workflow using the default token;
-validation therefore runs in the scheduled job itself.
-
-Like any other change, it reaches PyPI only through a release pull request
-that the `authorize` job accepts.
+The scheduled job itself runs the full checks on the newest interpreter before it opens the pull request, because a pull request a bot opens may not trigger other workflows; a failure leaves the run red and opens none.

@@ -141,8 +141,6 @@ all higher-order dependence.
 
 ## Signatures
 
-Generated from the docstrings in the code.
-
 ::: timegym.processes.resolve_process
 
 ::: timegym.processes.generate_process

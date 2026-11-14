@@ -92,21 +92,3 @@ pilot and supplement JSON hashes, warns on mismatches, and retains the actual
 Linux hashes in the `research-linux-hashes` artifact. It has not been executed
 from this checkout, so no Linux repeatability result is claimed here.
 Timing is recorded separately and is not a benchmark claim.
-
-## Remaining release and research work
-
-CI covers the [declared Python range](../README.md#sixty-seconds), the older compatibility stack,
-installed wheels on Linux/macOS/Windows, all notebooks, documentation, and both
-studies. `release.yml` ran these jobs on the v1.1.0 tag before publishing; the
-`research-smoke` job only warns on a hash mismatch, so a green run does not
-show Linux repeatability; the observed hashes are in its `research-linux-hashes`
-artifact. Local validation was on macOS; do not infer Windows or Linux results from it.
-
-1.1.0 was published to PyPI on 5 November 2026 by the release workflow. No
-manuscript has been submitted.
-
-For a stronger empirical paper, the next evidence should come from independently
-selected defects in other forecasting implementations and additional real tasks.
-The current studies support the specified workflow and expose useful blind spots;
-they do not estimate general debugging effectiveness. See the
-[claim ledger](claims.md) and [publication strategy](publication-strategy.md).

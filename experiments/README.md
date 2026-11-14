@@ -5,8 +5,8 @@ create the environment once:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
-.venv/bin/pip install -r requirements-study.txt
+.venv/bin/python -m pip install -r requirements-study.txt
+.venv/bin/python -m pip install --no-build-isolation --no-deps -e .
 ```
 
 Render the frozen records without running either study:
@@ -23,7 +23,7 @@ Both runners refuse existing `results.json`, `manifest.json`, `runtime.json`,
 explicit replacement option for an approved re-freeze; routine reproductions
 use a new output directory. Both runners enforce one numerical thread with
 `threadpoolctl` and record the observed environment and thread pools in separate
-`runtime.json` files. Environment-variable prefixes are unnecessary.
+`runtime.json` files.
 
 ## Study 1: controlled pilot
 
@@ -50,15 +50,13 @@ The statistical check uses 99 independent reference ensembles and a per-case
 reference law. It is not a test of arbitrary covariance equality, and it is not
 a guarantee that a clean ensemble will pass. False alarms and Wilson confidence
 intervals are retained in the paper. The MSE alarm ignores index labels and non-point
-outputs; this illustrates a restricted numerical comparator, not superiority to
-properly validated evaluation frameworks.
+outputs.
 
 The separate model-level fault omits inverse standardization in a historical-mean
 forecast. Its repair applies the training location and scale exactly once. The
 location-equivariance relation is explicitly declared for this model. The same
 repair is illustrated at four ordered AirPassengers origins, without treating
-them as independent replications. It does not make this weak baseline a good
-forecasting model.
+them as independent replications.
 
 Outputs:
 
@@ -203,23 +201,4 @@ conclusions on the fresh output.
 
 ### Frozen-record migration
 
-The 30 October 2026 update did not rerun either study. `migrate_frozen.py` removed
-only verified duplicate repaired records and unused alarm-difference t intervals,
-updated protocol metadata, and regenerated CSVs. Pilot numerical bytes and all
-retained supplement measurements and paired loss summaries stayed unchanged.
-Each manifest preserves its original manifest and input hash under
-`record_migration`; historical source/environment evidence is not replaced by
-current code hashes. The supplement operation counts now describe the retained
-branches; the separate historical timing includes the removed duplicate work.
-The migration can be replayed with `python -m experiments.migrate_frozen --root PATH`
-on a checkout containing the pre-migration records and the updated protocols.
-An already migrated record is rejected.
-
-The 3 November 2026 update renamed the supplement's paired loss fields
-`repair_minus_faulty_mse` and `repair_minus_faulty_reference_mse` to
-`clean_minus_faulty_mse` and `clean_minus_faulty_reference_mse`, in `results.json`
-and the `model-repair-losses.csv` header. No study was rerun and no value changed.
-`python -m experiments.migrate_frozen --root PATH --step loss-keys` applies the
-rename to a record matching its manifest, rewrites the CSVs and the manifest hash,
-and logs the original hash under `loss_key_migration`. An already renamed record
-is rejected.
+The records were migrated twice without rerunning either study (30 October and 3 November 2026); no value changed. Each manifest keeps the original hashes under `record_migration` and `loss_key_migration`.

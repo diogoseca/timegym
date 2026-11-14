@@ -7,10 +7,6 @@ the expected value and the spread of every future step, given that past. Your
 model never sees the future or the answer key; only the scorer does.
 [Synthetic scenarios](../stress-cases.md) describes each recipe in plain terms.
 
-Synthetic cases and their known conditional references: `Scenario`, `Case` and
-`Reference` from `timegym`, `DEFAULT_LEVELS` from `timegym.contracts`, and
-`scenario_label` from `timegym.scenarios`.
-
 `Scenario(kind, context_length=120, horizon=12, parameters=<factory>, n_targets=1,
 seed=0).generate(seed=None)` returns a `Case(task, observed, reference, manifest)`.
 Core kinds: `white_noise`, `trend`, `seasonal`, `ar1`, `random_walk`. Additional
@@ -89,8 +85,6 @@ horizon=12, *, n_targets=1, seed=0)` creates fresh specifications for those fami
 with a context length of 240 and horizon of 80.
 
 ## Signatures
-
-Generated from the docstrings in the code.
 
 ::: timegym.Scenario
 

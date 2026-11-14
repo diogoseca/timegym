@@ -71,7 +71,7 @@ composed and financial families in
   a fitted model's samples, or against a jump, volatility or regime fault in one
   target. Tutorials 02 and 07 pass `check_dependence=True` on real data, which
   has no reference, so the check returns `UNSUPPORTED`. Regime switching with
-  jumps has an approximate reference, so tutorials 11 and 12 show the check
+  jumps has an approximate reference, so tutorial 12 shows the check
   returning `UNSUPPORTED` there too.
 
 ## Keeping the map current

@@ -29,6 +29,4 @@ strength and preconditions. This bypass is a specified repair, not repair discov
 
 ## Signatures
 
-Generated from the docstrings in the code.
-
 ::: timegym.mutations.mutate_forecast
