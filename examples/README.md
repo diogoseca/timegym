@@ -20,4 +20,4 @@ python examples/reproduce_report.py report.json --case-index 0
 The README's figures are redrawn by
 [`tools/readme_figures.py`](../tools/readme_figures.py). The original example
 notebook is preserved as
-[Quick Start (2021)](../source/archive/Quick%20Start%20%282021%29.ipynb).
+[Quick Start (2021)](https://github.com/diogoseca/timegym/blob/v1.4.0/source/archive/Quick%20Start%20%282021%29.ipynb) at the v1.4.0 tag.

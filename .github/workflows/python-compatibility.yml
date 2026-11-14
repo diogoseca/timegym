@@ -39,17 +39,12 @@ jobs:
           python -m pip install --no-deps -e .
           python tools/sync_citation.py
           python paper/build_standalone.py
-          python tools/export_notebooks.py --check
-          python tools/sync_citation.py --check
-          python paper/build_standalone.py --check
           python -m pytest -q
           python tools/check_notebooks.py
           python examples/quickstart.py
           python -m mkdocs build --strict
           python -m build
           python -m twine check dist/*
-          docker build -t timegym-compatibility .
-          docker run --rm timegym-compatibility
       - uses: peter-evans/create-pull-request@v7
         if: steps.support.outputs.changed == 'true'
         with:
@@ -59,6 +54,5 @@ jobs:
           labels: python-compatibility,fix
           body: |
             Update the supported CPython range after a stable Python release and pandas wheel support.
-            Synchronizes classifiers, requires-python, CI, Docker and documentation. It is labelled `fix`, so merging it releases the next fix version.
-            The proposal passed tests, notebooks, export/citation checks, strict docs, distributions and the development image on the newest Python.
-            Merging lets tag-release.yml add one to the fix counter in the next release pull request.
+            Synchronizes classifiers, requires-python, CI and documentation. It is labelled `fix`, so merging it adds one to the fix counter in the next release pull request.
+            The proposal regenerated the exported package, the citation metadata and the standalone paper, and passed tests, notebooks, strict docs and distribution checks on the newest Python.

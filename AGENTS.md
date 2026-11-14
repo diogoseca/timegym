@@ -21,7 +21,7 @@ Follow pandas when choosing current Python and scientific dependency support.
 Prefer the latest stable Python and dependency releases supported by pandas;
 when uncertain, use pandas' support policy and release timing. Keep explicit
 NumPy, pandas and SciPy major-version ceilings until compatibility is reviewed.
-The scheduled compatibility workflow proposes coordinated metadata, CI, Docker
+The scheduled compatibility workflow proposes coordinated metadata, CI
 and documentation updates and tests them before opening a pull request. Keep
 the historical study lock and its Python version separate from current support.
 A successful local check is not evidence that another OS or Python version passed.

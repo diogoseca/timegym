@@ -395,6 +395,8 @@ def main():
                         help="exploratory follow-up record (default experiments/results-v2-followup)")
     parser.add_argument("--addendum-dir", type=Path, default=None,
                         help="second exploratory record (default experiments/results-v2-addendum)")
+    parser.add_argument("--pilot-manifest", type=Path, default=ROOT / "experiments/results/manifest.json",
+                        help="Study 1 manifest whose software versions must match (default the recorded one)")
     args = parser.parse_args()
     path = args.results_dir / "results.json"
     results = json.loads(path.read_text())
@@ -413,7 +415,7 @@ def main():
     plot_covariance(results, manifest["protocol"], directory)
     fragment = args.paper_dir / "generated-supplement.tex"
     fragment.write_text(render_tex(results, manifest, followup))
-    pilot_manifest = json.loads((ROOT / "experiments/results/manifest.json").read_text())
+    pilot_manifest = json.loads(args.pilot_manifest.read_text())
     (args.paper_dir / "generated-macros.tex").write_text(render_macros(results, manifest, pilot_manifest, followup,
                                                                              addendum))
     print(json.dumps({"tables": str(fragment), "figures": str(directory)}))

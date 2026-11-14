@@ -76,5 +76,5 @@ run `python tools/export_notebooks.py --check` and then
 `python tools/check_notebooks.py` from the repository root to verify source
 parity and execute every source notebook and tutorial in a fresh kernel. Their source and saved
 outputs accompany the source distribution. The original notebooks are
-preserved separately in `source/archive/` in Git and excluded from both
-execution and the source distribution.
+preserved in Git at the [v1.4.0 tag](https://github.com/diogoseca/timegym/tree/v1.4.0/source/archive) and are not part of
+execution or the source distribution.

@@ -20,7 +20,7 @@ def test_discovery_requires_final_python_and_pandas_wheel_support():
 
 
 def test_update_rewrites_support_and_leaves_versioning_to_the_merge_workflow(tmp_path):
-    files = ['pyproject.toml', 'Dockerfile', 'README.md', 'docs/release.md',
+    files = ['pyproject.toml', 'README.md', 'docs/release.md',
              'source/12_package.ipynb', 'CITATION.cff', 'CHANGELOG.md']
     files += [str(p.relative_to(ROOT)) for p in (ROOT / '.github/workflows').glob('*.yml')]
     for name in files:
@@ -33,8 +33,7 @@ def test_update_rewrites_support_and_leaves_versioning_to_the_merge_workflow(tmp
     assert update(tmp_path, versions)
     project = tomllib.loads((tmp_path / 'pyproject.toml').read_text())['project']
     assert project['requires-python'] == '>=3.12,<3.17'
-    assert 'FROM python:3.16-slim' in (tmp_path / 'Dockerfile').read_text()
-    assert "python-version: ['3.12', '3.13', '3.14', '3.15', '3.16']" in (tmp_path / '.github/workflows/checks.yml').read_text()
+    assert "python-version: ['3.12', '3.16']" in (tmp_path / '.github/workflows/checks.yml').read_text()
     assert "python-version: '3.16' # current-python" in (tmp_path / '.github/workflows/tag-release.yml').read_text()
     assert 'Python 3.12–3.16' in (tmp_path / 'docs/release.md').read_text()
     assert versioned == {name: (tmp_path / name).read_bytes() for name in versioned}

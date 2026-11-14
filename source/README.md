@@ -6,10 +6,10 @@ writes into `timegym/`. The [source map](source-map.json) gives each of the 25
 package modules one owning notebook. To use TimeGym rather than change it, read
 the [tutorials](../tutorials/README.md) instead.
 
-The [11 original notebooks](archive/README.md) from 2021 keep the development
-history and saved figures in Git. They are excluded from source distributions
-and from the notebook checks; the 15 source notebooks and the 12 tutorials are
-included.
+The [11 original notebooks](https://github.com/diogoseca/timegym/tree/v1.4.0/source/archive) from 2021 keep the development
+history and saved figures at the v1.4.0 tag in Git. They are not part of the
+current tree, source distributions or notebook checks; the 15 source notebooks
+and the 12 tutorials are.
 
 ## Open and edit
 
@@ -57,9 +57,9 @@ python tools/check_notebooks.py --write --html-dir /tmp/timegym-notebooks
 
 The checker runs the source notebooks and the tutorials in fresh kernels with
 the invoking Python interpreter. It clears old outputs before execution, rejects
-uncaught errors and skipped code, and excludes the archive. `--write` saves the
+uncaught errors and skipped code. `--write` saves the
 executed outputs; the HTML option makes plot and narrative review convenient. A
 single notebook path can also be passed to the checker while developing it.
 
 Historical themes that remain unfinished are identified in the
-[archive guide](archive/README.md).
+[archive guide](https://github.com/diogoseca/timegym/blob/v1.4.0/source/archive/README.md) at the v1.4.0 tag.

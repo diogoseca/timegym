@@ -72,17 +72,11 @@ Outputs:
 
 There are no timestamps or runtime values in numerical results. A
 platform-dependent tolerance may be needed on other BLAS/NumPy versions.
-The CI `research-smoke` job compares both rerun hashes to their frozen manifests,
-warns on platform differences, and uploads the observed Linux hashes as
-`research-linux-hashes`; see [the validation record](../paper/validation.md).
+The CI `research-smoke` job reruns both studies and renders the paper's tables
+from the fresh output, so it fails when a conclusion the paper states does not
+hold there; it does not compare hashes. See [the validation record](../paper/validation.md).
 Local comparisons fail on a mismatch
 unless `--warn` is explicit.
-
-To reproduce one selected controlled counterexample without running the full
-study, use `python -m experiments.reproduce_fault --mutation dependence_shuffle --seed 10000`.
-This reconstructs its saved scenario, ensemble and mutation seeds, then compares
-the contract and covariance decisions with the original record. Its successful
-exit means reproduction matched, even when the forecast correctly receives FAIL.
 
 Scope limits: no held-out generator families, representative real-bug corpus,
 foundation models, sktime-conformance comparator, or broad real-data transfer study.

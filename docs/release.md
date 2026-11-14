@@ -1,8 +1,6 @@
 # Releases and compatibility
 
-TimeGym is a PyPI package. The Dockerfile is a development image: it installs
-`requirements-study.txt` first, then the package with `--no-deps`, preserving
-the recorded scientific stack. The canonical study reproduction uses
+TimeGym is a PyPI package. The canonical study reproduction uses
 Python 3.13 as recorded in [the study guide](../experiments/README.md).
 
 <!-- BEGIN PYTHON SUPPORT -->
@@ -144,7 +142,7 @@ checks stable releases listed by [Python.org](https://www.python.org/downloads/)
 and the latest pandas release's Python classifiers, requirement and CPython
 wheel availability. Prereleases and a new Python minor without pandas wheels
 are deferred. A changed supported range updates classifiers, `requires-python`,
-CI, the Docker base and the marked documentation ranges. The proposal leaves
+CI and the marked documentation ranges. The proposal leaves
 the version alone and is labeled `fix`, so merging it adds one to the fix
 counter in the next release pull request. The study lock is retained.
 
