@@ -6,7 +6,7 @@ import pytest
 import warnings
 
 from timegym.contracts import Forecast
-from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
+from timegym.diagnostics import RankAlarm, covariance_dependence_check, evaluate_forecast, rank_alarm
 from timegym.reporting import CaseResult, DiagnosticResult, TestReport
 from timegym.scenarios import Scenario
 
@@ -213,6 +213,143 @@ def test_covariance_check_exposes_insufficient_calibration_and_support():
     assert check.status == "INCONCLUSIVE"
     assert check.evidence["minimum_p_value"] == 0.05
     assert check.evidence["critical_value"] is None
+
+
+def _shuffled_dependence_case():
+    case = Scenario("random_walk", context_length=16, horizon=6, n_targets=2,
+                    parameters={"correlation": 0.8}).generate(seed=3)
+    original = case.reference.sample(256, 17)
+    shuffled = original.copy().reshape(256, -1)
+    rng = np.random.default_rng(32)
+    for column in range(shuffled.shape[1]):
+        shuffled[:, column] = rng.permutation(shuffled[:, column])
+    return case, original, shuffled.reshape(original.shape)
+
+
+@pytest.mark.parametrize("which, n_calibration, alpha, status", [
+    ("shuffled", 99, 0.05, "FAIL"),
+    ("original", 99, 0.05, None),  # PASS or FAIL: one correct ensemble among 99 others
+    ("shuffled", 19, 0.05, "FAIL"),
+    ("original", 19, 0.01, "INCONCLUSIVE"),
+])
+def test_covariance_check_keeps_its_evidence_through_rank_alarm(monkeypatch, which, n_calibration, alpha,
+                                                                 status):
+    import math
+
+    from timegym import diagnostics
+
+    seen = {}
+
+    def spy(observed, calibration, *, alpha):
+        seen.update(observed=float(observed), calibration=np.asarray(calibration, dtype=float))
+        return rank_alarm(observed, calibration, alpha=alpha)
+
+    monkeypatch.setattr(diagnostics, "rank_alarm", spy)
+    case, original, shuffled = _shuffled_dependence_case()
+    samples = shuffled if which == "shuffled" else original
+    check = covariance_dependence_check(case.reference, samples, seed=101, n_calibration=n_calibration,
+                                        alpha=alpha)
+    # The rule as the check wrote it out before it called rank_alarm, on the same statistics.
+    observed, null = seen["observed"], seen["calibration"]
+    assert len(null) == n_calibration
+    p_value = float((1 + np.sum(null >= observed)) / (n_calibration + 1))
+    rank = math.ceil((n_calibration + 1) * (1 - alpha))
+    critical_value = float(np.sort(null)[rank - 1]) if rank <= n_calibration else None
+    if 1 / (n_calibration + 1) > alpha:
+        expected = "INCONCLUSIVE"
+    else:
+        expected = "FAIL" if p_value <= alpha else "PASS"
+    messages = {
+        "FAIL": "Ensemble covariance differs from the specified reference at the declared per-check level.",
+        "PASS": "No covariance discrepancy detected at the declared level; this does not establish "
+                "equality of distributions.",
+        "INCONCLUSIVE": "Too few calibration ensembles to reject at the requested alpha.",
+    }
+    assert (check.status, check.message) == (expected, messages[expected])
+    assert status in (None, expected)
+    evidence = check.evidence
+    assert evidence["statistic"] == observed
+    assert evidence["p_value"] == p_value
+    assert evidence["minimum_p_value"] == pytest.approx(1 / (n_calibration + 1), abs=1e-15)
+    assert evidence["critical_value"] == critical_value
+    assert (evidence["alpha"], evidence["n_calibration"]) == (alpha, n_calibration)
+
+
+# --- The rank rule ---------------------------------------------------------------------------
+
+def test_rank_alarm_p_value_counts_calibration_values_at_least_as_large():
+    calibration = np.arange(1.0, 20.0)  # 1, 2, ..., 19
+    result = rank_alarm(15.5, calibration, alpha=0.25)
+    assert isinstance(result, RankAlarm)
+    assert result.p_value == (1 + 4) / 20  # 16, 17, 18 and 19
+    assert (result.n, result.alpha, result.observed) == (19, 0.25, 15.5)
+    assert (result.rank, result.threshold) == (15, 15.0)  # ceil(20 * 0.75)
+    assert result.status == "FAIL"  # p = 0.25 is at most alpha
+    assert rank_alarm(14.5, calibration, alpha=0.25).status == "PASS"  # p = 6 / 20
+    assert rank_alarm(100.0, calibration).p_value == 1 / 20
+    assert rank_alarm(-100.0, calibration).p_value == 1.0
+    with pytest.raises(Exception):
+        result.p_value = 0.0  # frozen
+
+
+def test_rank_alarm_counts_ties_against_the_alarm():
+    tied = np.ones(128)
+    assert rank_alarm(1.0, tied).p_value == 1.0
+    assert rank_alarm(1.0, tied).status == "PASS"
+    assert rank_alarm(1.001, tied).p_value == 1 / 129
+    calibration = np.array([1.0, 2.0, 2.0, 2.0, 3.0])
+    assert rank_alarm(2.0, calibration).p_value == (1 + 4) / 6
+
+
+def test_rank_alarm_fails_exactly_when_the_observed_value_is_above_the_threshold():
+    rng = np.random.default_rng(7)
+    for _ in range(2000):
+        n = int(rng.integers(1, 300))
+        alpha = float(rng.choice([0.01, 0.05, 0.1, 0.059, 0.172, float(rng.uniform(0.001, 0.999))]))
+        # Few distinct values, so ties and observed values equal to the threshold are common.
+        calibration = rng.integers(0, 12, size=n).astype(float)
+        observed = float(rng.integers(-1, 14))
+        result = rank_alarm(observed, calibration, alpha=alpha)
+        assert (observed > result.threshold) == (result.p_value <= alpha)
+        assert (result.status == "FAIL") == (result.p_value <= alpha and result.status != "INCONCLUSIVE")
+        if result.rank <= n:
+            assert result.threshold == np.sort(calibration)[result.rank - 1]
+    # 1000 * (1 - 0.059) rounds to just above 941, so a plain ceil would give rank 942 and
+    # threshold 941, and 940.5 would fail without being above it.
+    result = rank_alarm(940.5, np.arange(999.0), alpha=0.059)
+    assert result.rank == 941 and result.threshold == 940.0
+    assert result.p_value == (1 + 58) / 1000 and result.status == "FAIL"
+
+
+def test_rank_alarm_is_inconclusive_when_no_value_could_fail():
+    result = rank_alarm(1e9, np.arange(19.0), alpha=0.01)  # 1 / 20 > 0.01
+    assert result.status == "INCONCLUSIVE"
+    assert result.p_value == 1 / 20
+    assert result.rank == 20 and result.threshold == float("inf")
+    edge = rank_alarm(1e9, np.arange(19.0), alpha=0.05)  # 1 / 20 = 0.05: one value can fail
+    assert (edge.status, edge.rank, edge.threshold) == ("FAIL", 19, 18.0)
+    assert rank_alarm(5.0, [1.0], alpha=0.3).status == "INCONCLUSIVE"
+
+
+@pytest.mark.parametrize("observed, calibration, alpha, message", [
+    (1.0, [], 0.05, "calibration"),
+    (1.0, [[1.0, 2.0]], 0.05, "calibration"),
+    (1.0, [1.0, np.nan], 0.05, "calibration"),
+    (1.0, [1.0, np.inf], 0.05, "calibration"),
+    (1.0, [1.0 + 1j], 0.05, "real"),
+    (np.nan, [1.0], 0.05, "observed"),
+    (np.inf, [1.0], 0.05, "observed"),
+    ([1.0, 2.0], [1.0], 0.05, "observed"),
+    (True, [1.0], 0.05, "observed"),
+    (1.0, [1.0], 0.0, "alpha"),
+    (1.0, [1.0], 1.0, "alpha"),
+    (1.0, [1.0], np.nan, "alpha"),
+    (1.0, [1.0], True, "alpha"),
+    (1.0, [1.0], "0.05", "alpha"),
+])
+def test_rank_alarm_rejects_invalid_inputs(observed, calibration, alpha, message):
+    with pytest.raises(ValueError, match=message):
+        rank_alarm(observed, calibration, alpha=alpha)
 
 
 def test_report_json_is_safe_and_preserves_detailed_failures(tmp_path):

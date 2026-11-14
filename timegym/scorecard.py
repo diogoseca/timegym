@@ -3,18 +3,24 @@
 from __future__ import annotations
 import functools
 import io
+import json
+import math
+import os
 import textwrap
+import warnings
 from dataclasses import dataclass
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from ._internal import positive_int, _deprecated
 from .contracts import _describe_shift, _index_shift
+from .diagnostics import rank_alarm
 from .evaluation import ForecastRun
 from .grid import PATTERNS, GridCell, scenario_grid
 from .plotting import _BAND_COLORS, _FORECAST, _HAIRLINE, _INK, _MUTED, _SURFACE
 from .reporting import CHECKS, TestReport, _case_checks
 
-__all__ = ["VERDICTS", "verdict", "Scorecard", "scorecard"]
+__all__ = ["VERDICTS", "verdict", "Scorecard", "ScorecardComparison", "scorecard"]
 
 # %% ../source/13_scorecard.ipynb #scorecard-imports
 
@@ -517,6 +523,10 @@ class Scorecard:
     ``attainable=True``, which simulates them once per session: about 3 to 5
     seconds for each autoregressive or random-walk cell, well under a second
     for the others.
+
+    ``save_baseline(path)`` writes each series' avoidable error to a small
+    JSON file, and ``compare(baseline)`` compares a later card on the same
+    series with it, cell by cell; see ``ScorecardComparison``.
     """
 
     title: str
@@ -653,6 +663,39 @@ class Scorecard:
         plt.close(figure)
         return path
 
+    def save_baseline(self, path):
+        """Write this card's baseline to a JSON file at ``path`` and return ``path``.
+
+        The file holds the package version, the title, the grid (pattern
+        keys, noise standard deviations, history length and horizon), the
+        seed, the number of instances and, for each cell, its score and each
+        series' avoidable error in instance order, with ``null`` for a series
+        that crashed or failed an output check. Floats are written so that
+        they read back exactly and keys are sorted, so the same card always
+        writes the same file. At 30 instances the default grid stores 600
+        avoidable errors, small enough to commit beside the tests.
+        """
+        text = json.dumps(
+            _baseline_record(self), indent=1, sort_keys=True, allow_nan=False
+        )
+        Path(path).write_text(text + "\n", encoding="utf-8")
+        return path
+
+    def compare(self, baseline, *, alpha=0.05):
+        """Compare this card with a baseline on the same series; returns a ScorecardComparison.
+
+        ``baseline`` is a path written by ``save_baseline`` or another
+        Scorecard. Both must use the same grid, seed and number of instances,
+        so that they drew the same series; otherwise ``ValueError`` says what
+        differs. Each cell is ``"unchanged"``, ``"changed, no worse"`` or
+        ``"changed and worse"``: worse when a one-sided sign-flip test of the
+        paired avoidable errors rejects after Holm's correction at ``alpha``
+        across the cells that changed, or when a series scored in the
+        baseline now crashes or fails an output check. Below 20 instances it
+        warns, because so few series find only large regressions; use 30.
+        """
+        return _compare(self, baseline, alpha)
+
     def _repr_png_(self):
         import matplotlib.pyplot as plt
 
@@ -680,6 +723,405 @@ def _unsettled_line(count, total, instances):
         f"not settled at {_count(instances, 'instance', 'instances')}. "
         f"Run scorecard(instances={more}) to narrow {'it' if count == 1 else 'them'}."
     )
+
+
+# %% ../source/13_scorecard.ipynb #scorecard-compare
+# A baseline file names its format and version, so a file of another kind, or one written by a
+# newer TimeGym in a format this version cannot read, is refused instead of misread.
+_BASELINE_FORMAT, _BASELINE_VERSION = "timegym-scorecard-baseline", 1
+
+# Sign flips behind each changed cell's p-value.
+_FLIPS = 9_999
+
+# Two avoidable errors of one series agree when they differ by at most this share of the largest
+# avoidable error in the cell, in either version, or by _ABSOLUTE_TOLERANCE, whichever is larger:
+# roundoff from another platform or library version, not a change in the forecasts. This is the
+# form experiments/common.py uses to compare recomputed statistics with recorded ones.
+_RELATIVE_TOLERANCE, _ABSOLUTE_TOLERANCE = 1e-8, 1e-9
+
+# Below this many series per cell, compare() warns that only large regressions can be found.
+_FEW_INSTANCES = 20
+
+_CHANGES = ("unchanged", "changed, no worse", "changed and worse")
+
+
+def _series_avoidable(card):
+    """Each cell's avoidable error per series, in instance order; None where a series was not scored."""
+    found = [[None] * card.instances for _ in card.cells]
+    for entry in card.run.cases:
+        numbers = _case_numbers(entry)
+        found[entry.scenario_index][entry.seed_index] = (
+            None if numbers is None else numbers[1]
+        )
+    return found
+
+
+def _grid(card):
+    """The settings that decide which series a card draws, as a baseline file stores them."""
+    first = card.cells[0].scenario
+    return {
+        "patterns": list(dict.fromkeys(cell.pattern for cell in card.cells)),
+        "noise_sds": [
+            float(sd) for sd in dict.fromkeys(cell.noise_sd for cell in card.cells)
+        ],
+        "context_length": int(first.context_length),
+        "horizon": int(first.horizon),
+    }
+
+
+def _baseline_record(card):
+    """The JSON-ready baseline of a scorecard (``Scorecard.save_baseline``)."""
+    cells = []
+    for row, avoidable in zip(card.table.itertuples(), _series_avoidable(card)):
+        cells.append(
+            {
+                "pattern": row.pattern,
+                "noise_sd": float(row.noise_sd),
+                "score": float(row.score) if np.isfinite(row.score) else None,
+                "avoidable": avoidable,
+            }
+        )
+    return {
+        "format": _BASELINE_FORMAT,
+        "format_version": _BASELINE_VERSION,
+        "timegym_version": card.run.metadata.get("timegym_version"),
+        "title": card.title,
+        "grid": _grid(card),
+        "seed": int(card.seed),
+        "instances": int(card.instances),
+        "cells": cells,
+    }
+
+
+def _read_baseline(path):
+    """Load and check a baseline file written by ``Scorecard.save_baseline``."""
+    try:
+        record = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"{path} is not a TimeGym scorecard baseline: {error}"
+        ) from None
+    if not isinstance(record, dict) or record.get("format") != _BASELINE_FORMAT:
+        raise ValueError(
+            f"{path} is not a TimeGym scorecard baseline; write one with Scorecard.save_baseline(path)"
+        )
+    version = record.get("format_version")
+    if type(version) is not int or version < 1:
+        raise ValueError(f"{path} has no valid format_version")
+    if version > _BASELINE_VERSION:
+        raise ValueError(
+            f"{path} uses baseline format version {version}, written by timegym "
+            f"{record.get('timegym_version')}; this TimeGym reads version {_BASELINE_VERSION}. "
+            "Upgrade TimeGym to compare with it."
+        )
+
+    def number(value):
+        return (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and math.isfinite(value)
+        )
+
+    try:
+        grid, instances, cells = record["grid"], record["instances"], record["cells"]
+        # Cells come rows first, as scenario_grid makes them: each pattern at every noise level.
+        expected = [(key, sd) for key in grid["patterns"] for sd in grid["noise_sds"]]
+        valid = (
+            {"seed", "title"} <= record.keys()
+            and isinstance(cells, list)
+            and [(cell["pattern"], cell["noise_sd"]) for cell in cells] == expected
+            and all(
+                (cell["score"] is None or number(cell["score"]))
+                and len(cell["avoidable"]) == instances
+                and all(value is None or number(value) for value in cell["avoidable"])
+                for cell in cells
+            )
+        )
+    except (KeyError, TypeError) as error:
+        raise ValueError(
+            f"{path} is an incomplete scorecard baseline: {error!r}"
+        ) from None
+    if not valid:
+        raise ValueError(
+            f"{path} is an inconsistent scorecard baseline: it needs one cell per pattern and "
+            "noise level, rows first, each with a score and one finite avoidable error or null "
+            "per instance"
+        )
+    return record
+
+
+def _same_setting(key, here, there):
+    """Whether one grid setting agrees; computed noise levels can differ in the last digit by platform."""
+    if key != "noise_sds":
+        return here == there
+    try:
+        return len(here) == len(there) and bool(
+            np.allclose(here, there, rtol=1e-9, atol=0.0)
+        )
+    except (TypeError, ValueError):
+        return False
+
+
+def _check_same_series(record, card, name):
+    """Raise when the baseline was drawn on other series than ``card``, saying what differs."""
+    grid = _grid(card)
+    stored = record["grid"]
+    labels = {
+        "patterns": "patterns",
+        "noise_sds": "noise standard deviations",
+        "context_length": "history length (context_length)",
+        "horizon": "horizon",
+    }
+    differences = [
+        f"{label} {grid[key]} here, {stored[key]} in the baseline"
+        for key, label in labels.items()
+        if not _same_setting(key, grid[key], stored[key])
+    ]
+    if card.seed != record["seed"]:
+        differences.append(f"seed {card.seed} here, {record['seed']} in the baseline")
+    if card.instances != record["instances"]:
+        differences.append(
+            f"instances {card.instances} here, {record['instances']} in the baseline"
+        )
+    if differences:
+        raise ValueError(
+            f"{name} was made on other series, so it cannot be compared with this card: "
+            + "; ".join(differences)
+            + ". Make the card with the baseline's settings, or save a new baseline."
+        )
+
+
+def _sign_flip_pvalue(differences, seed):
+    """One-sided sign-flip p-value for a mean difference above zero, from ``rank_alarm``.
+
+    The generator depends only on ``seed`` and the number of differences, as in
+    ``_interval``, so a cell's p-value does not depend on which other cells were scored.
+    """
+    differences = np.asarray(differences, dtype=float)
+    signs = np.random.default_rng([int(seed), len(differences)]).choice(
+        [-1.0, 1.0], size=(_FLIPS, len(differences))
+    )
+    return rank_alarm(differences.mean(), (signs * differences).mean(axis=1)).p_value
+
+
+def _holm(p_values, alpha):
+    """Holm's step-down rejections at ``alpha``, in the order the p-values were given."""
+    order = np.argsort(p_values, kind="stable")
+    rejected = np.zeros(len(p_values), dtype=bool)
+    for step, position in enumerate(order):
+        if p_values[position] > alpha / (len(p_values) - step):
+            break
+        rejected[position] = True
+    return rejected
+
+
+def _compare(card, baseline, alpha):
+    """Compare ``card`` with a baseline file or Scorecard (``Scorecard.compare``)."""
+    if isinstance(alpha, bool) or not isinstance(alpha, (int, float)):
+        raise ValueError("alpha must be a number in (0, 1)")
+    if not (math.isfinite(alpha) and 0 < alpha < 1):
+        raise ValueError("alpha must be a number in (0, 1)")
+    if isinstance(baseline, Scorecard):
+        record, name = (
+            _baseline_record(baseline),
+            f"the baseline scorecard {baseline.title!r}",
+        )
+    elif isinstance(baseline, (str, os.PathLike)):
+        # The file's name, not its full path, so messages read the same on every machine.
+        record, name = _read_baseline(baseline), Path(baseline).name
+    else:
+        raise TypeError("baseline must be a path to a saved baseline or a Scorecard")
+    _check_same_series(record, card, name)
+    if card.instances < _FEW_INSTANCES:
+        warnings.warn(
+            f"Comparing {card.instances} series per cell finds only large regressions; "
+            "make both cards with instances=30.",
+            UserWarning,
+            stacklevel=3,
+        )
+    rows, tested = [], []
+    for index, (row, new, old) in enumerate(
+        zip(card.table.itertuples(), _series_avoidable(card), record["cells"])
+    ):
+        old = old["avoidable"]
+        pairs = [(b, a) for b, a in zip(old, new) if b is not None and a is not None]
+        differences = np.array([a - b for b, a in pairs])
+        scale = max((abs(v) for v in old + new if v is not None), default=0.0)
+        tolerance = max(_ABSOLUTE_TOLERANCE, _RELATIVE_TOLERANCE * scale)
+        moved = bool(len(differences)) and bool(np.any(np.abs(differences) > tolerance))
+        newly_failing = sum(b is not None and a is None for b, a in zip(old, new))
+        newly_passing = sum(b is None and a is not None for b, a in zip(old, new))
+        scored_before = [b for b in old if b is not None]
+        stored_score = record["cells"][index]["score"]
+        rows.append(
+            {
+                "pattern": row.pattern,
+                "title": row.title,
+                "noise": row.noise,
+                "noise_sd": row.noise_sd,
+                "change": (
+                    "unchanged"
+                    if not (moved or newly_failing or newly_passing)
+                    else "changed, no worse"
+                ),
+                "baseline_score": (
+                    np.nan if stored_score is None else float(stored_score)
+                ),
+                "score": row.score,
+                "baseline_avoidable": (
+                    float(np.mean(scored_before)) if scored_before else np.nan
+                ),
+                "avoidable": row.avoidable_mse,
+                "p_value": (
+                    _sign_flip_pvalue(differences, card.seed) if moved else np.nan
+                ),
+                "newly_failing": newly_failing,
+                "newly_passing": newly_passing,
+            }
+        )
+        if moved:
+            tested.append(index)
+    if tested:
+        rejected = _holm([rows[index]["p_value"] for index in tested], alpha)
+        for index, worse in zip(tested, rejected):
+            if worse:
+                rows[index]["change"] = "changed and worse"
+    for entry in rows:
+        if entry["newly_failing"]:
+            entry["change"] = "changed and worse"
+    return ScorecardComparison(
+        table=pd.DataFrame(rows),
+        baseline=name,
+        baseline_version=record.get("timegym_version"),
+        card_version=card.run.metadata.get("timegym_version"),
+        instances=card.instances,
+        seed=card.seed,
+        alpha=float(alpha),
+    )
+
+
+@dataclass(repr=False)
+class ScorecardComparison:
+    """A scorecard compared, cell by cell, with a saved baseline on the same series.
+
+    ``table`` has one row per pattern and noise level: ``change`` (one of
+    ``"unchanged"``, ``"changed, no worse"`` and ``"changed and worse"``),
+    the baseline's and this card's ``score`` and mean avoidable error over the
+    series each scored (``baseline_score``, ``score``,
+    ``baseline_avoidable``, ``avoidable``), the paired test's ``p_value``
+    before Holm's correction (NaN where no series moved), and the number of
+    series that ``newly_failing`` crash or fail an output check and that are
+    ``newly_passing``. ``worse`` holds the rows that are changed and worse,
+    and ``assert_no_regression()`` raises when there are any. ``baseline``
+    names the baseline: the file's name, or the baseline card's title.
+    ``baseline_version`` is the TimeGym version that wrote it and
+    ``card_version`` this card's; the printed comparison names the baseline's
+    version when the two differ.
+
+    A row is unchanged when every series has the same status and its
+    avoidable error agrees with the baseline's within roundoff. Otherwise the
+    paired differences of avoidable error, on the series scored in both, get
+    a one-sided sign-flip test with 9,999 flips, and Holm's correction at
+    ``alpha`` runs across the rows where a series moved. A row is changed and
+    worse when that corrected test rejects or when a series scored in the
+    baseline now crashes or fails an output check. The test assumes that,
+    under "no worse", the paired differences are not shifted upward
+    (symmetric about zero, or below it), and that the differences of
+    different series are independent, as they are when the model treats each
+    series on its own. It does not say the new version is better, and a
+    version that is further from the answer key by a margin too small for the
+    number of series passes.
+    """
+
+    table: pd.DataFrame
+    baseline: str
+    baseline_version: str | None
+    card_version: str | None
+    instances: int
+    seed: int
+    alpha: float
+
+    @property
+    def worse(self):
+        """The rows that are changed and worse."""
+        return self.table[self.table["change"] == "changed and worse"]
+
+    def assert_no_regression(self):
+        """Raise ``AssertionError`` naming each cell that is changed and worse, with its numbers."""
+        if self.worse.empty:
+            return
+        lines = [
+            f"Worse than {self.baseline} in "
+            f"{_count(len(self.worse), 'cell', 'cells')} "
+            f"({self.instances} series per cell, Holm's correction at alpha {self.alpha:g}):"
+        ]
+        lines += [
+            f"  {_row_label(row)}: {_row_numbers(row)}"
+            for _, row in self.worse.iterrows()
+        ]
+        raise AssertionError("\n".join(lines))
+
+    def __str__(self):
+        saved = ""
+        if self.baseline_version and self.baseline_version != self.card_version:
+            saved = f"; saved with timegym {self.baseline_version}"
+        lines = [
+            f"Compared with {self.baseline} ({self.instances} series per cell{saved})"
+        ]
+        counts = self.table["change"].value_counts()
+        width = len(str(len(self.table)))
+        labels = [_row_label(row) for _, row in self.table.iterrows()]
+        label_width = max(map(len, labels), default=0)
+        for change in _CHANGES:
+            number = int(counts.get(change, 0))
+            if not number:
+                continue
+            lines.append(
+                f"  {number:>{width}} {'cell ' if number == 1 else 'cells'}  {change}"
+            )
+            if change == "unchanged":
+                continue
+            for label, (_, row) in zip(labels, self.table.iterrows()):
+                if row["change"] == change:
+                    lines.append(
+                        f"  {'':>{width}}         {label:<{label_width}}   {_row_numbers(row)}"
+                    )
+        return "\n".join(lines)
+
+    def __repr__(self):
+        counts = self.table["change"].value_counts()
+        found = "; ".join(
+            f"{change}: {int(counts.get(change, 0))}" for change in _CHANGES
+        )
+        return f"ScorecardComparison({self.baseline!r}; {found})"
+
+
+def _row_label(row):
+    """``Straight-line trend, low noise``."""
+    return f"{row['title']}, {row['noise'].lower()}"
+
+
+def _row_numbers(row):
+    """``avoidable error 0.31 -> 0.74 (+139%), p = 0.0004``, with series that newly fail or pass."""
+    before, after = row["baseline_avoidable"], row["avoidable"]
+    text = f"avoidable error {_error(before)} -> {_error(after)}"
+    if np.isfinite(before) and np.isfinite(after) and before > 0:
+        # Close errors print alike at three digits; the relative change tells them apart.
+        change = 100 * (after - before) / before
+        text += f" ({change:+.0f}%)" if abs(change) >= 10 else f" ({change:+.2g}%)"
+    if row["change"] == "changed and worse" and np.isfinite(row["p_value"]):
+        text += f", p = {row['p_value']:.2g}"
+    failing = int(row["newly_failing"])
+    if failing:
+        text += f", {failing} series now {'crashes or fails' if failing == 1 else 'crash or fail'} an output check"
+    if row["newly_passing"]:
+        text += f", {int(row['newly_passing'])} series now scored"
+    return text
+
+
+def _error(value):
+    """A cell's mean avoidable error at three significant digits, or ``none scored``."""
+    return f"{value:#.3g}".rstrip(".") if np.isfinite(value) else "none scored"
 
 
 # %% ../source/13_scorecard.ipynb #scorecard-plot

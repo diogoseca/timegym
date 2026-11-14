@@ -129,6 +129,16 @@ card.report.assert_passed()          # fail a CI build on a malformed forecast o
 card.report.to_json("report.json")   # every case, enough to replay one on another machine
 ```
 
+To catch a change that makes the model worse, save the scorecard of the version
+you trust and compare each later version with it on the same series. A paired
+test says, cell by cell, whether the new version is further from the answer key:
+
+```python
+pipeline.scorecard(instances=30).save_baseline("scorecard-baseline.json")  # once
+diff = pipeline.scorecard(instances=30).compare("scorecard-baseline.json")
+diff.assert_no_regression()          # fail a CI build on a cell that got worse
+```
+
 The [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) shows the rest: the
 scorecard as a DataFrame (`card.table`), how many draws to use and what `seed=None` does, and
 `pipeline.test` on series you choose. [Scorecards and the scenario grid](https://diogoseca.github.io/timegym/docs/api/scorecard/)
@@ -236,6 +246,7 @@ cause of a bug, repair a model, detect data leakage in general, or work out an
 answer key for data you bring yourself: real data is scored against what
 happened, and the checks that need a key say `UNSUPPORTED`. Panels, hierarchies,
 and missing or irregular observations are out of scope for now.
+[What TimeGym tests, and what it does not](docs/concepts/scope.md) draws the line in more detail.
 
 The package is written in notebooks: the [source notebooks](source/README.md)
 in `source/` generate every module in `timegym/`. [Contributing](docs/contributing.md)

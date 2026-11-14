@@ -3,8 +3,8 @@
 One call that tells you what a forecaster can and cannot do:
 `Pipeline.scorecard()` and `Scorecard` from `timegym`, the grid itself
 (`PATTERNS`, `GridCell`, `scenario_grid`) from `timegym`, and the lower-level
-`verdict`, `VERDICTS`, `Pattern`, `noise_levels`, `NOISE_LOW` and
-`NOISE_HIGH` from `timegym.scorecard` and `timegym.grid`.
+`verdict`, `VERDICTS`, `ScorecardComparison`, `Pattern`, `noise_levels`,
+`NOISE_LOW` and `NOISE_HIGH` from `timegym.scorecard` and `timegym.grid`.
 
 ```python
 from timegym import LastValueForecaster, Pipeline
@@ -207,6 +207,127 @@ draws a fresh seed and keeps it on `card.seed` and in the report metadata, so
 an interesting run can be repeated. Raise `instances` (20 or 30) when comparing
 close models.
 
+## Compare with a saved baseline
+
+The version of a model you last trusted is a second implementation you already
+have. Comparing its outputs exactly with a new version's is no test, because
+every intended change differs too. The answer key makes the comparison mean
+something: on the same series, is the new version further from the best
+possible forecast?
+
+```python
+# once, on the version you trust
+Pipeline(model).scorecard(instances=30).save_baseline("scorecard-baseline.json")
+
+# in the test suite, on every change
+card = Pipeline(model).scorecard(instances=30)
+diff = card.compare("scorecard-baseline.json")   # same seed, so the same series
+print(diff)
+diff.assert_no_regression()
+```
+
+`save_baseline(path)` writes a small JSON file and returns `path`. It holds a
+format name and version, the TimeGym version, the card's title, the grid
+(pattern keys, noise standard deviations, history length and horizon), the
+seed, the number of instances and, for each cell, its score and each series'
+avoidable error in instance order, with `null` for a series that crashed or
+failed an output check. Floats are written so that they read back exactly,
+and keys are sorted, so the same card always writes the same file. For the
+default grid at 30 instances that is 600 avoidable errors, about 17 kB, small
+enough to commit beside the tests.
+
+`compare(baseline, *, alpha=0.05)` takes such a file or another `Scorecard`
+and returns a `ScorecardComparison`; both give the same result. The two cards
+must have the same grid, seed and number of instances, so that they drew the
+same series: otherwise `compare` raises `ValueError` and says what differs. A
+file that is not a baseline, or one written in a newer format than this
+TimeGym reads, raises `ValueError` too. Series come from the seed and from
+TimeGym's generators, so if a TimeGym release draws other series for the same
+seed, save a new baseline from the version you trust.
+
+Each cell gets one of three outcomes in the `change` column:
+
+- `"unchanged"`: every series has the same status (scored, or crashed or
+  failed an output check) and its avoidable error agrees with the baseline's
+  up to roundoff: they differ by at most `1e-9`, or by `1e-8` times the
+  largest avoidable error in the cell (in either version) if that is larger.
+  This is the tolerance the studies in `experiments/` use to compare
+  recomputed numbers with recorded ones.
+- `"changed and worse"`: a paired test finds the new version further from the
+  answer key after Holm's correction, or a series that was scored in the
+  baseline now crashes or fails an output check. Only this outcome fails
+  `assert_no_regression()`.
+- `"changed, no worse"`: the forecasts differ and neither rule applies.
+
+The paired test takes the series scored in both cards and their differences
+`d = new avoidable error - baseline avoidable error`. Its statistic is the
+mean of `d`. It flips the sign of each difference at random 9,999 times and
+ranks the observed mean among the flipped means with
+[`rank_alarm`](diagnostics.md#statistical-and-metamorphic-diagnostics), a
+one-sided p-value for a mean above zero:
+
+```
+p = (1 + number of flipped means >= observed mean) / 10,000
+```
+
+The flips are seeded from the card's seed and the number of pairs, so a
+cell's p-value repeats exactly and does not depend on which other patterns
+were scored. Holm's step-down correction at `alpha` runs across the cells
+that changed, the cells with at least one difference beyond roundoff. The
+sign-flip test conditions on the sizes of the differences, and whether a cell
+changed depends only on those sizes and on how large the errors are, which
+swapping the two values of a pair does not change, so restricting the
+correction to the changed cells keeps the test valid. A series that was
+broken in the baseline and is scored now is left out of the test and counted
+as newly passing.
+
+What the test assumes and what it cannot see:
+
+- It assumes that, when the new version is no worse, the paired differences
+  are not shifted upward: symmetric about zero, or below it. It also assumes
+  that the series' differences are independent. They are when the model
+  treats each series on its own. A model that draws random numbers from one
+  fixed seed adds the same noise to every series, so another seed is a
+  different model, and the comparison can find it worse.
+- It does not say that the new version is better: "changed, no worse" only
+  means the test did not find it worse.
+- A version that is further from the answer key by a margin too small for the
+  number of series passes. Fewer than 20 instances make `compare` warn,
+  because ten series find only large regressions; use 30.
+- Because the series are paired, it can find a very small change. Adding a
+  ridge penalty of 1 to a least-squares regression on six lags raised one
+  cell's mean avoidable error by 0.04% on the default grid at 30 instances,
+  and the comparison called that cell changed and worse. The table and the
+  printed comparison show how far each cell moved, so you can judge whether a
+  worse cell matters. When a change is intended, save a new baseline.
+
+`ScorecardComparison.table` has one row per cell: `pattern`, `title`,
+`noise`, `noise_sd`, `change`, `baseline_score`, `score`,
+`baseline_avoidable` and `avoidable` (each card's mean avoidable error over
+the series it scored), `p_value` (before Holm's correction; NaN where no
+series moved beyond roundoff), and `newly_failing` and `newly_passing`, the
+numbers of series that crash or fail an output check now but did not in the
+baseline, and the reverse. `worse` holds the rows that are changed and worse.
+`assert_no_regression()` raises `AssertionError` naming each of them with its
+numbers. `baseline_version` is the TimeGym version that wrote the baseline
+and `card_version` this card's. `print(diff)` gives a plain summary, and names
+the baseline's version when the two differ. This one, from
+[source notebook 13](../../source/13_scorecard.ipynb), compares a lag
+regression with an off-by-one bug against the baseline of the correct model,
+with 15 of its "changed, no worse" rows left out:
+
+```text
+Compared with scorecard-baseline.json (30 series per cell)
+  17 cells  changed, no worse
+             Pure noise, low noise                             avoidable error 0.0175 -> 0.0177 (+1.1%)
+             ...
+             Random walk with drift, high noise                avoidable error 5.10 -> 5.02 (-1.6%)
+   3 cells  changed and worse
+             Repeating seasonal cycle, low noise               avoidable error 0.164 -> 1.21 (+635%), p = 0.0001
+             Mean reversion (AR(1)): shocks fade, low noise    avoidable error 0.299 -> 0.358 (+20%), p = 0.0004
+             Mean reversion (AR(1)): shocks fade, high noise   avoidable error 0.497 -> 0.546 (+9.9%), p = 0.0002
+```
+
 ## The Scorecard
 
 `Scorecard` keeps `title`, `table` (one row per pattern and noise level with
@@ -219,6 +340,9 @@ close models.
 whose verdict is not settled.
 `report` is the JSON-ready `TestReport`. `plot(compact=False)` returns the
 Matplotlib figure; `compact=True` draws only the colored scores.
+`save_baseline(path)` writes the card's baseline file and `compare(baseline,
+*, alpha=0.05)` compares the card with one
+([Compare with a saved baseline](#compare-with-a-saved-baseline)).
 
 ## Signatures
 
@@ -229,6 +353,8 @@ Matplotlib figure; `compact=True` draws only the colored scores.
 ::: timegym.GridCell
 
 ::: timegym.scorecard.verdict
+
+::: timegym.scorecard.ScorecardComparison
 
 ::: timegym.grid.Pattern
 

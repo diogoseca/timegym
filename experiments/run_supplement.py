@@ -13,7 +13,6 @@ import csv
 import hashlib
 import importlib.metadata
 import json
-import math
 import os
 from pathlib import Path
 import platform
@@ -25,7 +24,7 @@ from timegym.statistics import wilson_interval as wilson
 
 from timegym import Pipeline, Scenario
 from timegym.checks import check_shift_equivariance
-from timegym.diagnostics import covariance_dependence_check
+from timegym.diagnostics import covariance_dependence_check, rank_alarm
 from timegym.metrics import crps, energy_score, mse, variogram_score
 from timegym.mutations import mutate_forecast
 from threadpoolctl import threadpool_info, threadpool_limits
@@ -48,17 +47,20 @@ def conformal_threshold(calibration_scores, alpha):
         raise ValueError("Calibration scores must be a finite nonempty vector")
     if not np.isfinite(alpha) or not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1)")
-    rank = math.ceil((len(scores)+1) * (1-alpha))
-    if rank > len(scores):
+    # The threshold and its rank depend only on the calibration scores and alpha, so any
+    # finite observed value gives them; rank_alarm applies the same rule as conformal_pvalue.
+    alarm = rank_alarm(scores[0], scores, alpha=alpha)
+    if alarm.rank > len(scores):
         raise ValueError("Too few calibration cases for a finite threshold at this alpha")
-    return float(np.sort(scores)[rank-1]), rank
+    return alarm.threshold, alarm.rank
 
 
 def conformal_pvalue(calibration_scores, score):
+    """Rank p-value of ``score`` among the calibration scores, from ``rank_alarm``."""
     scores = np.asarray(calibration_scores, dtype=float)
     if not np.isfinite(score) or not len(scores) or not np.isfinite(scores).all():
         raise ValueError("Scores must be finite")
-    return float((1 + np.count_nonzero(scores >= score)) / (len(scores)+1))
+    return rank_alarm(score, scores).p_value
 
 
 def holm_rejections(pvalues, alpha):

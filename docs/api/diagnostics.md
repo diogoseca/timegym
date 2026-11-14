@@ -85,6 +85,38 @@ and raise before evaluation, including when dependence checking is disabled.
 Point, quantile, and sample accuracy diagnostics include their available scores
 in evidence, with reference capabilities when a simulation reference supplies them.
 
+`timegym.diagnostics.rank_alarm(observed, calibration, *, alpha=0.05)` is the
+rank rule behind this check and behind
+[comparing a scorecard with a saved baseline](scorecard.md#compare-with-a-saved-baseline).
+It ranks an observed statistic among `n` calibration values from something
+known to be correct and returns a frozen `RankAlarm` with `observed`,
+`p_value`, `status`, `threshold`, `rank`, `n` and `alpha`:
+
+```
+p_value = (1 + number of calibration values >= observed) / (n + 1)
+```
+
+Ties count against the alarm. `status` is `FAIL` when `p_value <= alpha`,
+`PASS` when it is larger, and `INCONCLUSIVE` when `1 / (n + 1) > alpha`,
+because then no observed value could fail. `threshold` is the calibration
+value at position `rank = ceil((n + 1) * (1 - alpha))` in increasing order,
+without interpolation, so `observed > threshold` exactly when
+`p_value <= alpha`; the rank is computed so that rounding cannot break that
+equivalence. When `rank` exceeds `n` there is no such value: `threshold` is
+`math.inf` and the status is `INCONCLUSIVE`. If the observed value and the
+calibration values are exchangeable, for example independent draws of the
+same statistic from the same correct source, `FAIL` happens with probability
+at most `alpha`. Large values are the alarming ones. A calibration array that
+is empty, not one-dimensional or not finite, a nonfinite observed value, or an
+alpha outside (0, 1) raises `ValueError`.
+
+```python
+from timegym.diagnostics import rank_alarm
+
+result = rank_alarm(observed, calibration, alpha=0.05)
+result.p_value, result.status, result.threshold
+```
+
 `timegym.checks.check_shift_equivariance(pipeline, context, future_index, *,
 shift=10.0, atol=1e-8, rtol=1e-7)` tests
 f(y+c)=f(y)+c. Use it only when this property is part of the model's intended
@@ -242,6 +274,10 @@ The t interval is for continuous score differences, not differences in alarm rat
 ::: timegym.diagnostics.evaluate_forecast
 
 ::: timegym.diagnostics.covariance_dependence_check
+
+::: timegym.diagnostics.rank_alarm
+
+::: timegym.diagnostics.RankAlarm
 
 ::: timegym.checks.check_shift_equivariance
 

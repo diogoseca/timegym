@@ -592,3 +592,290 @@ def test_the_picture_marks_the_attainable_score_in_both_modes():
         marks = _attainable_marks(figure)
         assert len(marks) == 4 and all(mark.get_marker() == "v" for mark in marks)
         plt.close(figure)
+
+
+# --- Compare with a saved baseline -----------------------------------------------------------
+
+_COMPARED = ["noise", "trend", "random_walk"]
+
+
+@pytest.fixture(scope="module")
+def last_value_baseline():
+    return Pipeline(NaiveForecaster()).scorecard(_COMPARED, instances=20, seed=4)
+
+
+class CrashesAboveThree(LastValue):
+    """The last value, except that it raises when the history ends above 3."""
+
+    def fit(self, context):
+        if context.iloc[-1, 0] > 3:
+            raise ValueError("intentional crash")
+        super().fit(context)
+
+
+def _with_differences(path, cells, differences):
+    """Rewrite a saved baseline so that ``new - baseline`` is ``differences``, scaled, in ``cells``."""
+    import json
+
+    record = json.loads(path.read_text(encoding="utf-8"))
+    for index in cells:
+        avoidable = record["cells"][index]["avoidable"]
+        size = 1e-3 * min(avoidable)
+        record["cells"][index]["avoidable"] = [value - d * size for value, d in zip(avoidable, differences)]
+    path.write_text(json.dumps(record), encoding="utf-8")
+    return path
+
+
+def test_a_saved_baseline_holds_each_series_avoidable_error_and_reads_back_exactly(tmp_path,
+                                                                                 last_value_baseline):
+    import json
+
+    from timegym.scorecard import _case_numbers
+
+    card = last_value_baseline
+    path = tmp_path / "scorecard-baseline.json"
+    assert card.save_baseline(path) == path
+    record = json.loads(path.read_text(encoding="utf-8"))
+    assert (record["format"], record["format_version"]) == ("timegym-scorecard-baseline", 1)
+    assert record["timegym_version"] == card.run.metadata["timegym_version"]
+    assert record["title"] == card.title
+    assert record["grid"] == {"patterns": _COMPARED, "noise_sds": [0.5, 2.0], "context_length": 120,
+                              "horizon": 24}
+    assert (record["seed"], record["instances"]) == (4, 20)
+    assert len(record["cells"]) == 6
+    for index, cell in enumerate(record["cells"]):
+        row = card.table.loc[index]
+        assert (cell["pattern"], cell["noise_sd"], cell["score"]) == (row["pattern"], row["noise_sd"],
+                                                                       row["score"])
+        entries = sorted((entry for entry in card.run.cases if entry.scenario_index == index),
+                         key=lambda entry: entry.seed_index)
+        assert cell["avoidable"] == [_case_numbers(entry)[1] for entry in entries]  # exactly
+    again = tmp_path / "again.json"
+    card.save_baseline(str(again))
+    assert again.read_bytes() == path.read_bytes()
+    assert list(record) == sorted(record)
+
+
+def test_a_series_that_crashed_is_stored_as_null(tmp_path):
+    card = Pipeline(CrashesAboveThree()).scorecard(["random_walk"], instances=20, seed=4)
+    record = __import__("json").loads(card.save_baseline(tmp_path / "b.json").read_text(encoding="utf-8"))
+    crashed = [entry.seed_index for entry in card.run.cases
+               if entry.scenario_index == 0
+               and any(d.name == "model_execution" for d in entry.result.diagnostics)]
+    assert crashed and len(crashed) < 20
+    assert [i for i, value in enumerate(record["cells"][0]["avoidable"]) if value is None] == crashed
+
+
+def test_the_same_model_on_the_same_series_is_unchanged_everywhere(tmp_path, last_value_baseline):
+    path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
+    card = Pipeline(NaiveForecaster()).scorecard(_COMPARED, instances=20, seed=4)
+    diff = card.compare(path)
+    assert (diff.table["change"] == "unchanged").all()
+    assert diff.table["p_value"].isna().all() and diff.worse.empty
+    assert list(diff.table.columns) == ["pattern", "title", "noise", "noise_sd", "change", "baseline_score",
+                                        "score", "baseline_avoidable", "avoidable", "p_value",
+                                        "newly_failing", "newly_passing"]
+    diff.assert_no_regression()
+    assert str(diff).splitlines() == [
+        "Compared with scorecard-baseline.json (20 series per cell)",
+        "  6 cells  unchanged",
+    ]
+    assert diff.baseline_version == diff.card_version == card.run.metadata["timegym_version"]
+
+
+def test_the_printed_comparison_names_a_baseline_saved_with_another_version(tmp_path, last_value_baseline):
+    import json
+
+    path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
+    record = json.loads(path.read_text(encoding="utf-8"))
+    path.write_text(json.dumps({**record, "timegym_version": "0.0.1"}), encoding="utf-8")
+    diff = last_value_baseline.compare(path)
+    assert diff.baseline_version == "0.0.1"
+    assert str(diff).splitlines()[0] == (
+        "Compared with scorecard-baseline.json (20 series per cell; saved with timegym 0.0.1)")
+
+
+def test_computed_noise_levels_that_differ_in_the_last_digit_are_the_same_grid(tmp_path):
+    import json
+
+    card = Pipeline(NaiveForecaster()).scorecard(["noise"], noise_levels=3, instances=20, seed=4)
+    path = card.save_baseline(tmp_path / "scorecard-baseline.json")
+    record = json.loads(path.read_text(encoding="utf-8"))
+    nudged = [sd * (1 + 2e-16) for sd in record["grid"]["noise_sds"]]
+    record["grid"]["noise_sds"] = nudged
+    for cell, sd in zip(record["cells"], nudged):
+        cell["noise_sd"] = sd
+    path.write_text(json.dumps(record), encoding="utf-8")
+    assert (card.compare(path).table["change"] == "unchanged").all()
+
+
+def test_a_path_and_a_scorecard_give_the_same_comparison(tmp_path, last_value_baseline):
+    path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
+    card = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4)
+    from_file, from_card = card.compare(path), card.compare(last_value_baseline)
+    pd.testing.assert_frame_equal(from_file.table, from_card.table)
+    assert from_file.baseline == "scorecard-baseline.json"  # the file's name, not its folder
+    assert from_card.baseline == f"the baseline scorecard {last_value_baseline.title!r}"
+
+
+def test_each_cell_is_unchanged_changed_no_worse_or_changed_and_worse(last_value_baseline):
+    # The mean of the history is better than the last value on pure noise and worse on a random walk.
+    card = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4)
+    diff = card.compare(last_value_baseline)
+    change = diff.table.set_index(["pattern", "noise"])["change"]
+    assert change["noise", "Low noise"] == change["noise", "High noise"] == "changed, no worse"
+    assert change["random_walk", "Low noise"] == change["random_walk", "High noise"] == "changed and worse"
+    assert diff.table["p_value"].notna().all()
+    worse = diff.worse
+    assert set(worse["pattern"]) >= {"random_walk"}
+    assert (worse["avoidable"] > worse["baseline_avoidable"]).all()
+    lines = str(diff).splitlines()
+    assert any(line.strip().startswith("Random walk: shocks never fade, low noise") and "p = " in line
+               for line in lines)
+
+
+def test_a_series_that_newly_crashes_is_worse_and_one_that_newly_runs_is_not(last_value_baseline):
+    crashing = Pipeline(CrashesAboveThree()).scorecard(_COMPARED, instances=20, seed=4)
+    diff = crashing.compare(last_value_baseline)
+    row = diff.table.set_index(["pattern", "noise"]).loc["random_walk", "Low noise"]
+    assert row["newly_failing"] > 0 and row["newly_passing"] == 0
+    assert np.isnan(row["p_value"])  # the series scored in both did not move
+    assert row["change"] == "changed and worse"
+    failing = int(row["newly_failing"])
+    says = f"{failing} series now {'crashes or fails' if failing == 1 else 'crash or fail'} an output check"
+    assert says in str(diff)
+    with pytest.raises(AssertionError, match=says):
+        diff.assert_no_regression()
+    back = last_value_baseline.compare(crashing)
+    row = back.table.set_index(["pattern", "noise"]).loc["random_walk", "Low noise"]
+    assert row["newly_passing"] > 0 and row["newly_failing"] == 0
+    assert row["change"] == "changed, no worse" and np.isnan(row["p_value"])
+    back.assert_no_regression()
+
+
+def test_holm_counts_only_the_cells_that_changed(tmp_path, last_value_baseline):
+    # Distinct sizes, the eight smallest negative: a p-value between 0.05 / 3 and 0.05 (about 0.03).
+    differences = np.sqrt(np.arange(2, 22)) * np.where(np.arange(20) < 8, -1.0, 1.0)
+    card = Pipeline(NaiveForecaster()).scorecard(_COMPARED, instances=20, seed=4)
+    one = _with_differences(last_value_baseline.save_baseline(tmp_path / "one.json"), [2], differences)
+    diff = card.compare(one)
+    p = diff.table.loc[2, "p_value"]
+    assert 0.05 / 3 < p <= 0.05
+    # One changed cell is a family of one, so p <= 0.05 rejects; 0.05 / 6 cells would not.
+    assert list(diff.table["change"]) == ["unchanged"] * 2 + ["changed and worse"] + ["unchanged"] * 3
+    three = _with_differences(last_value_baseline.save_baseline(tmp_path / "three.json"), [0, 2, 4],
+                              differences)
+    diff = card.compare(three)
+    # Three changed cells: Holm needs the smallest p-value at most 0.05 / 3, and none is.
+    assert diff.table.loc[[0, 2, 4], "p_value"].tolist() == pytest.approx([p] * 3)
+    assert diff.table.loc[[0, 2, 4], "change"].eq("changed, no worse").all()
+    assert diff.table.loc[[1, 3, 5], "change"].eq("unchanged").all()
+    diff.assert_no_regression()
+
+
+def test_holm_steps_down_and_keeps_the_given_order():
+    from timegym.scorecard import _holm
+
+    np.testing.assert_array_equal(_holm([0.04, 0.01, 0.20, 0.02], 0.05), [False, True, False, False])
+    np.testing.assert_array_equal(_holm([0.05, 0.001, 0.01, 0.016], 0.05), [True, True, True, True])
+
+
+def test_a_p_value_recomputed_by_hand_from_the_stored_numbers(tmp_path, last_value_baseline):
+    import json
+
+    path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
+    card = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4)
+    diff = card.compare(path)
+    index = 4  # random walk, low noise
+    old = json.loads(path.read_text(encoding="utf-8"))["cells"][index]["avoidable"]
+    new = [entry for entry in card.run.cases if entry.scenario_index == index]
+    new = [n for _, n in sorted((entry.seed_index, entry.result.metrics["mean_reference_mse"]) for entry in new)]
+    d = np.array(new) - np.array(old)
+    flips = np.random.default_rng([4, len(d)]).choice([-1.0, 1.0], size=(9999, len(d)))
+    p = (1 + np.sum((flips * d).mean(axis=1) >= d.mean())) / 10000
+    assert diff.table.loc[index, "p_value"] == pytest.approx(p)
+    assert diff.table.loc[index, "baseline_avoidable"] == pytest.approx(np.mean(old))
+    assert diff.table.loc[index, "avoidable"] == pytest.approx(np.mean(new))
+
+
+def test_p_values_repeat_and_do_not_depend_on_the_other_patterns(last_value_baseline):
+    card = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4)
+    first, second = card.compare(last_value_baseline), card.compare(last_value_baseline)
+    pd.testing.assert_frame_equal(first.table, second.table)
+    alone = Pipeline(NaiveForecaster("mean")).scorecard(["random_walk"], instances=20, seed=4).compare(
+        Pipeline(NaiveForecaster()).scorecard(["random_walk"], instances=20, seed=4))
+    shared = first.table[first.table["pattern"] == "random_walk"]
+    np.testing.assert_array_equal(alone.table["p_value"], shared["p_value"])
+
+
+def test_assert_no_regression_names_the_worse_cells_with_their_numbers(last_value_baseline):
+    diff = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4).compare(
+        last_value_baseline)
+    with pytest.raises(AssertionError) as raised:
+        diff.assert_no_regression()
+    message = str(raised.value)
+    assert message.startswith(f"Worse than the baseline scorecard {last_value_baseline.title!r} in ")
+    from timegym.scorecard import _error
+
+    for row in diff.worse.itertuples():
+        assert f"{row.title}, {row.noise.lower()}: avoidable error {_error(row.baseline_avoidable)} -> " in message
+    assert (_error(2.0), _error(0.0455), _error(100.0), _error(np.nan)) == ("2.00", "0.0455", "100", "none scored")
+    assert "Pure noise" not in message
+
+
+@pytest.mark.parametrize("settings, says", [
+    ({"patterns": ["noise", "trend"]}, "patterns"),
+    ({"noise_levels": 3}, "noise standard deviations"),
+    ({"context_length": 60}, "history length"),
+    ({"horizon": 12}, "horizon"),
+    ({"seed": 5}, "seed 5 here, 4 in the baseline"),
+    ({"instances": 25}, "instances 25 here, 20 in the baseline"),
+])
+def test_a_baseline_on_other_series_is_refused_with_what_differs(tmp_path, last_value_baseline, settings,
+                                                                 says):
+    path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
+    arguments = {"patterns": _COMPARED, "instances": 20, "seed": 4, **settings}
+    card = Pipeline(NaiveForecaster()).scorecard(arguments.pop("patterns"), **arguments)
+    for baseline in (path, last_value_baseline):
+        with pytest.raises(ValueError, match=f"other series.*{says}"):
+            card.compare(baseline)
+
+
+def test_a_file_that_is_not_a_baseline_or_is_newer_is_refused(tmp_path, last_value_baseline):
+    import json
+
+    card = last_value_baseline
+    other = tmp_path / "report.json"
+    other.write_text(json.dumps({"schema_version": 2}), encoding="utf-8")
+    with pytest.raises(ValueError, match="is not a TimeGym scorecard baseline"):
+        card.compare(other)
+    broken = tmp_path / "broken.json"
+    broken.write_text("{", encoding="utf-8")
+    with pytest.raises(ValueError, match="is not a TimeGym scorecard baseline"):
+        card.compare(broken)
+    newer = card.save_baseline(tmp_path / "newer.json")
+    record = json.loads(newer.read_text(encoding="utf-8"))
+    newer.write_text(json.dumps({**record, "format_version": 2}), encoding="utf-8")
+    with pytest.raises(ValueError, match="format version 2.*reads version 1"):
+        card.compare(newer)
+    short = card.save_baseline(tmp_path / "short.json")
+    record["cells"][0]["avoidable"] = record["cells"][0]["avoidable"][:-1]
+    short.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(ValueError, match="inconsistent"):
+        card.compare(short)
+    reordered = card.save_baseline(tmp_path / "reordered.json")
+    record = json.loads(reordered.read_text(encoding="utf-8"))
+    reordered.write_text(json.dumps({**record, "cells": record["cells"][::-1]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="inconsistent"):
+        card.compare(reordered)
+    with pytest.raises(TypeError, match="baseline"):
+        card.compare(card.table)
+    with pytest.raises(ValueError, match="alpha"):
+        card.compare(card, alpha=1.5)
+
+
+def test_fewer_than_20_series_warn_that_only_large_regressions_are_found():
+    small = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=10)
+    with pytest.warns(UserWarning, match="10 series per cell finds only large regressions"):
+        diff = small.compare(small)
+    assert (diff.table["change"] == "unchanged").all()
