@@ -35,6 +35,7 @@ jobs:
       - run: python tools/export_notebooks.py --check
       - run: python paper/build_standalone.py --check
       - run: python tools/sync_citation.py --check
+      - run: python tools/attainable_table.py --check
   test:
     runs-on: ubuntu-latest
     strategy:

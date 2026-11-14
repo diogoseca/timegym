@@ -130,6 +130,13 @@ notebooks.
 
 `sync_citation.py` renders README citations from `CITATION.cff`; `--check`
 compares the block without writing and verifies the package/changelog identity.
+`attainable_table.py` recomputes the scorecard's stored attainable scores: for
+each of the 20 default cells, the pattern's own model family fitted to 200 fresh
+series. It prints the table as the literal that `source/13_scorecard.ipynb`
+stores; `--check` recomputes it and exits with status 1 when a value is more
+than 0.3 points from the stored one, a margin for likelihood optimizers that
+stop slightly differently across SciPy versions and platforms.
+
 `update_python_support.py` reports stable CPython/pandas compatibility; `--apply`
 prepares the coordinated update. The scheduled workflow exports changed
 notebooks, rebuilds citation/manuscript outputs, tests, and opens a PR. See

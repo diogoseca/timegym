@@ -484,3 +484,111 @@ def test_the_picture_marks_unsettled_verdicts_in_both_modes(last_value_card):
         texts = [text.get_text().strip() for ax in figure.axes for text in ax.texts]
         assert label in texts and f"{settled['score']:.0f}  {settled['verdict']}" in texts
         plt.close(figure)
+
+
+# --- What a fitted model could score ----------------------------------------------------------
+
+def test_every_pattern_has_a_fitted_estimator_and_six_arguments_still_build_a_pattern():
+    from timegym.grid import Pattern
+
+    assert all(callable(pattern.fitted) for pattern in PATTERNS.values())
+    plain = Pattern("x", "X", "x", "y", "z", lambda s, n, h: Scenario("white_noise", n, h, {"sigma": s}))
+    assert plain.fitted is None
+
+
+@pytest.mark.parametrize("key, instances, floor", [
+    ("noise", 10, 95), ("trend", 10, 90), ("seasonal", 10, 90), ("trend_seasonal", 10, 85),
+    ("level_shift", 10, 85), ("mean_reverting", 5, 80), ("cycles", 5, 80), ("random_walk", 5, 80),
+    ("random_walk_drift", 5, 80),
+])
+def test_each_fitted_estimator_scores_well_on_its_own_row(key, instances, floor):
+    card = Pipeline(PATTERNS[key].fitted()).scorecard([key], instances=instances)
+    assert (card.table["score"] >= floor).all() and card.table["failed_checks"].sum() == 0
+
+
+def test_the_sample_mean_matches_its_expected_score():
+    from timegym.scorecard import _ATTAINABLE
+
+    # Forecasting with the mean of 120 values adds 1/120 of the noise variance.
+    assert _ATTAINABLE["noise"][0.5] == pytest.approx(100 / (1 + 1 / 120), abs=0.3)
+
+
+def test_the_stored_table_has_the_20_default_cells_between_80_and_100():
+    from timegym.scorecard import _ATTAINABLE
+
+    cells = {(cell.pattern, cell.noise_sd) for cell in scenario_grid()}
+    stored = {(key, sd): value for key, values in _ATTAINABLE.items() for sd, value in values.items()}
+    assert set(stored) == cells
+    assert all(80 <= value <= 100 for value in stored.values())
+
+
+def test_the_default_card_shows_the_stored_attainable_score_after_settled():
+    from timegym.scorecard import _ATTAINABLE
+
+    table = Pipeline(NaiveForecaster()).scorecard(instances=1).table
+    assert list(table.columns[8:11]) == ["settled", "attainable", "mistakes"]
+    expected = [_ATTAINABLE[row.pattern][row.noise_sd] for row in table.itertuples()]
+    assert table["attainable"].to_numpy() == pytest.approx(expected)
+
+
+def test_a_custom_cell_is_simulated_once_and_agrees_with_a_pipeline_scorecard():
+    from timegym.scorecard import _ATTAINABLE_SEED, _attainable_score, _simulated_attainable
+
+    _simulated_attainable.cache_clear()
+    first = Pipeline(NaiveForecaster()).scorecard(["trend"], noise_levels=[1.0], instances=1, horizon=6,
+                                                  attainable=True)
+    again = Pipeline(NaiveForecaster()).scorecard(["trend"], noise_levels=[1.0], instances=1, horizon=6,
+                                                  attainable=True)
+    info = _simulated_attainable.cache_info()
+    assert (info.misses, info.hits) == (1, 1)
+    assert again.table["attainable"].iloc[0] == first.table["attainable"].iloc[0]
+    cell = scenario_grid(["trend"], [1.0], horizon=6)[0]
+    direct = _attainable_score(PATTERNS["trend"], cell.scenario, series=20)
+    piped = Pipeline(PATTERNS["trend"].fitted()).scorecard(["trend"], noise_levels=[1.0], horizon=6,
+                                                           instances=20, seed=_ATTAINABLE_SEED)
+    assert direct == pytest.approx(piped.table["score"].iloc[0], abs=1e-9)
+
+
+def test_a_custom_cell_is_nan_and_not_simulated_unless_asked():
+    from timegym.scorecard import _simulated_attainable
+
+    before = _simulated_attainable.cache_info()
+    card = Pipeline(NaiveForecaster()).scorecard(["random_walk"], noise_levels=[0.5, 1.0], instances=1)
+    assert card.table["attainable"].iloc[0] == pytest.approx(99.8)  # stored: low noise on the default grid
+    assert np.isnan(card.table["attainable"].iloc[1])
+    assert _simulated_attainable.cache_info() == before
+    figure = card.plot(compact=True)
+    assert len(_attainable_marks(figure)) == 1
+    plt.close(figure)
+
+
+def test_card_titles_drop_leading_underscores_from_class_names():
+    card = Pipeline(PATTERNS["trend"].fitted()).scorecard(["trend"], instances=1)
+    assert card.title == "LeastSquaresLine"
+    assert Pipeline(PATTERNS["seasonal"].fitted()).scorecard(["noise"], instances=1).title == \
+        "Sinusoid(period=12.0, trend=False)"
+
+
+def _attainable_marks(figure):
+    return [line for ax in figure.axes for line in ax.get_lines() if line.get_gid() == "attainable"]
+
+
+def test_a_pattern_without_a_fitted_estimator_has_no_attainable_score_or_mark(monkeypatch):
+    import dataclasses
+
+    monkeypatch.setitem(PATTERNS, "noise", dataclasses.replace(PATTERNS["noise"], fitted=None))
+    card = Pipeline(NaiveForecaster()).scorecard(["noise"], instances=2)
+    assert card.table["attainable"].isna().all()
+    for compact in (False, True):
+        figure = card.plot(compact=compact)
+        assert not _attainable_marks(figure)
+        plt.close(figure)
+
+
+def test_the_picture_marks_the_attainable_score_in_both_modes():
+    card = Pipeline(NaiveForecaster()).scorecard(["noise", "trend"], instances=1)
+    for compact in (False, True):
+        figure = card.plot(compact=compact)
+        marks = _attainable_marks(figure)
+        assert len(marks) == 4 and all(mark.get_marker() == "v" for mark in marks)
+        plt.close(figure)
