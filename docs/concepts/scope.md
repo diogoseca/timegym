@@ -1,100 +1,104 @@
 # What TimeGym tests, and what it does not
 
-TimeGym runs a forecaster on series it generated itself, so it knows the
-answer key for every future step. That makes some questions answerable
-exactly and leaves others outside its reach. This page says which is which.
+TimeGym makes up the series it tests on, so it knows the best possible
+forecast for every future step: the answer key. That lets it answer some
+questions exactly. Others it cannot answer at all. This page says which is
+which.
 
-## Verification, not validation
+## It checks your code, not your choice of model
 
-Verification asks whether code does what its authors meant it to do;
-validation asks whether that is the right thing to do for the real system.
-TimeGym does verification, in the way manufactured solutions verify numerical
-code: a problem is built so that its exact solution is known, and the code is
-checked against it
+TimeGym answers one question: does the pipeline do what it was built to do? It
+does not answer a second one: is this the right pipeline for your data?
+Engineers call the first verification and the second validation. TimeGym
+checks forecasting code the way numerical software is checked, on a problem
+built so that the exact answer is known
 ([Roache 2002](https://doi.org/10.1115/1.1436090)).
 
-A scorecard therefore says whether a pipeline can learn each mechanism it
-shows: a trend, a seasonal cycle, a random walk, mean reversion. It never says
-whether those mechanisms are in your data, or which of them matter there. A
-pipeline that scores well can still forecast your series badly, and one that
-fails a row can be the right choice for data without that pattern.
+So a scorecard tells you whether a pipeline can learn each kind of behaviour
+it shows: a trend, a repeating cycle, a random walk, a pull back to the
+average. It does not tell you whether your data behave that way, or which of
+those behaviours matter there. A pipeline that scores well can still forecast
+your series badly, and one that fails a row can be the right choice for data
+without that pattern.
 
-## What can leak and what cannot
+## The model never sees the future
 
-`Pipeline.predict(context, future_index)` fits the model on a copy of the
-context, the past only, and then calls `predict` with a copy of the future
-index: the labels of the steps to forecast, never their values. A target
-transform is fitted on that context alone. `Pipeline.test`, `Pipeline.run` and
-`Pipeline.scorecard` call `predict` the same way for every case and score the
-forecast afterwards against the held-out values and the answer key.
+During a test the model gets two things: the history, and the dates it has to
+forecast. It never gets the values at those dates. TimeGym scores the forecast
+afterwards, against what happened and against the answer key. So a model
+cannot peek at the future inside a TimeGym test, even by accident.
 
-So a model under test never receives the future values, and nothing TimeGym
-passes to it can leak them: look-ahead inside a test is impossible through the
-interface. Leakage while you prepare your own data, such as features computed
-with a centered window or scaled with statistics of the whole series, happens
-before TimeGym sees anything and is outside it.
+In code: `Pipeline.predict(context, future_index)` fits the model on a copy of
+the history and then asks for a forecast with a copy of the future dates. A
+target transform is fitted on that history alone. `Pipeline.test`,
+`Pipeline.run` and `Pipeline.scorecard` all forecast this way.
 
-## Which learners the shift check applies to
+What TimeGym cannot see is how you prepared your own data before the test. If
+a feature was computed with a window that reaches forward in time, or values
+were scaled using the whole series, the future has already leaked in, and no
+test here will notice.
 
-`check_shift_equivariance` adds a constant to the history, refits, and checks
-that the point forecast moves by the same constant, `f(y + c) = f(y) + c`,
-within `atol=1e-8` and `rtol=1e-7`. Its docstring says the property is not
-universal, and the caller decides whether it applies. Whether it applies is a
-property of the learner, not a sign of quality:
+## The shift check is not for every model
 
-- **A linear model with an unpenalised intercept on lagged values.** Shifting
-  every value by `c` shifts every input and every target by `c`. The fitted
-  slopes are unchanged, the intercept absorbs the shift, and so each forecast,
-  and each recursive step built on it, moves by exactly `c`. Only rounding
-  differs, well inside the tolerances. Penalising the intercept breaks this.
-- **Trees and tree ensembles on lagged values.** In exact arithmetic every
-  split threshold moves by `c` and every leaf mean moves by `c`, so the
-  forecast moves by `c`. In floating point the shifted values give slightly
-  different sums when the learner scores candidate splits. Where two splits
-  separate the training rows equally well, which happens in small nodes,
-  rounding decides between them, and the refitted tree can pick the other
-  one. Both trees fit the history equally well and still forecast a new input
-  differently, so the forecast can move by more than rounding. A tree model
-  can fail the check with no bug, so its `FAIL` needs a look before it is
-  called a fault.
-- **A neural network on raw lagged values.** Its activations respond to the
-  level of the inputs, not only to their differences, so a shifted history
-  can give a different forecast shape. It need not move by `c`, and that is
-  no bug.
+`check_shift_equivariance` adds the same number to every value of the history,
+fits the model again, and checks that the forecast moves by that same number.
+If every temperature reading were 10 degrees higher, the forecast should be 10
+degrees higher. The two forecasts have to agree within `atol=1e-8` and
+`rtol=1e-7`.
 
-The check is for a model that promises the property, such as a last-value,
-moving-average or differenced model, or a linear model as above. A model that
-clips at zero, uses absolute levels as features or shrinks towards a fixed
-level breaks it on purpose.
+Some models promise this and some do not, and a model that does not is not a
+worse model. Run the check when your model should behave this way:
+
+- **Should pass.** A last-value, moving-average or differenced model, and a
+  linear model on past values whose intercept is not shrunk, such as ordinary
+  least squares. Adding a number to every value adds it to every input and
+  every target, so the fitted slopes stay the same and the intercept takes up
+  the shift.
+- **Can fail without a bug: tree models on past values.** On paper a tree
+  passes. In practice, when two ways of splitting the data are equally good,
+  tiny rounding differences decide between them, and after the shift the tree
+  can pick the other one. Both trees fit the history equally well and still
+  forecast differently. Look into a `FAIL` from a tree model before you call
+  it a bug.
+- **Need not pass: a neural network on raw past values.** It responds to how
+  high the values are, not only to how they change, so a shifted history can
+  give a forecast of a different shape.
+- **Breaks it on purpose.** A model that clips at zero, uses the level itself
+  as a feature, or pulls its forecasts towards a fixed level.
 
 ## How to read a score
 
-A cell's score is `100 * unavoidable / (unavoidable + avoidable)`, pooled over
-its series ([The score](../api/scorecard.md#the-score)). Read it in four ways:
+A score compares two errors: the error nobody could avoid, because the future
+has noise in it, and the extra error the model added. 100 means no extra
+error, and 50 means the extra error is as large as the noise. The formula is
+`100 * unavoidable / (unavoidable + avoidable)`, pooled over the cell's series
+([The score](../api/scorecard.md#the-score)). Read a score in four ways:
 
 - **Against 100.** 100 is the answer key itself: the forecast of someone who
-  knows the process and its parameters.
-- **Against the triangle.** The `attainable` column is what the row's own model
-  family scores when it is fitted to each history. It is an estimate from 200
-  series, not a ceiling: a model can land above it on a given card
+  knows exactly how the series was made.
+- **Against the triangle.** The `attainable` column is what the right kind of
+  model scores when it has to learn its numbers from the same history. It is
+  an estimate from 200 series, not a ceiling: a model can land above it on a
+  given card
   ([What a fitted model could score](../api/scorecard.md#what-a-fitted-model-could-score)).
-- **Within its interval.** `score_low` and `score_high` are a 95% bootstrap
-  interval over the card's series, and `settled` says whether both ends fall in
-  the printed band ([How sure a score is](../api/scorecard.md#how-sure-a-score-is)).
-- **Against a saved baseline.** On the same series, a paired test says whether
-  a new version of the pipeline is further from the answer key than the version
-  you trusted ([Compare with a saved baseline](../api/scorecard.md#compare-with-a-saved-baseline)).
+- **Within its interval.** With other series of the same kind the score would
+  come out a little different. `score_low` and `score_high` show by how much
+  (a 95% interval), and `settled` says whether the whole interval stays in the
+  printed band ([How sure a score is](../api/scorecard.md#how-sure-a-score-is)).
+- **Against a saved baseline.** On the same series, is a new version of the
+  pipeline further from the answer key than the version you trusted?
+  ([Compare with a saved baseline](../api/scorecard.md#compare-with-a-saved-baseline)).
 
 ## When there is no score
 
-The score divides the unavoidable error by the total error. On a series with
-no noise the unavoidable error is zero, so the score is 100 for a forecast
-that matches the answer key exactly and 0 for every other forecast, however
-close: by the formula, an avoidable error of `1e-30` scores 0. Such a score says nothing about
-how good a forecast is and should not be read; compare the avoidable error
-itself (`avoidable_mse` in `card.table`, `mean_reference_mse` in a report)
-instead. The scorecard's grid accepts only positive noise levels.
+The score needs some noise. On a series with no noise at all, nobody is forced
+to make any error, so the score is 100 for a forecast that matches the answer
+key exactly and 0 for every other forecast, however close: an extra error of
+`1e-30` scores 0. That number says nothing about how good a forecast is, so do
+not read it. Compare the extra error itself instead (`avoidable_mse` in
+`card.table`, `mean_reference_mse` in a report). The scorecard's own grid
+always has noise, so this only comes up with series you define yourself.
 
-Deterministic chaos is the standard case. Its future is fixed by its present,
-so the unavoidable error is zero, yet any error in the state grows quickly,
-and every practical forecaster would score 0.
+Chaotic series are the usual example. Their future is fully fixed by their
+present, so there is no noise, yet the smallest error grows fast, and every
+practical forecaster would score 0.

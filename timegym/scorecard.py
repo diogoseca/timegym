@@ -688,11 +688,13 @@ class Scorecard:
         Scorecard. Both must use the same grid, seed and number of instances,
         so that they drew the same series; otherwise ``ValueError`` says what
         differs. Each cell is ``"unchanged"``, ``"changed, no worse"`` or
-        ``"changed and worse"``: worse when a one-sided sign-flip test of the
-        paired avoidable errors rejects after Holm's correction at ``alpha``
-        across the cells that changed, or when a series scored in the
-        baseline now crashes or fails an output check. Below 20 instances it
-        warns, because so few series find only large regressions; use 30.
+        ``"changed and worse"``: worse when, on the same series, the new
+        version is further from the answer key by more than chance would
+        explain, or when a series scored in the baseline now crashes or fails
+        an output check. ``alpha`` sets how strict the test is: when nothing
+        got worse, it calls some cell worse in at most about that share of
+        comparisons. Below 20 instances it warns, because so few series find
+        only large regressions; use 30.
         """
         return _compare(self, baseline, alpha)
 
@@ -1019,18 +1021,19 @@ class ScorecardComparison:
     version when the two differ.
 
     A row is unchanged when every series has the same status and its
-    avoidable error agrees with the baseline's within roundoff. Otherwise the
-    paired differences of avoidable error, on the series scored in both, get
-    a one-sided sign-flip test with 9,999 flips, and Holm's correction at
-    ``alpha`` runs across the rows where a series moved. A row is changed and
-    worse when that corrected test rejects or when a series scored in the
-    baseline now crashes or fails an output check. The test assumes that,
-    under "no worse", the paired differences are not shifted upward
-    (symmetric about zero, or below it), and that the differences of
-    different series are independent, as they are when the model treats each
-    series on its own. It does not say the new version is better, and a
-    version that is further from the answer key by a margin too small for the
-    number of series passes.
+    avoidable error agrees with the baseline's within roundoff. It is changed
+    and worse when, on the series scored in both, the new version is further
+    from the answer key by more than chance would explain, or when a series
+    scored in the baseline now crashes or fails an output check. Otherwise it
+    is changed, no worse. That does not mean better, and a worsening too small
+    for the number of series passes.
+
+    The statistics: the paired differences of avoidable error get a one-sided
+    sign-flip test with 9,999 flips, and Holm's correction at ``alpha`` runs
+    across the rows where a series moved. The test assumes that, under "no
+    worse", the paired differences are not shifted upward (symmetric about
+    zero, or below it), and that the differences of different series are
+    independent, as they are when the model treats each series on its own.
     """
 
     table: pd.DataFrame
@@ -1053,7 +1056,7 @@ class ScorecardComparison:
         lines = [
             f"Worse than {self.baseline} in "
             f"{_count(len(self.worse), 'cell', 'cells')} "
-            f"({self.instances} series per cell, Holm's correction at alpha {self.alpha:g}):"
+            f"({self.instances} series per cell, alpha {self.alpha:g}):"
         ]
         lines += [
             f"  {_row_label(row)}: {_row_numbers(row)}"

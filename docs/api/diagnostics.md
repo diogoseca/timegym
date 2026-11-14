@@ -88,7 +88,8 @@ in evidence, with reference capabilities when a simulation reference supplies th
 `timegym.diagnostics.rank_alarm(observed, calibration, *, alpha=0.05)` is the
 rank rule behind this check and behind
 [comparing a scorecard with a saved baseline](scorecard.md#compare-with-a-saved-baseline).
-It ranks an observed statistic among `n` calibration values from something
+It asks whether a number is unusually large next to numbers you know are fine.
+It ranks the observed value among `n` calibration values from something
 known to be correct and returns a frozen `RankAlarm` with `observed`,
 `p_value`, `status`, `threshold`, `rank`, `n` and `alpha`:
 

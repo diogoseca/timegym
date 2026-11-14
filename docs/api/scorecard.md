@@ -247,22 +247,44 @@ seed, save a new baseline from the version you trust.
 
 Each cell gets one of three outcomes in the `change` column:
 
-- `"unchanged"`: every series has the same status (scored, or crashed or
-  failed an output check) and its avoidable error agrees with the baseline's
-  up to roundoff: they differ by at most `1e-9`, or by `1e-8` times the
-  largest avoidable error in the cell (in either version) if that is larger.
-  This is the tolerance the studies in `experiments/` use to compare
-  recomputed numbers with recorded ones.
-- `"changed and worse"`: a paired test finds the new version further from the
-  answer key after Holm's correction, or a series that was scored in the
-  baseline now crashes or fails an output check. Only this outcome fails
-  `assert_no_regression()`.
-- `"changed, no worse"`: the forecasts differ and neither rule applies.
+- `"unchanged"`: every series came out the same as in the baseline. Each has
+  the same status (scored, or crashed or failed an output check), and its
+  avoidable error agrees with the baseline's up to roundoff: they differ by at
+  most `1e-9`, or by `1e-8` times the largest avoidable error in the cell (in
+  either version) if that is larger.
+- `"changed and worse"`: on the same series, the new version is further from
+  the answer key by more than chance would explain, or a series that was
+  scored in the baseline now crashes or fails an output check. Only this
+  outcome fails `assert_no_regression()`.
+- `"changed, no worse"`: the forecasts differ, and the test did not find the
+  new version worse.
 
-The paired test takes the series scored in both cards and their differences
-`d = new avoidable error - baseline avoidable error`. Its statistic is the
-mean of `d`. It flips the sign of each difference at random 9,999 times and
-ranks the observed mean among the flipped means with
+Four things to keep in mind when you read the result:
+
+- "Changed, no worse" does not mean better. It only means the test did not
+  find the new version worse.
+- A small worsening can pass. With few series only large ones are found, so
+  `compare` warns below 20 instances. Use 30.
+- A very small worsening can fail when it shows up on almost every series.
+  Adding a ridge penalty of 1 to a least-squares regression on six lags raised
+  one cell's mean avoidable error by 0.04% on the default grid at 30
+  instances, and the comparison called that cell changed and worse. The table
+  and the printed comparison show how far each cell moved, so you can judge
+  whether a worse cell matters. When a change is intended, save a new
+  baseline.
+- The test counts each series as separate evidence. That is right when the
+  model handles each series on its own. A model that draws its random numbers
+  from one fixed seed adds the same noise to every series, so with another
+  seed it is a different model, and the comparison can find it worse.
+
+### How the test works
+
+This part is for readers who want the statistics.
+
+The test is paired: it takes the series scored in both cards and their
+differences `d = new avoidable error - baseline avoidable error`. Its
+statistic is the mean of `d`. It flips the sign of each difference at random
+9,999 times and ranks the observed mean among the flipped means with
 [`rank_alarm`](diagnostics.md#statistical-and-metamorphic-diagnostics), a
 one-sided p-value for a mean above zero:
 
@@ -272,34 +294,18 @@ p = (1 + number of flipped means >= observed mean) / 10,000
 
 The flips are seeded from the card's seed and the number of pairs, so a
 cell's p-value repeats exactly and does not depend on which other patterns
-were scored. Holm's step-down correction at `alpha` runs across the cells
-that changed, the cells with at least one difference beyond roundoff. The
-sign-flip test conditions on the sizes of the differences, and whether a cell
-changed depends only on those sizes and on how large the errors are, which
-swapping the two values of a pair does not change, so restricting the
-correction to the changed cells keeps the test valid. A series that was
-broken in the baseline and is scored now is left out of the test and counted
-as newly passing.
+were scored. Because several cells are tested at once, Holm's step-down
+correction at `alpha` runs across the cells that changed, the cells with at
+least one difference beyond roundoff. The sign-flip test conditions on the
+sizes of the differences, and whether a cell changed depends only on those
+sizes and on how large the errors are, which swapping the two values of a
+pair does not change, so restricting the correction to the changed cells
+keeps the test valid. A series that was broken in the baseline and is scored
+now is left out of the test and counted as newly passing.
 
-What the test assumes and what it cannot see:
-
-- It assumes that, when the new version is no worse, the paired differences
-  are not shifted upward: symmetric about zero, or below it. It also assumes
-  that the series' differences are independent. They are when the model
-  treats each series on its own. A model that draws random numbers from one
-  fixed seed adds the same noise to every series, so another seed is a
-  different model, and the comparison can find it worse.
-- It does not say that the new version is better: "changed, no worse" only
-  means the test did not find it worse.
-- A version that is further from the answer key by a margin too small for the
-  number of series passes. Fewer than 20 instances make `compare` warn,
-  because ten series find only large regressions; use 30.
-- Because the series are paired, it can find a very small change. Adding a
-  ridge penalty of 1 to a least-squares regression on six lags raised one
-  cell's mean avoidable error by 0.04% on the default grid at 30 instances,
-  and the comparison called that cell changed and worse. The table and the
-  printed comparison show how far each cell moved, so you can judge whether a
-  worse cell matters. When a change is intended, save a new baseline.
+The test assumes that, when the new version is no worse, the paired
+differences are not shifted upward: symmetric about zero, or below it. It
+also assumes that the series' differences are independent.
 
 `ScorecardComparison.table` has one row per cell: `pattern`, `title`,
 `noise`, `noise_sd`, `change`, `baseline_score`, `score`,

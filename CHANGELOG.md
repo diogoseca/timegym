@@ -39,16 +39,18 @@
   avoidable error (about 17 kB for the default grid at 30 instances), and
   `compare` accepts that file or another `Scorecard` and returns a
   `ScorecardComparison`. Each cell is "unchanged", "changed, no worse" or
-  "changed and worse": worse when a one-sided paired sign-flip test of the
-  avoidable errors rejects after Holm's correction across the changed cells,
-  or when a series scored in the baseline now crashes or fails an output
-  check. `assert_no_regression()` raises on the worse cells. A different
+  "changed and worse": worse when, on the same series, the new version is
+  further from the answer key by more than chance would explain (a paired
+  sign-flip test with Holm's correction across the changed cells), or when a
+  series scored in the baseline now crashes or fails an output check.
+  `assert_no_regression()` raises on the worse cells. A different
   grid, seed or number of instances raises `ValueError`, and fewer than 20
   instances warn; use 30. The test does not say that the new version is
   better, and a regression too small for the number of series passes.
 - Added `timegym.diagnostics.rank_alarm(observed, calibration, *, alpha=0.05)`,
-  the rank rule behind TimeGym's statistical alarms, and the `RankAlarm`
-  result it returns: the p-value
+  the rank rule behind TimeGym's statistical alarms: it asks whether a number
+  is unusually large next to numbers you know are fine. Its `RankAlarm`
+  result holds the p-value
   `(1 + number of calibration values >= observed) / (n + 1)`, the status, and
   the threshold the observed value must exceed to fail.
   `covariance_dependence_check` now calls it. Its statuses, messages and

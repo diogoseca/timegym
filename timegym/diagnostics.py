@@ -57,6 +57,9 @@ class RankAlarm:
 def rank_alarm(observed, calibration, *, alpha=0.05):
     """Rank ``observed`` among ``calibration`` values from a correct source; returns a RankAlarm.
 
+    It asks whether a number is unusually large next to numbers you know are
+    fine: ``"FAIL"`` means that few of them are as large as it.
+
     The p-value is ``(1 + number of calibration values >= observed) / (n + 1)``
     for ``n`` calibration values, so ties are conservative, and the status is
     ``"FAIL"`` when it is at most ``alpha``. If ``observed`` and the
