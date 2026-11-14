@@ -1,6 +1,6 @@
 # What TimeGym tests, and what it does not
 
-TimeGym makes up the series it tests on, so it knows the best possible
+TimeGym simulates the series it tests on, so it knows the best possible
 forecast for every future step: the answer key. That lets it answer some
 questions exactly. Others it cannot answer at all. This page says which is
 which.
@@ -15,45 +15,46 @@ built so that the exact answer is known
 ([Roache 2002](https://doi.org/10.1115/1.1436090)).
 
 So a scorecard tells you whether a pipeline can learn each kind of behaviour
-it shows: a trend, a repeating cycle, a random walk, a pull back to the
-average. It does not tell you whether your data behave that way, or which of
-those behaviours matter there. A pipeline that scores well can still forecast
-your series badly, and one that fails a row can be the right choice for data
-without that pattern.
+it shows: a trend, a seasonal cycle, a random walk, mean reversion. It does
+not tell you whether your data behave that way, or which of those behaviours
+matter there. A pipeline that scores well can still forecast your series
+badly, and one that fails a row can be the right choice for data without that
+pattern.
 
 ## The model never sees the future
 
 During a test the model gets two things: the history, and the dates it has to
 forecast. It never gets the values at those dates. TimeGym scores the forecast
-afterwards, against what happened and against the answer key. So a model
-cannot peek at the future inside a TimeGym test, even by accident.
+afterwards, against what happened and against the answer key. So inside a
+TimeGym test there is no data leakage: a model cannot use future values, even
+by accident.
 
 In code: `Pipeline.predict(context, future_index)` fits the model on a copy of
 the history and then asks for a forecast with a copy of the future dates. A
 target transform is fitted on that history alone. `Pipeline.test`,
 `Pipeline.run` and `Pipeline.scorecard` all forecast this way.
 
-What TimeGym cannot see is how you prepared your own data before the test. If
-a feature was computed with a window that reaches forward in time, or values
-were scaled using the whole series, the future has already leaked in, and no
-test here will notice.
+What TimeGym cannot see is leakage in how you prepared your own data before
+the test. If a feature was computed with a window that reaches forward in
+time, or values were scaled using the whole series, the future has already
+leaked in, and no test here will notice.
 
 ## The shift check is not for every model
 
 `check_shift_equivariance` adds the same number to every value of the history,
 fits the model again, and checks that the forecast moves by that same number.
 If every temperature reading were 10 degrees higher, the forecast should be 10
-degrees higher. The two forecasts have to agree within `atol=1e-8` and
-`rtol=1e-7`.
+degrees higher. A model that behaves this way is called shift-equivariant. The
+two forecasts have to agree within `atol=1e-8` and `rtol=1e-7`.
 
 Some models promise this and some do not, and a model that does not is not a
 worse model. Run the check when your model should behave this way:
 
 - **Should pass.** A last-value, moving-average or differenced model, and a
-  linear model on past values whose intercept is not shrunk, such as ordinary
-  least squares. Adding a number to every value adds it to every input and
-  every target, so the fitted slopes stay the same and the intercept takes up
-  the shift.
+  linear model on past values whose intercept is not regularised, such as
+  ordinary least squares. Adding a number to every value adds it to every
+  input and every target, so the fitted coefficients stay the same and the
+  intercept takes up the shift.
 - **Can fail without a bug: tree models on past values.** On paper a tree
   passes. In practice, when two ways of splitting the data are equally good,
   tiny rounding differences decide between them, and after the shift the tree
@@ -76,10 +77,10 @@ error, and 50 means the extra error is as large as the noise. The formula is
 
 - **Against 100.** 100 is the answer key itself: the forecast of someone who
   knows exactly how the series was made.
-- **Against the triangle.** The `attainable` column is what the right kind of
-  model scores when it has to learn its numbers from the same history. It is
-  an estimate from 200 series, not a ceiling: a model can land above it on a
-  given card
+- **Against the attainable score.** The `attainable` column, the small
+  triangle on the picture, is what the right kind of model scores when it has
+  to estimate its parameters from the same history. It is an estimate from 200
+  series, not a ceiling: a model can land above it on a given card
   ([What a fitted model could score](../api/scorecard.md#what-a-fitted-model-could-score)).
 - **Within its interval.** With other series of the same kind the score would
   come out a little different. `score_low` and `score_high` show by how much
@@ -99,6 +100,6 @@ not read it. Compare the extra error itself instead (`avoidable_mse` in
 `card.table`, `mean_reference_mse` in a report). The scorecard's own grid
 always has noise, so this only comes up with series you define yourself.
 
-Chaotic series are the usual example. Their future is fully fixed by their
-present, so there is no noise, yet the smallest error grows fast, and every
-practical forecaster would score 0.
+Chaotic series are the usual example. They are deterministic: their future is
+fully fixed by their present, so there is no noise. Yet the smallest error
+grows fast, and every practical forecaster would score 0.

@@ -48,9 +48,9 @@
   instances warn; use 30. The test does not say that the new version is
   better, and a regression too small for the number of series passes.
 - Added `timegym.diagnostics.rank_alarm(observed, calibration, *, alpha=0.05)`,
-  the rank rule behind TimeGym's statistical alarms: it asks whether a number
-  is unusually large next to numbers you know are fine. Its `RankAlarm`
-  result holds the p-value
+  the one function that now computes the p-value of TimeGym's statistical
+  checks: it asks whether a number is unusually large next to numbers you know
+  are fine. Its `RankAlarm` result holds the p-value
   `(1 + number of calibration values >= observed) / (n + 1)`, the status, and
   the threshold the observed value must exceed to fail.
   `covariance_dependence_check` now calls it. Its statuses, messages and

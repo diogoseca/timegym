@@ -209,9 +209,10 @@ close models.
 
 ## Compare with a saved baseline
 
-The version of a model you last trusted is a second implementation you already
-have. Comparing its outputs exactly with a new version's is no test, because
-every intended change differs too. The answer key makes the comparison mean
+This is a regression test for forecast quality. The reference is the version
+of your model that you last trusted. Checking that a new version gives exactly
+the same forecasts is not a useful test, because every change you make on
+purpose changes the forecasts too. The answer key makes the comparison mean
 something: on the same series, is the new version further from the best
 possible forecast?
 

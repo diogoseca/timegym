@@ -28,11 +28,12 @@ every case of every family.
 
 The [diagnostics catalogue](../api/diagnostics.md#diagnostics-catalogue) gives
 each diagnostic's statuses, tolerance and evidence. The statistical check ranks
-its statistic among values computed on draws from the answer key, with the rule
-that [`rank_alarm`](../api/diagnostics.md#statistical-and-metamorphic-diagnostics)
-exposes; comparing a scorecard with a
-[saved baseline](../api/scorecard.md#compare-with-a-saved-baseline) uses the
-same rule for its paired test.
+its statistic among values computed on draws from the answer key and gets its
+p-value from
+[`rank_alarm`](../api/diagnostics.md#statistical-and-metamorphic-diagnostics);
+comparing a scorecard with a
+[saved baseline](../api/scorecard.md#compare-with-a-saved-baseline) gets the
+p-value of its paired test from the same function.
 
 ## The map
 

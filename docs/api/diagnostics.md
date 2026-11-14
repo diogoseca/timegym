@@ -85,13 +85,14 @@ and raise before evaluation, including when dependence checking is disabled.
 Point, quantile, and sample accuracy diagnostics include their available scores
 in evidence, with reference capabilities when a simulation reference supplies them.
 
-`timegym.diagnostics.rank_alarm(observed, calibration, *, alpha=0.05)` is the
-rank rule behind this check and behind
+`timegym.diagnostics.rank_alarm(observed, calibration, *, alpha=0.05)` asks
+whether a number is unusually large next to numbers you know are fine. This
+check uses it, and so does
 [comparing a scorecard with a saved baseline](scorecard.md#compare-with-a-saved-baseline).
-It asks whether a number is unusually large next to numbers you know are fine.
 It ranks the observed value among `n` calibration values from something
-known to be correct and returns a frozen `RankAlarm` with `observed`,
-`p_value`, `status`, `threshold`, `rank`, `n` and `alpha`:
+known to be correct, which gives a Monte Carlo p-value, and returns a frozen
+`RankAlarm` with `observed`, `p_value`, `status`, `threshold`, `rank`, `n` and
+`alpha`:
 
 ```
 p_value = (1 + number of calibration values >= observed) / (n + 1)
