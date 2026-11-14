@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.4.1 — 2026-11-14
 
 - Deprecated these names. Each still works as in 1.4.0, warns with a
   `DeprecationWarning` that says what to use instead, and leaves in TimeGym

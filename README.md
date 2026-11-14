@@ -248,13 +248,13 @@ Zenodo, cite that release's DOI.
   author = {Seca, Diogo},
   title = {{TimeGym: verification and diagnosis for forecasting pipelines}},
   year = {2026},
-  version = {1.4.0},
+  version = {1.4.1},
   url = {https://github.com/diogoseca/timegym},
 }
 ```
 
 Seca, D. (2026). *TimeGym: verification and diagnosis for forecasting pipelines*
-(Version 1.4.0) [Computer software]. https://github.com/diogoseca/timegym
+(Version 1.4.1) [Computer software]. https://github.com/diogoseca/timegym
 
 The 2021 preprint (arXiv version 1, the original prototype):
 
