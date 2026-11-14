@@ -354,3 +354,133 @@ def test_the_built_in_last_value_forecaster_is_scored_by_name():
     assert named.report.metadata["model"] == "LastValueForecaster"
     # One forecaster, two names: the scores are the same.
     pd.testing.assert_frame_equal(named.table, naive.table)
+
+
+# --- How sure a score is -----------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def last_value_card():
+    return Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=3)
+
+
+def test_the_table_has_an_interval_and_a_settled_flag_after_the_score():
+    table = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=3).table
+    assert list(table.columns[:9]) == ["pattern", "title", "noise", "noise_sd", "score", "score_low",
+                                      "score_high", "verdict", "settled"]
+    assert table["settled"].dtype == bool
+
+
+def test_the_interval_holds_the_score_and_stays_between_0_and_100(last_value_card):
+    table = last_value_card.table
+    assert (table["score_low"] <= table["score"] + 1e-9).all()
+    assert (table["score"] <= table["score_high"] + 1e-9).all()
+    assert (table["score_low"] >= 0).all() and (table["score_high"] <= 100).all()
+
+
+def test_the_same_seed_gives_the_same_interval_and_another_seed_can_differ(last_value_card):
+    again = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=3)
+    other = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=4)
+    columns = ["score_low", "score_high"]
+    pd.testing.assert_frame_equal(again.table[columns], last_value_card.table[columns])
+    assert not np.allclose(other.table[columns], last_value_card.table[columns])
+
+
+def test_a_cell_has_the_same_interval_whichever_other_patterns_are_scored(last_value_card):
+    alone = Pipeline(NaiveForecaster()).scorecard(["random_walk"], instances=10, seed=3).table
+    shared = last_value_card.table[last_value_card.table["pattern"] == "random_walk"]
+    np.testing.assert_allclose(alone[["score_low", "score_high"]], shared[["score_low", "score_high"]])
+
+
+def test_the_interval_is_a_bootstrap_of_the_cell_score_over_its_series(last_value_card):
+    from timegym.scorecard import _RESAMPLES, _case_numbers
+
+    card, index = last_value_card, 4  # random walk, low noise
+    pairs = np.array([_case_numbers(entry)[:2] for entry in card.run.cases if entry.scenario_index == index])
+    n = len(pairs)
+    draws = np.random.default_rng([card.seed, n]).integers(0, n, size=(_RESAMPLES, n))
+    scores = [100 * pairs[pick, 0].sum() / pairs[pick].sum() for pick in draws]
+    low, high = np.percentile(scores, [2.5, 97.5])
+    row = card.table.loc[index]
+    assert row["pattern"] == "random_walk"
+    assert (row["score_low"], row["score_high"]) == pytest.approx((min(low, row["score"]),
+                                                                    max(high, row["score"])))
+    # The same formula on the series as drawn gives the score itself.
+    assert 100 * pairs[:, 0].sum() / pairs.sum() == pytest.approx(row["score"])
+
+
+def test_the_answer_key_is_settled_at_100_everywhere():
+    cells = scenario_grid()
+    card = Pipeline(AnswerKey(_answer_keys(cells, 0, 3))).scorecard(instances=3)
+    assert card.table["score_low"].min() == pytest.approx(100)
+    assert card.table["settled"].all() and card.unsettled.empty
+    assert "?" not in str(card) and "Run scorecard(" not in str(card)  # no mark, no closing line
+
+
+def test_settled_means_both_ends_have_the_verdict_and_unsettled_lists_the_rest(last_value_card):
+    table = last_value_card.table
+    both = [verdict(low) == verdict(high) for low, high in zip(table["score_low"], table["score_high"])]
+    assert table["settled"].tolist() == both
+    assert last_value_card.unsettled.index.tolist() == table.index[~table["settled"]].tolist()
+    assert 0 < len(last_value_card.unsettled) < len(table)  # this card has both kinds
+
+
+class SometimesBroken(LastValue):
+    """Repeats the last value, but returns a missing value when the last value is above zero."""
+
+    def predict(self, future_index):
+        forecast = super().predict(future_index)
+        if float(self.last.iloc[0]) > 0:
+            forecast.iloc[0, 0] = np.nan
+        return forecast
+
+
+def test_failed_output_checks_pull_the_interval_down_and_always_failing_settles_at_0():
+    healthy = Pipeline(LastValue()).scorecard(["noise"], instances=10).table
+    card = Pipeline(SometimesBroken()).scorecard(["noise"], instances=10)
+    broken = card.table
+    assert (0 < broken["failed_checks"]).all() and (broken["failed_checks"] < 10).all()
+    assert (broken["score_low"] < healthy["score_low"]).all()
+    # Resampling the series exactly as drawn gives the score, broken instances included.
+    from timegym.scorecard import _instance_pairs, _resampled_scores
+
+    pairs, valid = _instance_pairs([entry for entry in card.run.cases if entry.scenario_index == 0])
+    as_drawn = _resampled_scores(*np.array(pairs).T, np.array(valid), np.arange(10)[None, :])
+    assert as_drawn[0] == pytest.approx(card.table.loc[0, "score"])
+    cells = scenario_grid(["trend"])
+    dates = Pipeline(AnswerKey(_answer_keys(cells, 0, 2), date_shift=-1)).scorecard(["trend"], instances=2)
+    assert dates.table[["score_low", "score_high"]].to_numpy().ravel() == pytest.approx([0] * 4)
+    assert dates.table["settled"].all()
+
+
+def test_one_instance_has_no_interval_and_no_settled_verdict():
+    card = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=1)
+    assert card.table[["score_low", "score_high"]].isna().all().all()
+    assert not card.table["settled"].any() and len(card.unsettled) == 2
+    assert str(card).endswith("2 of 2 verdicts are not settled at 1 instance. "
+                              "Run scorecard(instances=30) to narrow them.")
+
+
+def test_the_printed_card_marks_unsettled_verdicts_and_says_how_many(last_value_card):
+    from timegym.scorecard import _unsettled_line
+
+    text, table = str(last_value_card), last_value_card.table
+    row = last_value_card.unsettled.iloc[0]
+    assert f"{row['score']:.0f} {row['verdict']}?" in text
+    assert "A question mark means the verdict is not settled: the score's 95% interval reaches into another band." in text
+    assert text.splitlines()[-2:] == ["", f"{len(last_value_card.unsettled)} of {len(table)} verdicts are not "
+                                          "settled at 10 instances. Run scorecard(instances=30) to narrow them."]
+    assert _unsettled_line(1, 20, 10) == ("1 of 20 verdicts is not settled at 10 instances. "
+                                          "Run scorecard(instances=30) to narrow it.")
+    assert _unsettled_line(2, 4, 40).endswith("at 40 instances. Run scorecard(instances=120) to narrow them.")
+    assert _unsettled_line(0, 20, 10) == ""
+
+
+def test_the_picture_marks_unsettled_verdicts_in_both_modes(last_value_card):
+    row = last_value_card.unsettled.iloc[0]
+    label = f"{row['score']:.0f}  {row['verdict']}?"
+    settled = last_value_card.table[last_value_card.table["settled"]].iloc[0]
+    for compact in (False, True):
+        figure = last_value_card.plot(compact=compact)
+        texts = [text.get_text().strip() for ax in figure.axes for text in ax.texts]
+        assert label in texts and f"{settled['score']:.0f}  {settled['verdict']}" in texts
+        plt.close(figure)

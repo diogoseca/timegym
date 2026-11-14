@@ -418,8 +418,10 @@ class Pipeline:
         ``instances`` times with seeds ``seed + i``, the same draws in every
         cell. A cell's score is ``100 * unavoidable / (unavoidable + avoidable)``
         mean squared error, pooled over its instances; instances that crash or
-        fail an output check score zero. ``seed=None`` picks a fresh seed, kept
-        on the result.
+        fail an output check score zero. ``score_low`` to ``score_high`` in the
+        table is a 95% percentile bootstrap interval over the cell's series; with
+        ten series it is rough and tends to be too narrow, so raise ``instances``
+        to tighten it. ``seed=None`` picks a fresh seed, kept on the result.
         """
         from timegym.scorecard import _scorecard
 

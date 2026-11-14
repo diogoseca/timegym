@@ -67,6 +67,35 @@ the mean of the cell scores. `VERDICTS` names the bands on the rounded score:
 90 or more "Nails it", 70 "Good", 40 "Struggles", below 40 "Fails";
 `verdict(score)` returns the band.
 
+## How sure a score is
+
+Ten series per cell are a small sample, so every score comes with an interval.
+`card.table` has three columns for it:
+
+- `score_low` and `score_high`: a 95% percentile bootstrap interval over the
+  cell's series. The cell is scored again on 2,000 resamples of its series,
+  drawn with replacement; an instance that crashed or failed an output check
+  scores zero in every resample that draws it. The interval always contains
+  the score. The same seed gives the same interval, whichever other patterns
+  were scored. With fewer than two series there is no interval (NaN).
+- `settled`: True when both ends of the interval fall in the band printed for
+  the score.
+
+```python
+card.table[["title", "noise", "score", "score_low", "score_high", "verdict", "settled"]]
+card.unsettled        # the rows whose interval crosses 90, 70 or 40
+```
+
+The printed card adds a question mark to a verdict that is not settled
+(`56 Struggles?`) and ends with a line such as `12 of 20 verdicts are not
+settled at 10 instances. Run scorecard(instances=30) to narrow them.` On the
+image, a short line beside each score draws its interval on a 0 to 100 scale,
+ticked at 40, 70 and 90; a verdict that is not settled gets a question mark
+and a paler badge.
+
+The interval only knows the series the card drew. With ten series it is rough
+and tends to be too narrow; raise `instances` to tighten it.
+
 ## Mistakes and checks
 
 Cells that struggle or fail (a shown score below 70) name up to two **mistakes**. Each instance's error
@@ -108,11 +137,13 @@ close models.
 ## The Scorecard
 
 `Scorecard` keeps `title`, `table` (one row per pattern and noise level with
-`score`, `verdict`, `mistakes`, `unavoidable_mse`, `avoidable_mse`, `mse`,
-`instances` and `failed_checks`), `run` (the `ForecastRun` with every series and
-forecast), `cells`, `seed` and `instances`. `good_at` lists patterns scoring at
-least 70 at every noise level, `fails_at` those below 40 at some level and
-`noise_sensitive` those that lose 25 points or more from low to high noise.
+`score`, `score_low`, `score_high`, `verdict`, `settled`, `mistakes`,
+`unavoidable_mse`, `avoidable_mse`, `mse`, `instances` and `failed_checks`),
+`run` (the `ForecastRun` with every series and forecast), `cells`, `seed` and
+`instances`. `good_at` lists patterns scoring at least 70 at every noise level,
+`fails_at` those below 40 at some level and `noise_sensitive` those that lose
+25 points or more from low to high noise. `unsettled` holds the table rows
+whose verdict is not settled.
 `report` is the JSON-ready `TestReport`. `plot(compact=False)` returns the
 Matplotlib figure; `compact=True` draws only the colored scores.
 
