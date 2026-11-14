@@ -35,14 +35,7 @@ forecaster can get right by design.
 | `random_walk` | Random walk: shocks never fade | Where it is now: the best forecast is flat at the current level, smoothed when noisy. | The direction of the next move. Uncertainty grows without limit with the horizon. |
 | `random_walk_drift` | Random walk with drift | The current level plus the steady drift. | The wandering around the drift line, which grows with the horizon. |
 
-**AR versus random walk.** The last four rows are all autoregressive: each
-value is a weighted sum of earlier values plus a new random shock. What differs
-is what happens to a shock. In mean reversion (AR(1) with weight 0.8) a shock
-fades by 20% per step, so the series keeps returning to its mean. With two
-weights (AR(2)) the fading can overshoot and swing back, which looks like
-irregular cycles: there is no fixed period to copy, unlike the seasonal row.
-A random walk is the AR(1) case with weight exactly 1, so a shock never fades
-and there is no mean to return to; the best forecast is the current level.
+The last four rows are autoregressive; [Synthetic scenarios](../stress-cases.md#the-core-scenarios) explains how mean reversion, irregular cycles and the random walk differ.
 
 `noise_levels(levels=2)` returns `(name, sd)` pairs from low to high: two
 levels by default, `("Low noise", 0.5)` and `("High noise", 2.0)`.
@@ -124,8 +117,6 @@ least 70 at every noise level, `fails_at` those below 40 at some level and
 Matplotlib figure; `compact=True` draws only the colored scores.
 
 ## Signatures
-
-Generated from the docstrings in the code.
 
 ::: timegym.Scorecard
 

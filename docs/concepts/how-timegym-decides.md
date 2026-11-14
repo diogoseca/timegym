@@ -1,8 +1,7 @@
 # How TimeGym decides
 
 TimeGym asks three questions of every forecast, in order, and records a verdict
-for each with the numbers behind it. This page explains the questions, the
-verdicts and the words the rest of the documentation uses for them.
+for each with the numbers behind it.
 
 ## In short
 
@@ -123,40 +122,14 @@ fixtures rather than mutants. See [Fault fixtures](../api/fault-fixtures.md).
 [Scores and diagnostics](../api/diagnostics.md) lists every score and what it
 rewards.
 
-## What a report records
-
-[Weyuker (1982)](https://doi.org/10.1093/comjnl/25.4.465) asked test
-documentation to record five things. Each is a field of the saved `TestReport`:
-
-| Weyuker's item | Where it is in a report |
-| --- | --- |
-| The criteria used | `metadata["pipeline_config"]`, `metadata["diagnostic_settings"]` and the diagnostic names |
-| How far they were met | Each diagnostic's `status`, and `report.summary` |
-| The test data | Each case's `scenario`, `seed` and `manifest` |
-| The outputs | Each case's `metrics` and the diagnostic `evidence`. Forecasts are not stored; `replay_case` regenerates them |
-| How correctness was decided | Each diagnostic's `category`, `message` and `evidence`, with version and dependency provenance in `metadata` |
-
-[Pipeline and reports](../api/pipeline.md) documents the format and replay.
-
 ## Where these ideas come from
 
 In software testing, the thing that decides whether an output is correct is
-called an oracle. A forecaster has no exact correct output, so it is what
-[Weyuker (1982)](https://doi.org/10.1093/comjnl/25.4.465) called a non-testable
-program. Weyuker listed what remains possible: a partial oracle that checks only
-some properties of the output, tests on simplified data with known results, and
-known properties of the output.
-[Davis and Weyuker (1981)](https://doi.org/10.1145/800175.809889) had proposed
-the pseudo-oracle, an independent implementation of the same specification
-whose outputs are compared within a tolerance, and
-[Guderlei and Mayer (2007)](https://doi.org/10.1109/QSIC.2007.4385527) extended
-property checks to programs with random output by comparing output
-distributions with hypothesis tests.
-
-None of these ideas is new. TimeGym makes each one runnable for forecasts and
-records its assumptions in the report. In this vocabulary, the three questions
-above are a partial oracle, simplified data with known results, and known
-properties:
+called an oracle. A forecaster has no exact correct output, so TimeGym combines
+the partial oracles that [Weyuker (1982)](https://doi.org/10.1093/comjnl/25.4.465)
+described; the [TimeGym manuscript](../../paper/README.md) gives the history.
+In that vocabulary, the three questions above are a partial oracle, simplified
+data with known results, and known properties:
 
 | Oracle type | TimeGym mechanism | Where to find it |
 | --- | --- | --- |
@@ -169,14 +142,4 @@ properties:
 The [diagnostics catalogue](../api/diagnostics.md#diagnostics-catalogue) gives
 the oracle type of every diagnostic the package emits, and the
 [capability map](capability-map.md) shows which tutorial exercises each pair of
-model behavior and oracle type. The
-[TimeGym manuscript](../../paper/README.md) uses the same terms.
-
-## Further reading
-
-- [Barr et al. (2015)](https://doi.org/10.1109/TSE.2014.2372785) survey the
-  oracle problem in software testing.
-- [Seca (2021)](https://doi.org/10.48550/arXiv.2105.01407) reviews oracle issues
-  in machine learning.
-- [Chen et al. (2018)](https://doi.org/10.1145/3143561) review metamorphic
-  testing.
+model behavior and oracle type.

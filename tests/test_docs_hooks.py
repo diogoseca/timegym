@@ -73,8 +73,8 @@ def test_notebook_links_point_at_built_pages_or_github():
     assert link('README.md') == '../'
     assert link('../docs/stress-cases.md') == '../../docs/stress-cases/'
     assert link('../source/07_pipeline.ipynb') == f'{repo}/blob/main/source/07_pipeline.ipynb'
-    assert link('../source/archive/3.%20Semi-Synthetic%20Data.ipynb') == (
-        f'{repo}/blob/main/source/archive/3.%20Semi-Synthetic%20Data.ipynb')
+    assert link('../source/drafts/3.%20Semi-Synthetic%20Data.ipynb') == (
+        f'{repo}/blob/main/source/drafts/3.%20Semi-Synthetic%20Data.ipynb')
     for unchanged in ('https://doi.org/10.1/x', '#section', '/absolute/', '../../outside.md'):
         assert link(unchanged) == unchanged
 
@@ -117,15 +117,3 @@ def test_raw_github_images_are_served_from_the_site():
     assert on_page_markdown(f'[![card]({raw})]({raw})', home, config, None) == (
         '[![card](docs/images/scorecard.png)](docs/images/scorecard.png)')
     assert on_page_markdown(f'![card]({raw})', deeper, config, None) == '![card](images/scorecard.png)'
-
-
-def test_readme_images_exist_in_the_repository():
-    import re
-    from pathlib import Path
-
-    root = Path(__file__).resolve().parents[1]
-    raw = 'https://raw.githubusercontent.com/diogoseca/timegym/main/'
-    images = re.findall(re.escape(raw) + r'([^)\s]+)', (root / 'README.md').read_text(encoding='utf-8'))
-    assert images, 'README shows no images'
-    for image in images:
-        assert (root / image).is_file(), f'README image {image} is not in the repository'

@@ -103,18 +103,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("notebooks", nargs="*", type=Path, help="Selected notebook paths; default: every source notebook and tutorial")
     parser.add_argument("--write", action="store_true", help="Save successfully executed outputs in the notebooks")
-    parser.add_argument("--group", choices=["all", "source", "tutorials", "demo"], default="all",
-                        help="Execute all notebooks, or only the source notebooks or the tutorials (demo is an old name for tutorials)")
+    parser.add_argument("--group", choices=["all", "source", "tutorials"], default="all",
+                        help="Execute all notebooks, or only the source notebooks or the tutorials")
     parser.add_argument("--html-dir", type=Path, help="Also export executed notebooks as HTML for inspection")
     args = parser.parse_args()
-    group = "tutorials" if args.group == "demo" else args.group
+    group = args.group
     folders = list(FOLDERS.values()) if group == "all" else [FOLDERS[group]]
     if args.notebooks:
         paths = [p for p in args.notebooks if p.resolve().parent in {f.resolve() for f in folders}]
     else:
         paths = [p for folder in folders for p in sorted(folder.glob("[0-9][0-9]_*.ipynb"))]
-    if any((FOLDERS["source"] / "archive").resolve() in p.resolve().parents for p in args.notebooks):
-        parser.error("Archived notebooks are preserved historical sources and are not part of the executable build.")
     if not paths:
         parser.error("No source notebooks or tutorials found")
     with TemporaryDirectory(prefix="timegym-notebook-") as temporary:

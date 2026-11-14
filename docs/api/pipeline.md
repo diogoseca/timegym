@@ -131,8 +131,6 @@ manifest versions are integers.
 
 ## Signatures
 
-Generated from the docstrings in the code.
-
 ::: timegym.Pipeline
 
 ::: timegym.ForecastRun

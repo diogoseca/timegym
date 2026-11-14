@@ -29,19 +29,38 @@ def build_ablation(root: Path):
         raise ValueError("Supplement protocol does not match the recorded manifest")
     if results["protocol_sha256"] != manifest["protocol_sha256"] or results["protocol_version"] != "2.0":
         raise ValueError("Supplement result/protocol identity mismatch")
+    # Exploratory follow-up (protocol 2.1), chosen after the protocol 2.0 results were known.
+    followup_path = root / "experiments/results-v2-followup/results.json"
+    followup_manifest_path = root / "experiments/results-v2-followup/manifest.json"
+    followup_protocol_path = root / "experiments/protocol-v2-followup.json"
+    followup, followup_manifest = _json(followup_path), _json(followup_manifest_path)
+    if _digest(followup_path) != followup_manifest["results_sha256"]:
+        raise ValueError("Follow-up results do not match their manifest")
+    if (_digest(followup_protocol_path) != followup_manifest["protocol_sha256"]
+            or followup["protocol_version"] != "2.1" or followup["status"] != "exploratory"):
+        raise ValueError("Follow-up result/protocol identity mismatch")
+    if followup_manifest["frozen_inputs_sha256"]["experiments/results-v2/results.json"] != manifest["results_sha256"]:
+        raise ValueError("The follow-up was computed from different Study 2 records")
 
-    checks = ["contract", "scalar_shift", "target_shift", "conformance", "loss"]
-    headers = ["Output\nchecks", "Scalar\nshift", "Target\nshift*", "NumPy\nagreement*", "Calibrated\nMSE*"]
+    checks = ["contract", "scalar_shift", "target_shift", "conformance", "loss", "answer_key"]
+    headers = ["Output\nchecks", "Scalar\nshift", "Target\nshift*", "NumPy\nagreement*", "Calibrated\nMSE*",
+               "Answer\nkey*†"]
     labels = ["Correct implementation", "Reversed prediction lags", "Stale recursive state",
               "Missing inverse scaling", "Swapped recursive targets"]
     branches = ["clean", *protocol["model_study"]["faults"]]
+    key_rows = followup["answer_key_alarm"]["rows"]
     rows = []
     for branch, label in zip(branches, labels):
         records = [row for row in results["model"]["records"] if row["branch"] == branch]
-        rows.append({"branch": branch, "label": label, "n": len(records),
-                     "counts": {check: sum(row["alarms"][check] for row in records) for check in checks}})
+        counts = {check: sum(row["alarms"][check] for row in records) for check in checks[:-1]}
+        branch_key = [row for row in key_rows if row["branch"] == branch]
+        if sum(row["loss_alarms"] for row in branch_key) != counts["loss"]:
+            raise ValueError("The follow-up loss alarms disagree with the frozen records")
+        counts["answer_key"] = sum(row["answer_key_alarms"] for row in branch_key)
+        rows.append({"branch": branch, "label": label, "n": len(records), "counts": counts,
+                     "answer_key_n": sum(row["n"] for row in branch_key)})
     expected_n = len(protocol["model_study"]["conditions"]) * protocol["model_study"]["evaluation_cases"]
-    if any(row["n"] != expected_n for row in rows):
+    if any(row["n"] != expected_n or row["answer_key_n"] != expected_n for row in rows):
         raise ValueError("Ablation counts do not cover the specified fixed condition corpus")
 
     selected = next(row for row in results["model"]["loss_summaries"]
@@ -64,7 +83,7 @@ def build_ablation(root: Path):
     canvas.text(12, 28, f"Alarms / {expected_n} cases per row: {len(protocol['model_study']['conditions'])} fixed conditions, "
                 f"{protocol['model_study']['evaluation_cases']} independent cases per condition.",
                 size=7.5, color=MUTED)
-    x0, y0, cell_w, cell_h = 148, 65, 57.6, 24
+    x0, y0, cell_w, cell_h = 148, 65, 48, 24
     for j, header in enumerate(headers):
         canvas.text(x0 + (j + .5) * cell_w, 48, header, size=7.5, weight="bold", align="center")
     for i, row in enumerate(rows):
@@ -80,9 +99,9 @@ def build_ablation(root: Path):
                         weight="bold" if count else "normal", align="center")
     for boundary in (1,):
         canvas.line(12, y0 + boundary * cell_h, 436, y0 + boundary * cell_h, color=GRAY, width=.65)
-    canvas.text(12, 199, "* Checks used only in this experiment. Counts are descriptive; dark cells mean more alarms.",
+    canvas.text(12, 199, "* Checks used only in this experiment. † Exploratory addition, chosen after the results were known.",
                 size=7, color=MUTED)
-    canvas.text(12, 213, "The clean row retains statistical false alarms; the output checks accept all four faults.",
+    canvas.text(12, 213, "Dark cells mean more alarms. The clean row retains false alarms; the output checks accept all four faults.",
                 size=7, color=MUTED)
     canvas.line(12, 225, 436, 225, color=GRID, width=.6)
 
@@ -111,7 +130,9 @@ def build_ablation(root: Path):
     metadata = {
         "purpose": "Complementary diagnostics and a correctness-versus-accuracy counterexample",
         "protocol_version": "2.0", "check_order": checks,
-        "experiment_only_checks": ["target_shift", "conformance", "loss"],
+        "experiment_only_checks": ["target_shift", "conformance", "loss", "answer_key"],
+        "exploratory_checks": {"answer_key": "Alarm on the distance from the answer key; exploratory follow-up "
+                                             "(protocol 2.1) chosen after the protocol 2.0 results were known"},
         "plotted_rows": rows,
         "aggregation": "Descriptive counts over six equally weighted fixed conditions; no pooled IID interval",
         "counterexample": {"condition": selected["condition"], "fault": selected["fault"],
@@ -119,6 +140,8 @@ def build_ablation(root: Path):
                            "clean_minus_faulty_realized_mse": counterexample,
                            "cases_improved": improved, "axis_limits": [-1, 1]},
         "sources": _sources(root, ["experiments/protocol-v2.json", "experiments/results-v2/results.json",
-                                    "experiments/results-v2/manifest.json"]),
+                                    "experiments/results-v2/manifest.json", "experiments/protocol-v2-followup.json",
+                                    "experiments/results-v2-followup/results.json",
+                                    "experiments/results-v2-followup/manifest.json"]),
     }
     return canvas, metadata

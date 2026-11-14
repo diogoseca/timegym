@@ -40,7 +40,7 @@ detection or validation on every supported platform.
 | Clean installed wheel | Core dependencies only; point/joint forecasts, joint controlled financial processes, reports, replay, retained runs, and CLI demo pass outside the checkout |
 | Source archive | Includes all 24 active notebooks, manuscript inputs, study records, citation metadata and build tooling; extracted source passes export drift check |
 | Original study | Numerical JSON unchanged; historical execution evidence retained in the manifest |
-| Protocol-2 study | Frozen numerical record; offline schema migration described below. Future repeats are compared by the CI research-smoke job |
+| Protocol-2 study | Frozen numerical record; offline schema migration described below. Future repeats are checked against the paper's conclusions by the CI research-smoke job |
 | Manuscript | Generated standalone source compiles successfully |
 
 The manuscript packaging policy was updated on 30 October 2026: source archives
@@ -87,26 +87,9 @@ Its manifest fingerprints individual package, runner, fixture, and protocol
 files. The original pilot records a combined source digest of
 `dece174f629b2647011570775af43f8a657f6a477ae10108972ed135b56f6549`.
 These historical source fingerprints identify the earlier execution, not the
-current runner after migration. The `research-smoke` CI job now compares fresh
-pilot and supplement JSON hashes, warns on mismatches, and retains the actual
-Linux hashes in the `research-linux-hashes` artifact. It has not been executed
+current runner after migration. The `research-smoke` CI job reruns the pilot
+and the supplement and renders the paper's tables from the fresh output, which
+fails when a conclusion the paper states does not hold; it does not compare
+hashes. It has not been executed
 from this checkout, so no Linux repeatability result is claimed here.
 Timing is recorded separately and is not a benchmark claim.
-
-## Remaining release and research work
-
-CI covers the [declared Python range](../README.md#sixty-seconds), the older compatibility stack,
-installed wheels on Linux/macOS/Windows, all notebooks, documentation, and both
-studies. `release.yml` ran these jobs on the v1.1.0 tag before publishing; the
-`research-smoke` job only warns on a hash mismatch, so a green run does not
-show Linux repeatability; the observed hashes are in its `research-linux-hashes`
-artifact. Local validation was on macOS; do not infer Windows or Linux results from it.
-
-1.1.0 was published to PyPI on 5 November 2026 by the release workflow. No
-manuscript has been submitted.
-
-For a stronger empirical paper, the next evidence should come from independently
-selected defects in other forecasting implementations and additional real tasks.
-The current studies support the specified workflow and expose useful blind spots;
-they do not estimate general debugging effectiveness. See the
-[claim ledger](claims.md) and [publication strategy](publication-strategy.md).

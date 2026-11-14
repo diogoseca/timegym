@@ -1,19 +1,18 @@
-"""Publication vector scenes built from the two frozen TimeGym studies.
+"""Publication vector scene of the first Study 1 dependence case.
 
-Only the illustrative first case is regenerated; all aggregate points and
-intervals come from the saved records, with internal consistency checks.
+Only the illustrative first case is regenerated, and its scores are checked
+against the saved records.
 """
 from __future__ import annotations
 
 from pathlib import Path
 
 import numpy as np
-from timegym.statistics import paired_t_interval as _interval
 
 from vector_canvas import Canvas
 
 
-from figure_common import INK, BLUE, ORANGE, GRAY, MUTED, GRID, _json, _digest, _sources, _verify_summary
+from figure_common import BLUE, ORANGE, GRAY, MUTED, GRID, _json, _digest, _sources
 
 
 def _axis(canvas, box, xlim, ylim, xticks, yticks, *, xfmt=None, yfmt=None):
@@ -33,15 +32,8 @@ def _axis(canvas, box, xlim, ylim, xticks, yticks, *, xfmt=None, yfmt=None):
     return sx, sy
 
 
-def _errorbar(canvas, x, y, low, high, color=BLUE):
-    canvas.line(x, low, x, high, color=color, width=.85)
-    canvas.line(x - 2, low, x + 2, low, color=color, width=.85)
-    canvas.line(x - 2, high, x + 2, high, color=color, width=.85)
-    canvas.circle(x, y, r=1.8, color=color)
-
-
 def build_dependence(root: Path):
-    """Joint-sample mechanism and paired score response, pilot protocol."""
+    """Joint-sample mechanism of the first pilot-protocol case."""
     from timegym import Scenario
     from timegym.metrics import crps, energy_score, variogram_score
     from timegym.mutations import mutate_forecast
@@ -77,16 +69,7 @@ def build_dependence(root: Path):
             np.testing.assert_allclose(value, saved[key], rtol=1e-12, atol=1e-15)
         verified_case_scores.append({"strength": strength, **scores})
 
-    summaries = {}
-    for strength in protocol["dependence_strengths"]:
-        rows = [row for row in results["dependence_records"] if row["strength"] == strength]
-        summaries[str(strength)] = {}
-        for score in score_functions:
-            summary = _interval([row[f"{score}_delta"] for row in rows])
-            _verify_summary(summary, results["dependence_summary"][str(strength)][score])
-            summaries[str(strength)][score] = summary
-
-    canvas = Canvas(width=448, height=376)
+    canvas = Canvas(width=448, height=222)
     canvas.text(12, 12, "Dependence changes while every marginal stays identical", size=10, weight="bold")
     canvas.text(12, 28, "128 joint samples from one predefined AR(1) case; independent coordinate-wise permutations.",
                 size=7.5, color=MUTED)
@@ -127,27 +110,9 @@ def build_dependence(root: Path):
     canvas.text(203, 198, "Shuffled", size=7, color=MUTED)
     canvas.text(12, 214, "All 16 horizon–target marginal sample sets are exactly unchanged.",
                 size=7.5, weight="bold")
-    canvas.line(12, 225, 436, 225, color=GRID, width=.6)
-
-    panels = [
-        ("crps", "Marginal CRPS (×10⁻¹⁶)", 1e16, (-1, 1), [-1, 0, 1]),
-        ("energy", "Joint energy score", 1., (-.008, .112), [0, .05, .10]),
-        ("variogram", "Joint variogram score", 1., (-.004, .055), [0, .025, .05]),
-    ]
-    for x, (score, title, scale, limits, yticks) in zip((32, 179, 326), panels):
-        canvas.text(x + 52.5, 240, title, size=7.7, weight="bold", align="center")
-        sx, sy = _axis(canvas, (x, 256, 105, 70), (0, 1), limits, [0, .5, 1], yticks)
-        canvas.line(x, sy(0), x + 105, sy(0), color=GRAY, width=.6, dash=True)
-        for strength in protocol["dependence_strengths"]:
-            summary = summaries[str(strength)][score]
-            _errorbar(canvas, sx(strength), sy(summary["mean"] * scale),
-                      sy(summary["ci95"][0] * scale), sy(summary["ci95"][1] * scale))
-    canvas.text(224, 352, "Shuffle strength (0 = unchanged; 1 = fully shuffled)", size=7.5, align="center")
-    canvas.text(224, 368, "Score change from clean: paired mean and 95% t interval over 64 cases; CRPS shows roundoff only.",
-                size=7, color=MUTED, align="center")
 
     metadata = {
-        "purpose": "Marginal invariance and joint-score response under a selected dependence mutation",
+        "purpose": "Marginal invariance and changed joint dependence under a selected dependence mutation",
         "protocol_version": protocol["protocol_version"], "case_seed": seed, "sample_seed": sample_seed,
         "mutation_seed": mutation_seed, "n_samples": protocol["n_samples"],
         "joint_pair": "first horizon, targets 1 and 2, identical axis limits",
@@ -155,9 +120,6 @@ def build_dependence(root: Path):
         "marginal_coordinate_count": int(np.prod(clean.samples.shape[1:])),
         "all_sorted_marginals_exactly_equal": True,
         "regenerated_scores_verified_against_saved_case": verified_case_scores,
-        "plotted_score_deltas": summaries,
-        "crps_display_multiplier": 1e16,
-        "interval": "Unadjusted paired t 95% interval over independent case-level score differences",
         "sources": _sources(root, ["experiments/protocol.json", "experiments/results/results.json",
                                     "experiments/results/manifest.json", "experiments/results-v2/manifest.json"]),
     }

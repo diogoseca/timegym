@@ -5,8 +5,6 @@ plot is drawn or an sklearn object is used, so scoring must work without them.
 
 Run with `python -I tools/smoke_installed.py` after installing a built wheel.
 --report PATH also saves the replayed report for replay in a separate process.
-For an offline local check only, --dependency-path can expose scientific
-dependencies from another environment without executing its editable .pth hooks.
 """
 from __future__ import annotations
 
@@ -20,11 +18,8 @@ from tempfile import TemporaryDirectory
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dependency-path", type=Path)
     parser.add_argument("--report", type=Path, help="Also save the replayed report here")
     args = parser.parse_args()
-    if args.dependency_path:
-        sys.path.append(str(args.dependency_path.resolve()))
     blocked = {"matplotlib", "sklearn", "nbdev", "nbformat", "nbclient", "nbconvert",
                "IPython", "tsfel", "yfinance", "jupyterlab"}
     attempts = []

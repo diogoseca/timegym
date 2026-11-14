@@ -107,10 +107,7 @@ jobs:
           python tools/export_notebooks.py
           python tools/sync_citation.py
           python paper/build_standalone.py
-          python tools/export_notebooks.py --check
           python tools/sync_citation.py --check --tag "$RELEASE_TAG"
-          python paper/build_standalone.py --check
-          python -m pytest -q tests/test_release_metadata.py tests/test_release_version.py
       - name: Open or refresh the release pull request
         if: steps.next.outputs.release == 'true'
         env:

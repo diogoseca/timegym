@@ -92,3 +92,28 @@ def test_standalone_tracks_release_identity(paper_tree):
     citation = paper_tree.parent / "CITATION.cff"
     citation.write_text(citation.read_text().replace(f"version: {__version__}", "version: 999.0.1"))
     assert "TimeGym 999.0.1" in build(paper_dir=paper_tree)
+
+
+def test_bibliography_renders_books_with_their_publisher(tmp_path):
+    bibliography = render_bibliography(r"\cite{clements1998forecasting}", ROOT / "paper/references.bib")
+    assert "Michael Clements and David Hendry." in bibliography
+    assert "Cambridge University Press, 1998." in bibliography
+    assert r"\emph{" not in bibliography
+    path = tmp_path / "references.bib"
+    path.write_text("@book{a,\n  author = {B, A},\n  title = {T},\n  year = {2000},\n  url = {https://example.org},\n}\n")
+    with pytest.raises(ValueError, match="Missing publisher"):
+        render_bibliography(r"\cite{a}", path)
+
+
+def test_bibliography_renders_a_book_without_url_with_edition_and_address(tmp_path):
+    path = tmp_path / "references.bib"
+    path.write_text("@book{a,\n  author = {B, A},\n  title = {T},\n  edition = {4},\n  publisher = {P},\n"
+                    "  address = {C},\n  year = {1932},\n}\n"
+                    "@misc{b,\n  author = {D, E},\n  title = {U},\n  year = {2000},\n}\n"
+                    "@inproceedings{c,\n  author = {F, G},\n  title = {V},\n  booktitle = {W},\n"
+                    "  year = {2019},\n  eprint = {1910.05387},\n  url = {https://arxiv.org/abs/1910.05387},\n}\n")
+    bibliography = render_bibliography(r"\cite{a,c}", path)
+    assert "\nT.\n4th edition, P, C, 1932." in bibliography
+    assert r"\emph{W}, arXiv:1910.05387, 2019." in bibliography
+    with pytest.raises(ValueError, match="Missing url in bibliography entry b"):
+        render_bibliography(r"\cite{b}", path)

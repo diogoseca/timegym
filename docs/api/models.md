@@ -50,8 +50,6 @@ with TimeGym and imported only when an sklearn object is used.
 
 ## Signatures
 
-Generated from the docstrings in the code.
-
 ::: timegym.NaiveForecaster
 
 ::: timegym.LastValueForecaster

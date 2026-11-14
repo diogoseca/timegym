@@ -5,8 +5,8 @@ create the environment once:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
-.venv/bin/pip install -r requirements-study.txt
+.venv/bin/python -m pip install -r requirements-study.txt
+.venv/bin/python -m pip install --no-build-isolation --no-deps -e .
 ```
 
 Render the frozen records without running either study:
@@ -23,7 +23,7 @@ Both runners refuse existing `results.json`, `manifest.json`, `runtime.json`,
 explicit replacement option for an approved re-freeze; routine reproductions
 use a new output directory. Both runners enforce one numerical thread with
 `threadpoolctl` and record the observed environment and thread pools in separate
-`runtime.json` files. Environment-variable prefixes are unnecessary.
+`runtime.json` files.
 
 ## Study 1: controlled pilot
 
@@ -50,15 +50,13 @@ The statistical check uses 99 independent reference ensembles and a per-case
 reference law. It is not a test of arbitrary covariance equality, and it is not
 a guarantee that a clean ensemble will pass. False alarms and Wilson confidence
 intervals are retained in the paper. The MSE alarm ignores index labels and non-point
-outputs; this illustrates a restricted numerical comparator, not superiority to
-properly validated evaluation frameworks.
+outputs.
 
 The separate model-level fault omits inverse standardization in a historical-mean
 forecast. Its repair applies the training location and scale exactly once. The
 location-equivariance relation is explicitly declared for this model. The same
 repair is illustrated at four ordered AirPassengers origins, without treating
-them as independent replications. It does not make this weak baseline a good
-forecasting model.
+them as independent replications.
 
 Outputs:
 
@@ -74,17 +72,11 @@ Outputs:
 
 There are no timestamps or runtime values in numerical results. A
 platform-dependent tolerance may be needed on other BLAS/NumPy versions.
-The CI `research-smoke` job compares both rerun hashes to their frozen manifests,
-warns on platform differences, and uploads the observed Linux hashes as
-`research-linux-hashes`; see [the validation record](../paper/validation.md).
+The CI `research-smoke` job reruns both studies and renders the paper's tables
+from the fresh output, so it fails when a conclusion the paper states does not
+hold there; it does not compare hashes. See [the validation record](../paper/validation.md).
 Local comparisons fail on a mismatch
 unless `--warn` is explicit.
-
-To reproduce one selected controlled counterexample without running the full
-study, use `python -m experiments.reproduce_fault --mutation dependence_shuffle --seed 10000`.
-This reconstructs its saved scenario, ensemble and mutation seeds, then compares
-the contract and covariance decisions with the original record. Its successful
-exit means reproduction matched, even when the forecast correctly receives FAIL.
 
 Scope limits: no held-out generator families, representative real-bug corpus,
 foundation models, sktime-conformance comparator, or broad real-data transfer study.
@@ -126,25 +118,81 @@ The supplement renderer also emits `paper/generated-macros.tex` for caption
 numbers (`RepairDeltaMean`, `RepairDeltaLow`, `RepairDeltaHigh`, `RepairImproved`,
 `CasesPerCondition`, and `CasesPerRow`). It checks these against paired raw losses.
 
+## Exploratory follow-up to Study 2 (protocol 2.1)
+
+`protocol-v2-followup.json` declares four analyses chosen on 13 November 2026,
+after the protocol 2.0 results were known. They are exploratory, and the paper
+labels every number from them as such. The runner imports the frozen Study 1
+and Study 2 code, re-runs only the fits it needs, checks each re-run value
+against the frozen records (within 1e-9), and never writes to `results/` or
+`results-v2/`:
+
+```bash
+.venv/bin/python -m experiments.run_followup --output /tmp/timegym-followup-repeat
+cmp experiments/results-v2-followup/results.json /tmp/timegym-followup-repeat/results.json
+```
+
+It takes well under a minute on one CPU thread. The record answers:
+
+- **Answer-key alarm.** The 768 clean Study 2 calibration fits are re-run; the
+  same conformal rule at 5% is applied to each case's mean squared distance
+  from the answer key, and the threshold to the frozen evaluation records'
+  `mean_reference_mse`. Counts appear beside the frozen loss alarm in
+  column K of the complete Study 2 table and in the diagnostic-evidence figure.
+- **Repair mechanism** on the random walk with drift: own-lag coefficient sums
+  of the clean fit, the per-step distance from the answer key of the clean and
+  stale-state branches, and the frozen paired distance from the answer key.
+- **Scorecard precision:** the Figure 1 pipeline with 30 instances per cell and
+  a bootstrap of ten-instance scores.
+- **Fitted AR(1) on the trend** in the Study 1 capability setting: its mean
+  coefficient and its mean offset from the answer key.
+
+The `results-v2-followup/` output contains `results.json` (including the 768
+stored calibration distances) and `manifest.json` (protocol, results and
+frozen-input digests, source digests, Python, library and package versions).
+`experiments/render_followup.py` validates the record and supplies its macros
+and table column to `render_results` and `render_supplement`; both accept
+`--followup-dir`. The tests recompute the thresholds and counts from the stored
+distances and the frozen records without re-running any fit.
+
+## Second exploratory record for Study 2 (protocol 2.2)
+
+`protocol-v2-addendum.json` declares two analyses chosen on 13 November 2026,
+after the protocol 2.0 results and the protocol 2.1 follow-up were known. They
+are exploratory and read only values stored in `results-v2/results.json`;
+nothing is refitted, and the runner never writes to `results/`, `results-v2/`
+or `results-v2-followup/`:
+
+```bash
+.venv/bin/python -m experiments.run_addendum --output /tmp/timegym-addendum-repeat
+cmp experiments/results-v2-addendum/results.json /tmp/timegym-addendum-repeat/results.json
+```
+
+It takes a few seconds. The record answers:
+
+- **Suite-level multiplicity.** From the stored p-values of the four condition
+  checks in each of the 64 suites, per variant: Holm at 0.05 (recomputed, and
+  required to equal every stored `holm_alarm`), Hochberg's step-up procedure,
+  Simes' global test and Fisher's combination (chi-square with 8 degrees of
+  freedom, in closed form). It stores suites with any rejection and suites
+  rejecting a true null for each method, with Wilson 95% intervals, and
+  per-condition rejection counts for raw, Holm and Hochberg decisions.
+- **Paired answer-key check.** For each of the 24 pairs of condition and fault,
+  the paired differences of the stored `mean_reference_mse` against the clean
+  branch on the same seeds, a one-sided sign-flip test with 9,999 flips (seed 0,
+  declared in the protocol), and Holm across the 24 pairs. The same analysis on
+  the first 30 and the first 10 evaluation seeds is a sensitivity check.
+
+The `results-v2-addendum/` output contains `results.json` (including every
+suite's p-values and decisions) and `manifest.json` (protocol, results and
+frozen-input digests, source digests, Python, library and package versions).
+`experiments/render_addendum.py` validates the record, checks the statements
+the manuscript makes from it (`check_addendum_conclusions`) and supplies its
+macros to `render_supplement`, which accepts `--addendum-dir`. The tests
+recompute both analyses from the frozen records. The `research-smoke` job of
+the checks workflow re-runs the follow-up and this record and checks their
+conclusions on the fresh output.
+
 ### Frozen-record migration
 
-The 30 October 2026 update did not rerun either study. `migrate_frozen.py` removed
-only verified duplicate repaired records and unused alarm-difference t intervals,
-updated protocol metadata, and regenerated CSVs. Pilot numerical bytes and all
-retained supplement measurements and paired loss summaries stayed unchanged.
-Each manifest preserves its original manifest and input hash under
-`record_migration`; historical source/environment evidence is not replaced by
-current code hashes. The supplement operation counts now describe the retained
-branches; the separate historical timing includes the removed duplicate work.
-The migration can be replayed with `python -m experiments.migrate_frozen --root PATH`
-on a checkout containing the pre-migration records and the updated protocols.
-An already migrated record is rejected.
-
-The 3 November 2026 update renamed the supplement's paired loss fields
-`repair_minus_faulty_mse` and `repair_minus_faulty_reference_mse` to
-`clean_minus_faulty_mse` and `clean_minus_faulty_reference_mse`, in `results.json`
-and the `model-repair-losses.csv` header. No study was rerun and no value changed.
-`python -m experiments.migrate_frozen --root PATH --step loss-keys` applies the
-rename to a record matching its manifest, rewrites the CSVs and the manifest hash,
-and logs the original hash under `loss_key_migration`. An already renamed record
-is rejected.
+The records were migrated twice without rerunning either study (30 October and 3 November 2026); no value changed. Each manifest keeps the original hashes under `record_migration` and `loss_key_migration`.

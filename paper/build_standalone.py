@@ -25,7 +25,7 @@ def read_bibliography(path: Path) -> dict[str, dict[str, str]]:
         line = line.strip()
         if not line or line.startswith("%"):
             continue
-        start = re.fullmatch(r"@(article|inproceedings|misc|manual)\{([\w-]+),", line)
+        start = re.fullmatch(r"@(article|book|inproceedings|misc|manual)\{([\w-]+),", line)
         field = re.fullmatch(r"(\w+)\s*=\s*\{(.*)\},?", line)
         if start and entry is None:
             key = start[2]
@@ -53,6 +53,14 @@ def read_bibliography(path: Path) -> dict[str, dict[str, str]]:
     return entries
 
 
+def ordinal(edition: str) -> str:
+    if not edition.isdigit():
+        return edition
+    number = int(edition)
+    suffix = "th" if 10 <= number % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
+    return f"{number}{suffix}"
+
+
 def render_bibliography(manuscript: str, path: Path) -> str:
     """Render cited entries in author/title order, as requested by plain style."""
     entries = read_bibliography(path)
@@ -63,7 +71,8 @@ def render_bibliography(manuscript: str, path: Path) -> str:
         raise ValueError(f"Missing bibliography entries: {', '.join(sorted(missing))}")
     for key in sorted(cited):
         fields = entries[key]
-        for required in ("title", "year", "url"):
+        # A book without a DOI or a stable address may have no URL; every other entry needs one.
+        for required in ("title", "year") + (() if fields["type"] == "book" else ("url",)):
             if not fields.get(required):
                 raise ValueError(f"Missing {required} in bibliography entry {key}")
         if not (fields.get("author") or fields.get("organization")):
@@ -83,10 +92,18 @@ def render_bibliography(manuscript: str, path: Path) -> str:
             parts = author.split(", ", 1)
             names.append(f"{parts[1]} {parts[0]}" if len(parts) == 2 else author)
         authors = (", ".join(names[:-1]) + " and " + names[-1]) if len(names) > 1 else names[0]
-        lines.extend([rf"\bibitem{{{key}}}", authors.rstrip(".") + ".",
-                      rf"\href{{{fields['url']}}}{{{fields['title']}}}."])
+        title = rf"\href{{{fields['url']}}}{{{fields['title']}}}" if fields.get("url") else fields["title"]
+        lines.extend([rf"\bibitem{{{key}}}", authors.rstrip(".") + ".", title + "."])
         venue = fields.get("journal", fields.get("booktitle", ""))
         publication = rf"\emph{{{venue}}}" if venue else ""
+        if fields["type"] == "book":
+            if not fields.get("publisher"):
+                raise ValueError(f"Missing publisher in bibliography entry {key}")
+            publication = fields["publisher"]
+            if "address" in fields:
+                publication += f", {fields['address']}"
+            if "edition" in fields:
+                publication = f"{ordinal(fields['edition'])} edition, {publication}"
         if "volume" in fields:
             publication += f", {fields['volume']}"
         if "number" in fields:
@@ -98,7 +115,7 @@ def render_bibliography(manuscript: str, path: Path) -> str:
         if "numpages" in fields:
             publication += f", {fields['numpages']} pages"
         if "eprint" in fields:
-            publication += f"arXiv:{fields['eprint']}"
+            publication += (", " if publication else "") + f"arXiv:{fields['eprint']}"
         lines.append((publication + ", " if publication else "") + fields["year"] + ".")
         if "note" in fields:
             lines.append(fields["note"].rstrip(".") + ".")

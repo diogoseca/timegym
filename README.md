@@ -89,43 +89,11 @@ print(card)
 …
 ```
 
-List what it is good at, where it fails, and where noise throws it off:
-
-```python
-card.good_at, card.fails_at, card.noise_sensitive
-```
-
-```text
-(['Mean reversion (AR(1)): shocks fade', 'Random walk: shocks never fade'],
- ['Straight-line trend', 'Repeating seasonal cycle', 'Trend + seasonal cycle', 'Irregular cycles (AR(2))'],
- [])
-```
-
-Read the scores as a DataFrame, one row per kind of series and noise level:
-
-```python
-card.table[["title", "noise", "score", "verdict", "mse"]].round(2)
-```
-
-```text
-                        title       noise  score    verdict   mse
-0                  Pure noise   Low noise  56.37  Struggles  0.49
-1                  Pure noise  High noise  56.37  Struggles  7.87
-2  Noise around a fixed level   Low noise  56.37  Struggles  0.49
-…
-```
-
-`card.table` also names the mistakes and splits each error into the part
-nobody could avoid and the part the model could have.
-
 Zoom in on one row:
 
 ```python
 trend = pipeline.scorecard(["trend"], instances=3)   # one row, both noise levels
-trend.save("trend.png")
 ```
-
-[![The scorecard's straight-line trend row on its own](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-scorecard.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-scorecard.png)
 
 Plot every draw behind that row, with the answer key and the forecast:
 
@@ -147,75 +115,17 @@ pipeline.scorecard(["trend"], instances=20).run.plot_errors(metric="mse")
 `mean_reference_mse`, is the error against the answer key: the part your model
 could have avoided.
 
-Stop a CI build when a forecast is malformed or the model crashes. Each output
-check counts the cases that passed it:
+For CI and for later:
 
 ```python
-card.checks
+card.report.assert_passed()          # fail a CI build on a malformed forecast or a crash
+card.report.to_json("report.json")   # every case, enough to replay one on another machine
 ```
 
-```text
-[{'check': 'runs', 'title': 'Runs without errors', 'passed': 200, 'failed': 0},
- {'check': 'dates', 'title': 'Forecasts the requested dates', 'passed': 200, 'failed': 0},
- …]
-```
-
-```python
-card.report.assert_passed()   # raises on any failure and says what went wrong
-```
-
-Save every case to analyse later, or to replay one on another machine:
-
-```python
-card.report.to_json("report.json")
-```
-
-```text
-{"cases": [{"diagnostics": [{"name": "forecast_contract", "status": "PASS", "message": …}, …],
-            "manifest": {"kind": "white_noise", "horizon": 24, "parameters": …, …},
-            "metrics": {"mae": 0.571, "mase": 1.081, "mean_reference_mse": 0.339, "mse": 0.538},
-            "scenario": "white_noise",
-            "seed": 0},
-           …],
- "metadata": {"instances": 10, "model": "LastValueForecaster", "seed": 0, "timegym_version": …, …},
- "summary": {…}}
-```
-
-The file holds each case's scenario, seed and scores, every check's verdict
-and the numbers behind it, the pipeline's settings, and the Python and library
-versions, so a failure with a built-in model can be replayed from the file
-alone.
-
-Change the size of the test. Each kind of series is drawn `instances` times at
-each noise level; draw `i` uses seed `seed + i`, so the same seed always gives
-the same series:
-
-```python
-card = pipeline.scorecard(instances=30)     # more draws: steadier scores
-card = pipeline.scorecard(noise_levels=3)   # low, medium and high noise
-card = pipeline.scorecard(seed=None)        # fresh draws every time
-card.seed                                   # the seed that was drawn, to repeat the run
-```
-
-When tuning a model on the scorecard, 20 or 30 instances keep the score from
-rewarding luck on a few draws; with `seed=None` every evaluation sees new
-series, so the tuning cannot overfit to fixed ones.
-
-Pick your own series. `test` returns the report; `run` keeps the forecasts too:
-
-```python
-from timegym import Scenario
-
-suite = [
-    Scenario("seasonal", context_length=240, horizon=24),
-    Scenario("random_walk", parameters={"drift": 0.1}),
-]
-report = pipeline.test(suite, seed=0, instances=30)   # scores and checks
-run = pipeline.run(suite, seed=0, instances=3)         # the same, plus every forecast
-run.plot_forecasts()
-```
-
-[![Three draws each of a seasonal series and a random walk with drift, with the last-value forecast](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-custom-scenarios.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-custom-scenarios.png)
+The [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) shows the rest: the
+scorecard as a DataFrame (`card.table`), how many draws to use and what `seed=None` does, and
+`pipeline.test` on series you choose. [Scorecards and the scenario grid](https://diogoseca.github.io/timegym/docs/api/scorecard/)
+lists every attribute.
 
 ## Why not just backtest?
 
@@ -282,61 +192,15 @@ Every forecast goes through three questions, in this order.
 A forecast that fails a check fails the test with the reason and is never
 scored, so a bug cannot pass as a slightly worse error.
 
-**2. How far is it from the answer key?** Because TimeGym generated the series,
-it knows the expected value and the spread of every future step (in the code,
-the *reference*). Your forecast is scored against both the key and what actually
-happened:
+**2. How far is it from the answer key?** Because TimeGym generated the series, it knows the expected value and the spread of every future step (in the code, the *reference*), so your forecast is scored against both the key and what actually happened.
 
-| Score | What it measures |
-| --- | --- |
-| `mean_reference_mse` | Error against the answer key: how far your forecast is from the best possible one |
-| `mse`, `mae`, `mase` | Error against what actually happened, which also contains noise nobody could predict |
-| `crps`, `energy_score`, `pinball` | For quantiles and sample paths: how close your spread is to the true spread |
+**3. Does it do what you declared?** Optional checks for specific properties: a model that claims to shift its forecast when the data shift can be tested for it, and sample paths can be tested for the right correlation between series.
 
-**3. Does it do what you declared?** Optional checks for specific properties: a
-model that claims to shift its forecast when the data shift can be tested for
-it, and sample paths can be tested for the right correlation between series.
-
-Each check returns a verdict and the numbers that led to it (in the code, a
-*diagnostic* with its *evidence*):
-
-| Verdict | Meaning |
-| --- | --- |
-| `PASS` | The check was run and satisfied |
-| `FAIL` | Something is wrong: a malformed forecast, or a broken declared property |
-| `INCONCLUSIVE` | Scored, but no pass mark is set. TimeGym tells you how far off you are; what counts as good enough is your call |
-| `UNSUPPORTED` | Not checked, because the forecast lacks what the check needs, such as quantiles |
-| `ERROR` | The model crashed; the traceback is kept |
-
-[How TimeGym decides](https://diogoseca.github.io/timegym/docs/concepts/how-timegym-decides/)
-explains each verdict in more depth.
+Each check returns one of five verdicts (`PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`) and the numbers that led to it. Scores are always `INCONCLUSIVE`: TimeGym tells you how far off you are and leaves the pass mark to you. [How TimeGym decides](https://diogoseca.github.io/timegym/docs/concepts/how-timegym-decides/) explains each verdict, and [Scores and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/) each score.
 
 ## Scenarios
 
-The scorecard's rows are ten kinds of series, each drawn at low noise (standard
-deviation 0.5) and high noise (2.0). For each one TimeGym knows what a forecast
-*can* get right, and what nobody can predict:
-
-| Kind of series | What a good forecast gets right | What nobody can predict |
-| --- | --- | --- |
-| Pure noise | Only the average, zero: the best forecast is a flat line at zero. | Every individual value. Any pattern a model finds here is invented. |
-| Noise around a fixed level | The level, estimated from the whole history. | Each wiggle around the level. |
-| Straight-line trend | The line, extended any number of steps ahead. | The noise around the line. |
-| Repeating seasonal cycle | The repeating shape, any number of steps ahead. | The noise around the cycle. |
-| Trend + seasonal cycle | Both the line and the repeating shape. | The noise around them. |
-| Sudden level shift | The new level, from the history since the jump. | The noise. Older history sits at the old level and misleads. |
-| Mean reversion (AR(1)): shocks fade | The pull back to the average: a gap halves in about three steps. | New shocks. After about ten steps only the average is left; measurement noise hides where the series is now. |
-| Irregular cycles (AR(2)) | The rest of the current swing, fading over the next cycles. | When the next swings come and how big they are; noise hides the current phase. |
-| Random walk: shocks never fade | Where it is now: the best forecast is flat at the current level, smoothed when noisy. | The direction of the next move. Uncertainty grows without limit with the horizon. |
-| Random walk with drift | The current level plus the steady drift. | The wandering around the drift line, which grows with the horizon. |
-
-Mean reversion and the random walk are the same equation: each step keeps a
-fraction of the last step's distance from the mean and adds a fresh shock. Keep
-80% and the series is pulled back; keep 100% and the pull is gone. The
-[scenario guide](docs/stress-cases.md) explains each kind in plain terms, and
-the composed and financial ones beyond the scorecard: price jumps, volatility
-clusters (GARCH) and hidden regime switches, alone or across several correlated
-series.
+The scorecard's rows are ten kinds of series, from pure noise to random walks with drift, each drawn at low noise (standard deviation 0.5) and high noise (2.0). For each one TimeGym knows what a forecast *can* get right and what nobody can predict; the scorecard prints both, and [Scorecards and the scenario grid](docs/api/scorecard.md#the-grid) lists all ten. The [scenario guide](docs/stress-cases.md) explains each kind in plain terms, why mean reversion and the random walk are the same equation, and the composed and financial ones beyond the scorecard: price jumps, volatility clusters (GARCH) and hidden regime switches, alone or across several correlated series.
 
 ## Tutorials
 
@@ -355,9 +219,8 @@ series.
 | | [Composed and financial stresses](https://diogoseca.github.io/timegym/tutorials/11_composed_and_financial_stresses/) | A ladder of mechanisms, bad luck vs a bad model, a conversion bug |
 | | [Joint financial uncertainty](https://diogoseca.github.io/timegym/tutorials/12_joint_financial_uncertainty/) | Assets that crash together, and the check that notices a lost link |
 
-The tutorials run on CPU with local data. Clone the repository, then
-`pip install -e '.[notebooks]'` and `python -m jupyterlab tutorials`; the
-[tutorials guide](tutorials/README.md) describes the folder.
+The tutorials run on CPU with local data; [Run the notebooks](https://diogoseca.github.io/timegym/docs/tutorials/#run-the-notebooks)
+gives the two commands, and the [tutorials guide](tutorials/README.md) describes the folder.
 
 ## Scope and development
 

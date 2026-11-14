@@ -1,0 +1,59 @@
+{
+  "protocol_version": "2.1",
+  "study_id": "study-2-exploratory-follow-up",
+  "status": "exploratory",
+  "chosen_on": "2026-11-13",
+  "selection": "These analyses were chosen on 2026-11-13, after the protocol 2.0 results were known. They are exploratory: none of them was declared before the Study 2 evaluation run, and their thresholds, cells and summaries were chosen with those results in view. They add numbers to the paper; they do not replace or revise protocol 2.0, whose records stay frozen.",
+  "frozen_inputs": {
+    "study_1_protocol": {"path": "experiments/protocol.json", "sha256": "2c4d9958edf54f9361154a798a0fc6cb9645de424d39411e1fd729856a7ce552"},
+    "study_1_results": {"path": "experiments/results/results.json", "sha256": "cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014"},
+    "study_2_protocol": {"path": "experiments/protocol-v2.json", "sha256": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30"},
+    "study_2_results": {"path": "experiments/results-v2/results.json", "sha256": "13b1228e7124b95f30953c8ee23e5189087e4c45d34de12c509ae9433a90b5b5"}
+  },
+  "answer_key_alarm": {
+    "purpose": "Apply the Study 2 calibrated alarm to the distance from the answer key instead of the realized error.",
+    "conditions": "All six Study 2 model conditions, in protocol 2.0 order.",
+    "calibration": "Re-run only the clean calibration fits of protocol 2.0 (same conditions, seeds, window and ridge penalty). For each case record mse(case.reference.mean, forecast.point), the mean squared distance of the clean forecast from the answer key.",
+    "reproduction_check": "The re-run realized MSE of every calibration case must equal the frozen calibration_records value within the tolerance below; the run fails otherwise and records the largest difference.",
+    "reproduction_tolerance": 1e-09,
+    "alpha": 0.05,
+    "rule": "experiments.run_supplement.conformal_threshold on the 128 clean calibration distances of each condition; alarm iff an evaluation case's distance strictly exceeds the threshold.",
+    "evaluation_scores": "mean_reference_mse of the frozen evaluation records in experiments/results-v2/results.json; evaluation cases are not re-run.",
+    "branches": ["clean", "reverse_prediction_lags", "stale_recursive_state", "omit_inverse_target_scaling", "swap_recursive_targets"],
+    "comparison": "Frozen realized-loss alarm (alarms.loss) on the same records.",
+    "summary_faults": ["reverse_prediction_lags", "stale_recursive_state"],
+    "summary_excluded_conditions": ["seasonal_scales"]
+  },
+  "repair_mechanism": {
+    "purpose": "Explain why restoring the stale-state branch worsens forecasts on the random walk with drift.",
+    "condition": "random_walk_drifts",
+    "branches": ["clean", "stale_recursive_state"],
+    "cases": "The 64 protocol 2.0 evaluation seeds of this condition, re-run.",
+    "reproduction_check": "The re-run mean_reference_mse of both branches must equal the frozen evaluation records within the answer-key reproduction tolerance.",
+    "coefficient_sum": "For each target, the sum over the six lags of the clean fit's own-target coefficients in original units: Ridge coefficient times target scale divided by feature scale.",
+    "per_step_distance": "For each horizon step, the mean over cases of the squared distance from the answer key, averaged over the two targets.",
+    "closer_count": "Number of frozen evaluation cases whose stale-state mean_reference_mse is below the clean one.",
+    "frozen_interval": "clean_minus_faulty_reference_mse of this condition and fault, read from the frozen loss_summaries."
+  },
+  "scorecard_precision": {
+    "purpose": "Measure how much a ten-instance scorecard cell moves between sets of seeds.",
+    "pipeline": "Pipeline(window_length=24).add(StandardScaler()).add(Ridge(alpha=1.0)), the Figure 1 pipeline in paper/figure_scorecard.py",
+    "scorecard": {"instances": 30, "seed": 0},
+    "figure_instances": 10,
+    "figure_check": "The score from the first ten instances of each cell must equal the score of pipeline.scorecard() with package defaults, which Figure 1 shows.",
+    "bootstrap": {"resamples": 4000, "size": 10, "replace": true, "generator": "numpy.random.default_rng", "seed": 0, "order": "One generator shared by the 20 cells in scorecard table order"},
+    "score": "100 U/(U + A) with U and A the mean unavoidable and avoidable errors of the resampled instances, as the scorecard defines it.",
+    "summaries": ["standard deviation (ddof 0) of the bootstrap scores", "2.5 and 97.5 percentiles of the bootstrap scores"]
+  },
+  "trend_ar1": {
+    "purpose": "Explain the fitted AR(1) result on the trend in the Study 1 capability table.",
+    "scenario": "trend",
+    "model": "gaussian_ar1, as constructed by experiments.run_study.capability_models",
+    "sigma": [0.25, 2.0],
+    "task": "Study 1 capability_task: context 120, horizon 8, one target",
+    "seeds": [10000, 10016],
+    "reproduction_check": "The re-run mean_reference_mse of every case must equal the frozen Study 1 capability_records value within the answer-key reproduction tolerance.",
+    "summaries": ["mean of the fitted least-squares AR(1) coefficient with intercept (the model's phi_)", "mean over cases and steps of forecast minus answer key"]
+  },
+  "uncertainty": "Descriptive counts and means. No interval is attached to the answer-key alarm counts and no comparison is adjusted for multiplicity."
+}

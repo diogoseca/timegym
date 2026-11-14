@@ -34,11 +34,11 @@ Dependence shuffle & 5/64 [3.4, 17.0] & 0/64 [0.0, 5.7] & 64/64 [94.3, 100.0] \\
 
 \bottomrule\end{tabular}\end{table}
 
-The clean covariance check rejected 6/64 cases (9.4\%; Wilson interval [4.4, 19.0]\%). The observed rate is above the nominal 5\% per-check level, with an interval that includes 5\%. No threshold was changed to remove these false alarms. This run does not establish precise calibration or a family-wise error rate.
+The clean covariance check rejected 6/64 cases (9.4\%; Wilson interval [4.4, 19.0]\%). The observed rate is above the nominal 5\% per-check level, with an interval that includes 5\%. No threshold was changed to remove these false alarms.
 
 The point-MSE cutoff was 4.1853, the empirical 95th percentile from 16 development cases. It alarmed on 5/64 clean cases. It detects invalid point arrays, but ignores index labels, target names, quantiles, and trajectory samples. Where a mutation leaves the point values unchanged, its alarms are identical to the clean alarms and supply no mutation-specific evidence.
 
-Disabling an output mutation restored the exact clean output, including its sample array. Repaired outputs had zero contract violations and the same 6/64 covariance alarms as the clean control. These paired rechecks confirm removal of the corruption; they do not imply that every repaired case receives a statistical pass.
+Disabling an output mutation restored the exact clean output, including its sample array. Repaired outputs had zero contract violations and the same 6/64 covariance alarms as the clean control.
 
 \subsection{Study 1: marginal invariance and joint-score response}
 
@@ -46,33 +46,33 @@ Table~\ref{tab:dependence} varies the proportion of ensemble rows selected for c
 
 \begin{table}[htbp]\centering\small
 
-\caption{Mutated minus clean score, mean and paired 95\% t interval over 64 independent cases. CRPS differences are floating-point roundoff. Intervals are exploratory and not multiplicity-adjusted.}
+\caption{Mutated minus clean score, mean and paired 95\% t interval over 64 independent cases. CRPS is unchanged at every strength up to floating-point roundoff and is not tabulated. Intervals are exploratory and not multiplicity-adjusted.}
 
 \label{tab:dependence}
 
-\begin{tabular}{@{}rccc@{}}\toprule
+\begin{tabular}{@{}rcc@{}}\toprule
 
-Strength & CRPS mean & Energy & Variogram \\ \midrule
+Strength & Energy & Variogram \\ \midrule
 
-0.00 & $0$ & +0.0000 [+0.0000, +0.0000] & +0.0000 [+0.0000, +0.0000] \\
+0.00 & +0.0000 [+0.0000, +0.0000] & +0.0000 [+0.0000, +0.0000] \\
 
-0.25 & $-7.81\times10^{-18}$ & +0.0150 [+0.0037, +0.0263] & +0.0069 [+0.0019, +0.0120] \\
+0.25 & +0.0150 [+0.0037, +0.0263] & +0.0069 [+0.0019, +0.0120] \\
 
-0.50 & $6.07\times10^{-18}$ & +0.0389 [+0.0209, +0.0570] & +0.0194 [+0.0102, +0.0286] \\
+0.50 & +0.0389 [+0.0209, +0.0570] & +0.0194 [+0.0102, +0.0286] \\
 
-0.75 & $-8.67\times10^{-19}$ & +0.0679 [+0.0456, +0.0902] & +0.0295 [+0.0181, +0.0408] \\
+0.75 & +0.0679 [+0.0456, +0.0902] & +0.0295 [+0.0181, +0.0408] \\
 
-1.00 & $-4.34\times10^{-18}$ & +0.0767 [+0.0534, +0.1001] & +0.0351 [+0.0230, +0.0472] \\
+1.00 & +0.0767 [+0.0534, +0.1001] & +0.0351 [+0.0230, +0.0472] \\
 
 \bottomrule\end{tabular}\end{table}
 
 \subsection{Study 1: capability profiles}
 
-The univariate capability sweep uses 16 evaluation seeds, three innovation scales, five kinds of series, and three unmodified models. Table~\ref{tab:capability} scores each model against the answer key at the lowest and highest scale: 100 times the unavoidable error over the sum of the unavoidable and avoidable errors (Section~\ref{sec:references}). The full three-scale sweep is in \code{figures/capability-curves.pdf} and \code{capability-summary.csv} of the reproducibility artifact. The fitted AR(1) nails white noise and mean reversion and fails on the trend at both scales. For the zero-drift random walk, the last value is the answer key. Noise matters where a fixed-size pattern competes with it: on the seasonal cycle the fitted AR(1) scores 9 at low noise and 91 at high noise, where the cycle is mostly buried and ignoring it costs little.
+The univariate capability sweep uses 16 evaluation seeds, three innovation scales, five kinds of series, and three unmodified models. Table~\ref{tab:capability} gives each model's score (Equation~\eqref{eq:score}) at the lowest and highest scale. The full three-scale sweep is in \code{figures/capability-curves.pdf} and \code{capability-summary.csv} of the reproducibility artifact. The fitted AR(1) nails white noise and mean reversion and fails on the trend at both scales, and gets worse with noise there: at low noise its coefficient is close to 1 and it follows the line, while at high noise the estimate falls to about \TrendARPhiHigh{} and the forecast reverts towards the mean of the history, below the trend. For the zero-drift random walk, the last value is the answer key. Noise matters where a fixed-size pattern competes with it: on the seasonal cycle the fitted AR(1) scores 9 at low noise and 91 at high noise, where the cycle is mostly buried and ignoring it costs little.
 
 \begin{table}[htbp]\centering\small
 
-\caption{Score out of 100 (100 matches the answer key) at low ($\sigma=0.25$) and high ($\sigma=2$) innovation noise, over 16 cases each. N nails it, G good, S struggles, F fails. White noise, mean reversion and the random walk score the same at both levels: with a zero mean and no drift, a larger $\sigma$ only rescales the series. The package's scorecard adds measurement noise to tell those levels apart.}
+\caption{Score out of 100 (100 matches the answer key) at low ($\sigma=0.25$) and high ($\sigma=2$) innovation noise, over 16 cases each. N nails it, G good, S struggles, F fails. White noise, mean reversion and the random walk score the same at both levels: with a zero mean and no drift, a larger $\sigma$ only rescales the series. The package's scorecard adds measurement noise to tell those levels apart. The frozen Study 1 used $\sigma=0.25$; the package scorecard's low level is 0.5.}
 
 \label{tab:capability}
 

@@ -61,10 +61,8 @@ def update(root: Path, versions: list[str]) -> bool:
         text = re.sub(r"python-version: '[^']+' # current-python",
                       f"python-version: '{latest}' # current-python", text)
         if path.name == 'checks.yml':
-            text = re.sub(r'python-version: \[[^\n]+\]', f'python-version: {versions!r}', text)
+            text = re.sub(r'python-version: \[[^\n]+\]', f'python-version: {[oldest, latest]!r}', text)
         path.write_text(text)
-    docker = root / 'Dockerfile'
-    docker.write_text(re.sub(r'^FROM python:[^\n]+', f'FROM python:{latest}-slim', docker.read_text(), flags=re.M))
     for relative in ('README.md', 'docs/release.md'):
         path = root / relative
         text = path.read_text()

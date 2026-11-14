@@ -99,8 +99,6 @@ rebuilds bundled transforms only.
 
 ## Signatures
 
-Generated from the docstrings in the code.
-
 ::: timegym.smoothing.simple_moving_average
 
 ::: timegym.smoothing.exponential_moving_average

@@ -52,19 +52,13 @@ errors across draws does not.
 
 ## The scorecard's ten rows
 
-`Pipeline.scorecard()` draws ten kinds of series from these scenarios, each at
-low and high noise: pure noise, noise around a fixed level, a straight-line
-trend, a repeating seasonal cycle, trend plus seasonal cycle, a sudden level
-shift in the history, mean reversion, irregular cycles, and random walks with and
-without drift. On the mean-reversion, cycle and random-walk rows the noise is
-measurement noise on top of the hidden process, so a good forecaster has to
-smooth it out. [Scorecards and the scenario grid](api/scorecard.md) lists each
-row's parameters and what it lets a forecast get right.
+`Pipeline.scorecard()` draws ten kinds of series from these scenarios, each at low and high noise; on the autoregressive and random-walk rows the noise is measurement noise on top of the hidden process. [Scorecards and the scenario grid](api/scorecard.md) lists each row.
 
 ## Composed and financial scenarios
 
 Four more recipes combine or extend the core ones. Each works for one series or
-for several correlated series.
+for several correlated series. [Scenario equations](scenario-equations.md) gives
+the generating equations and the answer key of each.
 
 | Scenario | What it adds | What it tests |
 | --- | --- | --- |
@@ -73,37 +67,9 @@ for several correlated series.
 | `garch` | Returns whose volatility clusters: calm periods and turbulent periods | Whether the forecast spread widens and narrows with recent volatility |
 | `markov_switching` | Hidden regimes, such as calm and stressed, with different behavior in each | Whether a model infers the regime it cannot see |
 
-The rest of this page explains these four in more depth: what they can and
-cannot show, and how to build a test out of them.
-
-## Changing mechanisms
-
-Seasonality repeats: for example, a cycle with fixed amplitude, period, and phase.
-Process drift is an expected increment, as in a random walk with drift. Concept
-drift concerns a changing predictive relationship; distribution shift can also
-change the inputs. Changes may affect trend slope, seasonal amplitude or period,
-noise variance or tails, jump intensity, or regime probabilities.
-[Gama et al. (2014)](https://doi.org/10.1145/2523813) distinguish these forms of
-distributional change.
-
-A stable seasonal cycle is not automatically a changing mechanism when calendar
-phase is part of the conditioning information. Likewise, changing volatility in
-a fixed GARCH process, or switching states under a fixed transition matrix, need
-not mean that the generating law changed. Test **state changes** and **parameter
-changes** separately.
-
 ## Available mechanisms
 
-Use these `Scenario` kinds through the `Pipeline.run` and
-`Pipeline.test` entry points. All four kinds, like the five core Gaussian
-families, support `n_targets > 1`. Joint draws retain `(sample, horizon, target)` order.
-
-| Kind | Controlled mechanism | Output and interpretation |
-| --- | --- | --- |
-| `composite` | Deterministic trend and sinusoid; one residual process, either white noise or random walk; optional Poisson increments and a change schedule | General time-series levels; component changes are explicit |
-| `merton_jump_diffusion` | Diffusion with compound-Poisson jumps | `price`, `log_price`, or `log_return`; physical expected-return drift includes jump compensation |
-| `garch` | Gaussian GARCH(1,1) innovations with recursive conditional variance | `log_return` or `log_price`; no price output |
-| `markov_switching` | Hidden regimes with state-dependent return distributions and optional regime-dependent jumps | `price`, `log_price`, or `log_return`; the reference filters the hidden regime |
+Use these `Scenario` kinds through the `Pipeline.run` and `Pipeline.test` entry points. All four kinds, like the core families, support `n_targets > 1`; [Composed and joint processes](api/processes.md) gives their parameters, outputs and units.
 
 [Merton (1976)](https://doi.org/10.1016/0304-405X(76)90022-2) motivates
 discontinuous price dynamics; [Bollerslev (1986)](https://doi.org/10.1016/0304-4076(86)90063-1)
@@ -132,37 +98,10 @@ forecast target before composing mechanisms.
 
 A synthetic suite can itself be overfit. Passing it establishes behavior under
 its declared assumptions; it does not establish real-market accuracy or profits.
-[FinStressTS (2026)](https://doi.org/10.1145/3770855.3817578) provides closely related
-mechanism-based financial forecasting benchmarks. TimeGym additionally emphasizes
-implementation contracts, controlled faults, and repair verification.
-
-## Match the model class to the target
-
-| Forecast target | Useful model classes to test |
-| --- | --- |
-| Levels or conditional return means | Last-value controls, linear regressions, autoregressions |
-| Return variance and predictive tails | ARCH/GARCH and probabilistic forecasters |
-| Latent levels, trends, or regimes | State-space and regime-switching models |
-| Nonlinear dependence on observed predictors | Trees and neural networks |
-| General forecasting transfer | Time-series foundation models with explicit input/output contracts |
-
-These are candidate classes, not rankings. Financial evaluation depends on the
-target and loss; [FinTSB (2026)](https://doi.org/10.1007/s11704-026-51064-5) emphasizes
-task-specific evaluation and realistic market constraints. Price, log price, returns, and
-volatility are different prediction problems.
 
 ## Reference limits
 
-References integrate future innovations and hidden-state uncertainty rather than
-using the realized future path. Analytic means and conditional samplers are
-provided where supported; multivariate GARCH labels its numerical cross-covariance; non-Gaussian marginal quantiles are empirical and
-identified as such. Multi-step GARCH distributions need not be Gaussian.
-
-Regime switching with jumps uses a numerical posterior approximation. Its
-covariance rank diagnostic is disabled rather than presented as an exact test.
-Inspect reference metadata and `UNSUPPORTED` outcomes alongside scores. See
-[Tasks and forecasts](api/tasks-and-forecasts.md) for output shapes and
-[Scores and diagnostics](api/diagnostics.md) for diagnostic semantics.
+Multi-step GARCH distributions need not be Gaussian, and regime switching with jumps uses a numerical approximation, so its covariance check returns `UNSUPPORTED`. [Composed and joint processes](api/processes.md) says which answer keys are exact and which are estimated; inspect reference metadata and `UNSUPPORTED` outcomes alongside scores.
 
 ## Extend a mechanism to dependent targets
 

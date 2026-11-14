@@ -1,8 +1,9 @@
-"""Draw the README's scorecard figures: python tools/readme_figures.py [folder]
+"""Draw the README's figures: python tools/readme_figures.py [folder]
 
-Runs the README's "More things to do with a scorecard" examples with the
-built-in LastValueForecaster and saves each figure as docs/images/readme-*.png
-(or into the folder given). Rerun it whenever the plots change style.
+Saves the scorecard of the built-in LastValueForecaster as docs/images/scorecard.png
+and runs the README's "More things to do with a scorecard" examples, saving each
+figure as docs/images/readme-*.png (or into the folder given). Rerun it whenever
+the plots change style.
 """
 import sys
 from pathlib import Path
@@ -12,7 +13,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from timegym import LastValueForecaster, Pipeline, Scenario
+from timegym import LastValueForecaster, Pipeline
 
 folder = Path(sys.argv[1] if len(sys.argv) > 1 else "docs/images")
 folder.mkdir(parents=True, exist_ok=True)
@@ -25,17 +26,11 @@ def save(figure, name):
     print(f"Saved {folder / name}")
 
 
+pipeline.scorecard().save(folder / "scorecard.png")
+print(f"Saved {folder / 'scorecard.png'}")
 trend = pipeline.scorecard(["trend"], instances=3)
-trend.save(folder / "readme-trend-scorecard.png")
-print(f"Saved {folder / 'readme-trend-scorecard.png'}")
 save(trend.run.plot_forecasts(), "readme-trend-forecasts.png")
 save(
     pipeline.scorecard(["trend"], instances=20).run.plot_errors(metric="mse"),
     "readme-trend-errors.png",
 )
-
-suite = [
-    Scenario("seasonal", context_length=240, horizon=24),
-    Scenario("random_walk", parameters={"drift": 0.1}),
-]
-save(pipeline.run(suite, seed=0, instances=3).plot_forecasts(), "readme-custom-scenarios.png")

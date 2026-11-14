@@ -1,0 +1,161 @@
+{
+  "frozen_inputs_sha256": {
+    "experiments/protocol-v2.json": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30",
+    "experiments/protocol.json": "2c4d9958edf54f9361154a798a0fc6cb9645de424d39411e1fd729856a7ce552",
+    "experiments/results-v2/results.json": "13b1228e7124b95f30953c8ee23e5189087e4c45d34de12c509ae9433a90b5b5",
+    "experiments/results/results.json": "cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014"
+  },
+  "package_version": "1.4.0",
+  "platform": "Linux-6.18.44-fc-v445-x86_64-with-glibc2.39",
+  "protocol": {
+    "answer_key_alarm": {
+      "alpha": 0.05,
+      "branches": [
+        "clean",
+        "reverse_prediction_lags",
+        "stale_recursive_state",
+        "omit_inverse_target_scaling",
+        "swap_recursive_targets"
+      ],
+      "calibration": "Re-run only the clean calibration fits of protocol 2.0 (same conditions, seeds, window and ridge penalty). For each case record mse(case.reference.mean, forecast.point), the mean squared distance of the clean forecast from the answer key.",
+      "comparison": "Frozen realized-loss alarm (alarms.loss) on the same records.",
+      "conditions": "All six Study 2 model conditions, in protocol 2.0 order.",
+      "evaluation_scores": "mean_reference_mse of the frozen evaluation records in experiments/results-v2/results.json; evaluation cases are not re-run.",
+      "purpose": "Apply the Study 2 calibrated alarm to the distance from the answer key instead of the realized error.",
+      "reproduction_check": "The re-run realized MSE of every calibration case must equal the frozen calibration_records value within the tolerance below; the run fails otherwise and records the largest difference.",
+      "reproduction_tolerance": 1e-09,
+      "rule": "experiments.run_supplement.conformal_threshold on the 128 clean calibration distances of each condition; alarm iff an evaluation case's distance strictly exceeds the threshold.",
+      "summary_excluded_conditions": [
+        "seasonal_scales"
+      ],
+      "summary_faults": [
+        "reverse_prediction_lags",
+        "stale_recursive_state"
+      ]
+    },
+    "chosen_on": "2026-11-13",
+    "frozen_inputs": {
+      "study_1_protocol": {
+        "path": "experiments/protocol.json",
+        "sha256": "2c4d9958edf54f9361154a798a0fc6cb9645de424d39411e1fd729856a7ce552"
+      },
+      "study_1_results": {
+        "path": "experiments/results/results.json",
+        "sha256": "cb8b53b50f30c6b6bfcdf945cd84640fcbeb44ed49588e3ecf87dcc62a59b014"
+      },
+      "study_2_protocol": {
+        "path": "experiments/protocol-v2.json",
+        "sha256": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30"
+      },
+      "study_2_results": {
+        "path": "experiments/results-v2/results.json",
+        "sha256": "13b1228e7124b95f30953c8ee23e5189087e4c45d34de12c509ae9433a90b5b5"
+      }
+    },
+    "protocol_version": "2.1",
+    "repair_mechanism": {
+      "branches": [
+        "clean",
+        "stale_recursive_state"
+      ],
+      "cases": "The 64 protocol 2.0 evaluation seeds of this condition, re-run.",
+      "closer_count": "Number of frozen evaluation cases whose stale-state mean_reference_mse is below the clean one.",
+      "coefficient_sum": "For each target, the sum over the six lags of the clean fit's own-target coefficients in original units: Ridge coefficient times target scale divided by feature scale.",
+      "condition": "random_walk_drifts",
+      "frozen_interval": "clean_minus_faulty_reference_mse of this condition and fault, read from the frozen loss_summaries.",
+      "per_step_distance": "For each horizon step, the mean over cases of the squared distance from the answer key, averaged over the two targets.",
+      "purpose": "Explain why restoring the stale-state branch worsens forecasts on the random walk with drift.",
+      "reproduction_check": "The re-run mean_reference_mse of both branches must equal the frozen evaluation records within the answer-key reproduction tolerance."
+    },
+    "scorecard_precision": {
+      "bootstrap": {
+        "generator": "numpy.random.default_rng",
+        "order": "One generator shared by the 20 cells in scorecard table order",
+        "replace": true,
+        "resamples": 4000,
+        "seed": 0,
+        "size": 10
+      },
+      "figure_check": "The score from the first ten instances of each cell must equal the score of pipeline.scorecard() with package defaults, which Figure 1 shows.",
+      "figure_instances": 10,
+      "pipeline": "Pipeline(window_length=24).add(StandardScaler()).add(Ridge(alpha=1.0)), the Figure 1 pipeline in paper/figure_scorecard.py",
+      "purpose": "Measure how much a ten-instance scorecard cell moves between sets of seeds.",
+      "score": "100 U/(U + A) with U and A the mean unavoidable and avoidable errors of the resampled instances, as the scorecard defines it.",
+      "scorecard": {
+        "instances": 30,
+        "seed": 0
+      },
+      "summaries": [
+        "standard deviation (ddof 0) of the bootstrap scores",
+        "2.5 and 97.5 percentiles of the bootstrap scores"
+      ]
+    },
+    "selection": "These analyses were chosen on 2026-11-13, after the protocol 2.0 results were known. They are exploratory: none of them was declared before the Study 2 evaluation run, and their thresholds, cells and summaries were chosen with those results in view. They add numbers to the paper; they do not replace or revise protocol 2.0, whose records stay frozen.",
+    "status": "exploratory",
+    "study_id": "study-2-exploratory-follow-up",
+    "trend_ar1": {
+      "model": "gaussian_ar1, as constructed by experiments.run_study.capability_models",
+      "purpose": "Explain the fitted AR(1) result on the trend in the Study 1 capability table.",
+      "reproduction_check": "The re-run mean_reference_mse of every case must equal the frozen Study 1 capability_records value within the answer-key reproduction tolerance.",
+      "scenario": "trend",
+      "seeds": [
+        10000,
+        10016
+      ],
+      "sigma": [
+        0.25,
+        2.0
+      ],
+      "summaries": [
+        "mean of the fitted least-squares AR(1) coefficient with intercept (the model's phi_)",
+        "mean over cases and steps of forecast minus answer key"
+      ],
+      "task": "Study 1 capability_task: context 120, horizon 8, one target"
+    },
+    "uncertainty": "Descriptive counts and means. No interval is attached to the answer-key alarm counts and no comparison is adjusted for multiplicity."
+  },
+  "protocol_sha256": "9ec8e7b2c7b62344d128d0583afaa70b3f166e70edc9fc2be10d8d1f57ccf5dd",
+  "python": "3.13.18",
+  "results_sha256": "e6601277e17d3cc8781982a29eb7faa79a2f6d7dfe3b8f132aeff8b6154938c1",
+  "source_files": {
+    "experiments/common.py": "cedd7261786543de5651ed127c295135dfc3487750736295ef4fa1036432b5e7",
+    "experiments/model_faults.py": "3449ed9b9d74cb150ccf2a341340ff9516036c0ec1e665f4f339ae04ae0a119d",
+    "experiments/protocol-v2-followup.json": "9ec8e7b2c7b62344d128d0583afaa70b3f166e70edc9fc2be10d8d1f57ccf5dd",
+    "experiments/run_followup.py": "03af8968553f5fddcfcb4030982cc7935fb765431629e415d3cd7ac9e86fca40",
+    "experiments/run_study.py": "d0468239855a27503affb1c7931033f4cd6240b6ea54ec83f5238d27fdbca5d4",
+    "experiments/run_supplement.py": "906dfb09a99e8750c1e2e337be9cf68842504d78053865dd2e06ba9ab1d2c153",
+    "timegym/__init__.py": "06448f6093ae54860842f84220a408f52ea44be1f9d5d5c9f43c9641f688e937",
+    "timegym/_internal.py": "9e55fb4b2b29a95c4f4d616be7f375dd2602a17b9d2e94553bb422c92ff98b08",
+    "timegym/_process_common.py": "87a50c56d688b115b0cdcbedbc4496d44a112d67a8fea47b76990075c5680271",
+    "timegym/checks.py": "550947c5717e6d63f613fbef9a417c80139a46d39e5b2892a63e1d18eadd9fea",
+    "timegym/contracts.py": "8ca5e8af47bb68e20b0f4c44dc6ba98a3c81ca04d19c0173acfa34c4af264d24",
+    "timegym/data/real.py": "1717283eaf18e2dfe2673c358bc863d70caf90b1c139ea538764e1601525e8fa",
+    "timegym/data/synthetic.py": "b358f97f4905d54abe31e4a8fc49b1a0c41d22a7cb1ca7b5513418a61176eaab",
+    "timegym/diagnostics.py": "9a48abf20cdc03a813642eb90cbd50c305f3a43d2ff006dbb2a5912a0d7a074e",
+    "timegym/evaluation.py": "d45d4b3a8936e3f645be730ea326a26f7a52c2f3c94987e2133efefb25dcec50",
+    "timegym/features.py": "5ba1a5ffc1e7bbb185a837e88669159b701104ada2e486ee7b1d83bb1c98fe36",
+    "timegym/grid.py": "28992f3f6575c9cb3b74d2cb500128077f4c6cd97ad535b191afef13fec0203f",
+    "timegym/joint_processes.py": "c72fccfb1e4a0be7c7d1c388188343268ee10ff37969a6d343ea76bd14f70dd4",
+    "timegym/metrics.py": "5e3a7431bff3d46d1a31dc2bda8ddcb9c142a2301cedfab180948252528fcd4c",
+    "timegym/models.py": "a60dabc3dbc07d34eef65ee801efaf5553de79d9501a1743946d192430bc4f57",
+    "timegym/mutations.py": "966d7a10ef209c8946ffbf11a2f7e619dfa58e8c64849d17472051a00155c715",
+    "timegym/pipeline.py": "540c552d27b84c7e203647519bbd24b4395ed9b76f520ff9270cf902bcfe4dfe",
+    "timegym/plotting.py": "bbcd53545e39eab4dac0299686c664b7c189ec55f3d6106a499c6e620a055da2",
+    "timegym/processes.py": "200004e591799c3552938442274deee81458826e0dfe0bf76dd32801ed09def6",
+    "timegym/provenance.py": "066f9230d241429bb313f1c997a67c8a27c3b8f040f1458cc37ac32c68faba93",
+    "timegym/reporting.py": "5810631ae4f3dda7f1dd35c28a9004fd89821a11366a01b1fdc56d96ceee3f9e",
+    "timegym/scenarios.py": "215d007b8e9d18cb412783bc8d2bdb85c3f231b053fc9c9593b35a2db97a241e",
+    "timegym/scorecard.py": "318362b5914fb81e22d959e379b45a9b6c85d5f2ca202ed16634a34794856169",
+    "timegym/smoothing.py": "677da64f01cb0ac4823a8032ef1f3409e012534aab49e1651cb978ac2dd7e93a",
+    "timegym/statistics.py": "d66c136ba2b2b513973e9157aff4ab491409249ef9ee5b4cb59839ca82b7bfb0",
+    "timegym/target.py": "81d98749d726c4af1f3fab7cd756f04333f569e668b39c0065f7be4f75bdd1c1"
+  },
+  "source_note": "Hashes identify the working source, including generated package files. The follow-up was chosen after the protocol 2.0 results were known and is exploratory.",
+  "thread_limit": 1,
+  "versions": {
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.18.1"
+  }
+}

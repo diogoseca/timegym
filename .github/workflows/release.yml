@@ -28,13 +28,10 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
       - run: python -m build
       - run: python -m twine check dist/*
-      - run: python paper/build_standalone.py
-      - name: Install LaTeX
-        # cm-super supplies Type 1 T1 fonts; without it Metafont bitmap fonts fail to build.
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends latexmk texlive-latex-recommended texlive-pictures texlive-fonts-recommended cm-super
-      - name: Compile standalone manuscript
-        working-directory: paper
-        run: latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=build timegym.tex
+      - uses: actions/download-artifact@v4
+        with:
+          name: paper-pdf
+          path: paper/build
       - uses: actions/upload-artifact@v4
         with:
           name: release-distributions

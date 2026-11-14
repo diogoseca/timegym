@@ -6,9 +6,12 @@ import sys
 
 import pytest
 
-from experiments import run_study, run_supplement
+from experiments import run_addendum, run_followup, run_study, run_supplement
 from experiments.common import close_statistics, interval_cell, protect_output, sha256
 from experiments.render_results import capability_summary, render_tex as pilot_tex
+from experiments.render_addendum import check_addendum_conclusions, load_addendum, validate_addendum
+from experiments.render_followup import check_followup_conclusions, load_followup, validate_followup
+from experiments.run_followup import answer_key_counts, answer_key_totals
 from experiments.render_supplement import render_macros, render_tex as supplement_tex
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,7 +22,9 @@ def records(directory):
     return json.loads((path / 'results.json').read_text()), json.loads((path / 'manifest.json').read_text())
 
 
-@pytest.mark.parametrize('runner,folder', [(run_study, 'results'), (run_supplement, 'results-v2')])
+@pytest.mark.parametrize('runner,folder', [(run_study, 'results'), (run_supplement, 'results-v2'),
+                                           (run_followup, 'results-v2-followup'),
+                                           (run_addendum, 'results-v2-addendum')])
 def test_cli_refuses_frozen_output_before_running(runner, folder, monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['study', '--output', str(ROOT / 'experiments' / folder)])
     with pytest.raises(FileExistsError, match='results.json'):
@@ -101,21 +106,40 @@ def test_permutation_null_validation_survives_rename_and_rejects_false_null():
 
 
 def test_frozen_fragments_and_macros_are_reproducible():
+    followup, _ = load_followup()
     pilot, manifest = records('results')
-    text = pilot_tex(pilot, manifest, capability_summary(pilot, manifest['protocol']))
+    text = pilot_tex(pilot, manifest, capability_summary(pilot, manifest['protocol']), followup)
     assert text == (ROOT / 'paper/generated-results.tex').read_text()
     assert 'accompanying capability figure' not in text and 'scikit-learn' not in text
+    assert r'the estimate falls to about \TrendARPhiHigh{}' in text
     supplement, manifest = records('results-v2')
-    text = supplement_tex(supplement, manifest)
+    text = supplement_tex(supplement, manifest, followup)
     assert text == (ROOT / 'paper/generated-supplement.tex').read_text()
+    assert r'Condition & Branch & C & S & T & N & L & K \\' in text
+    assert r' & Stale state & 0 & 0 & 0 & 64 & 5 & 28 \\' in text
     assert 'Fresh corrected refit' not in text and 'wall time' not in text
-    assert 'Reduced spread & --- & ---' in text
+    assert 'Reduced spread & ---' not in text and 'reduced-spread suites have none and are omitted' in text
     assert 'clean-minus-faulty mean MSE was +0.5132 [+0.2122, +0.8141]' in text
-    macros = render_macros(supplement, manifest, records('results')[1])
+    addendum, _ = load_addendum()
+    macros = render_macros(supplement, manifest, records('results')[1], followup, addendum)
     assert macros == (ROOT / 'paper/generated-macros.tex').read_text()
     for macro, value in [('RepairDeltaMean', '0.513'), ('RepairDeltaLow', '0.212'), ('RepairDeltaHigh', '0.814'),
                          ('RepairImproved', '21'), ('CasesPerCondition', '64'), ('CasesPerRow', '384'),
-                         ('StudySklearnFits', '8,448'), ('StudyCalibrationEnsembles', '152,832')]:
+                         ('StudySklearnFits', '8,448'), ('StudyCalibrationEnsembles', '152,832'),
+                         ('AnswerKeySubtleAlarms', '148'), ('LossSubtleAlarms', '36'), ('SubtleCases', '640'),
+                         ('AnswerKeyCleanAlarms', '12'), ('LossCleanAlarms', '13'), ('CleanNonSeasonalCases', '320'),
+                         ('OwnLagSumFirst', '0.95'), ('OwnLagSumSecond', '0.91'), ('ReferenceDeltaMean', '0.354'),
+                         ('ReferenceDeltaLow', '0.242'), ('ReferenceDeltaHigh', '0.467'), ('FaultyCloserCases', '53'),
+                         ('ScorecardNoiseSD', '3'), ('ScorecardMaxSD', '19'), ('ScorecardNoiseScore', '84'),
+                         ('ScorecardNoiseLoss', '16'), ('TrendARPhiHigh', '0.77'),
+                         ('CleanRawAnyLow', '14'), ('CleanRawAnyHigh', '33'), ('CleanHolmAnyLow', '2'),
+                         ('CleanHolmAnyHigh', '13'), ('SpreadRawAnyLow', '92'), ('SpreadRawAnyHigh', '100'),
+                         ('SpreadHolmAnyLow', '35'), ('SpreadHolmAnyHigh', '59'),
+                         ('FisherSpreadSuites', '63'), ('HolmSpreadSuites', '30'), ('FisherCleanSuites', '5'),
+                         ('HolmCleanSuites', '3'), ('SuitesPerVariant', '64'), ('FisherCleanLow', '3'),
+                         ('FisherCleanHigh', '17'), ('SuiteAlphaPercent', '5'), ('PairedFlagged', '21'),
+                         ('PairedPairs', '24'), ('PairedFlips', '9,999'), ('HochbergSpreadSuites', '35'),
+                         ('SimesSpreadSuites', '41'), ('HochbergCleanSuites', '3'), ('SimesCleanSuites', '3')]:
         assert rf'\newcommand{{\{macro}}}{{{value}}}' in macros
 
 
@@ -304,3 +328,288 @@ def test_reuse_rejects_unexpected_sample_mutation(monkeypatch):
     monkeypatch.setattr(run_study, 'mutate_forecast', mutate)
     with pytest.raises(AssertionError, match='different samples'):
         run_study.run(protocol)
+
+
+def test_followup_record_matches_its_manifest_and_frozen_inputs():
+    followup, manifest = load_followup()
+    protocol = json.loads(run_followup.PROTOCOL.read_text())
+    run_followup.validate_protocol(protocol)
+    assert manifest['protocol'] == protocol and followup['status'] == 'exploratory'
+    assert '2026-11-13' in protocol['selection'] and 'after the protocol 2.0 results were known' in protocol['selection']
+    for item in protocol['frozen_inputs'].values():
+        assert manifest['frozen_inputs_sha256'][item['path']] == item['sha256'] == sha256(ROOT / item['path'])
+    assert manifest['package_version'] and set(manifest['versions']) == {'numpy', 'pandas', 'scipy', 'scikit-learn'}
+    assert 'experiments/run_followup.py' in manifest['source_files']
+
+
+def test_followup_answer_key_alarm_recomputes_from_stored_distances_and_frozen_records():
+    followup, manifest = load_followup()
+    spec = manifest['protocol']['answer_key_alarm']
+    alarm = followup['answer_key_alarm']
+    assert alarm['largest_calibration_difference'] < spec['reproduction_tolerance']
+    assert all(len(values) == 128 for values in alarm['calibration_distances'].values())
+    supplement, _ = records('results-v2')
+    rows = answer_key_counts(alarm['calibration_distances'], supplement['model']['records'], spec['alpha'],
+                             alarm['conditions'], spec['branches'])
+    stored = [{key: row[key] for key in rows[0]} for row in alarm['rows']]
+    assert rows == stored
+    frozen_loss = {row['condition']: row['loss_calibration_threshold']
+                   for row in supplement['model']['condition_summaries'] if row['check'] == 'loss'}
+    assert all(row['loss_threshold'] == frozen_loss[row['condition']] for row in alarm['rows'])
+    totals = answer_key_totals(rows, spec['summary_faults'], spec['summary_excluded_conditions'])
+    assert totals == alarm['totals']
+    assert (totals['subtle_faults']['answer_key_alarms'], totals['subtle_faults']['loss_alarms'],
+            totals['subtle_faults']['n']) == (148, 36, 640)
+    assert (totals['clean']['answer_key_alarms'], totals['clean']['loss_alarms'], totals['clean']['n']) == (12, 13, 320)
+    cells = {(row['condition'], row['branch']): (row['answer_key_alarms'], row['loss_alarms']) for row in rows}
+    order = ['white_noise_locations', 'ar1_positive', 'ar1_negative', 'opposing_trends', 'seasonal_scales',
+             'random_walk_drifts']
+    assert [cells[c, 'reverse_prediction_lags'] for c in order] == [(5, 2), (42, 5), (23, 6), (0, 2), (64, 64), (2, 5)]
+    assert [cells[c, 'stale_recursive_state'] for c in order] == [(16, 2), (28, 5), (24, 2), (8, 6), (64, 64), (0, 1)]
+
+
+def test_followup_repair_scorecard_and_trend_summaries_agree_with_frozen_records():
+    followup, _ = load_followup()
+    supplement, _ = records('results-v2')
+    repair = followup['repair_mechanism']
+    by = {(row['branch'], row['seed']): row['mean_reference_mse'] for row in supplement['model']['records']
+          if row['condition'] == repair['condition']}
+    seeds = {seed for _, seed in by}
+    assert sum(by[repair['fault'], seed] < by['clean', seed] for seed in seeds) == repair['faulty_closer_to_answer_key'] == 53
+    summary = next(row for row in supplement['model']['loss_summaries']
+                   if row['condition'] == repair['condition'] and row['fault'] == repair['fault'])
+    assert repair['frozen_clean_minus_faulty_reference_mse'] == summary['clean_minus_faulty_reference_mse']
+    assert [round(value, 2) for value in repair['own_lag_coefficient_sum']['mean']] == [0.95, 0.91]
+    assert [round(value, 2) for value in repair['own_lag_coefficient_sum']['min']] == [0.78, 0.66]
+    steps = repair['per_step_squared_distance']
+    assert steps['clean'][0] == steps[repair['fault']][0]
+    assert (round(steps['clean'][-1], 2), round(steps[repair['fault']][-1], 2)) == (0.95, 0.17)
+    precision = followup['scorecard_precision']
+    figure = json.loads((ROOT / 'paper/figures/paper-figure-provenance.json').read_text())['paper-scorecard']
+    shown = {(cell['pattern'], cell['noise']): cell['score'] for cell in figure['cells']}
+    assert len(precision['cells']) == len(shown) == 20
+    for cell in precision['cells']:
+        assert math.isclose(cell['score_first_10'], shown[cell['pattern'], cell['noise']], rel_tol=0, abs_tol=1e-9)
+        assert cell['bootstrap_p2_5'] <= cell['bootstrap_p97_5']
+    sds = [cell['bootstrap_sd'] for cell in precision['cells']]
+    assert (precision['smallest_sd'], precision['largest_sd']) == (min(sds), max(sds))
+    assert (round(min(sds)), round(max(sds))) == (3, 19)
+    pilot, _ = records('results')
+    trend = {row['sigma']: row for row in followup['trend_ar1']['rows']}
+    assert set(trend) == {0.25, 2.0} and all(row['n'] == 16 for row in trend.values())
+    assert round(trend[0.25]['mean_phi'], 3) == 0.995 and round(trend[2.0]['mean_phi'], 2) == 0.77
+    assert round(trend[2.0]['mean_forecast_minus_answer_key'], 1) == -3.9
+    check_followup_conclusions(followup)
+
+
+def test_followup_rejects_changed_records_and_contradictions(tmp_path):
+    followup, manifest = load_followup()
+    path = tmp_path / 'results.json'
+    path.write_text(json.dumps({**followup, 'unrecorded': True}))
+    with pytest.raises(ValueError, match='fingerprint'):
+        validate_followup(path, followup, manifest)
+    changed = deepcopy(followup)
+    changed['answer_key_alarm']['totals']['clean']['answer_key_alarms'] = 20
+    with pytest.raises(ValueError, match='Recorded evidence'):
+        check_followup_conclusions(changed)
+    changed = deepcopy(followup)
+    changed['trend_ar1']['rows'][0]['mean_phi'] = .9
+    with pytest.raises(ValueError, match='Recorded evidence'):
+        check_followup_conclusions(changed)
+
+
+def test_followup_cli_protects_the_frozen_study_directories(monkeypatch):
+    for folder in ('results', 'results-v2'):
+        monkeypatch.setattr(sys, 'argv', ['followup', '--output', str(ROOT / 'experiments' / folder)])
+        with pytest.raises(SystemExit):
+            run_followup.main()
+
+
+def test_addendum_record_matches_its_manifest_and_frozen_inputs():
+    addendum, manifest = load_addendum()
+    protocol = json.loads(run_addendum.PROTOCOL.read_text())
+    run_addendum.validate_protocol(protocol)
+    assert manifest['protocol'] == protocol and addendum['status'] == 'exploratory'
+    assert protocol['protocol_version'] == '2.2' and protocol['chosen_on'] == '2026-11-13'
+    assert 'after the protocol 2.0 results and the protocol 2.1 follow-up were known' in protocol['selection']
+    assert 'refit nothing' in protocol['selection']
+    for item in protocol['frozen_inputs'].values():
+        assert manifest['frozen_inputs_sha256'][item['path']] == item['sha256'] == sha256(ROOT / item['path'])
+    assert 'experiments/run_addendum.py' in manifest['source_files']
+    assert protocol['paired_answer_key']['faults'] == records('results-v2')[1]['protocol']['model_study']['faults']
+
+
+@pytest.mark.parametrize('pvalues,holm,hochberg,simes', [
+    ([0.01, 0.02, 0.03, 0.04], [True, False, False, False], [True, True, True, True], True),
+    ([0.04, 0.01, 0.03, 0.02], [False, True, False, False], [True, True, True, True], True),
+    ([0.03, 0.04, 0.2, 0.5], [False] * 4, [False] * 4, False),
+    ([0.06, 0.02, 0.07, 0.9], [False] * 4, [False] * 4, False),
+    ([0.005, 0.5, 0.6, 0.7], [True, False, False, False], [True, False, False, False], True),
+])
+def test_addendum_multiplicity_helpers_on_hand_checked_inputs(pvalues, holm, hochberg, simes):
+    assert run_supplement.holm_rejections(pvalues, 0.05).tolist() == holm
+    assert run_addendum.hochberg_rejections(pvalues, 0.05).tolist() == hochberg
+    assert run_addendum.simes_rejects(pvalues, 0.05) is simes
+
+
+def test_addendum_fisher_combination_uses_the_even_chi_square_closed_form():
+    from scipy import stats
+    assert math.isclose(run_addendum.chi_square_sf_even(3.0, 2), math.exp(-1.5))
+    assert math.isclose(run_addendum.chi_square_sf_even(2.0, 4), 2 * math.exp(-1))
+    for x in (0.0, 0.7, 8.0, 15.5, 40.0):
+        assert math.isclose(run_addendum.chi_square_sf_even(x, 8), stats.chi2.sf(x, 8), rel_tol=1e-12)
+    # 0.03, 0.04, 0.2, 0.5: no single check survives Simes, but the combination rejects.
+    statistic, p = run_addendum.fisher_combination([0.03, 0.04, 0.2, 0.5])
+    assert math.isclose(statistic, -2 * math.log(0.03 * 0.04 * 0.2 * 0.5))
+    assert round(p, 4) == 0.0208
+    assert run_addendum.fisher_combination([1.0] * 4) == (0.0, 1.0)
+    with pytest.raises(ValueError):
+        run_addendum.chi_square_sf_even(1.0, 3)
+    with pytest.raises(ValueError):
+        run_addendum.fisher_combination([0.0, 0.5])
+
+
+def test_addendum_sign_flip_pvalue_bounds():
+    generator = __import__('numpy').random.default_rng(0)
+    assert run_addendum.sign_flip_pvalue([-1.0] * 6, 99, generator) == 1.0
+    assert run_addendum.sign_flip_pvalue([0.0] * 6, 99, generator) == 1.0
+    p = run_addendum.sign_flip_pvalue([1.0] * 12, 9999, generator)
+    assert 1 / 10000 <= p < 0.002
+
+
+def _same_up_to_roundoff(computed, stored, rel_tol=1e-12):
+    """Equal nested records, with floats compared up to roundoff across library versions."""
+    if isinstance(stored, dict):
+        return (isinstance(computed, dict) and computed.keys() == stored.keys()
+                and all(_same_up_to_roundoff(computed[key], stored[key], rel_tol) for key in stored))
+    if isinstance(stored, list):
+        return (isinstance(computed, list) and len(computed) == len(stored)
+                and all(_same_up_to_roundoff(a, b, rel_tol) for a, b in zip(computed, stored)))
+    if isinstance(stored, float) and isinstance(computed, float):
+        return math.isclose(computed, stored, rel_tol=rel_tol, abs_tol=0.0)
+    return computed == stored
+
+
+def test_addendum_multiplicity_recomputes_from_frozen_p_values():
+    from scipy import stats
+    addendum, manifest = load_addendum()
+    spec = manifest['protocol']['suite_multiplicity']
+    stored = addendum['suite_multiplicity']
+    supplement, supplement_manifest = records('results-v2')
+    conditions = [c['id'] for c in supplement_manifest['protocol']['covariance_study']['conditions']]
+    covariance = supplement['covariance']['records']
+    assert _same_up_to_roundoff(run_addendum.suite_multiplicity(spec, conditions, covariance), stored)
+    assert stored['frozen_decisions_checked'] == len(covariance) == 768
+    by = {(row['variant'], row['suite'], row['condition']): row for row in covariance}
+    expected = {'clean': (14, 3, 3, 3, 5), 'partial_shuffle': (64,) * 5, 'reduced_spread': (63, 30, 35, 41, 63)}
+    for variant, counts in expected.items():
+        found = [0] * 5
+        for suite in range(64):
+            p = sorted(by[variant, suite, c]['p_value'] for c in conditions)
+            found[0] += p[0] <= .05
+            found[1] += any(row['holm_alarm'] for (v, s, _), row in by.items() if (v, s) == (variant, suite))
+            found[2] += any(p[j] <= .05 / (4 - j) for j in range(4))
+            found[3] += any(p[j] <= .05 * (j + 1) / 4 for j in range(4))
+            found[4] += stats.chi2.sf(-2 * sum(math.log(x) for x in p), 8) <= .05
+        assert tuple(found) == counts
+    summaries = {row['variant']: row for row in stored['variants']}
+    for variant, counts in expected.items():
+        detected = summaries[variant]['suites_with_any_rejection']
+        assert tuple(detected[m]['count'] for m in ('raw', 'holm', 'hochberg', 'simes', 'fisher')) == counts
+    false = summaries['clean']['suites_rejecting_a_true_null']
+    assert tuple(false[m]['count'] for m in ('raw', 'holm', 'hochberg', 'simes', 'fisher')) == (14, 3, 3, 3, 5)
+    assert [round(100 * bound) for bound in false['fisher']['ci95']] == [3, 17]
+    shuffle = summaries['partial_shuffle']
+    assert shuffle['true_null_conditions'] == ['factorized_white_noise']
+    assert shuffle['suites_rejecting_a_true_null']['fisher'] is None
+    assert shuffle['suites_rejecting_a_true_null']['holm']['count'] == shuffle['rejections_per_condition'][
+        'factorized_white_noise']['holm']
+    assert summaries['reduced_spread']['rejections_per_condition'] == {
+        'factorized_white_noise': {'raw': 24, 'holm': 6, 'hochberg': 11},
+        'correlated_white_noise': {'raw': 46, 'holm': 13, 'hochberg': 21},
+        'negative_ar1': {'raw': 42, 'holm': 17, 'hochberg': 24},
+        'correlated_random_walk': {'raw': 53, 'holm': 21, 'hochberg': 27}}
+    frozen = {(row['condition'], row['variant']): row for row in supplement['covariance']['condition_summaries']}
+    for variant, row in summaries.items():
+        for condition, counts in row['rejections_per_condition'].items():
+            assert counts['raw'] == frozen[condition, variant]['raw']['count']
+            assert counts['holm'] == frozen[condition, variant]['holm']['count']
+    changed = deepcopy(covariance)
+    changed[0]['holm_alarm'] = not changed[0]['holm_alarm']
+    with pytest.raises(RuntimeError, match='frozen record'):
+        run_addendum.suite_multiplicity(spec, conditions, changed)
+
+
+def test_addendum_paired_check_recomputes_from_frozen_records():
+    import numpy as np
+    addendum, manifest = load_addendum()
+    spec = manifest['protocol']['paired_answer_key']
+    stored = addendum['paired_answer_key']
+    supplement, supplement_manifest = records('results-v2')
+    conditions = [c['id'] for c in supplement_manifest['protocol']['model_study']['conditions']]
+    model = supplement['model']['records']
+    assert _same_up_to_roundoff(run_addendum.paired_answer_key(spec, conditions, model), stored)
+    distance = {(r['condition'], r['branch'], r['seed']): r['mean_reference_mse'] for r in model}
+    generator = np.random.default_rng(spec['test']['seed'])
+    flagged = {}
+    for analysis, count in zip(stored['analyses'], spec['evaluation_seed_counts']):
+        p = []
+        for condition in conditions:
+            seeds = sorted({r['seed'] for r in model if r['condition'] == condition})[:count]
+            for fault in spec['faults']:
+                d = np.array([distance[condition, fault, s] - distance[condition, 'clean', s] for s in seeds])
+                flips = generator.choice([-1, 1], size=(spec['test']['flips'], count))
+                p.append((1 + np.sum((flips * d).mean(axis=1) >= d.mean())) / (spec['test']['flips'] + 1))
+        order = np.argsort(p, kind='stable')
+        holm = np.zeros(len(p), bool)
+        for rank, index in enumerate(order):
+            if p[index] > .05 / (len(p) - rank):
+                break
+            holm[index] = True
+        assert [pair['p_value'] for pair in analysis['pairs']] == p
+        assert [pair['holm_worse'] for pair in analysis['pairs']] == holm.tolist()
+        flagged[count] = analysis['flagged']
+    assert flagged[64] == 21 and flagged[30] in (20, 21, 22) and flagged[10] in (15, 16, 17)
+    full = next(a for a in stored['analyses'] if a['evaluation_seeds'] == 64)
+    assert full['n_pairs'] == 24
+    pairs = {(pair['condition'], pair['fault']): pair for pair in full['pairs']}
+    assert sorted(map(tuple, full['not_flagged'])) == sorted([
+        ('white_noise_locations', 'reverse_prediction_lags'), ('opposing_trends', 'reverse_prediction_lags'),
+        ('random_walk_drifts', 'stale_recursive_state')])
+    assert [round(pairs[key]['mean_difference'], 3) for key in [
+        ('white_noise_locations', 'reverse_prediction_lags'), ('opposing_trends', 'reverse_prediction_lags'),
+        ('random_walk_drifts', 'stale_recursive_state')]] == [0.007, -0.007, -0.354]
+    followup, _ = load_followup()
+    repair = followup['repair_mechanism']
+    assert 64 - pairs[repair['condition'], repair['fault']]['worse'] == repair['faulty_closer_to_answer_key']
+    check_addendum_conclusions(addendum)
+
+
+def test_addendum_rejects_changed_records_and_contradictions(tmp_path):
+    addendum, manifest = load_addendum()
+    path = tmp_path / 'results.json'
+    path.write_text(json.dumps({**addendum, 'unrecorded': True}))
+    with pytest.raises(ValueError, match='fingerprint'):
+        validate_addendum(path, addendum, manifest)
+    changed = deepcopy(addendum)
+    spread = next(row for row in changed['suite_multiplicity']['variants'] if row['variant'] == 'reduced_spread')
+    spread['suites_with_any_rejection']['fisher']['count'] = 30
+    with pytest.raises(ValueError, match='Recorded evidence'):
+        check_addendum_conclusions(changed)
+    changed = deepcopy(addendum)
+    spread = next(row for row in changed['suite_multiplicity']['variants'] if row['variant'] == 'reduced_spread')
+    spread['suites_with_any_rejection']['simes']['count'] = 30
+    with pytest.raises(ValueError, match='Holm <= Hochberg <= Simes <= Fisher'):
+        check_addendum_conclusions(changed)
+    changed = deepcopy(addendum)
+    full = next(a for a in changed['paired_answer_key']['analyses'] if a['evaluation_seeds'] == 64)
+    full['not_flagged'] = full['not_flagged'][:2]
+    with pytest.raises(ValueError, match='Recorded evidence'):
+        check_addendum_conclusions(changed)
+
+
+def test_addendum_cli_protects_the_frozen_study_directories(monkeypatch):
+    for folder in ('results', 'results-v2', 'results-v2-followup'):
+        monkeypatch.setattr(sys, 'argv', ['addendum', '--output', str(ROOT / 'experiments' / folder)])
+        with pytest.raises(SystemExit):
+            run_addendum.main()
