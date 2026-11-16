@@ -104,11 +104,12 @@ def _interval(pairs, valid, score, level=0.95):
     ``valid`` marks the instances that passed. Each instance is left out in turn
     and the rest are scored as the cell is scored. The jackknife spread of those
     scores times the Student t quantile at ``level``, with one degree of freedom
-    fewer than the instances, is the half-width. It is taken on the log-odds of
-    the score, so both ends stay between 0 and 100. When the score or a
-    leave-one-out score is exactly 0 or 100, it is taken on the score itself
-    and cut to 0 to 100. Nothing is drawn at random: the interval depends only
-    on the cell's series and ``level``.
+    fewer than the instances, is how far the interval reaches above the score.
+    Below the score it reaches ``_low_end_stretch`` times as far. Both distances
+    are taken on the log-odds of the score, so both ends stay between 0 and 100.
+    When the score or a leave-one-out score is exactly 0 or 100, they are taken
+    on the score itself and cut to 0 to 100. Nothing is drawn at random: the
+    interval depends only on the cell's series and ``level``.
     """
     count = len(pairs)
     if count < 2 or not np.isfinite(score):
@@ -118,16 +119,32 @@ def _interval(pairs, valid, score, level=0.95):
         [np.delete(np.arange(count), left_out) for left_out in range(count)]
     )
     scores = _subset_scores(unavoidable, avoidable, np.asarray(valid, dtype=bool), kept)
-    quantile = float(stats.t.ppf(0.5 + level / 2, count - 1))
+    above = float(stats.t.ppf(0.5 + level / 2, count - 1))
+    below = above * _low_end_stretch(count)
     if 0 < score < 100 and np.all((scores > 0) & (scores < 100)):
-        centre, half = _logit(score), quantile * _jackknife_spread(_logit(scores))
-        low = 100 * special.expit(centre - half)
-        high = 100 * special.expit(centre + half)
+        centre, spread = _logit(score), _jackknife_spread(_logit(scores))
+        low = 100 * special.expit(centre - below * spread)
+        high = 100 * special.expit(centre + above * spread)
     else:
-        half = quantile * _jackknife_spread(scores)
-        low, high = max(score - half, 0.0), min(score + half, 100.0)
+        spread = _jackknife_spread(scores)
+        low, high = max(score - below * spread, 0.0), min(score + above * spread, 100.0)
     # Rounding on the way to log-odds and back must not put the score outside its own interval.
     return float(min(low, score)), float(max(high, score))
+
+
+def _low_end_stretch(count):
+    """How many times further the interval reaches below a score than above it: ``1 + 1 / sqrt(count)``.
+
+    A cell's score comes from squared errors, and a few series carry most of
+    them. A card that happens to draw none of those few scores too high, and
+    its series also look alike, so an interval that reached equally far both
+    ways would lie above the long-run score too often. This factor puts the low
+    end within a few percent of where simulation says it has to be for the
+    interval to lie above the long-run score no more often than its level
+    allows when each series' avoidable error is a squared normal draw (5 to 500
+    instances, levels from 50% to 99%).
+    """
+    return 1.0 + 1.0 / math.sqrt(count)
 
 
 def _logit(score):
@@ -553,15 +570,17 @@ class Scorecard:
     other series of the same kind the score would come out a little
     different, and the interval shows by how much. ``interval_level`` says
     how cautious it is, 0.95 unless the card was made with another. With ten
-    series it is wide, and it still tends to hold the long-run score a little
-    less often than its level says; raise ``instances`` to tighten it. It
+    series it is wide; raise ``instances`` to tighten it. It reaches further
+    below the score than above it: a few series usually carry most of the
+    error, so a small card more often flatters a model than it wrongs it. It
     only knows the series the card drew, so it cannot see a model that fails
     on a kind of series the card did not draw. Fewer than two series give no
     interval (NaN). A verdict is ``settled`` when both ends of the interval
     fall in its band; ``unsettled`` lists the rows that are not. For the
     statistics: each series is left out in turn, the rest are scored, and the
     spread of those scores on the log-odds scale, times a Student t quantile,
-    gives the interval.
+    gives how far the interval reaches above the score; below it reaches
+    ``1 + 1/sqrt(n)`` times as far, with ``n`` the number of series.
 
     ``attainable`` is what the pattern's own model family (``Pattern.fitted``),
     fitted to each history, scores on 200 fresh series of the row: 100 minus

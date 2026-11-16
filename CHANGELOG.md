@@ -10,13 +10,15 @@
   `Pipeline.scorecard`, sets its confidence level: 0.95 by default, and for
   example 0.99 for a wider, more cautious interval. The card keeps it in the
   new field `Scorecard.interval_level`. With the default ten series the
-  interval is wide and still tends to hold the long-run score a little less
-  often than its level says; raise `instances` to tighten it. It only knows the
-  series the card drew, not kinds of series the card did not draw. For the
-  statistics: each series is left out in turn and the rest are scored, and the
-  spread of those scores on the log-odds scale, times a Student t quantile,
-  gives the interval; nothing is drawn at random. Scores and verdicts are
-  unchanged.
+  interval is wide; raise `instances` to tighten it. It reaches further below
+  the score than above it, because a few series usually carry most of the
+  error and a small card more often flatters a model than it wrongs it. It
+  only knows the series the card drew, not kinds of series the card did not
+  draw. For the statistics: each series is left out in turn and the rest are
+  scored, and the spread of those scores on the log-odds scale, times a
+  Student t quantile, gives how far the interval reaches above the score;
+  below it reaches 1 + 1/√n times as far, with n the number of series. Nothing
+  is drawn at random. Scores and verdicts are unchanged.
 - The printed scorecard marks a verdict that is not settled with a question
   mark (`56 Struggles?`) and ends with how many verdicts are not settled and
   how many instances to try. The image draws each interval as a short line

@@ -100,9 +100,11 @@ A higher confidence level gives a wider, more cautious interval. Pass
 card and the image name it. It is a number between 0 and 1, so `95` raises
 `ValueError`.
 
-With ten series the interval is wide, and it still tends to hold the score you
-would get from a very large number of series a little less often than its
-level says. Raise `instances` to tighten it.
+With ten series the interval is wide. Raise `instances` to tighten it.
+
+The interval reaches further below the score than above it. A few series
+usually carry most of a model's error, so a card of ten more often flatters a
+model than it wrongs it, and the low end allows for that.
 
 The interval only knows the series the card drew. It cannot see a model that
 fails on a kind of series that the card did not happen to draw, and it says
@@ -115,14 +117,35 @@ This part is for readers who want the statistics.
 
 Each series is left out in turn and the rest are scored as the cell is scored.
 How far those scores spread, times a Student t quantile with one degree of
-freedom fewer than the series, gives the half-width (a jackknife). This is
-done on the log-odds of the score, so both ends stay between 0 and 100. When
-the score, or a score with one series left out, is exactly 0 or 100 (every
-instance failed, a perfect forecaster, one instance that passed among failed
-ones), the same is done on the score itself and cut to 0 to 100. An instance
-that crashed or failed an output check scores zero wherever it is kept.
-Nothing is drawn at random, so a cell's interval depends only on its own
-series and the level, whichever other patterns were scored.
+freedom fewer than the series, gives how far the interval reaches above the
+score (a jackknife). Below the score it reaches 1 + 1/√n times as far, where n
+is the number of series: about a third more at ten series, a fifth more at
+thirty. Both distances are taken on the log-odds of the score, so both ends
+stay between 0 and 100. When the score, or a score with one series left out,
+is exactly 0 or 100 (every instance failed, a perfect forecaster, one instance
+that passed among failed ones), the same is done on the score itself and cut
+to 0 to 100. An instance that crashed or failed an output check scores zero
+wherever it is kept. Nothing is drawn at random, so a cell's interval depends
+only on its own series and the level, whichever other patterns were scored.
+
+The low end reaches further because squared errors are skewed. A card that
+happens to draw none of the few series with a large error scores too high, and
+its series also look alike, so an interval that reached equally far both ways
+would lie above the long-run score too often. The factor 1 + 1/√n puts the low
+end within a few percent of where simulation says it has to be for the
+interval to lie above the long-run score no more often than its level allows,
+when each series' avoidable error is a squared normal draw (a chi-square
+distribution with one degree of freedom), as it is for a forecast that is off
+by the same random amount at every step.
+
+The interval was checked on the 20 default cells with five forecasters of
+different kinds, against the score from 6,000 series per cell, on cards of 5
+to 100 series. Averaged over the cells, it held that score about as often as
+its level says, or more often, for four of the five. For the fifth, a Ridge
+regression on lagged values, it fell up to two points short. In a single cell
+it can be several points off either way. It holds less often than its level
+for a model whose error comes mostly from a few very bad series, because a
+small card rarely draws one of them.
 
 ## What a fitted model could score
 

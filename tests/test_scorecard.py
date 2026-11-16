@@ -413,14 +413,16 @@ def _interval_by_definition(pairs, valid, level=0.95):
 
     score = cell_score(list(range(n)))
     left_out = [cell_score([j for j in range(n) if j != i]) for i in range(n)]
-    q = student_t.ppf(0.5 + level / 2, n - 1)
+    above = student_t.ppf(0.5 + level / 2, n - 1)
+    below = above * (1 + 1 / math.sqrt(n))  # the low end reaches further than the high end
     if 0 < score < 100 and all(0 < s < 100 for s in left_out):
-        centre, half = logit(score), q * spread([logit(s) for s in left_out])
-        low, high = 100 / (1 + math.exp(-(centre - half))), 100 / (1 + math.exp(-(centre + half)))
+        centre, wide = logit(score), spread([logit(s) for s in left_out])
+        low = 100 / (1 + math.exp(-(centre - below * wide)))
+        high = 100 / (1 + math.exp(-(centre + above * wide)))
         scale = "log-odds"
     else:
-        half = q * spread(left_out)
-        low, high = max(score - half, 0.0), min(score + half, 100.0)
+        wide = spread(left_out)
+        low, high = max(score - below * wide, 0.0), min(score + above * wide, 100.0)
         scale = "score"
     return score, min(low, score), max(high, score), scale
 
@@ -436,6 +438,40 @@ def test_the_interval_of_a_hand_made_cell_follows_its_definition(level):
     score, low, high, scale = _interval_by_definition(SPREAD_OUT, [True] * 5, level)
     assert scale == "log-odds" and 0 < low < score < high < 100
     assert _interval(SPREAD_OUT, [True] * 5, score, level) == pytest.approx((low, high), rel=1e-9)
+
+
+@pytest.mark.parametrize("level", [0.5, 0.95, 0.99])
+def test_the_interval_reaches_further_below_the_score_than_above_it(level):
+    from timegym.scorecard import _interval, _low_end_stretch
+
+    def logit(x):
+        return math.log(x / (100 - x))
+
+    assert [_low_end_stretch(n) for n in (4, 25, 100)] == pytest.approx([1.5, 1.2, 1.1])
+    score = _interval_by_definition(SPREAD_OUT, [True] * 5)[0]
+    low, high = _interval(SPREAD_OUT, [True] * 5, score, level)
+    assert (logit(score) - logit(low)) / (logit(high) - logit(score)) == pytest.approx(1 + 1 / math.sqrt(5))
+    # On the score scale too: leaving the last series out scores exactly 100.
+    pairs = [(1.0, 0.0)] * 3 + [(1.0, 2.0)]
+    score, _, _, scale = _interval_by_definition(pairs, [True] * 4)
+    low, high = _interval(pairs, [True] * 4, score, 0.2)
+    assert scale == "score" and 0 < low < score < high < 100
+    assert (score - low) / (high - score) == pytest.approx(1.5)
+
+
+def test_the_interval_keeps_its_level_when_each_error_is_a_squared_normal_draw():
+    from timegym.scorecard import _interval
+
+    # Unavoidable error 1 and mean avoidable error 1: the long-run score is 50.
+    errors = np.random.default_rng(20261116).standard_normal((3000, 10)) ** 2
+    above = below = 0
+    for row in errors:
+        low, high = _interval([(1.0, error) for error in row], [True] * 10, 100 / (1 + row.mean()))
+        above += low > 50
+        below += high < 50
+    # Without the longer low end the interval lies above 50 in about 6% of cards, not 2.5%.
+    assert above / len(errors) < 0.035
+    assert 1 - (above + below) / len(errors) > 0.95
 
 
 def test_the_interval_of_a_drawn_cell_follows_its_definition(last_value_card):
