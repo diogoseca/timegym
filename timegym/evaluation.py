@@ -44,6 +44,65 @@ class ForecastRun:
     metadata: dict[str, Any] = field(default_factory=dict)
     titles: list[str] = field(default_factory=list)
 
+    @classmethod
+    def from_forecasts(
+        cls,
+        cases,
+        forecasts,
+        *,
+        metadata=None,
+        check_dependence=False,
+        n_calibration=99,
+        alpha=0.05,
+        dependence_seed_offset=100_000,
+    ):
+        """Check and score forecasts made earlier, one per case, without a model.
+
+        ``forecasts[i]`` is the forecast recorded for ``cases[i]``, in any form
+        a model's ``predict`` may return: a list or NumPy array, a pandas Series
+        or DataFrame, or a ``Forecast``. ``None`` means nothing was recorded,
+        and that case fails "Runs without errors". Each forecast gets the output
+        checks and scores of ``Pipeline.run``, and the run's report and plots
+        work as usual. ``metadata`` is added to the run's metadata, for example
+        ``{"model": "weather service"}``. No model is kept, so these cases
+        cannot be replayed.
+        """
+        from timegym.pipeline import _as_forecast, _evaluate_ready_made
+        from timegym.provenance import diagnostic_settings, runtime_provenance
+
+        if isinstance(cases, Case):
+            raise TypeError("cases must be a list of Case objects, not one Case")
+        if metadata is not None and not isinstance(metadata, dict):
+            raise TypeError("metadata must be a dictionary or None")
+        cases, forecasts = list(cases), list(forecasts)
+        if len(forecasts) != len(cases):
+            raise ValueError(
+                f"Got {len(forecasts)} forecasts for {len(cases)} cases; pass one "
+                "forecast per case, in the same order"
+            )
+        settings = diagnostic_settings(
+            check_dependence=check_dependence,
+            n_calibration=n_calibration,
+            alpha=alpha,
+            dependence_seed_offset=dependence_seed_offset,
+        )
+
+        def recorded(position, case):
+            if forecasts[position] is None:
+                raise ValueError("No forecast was recorded for this case")
+            return _as_forecast(forecasts[position], case.task)
+
+        results = _evaluate_ready_made(cases, recorded, settings)
+        return cls(
+            cases=results,
+            metadata={
+                **runtime_provenance(),
+                "model": "recorded forecasts",
+                "diagnostic_settings": settings,
+                **(metadata or {}),
+            },
+        )
+
     @property
     def report(self) -> TestReport:
         """Return the usual structured report for these evaluated cases."""

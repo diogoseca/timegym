@@ -1,7 +1,8 @@
 # Data preparation
 
-Differences of a target series, and the reversible target transforms that a
-`Pipeline` can fit and invert.
+Differences of a target series, the reversible target transforms that a
+`Pipeline` can fit and invert, and how to put readings taken at irregular
+times on a regular grid without letting the future in.
 
 `differencing` is public through `timegym.target`; import it from that module. It
 is a standalone pandas transformation, not an automatic Pipeline stage, and it
@@ -47,6 +48,37 @@ requires a valid forecast with the fitted target names in the fitted order.
 A pipeline's saved configuration describes exact bundled classes as `builtin`
 and any other object, including a subclass, as `external`; replay rebuilds
 bundled transforms only.
+
+## Irregular readings
+
+Sensors, logs and sales arrive at irregular times, and a TimeGym history needs
+one row per step. Put the readings on a regular grid by taking, at each step,
+the last reading at or before it, never one after it. pandas' default
+resampling does not do this: `readings.resample("1h").last()` labels each hour
+by its start, so a reading taken at 10:50 becomes the value at 10:00, and a
+forecast made at 10:00 sees 50 minutes of the future.
+`pd.merge_asof` with `direction="backward"` looks only backwards:
+
+```python
+import pandas as pd
+
+readings = pd.Series([1.0, 2.0, 3.0, 4.0], name="level", index=pd.to_datetime(
+    ["2024-05-01 09:10", "2024-05-01 10:50", "2024-05-01 12:05", "2024-05-01 19:30"]))
+grid = pd.date_range("2024-05-01 10:00", "2024-05-01 20:00", freq="1h")
+hourly = pd.merge_asof(pd.DataFrame(index=grid), readings.to_frame(),
+                       left_index=True, right_index=True,
+                       direction="backward",           # the last reading at or before each hour
+                       tolerance=pd.Timedelta("6h"))   # older than 6 hours: missing
+```
+
+At 11:00 `hourly` holds the 10:50 reading, and at 19:00 it is missing, because
+the last reading, at 12:05, is more than six hours old. Choose the tolerance
+on purpose: it says how old a reading may be and still count as current.
+
+TimeGym does not fill gaps for you: `ForecastTask` and `cases_from_series`
+refuse a history with missing values. Cut the series at a gap, or fill it in
+a way you can defend, before you
+[cut it into cases](tasks-and-forecasts.md#your-own-data).
 
 ## Signatures
 

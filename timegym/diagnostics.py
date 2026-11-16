@@ -271,6 +271,10 @@ def evaluate_forecast(
     or ensemble outputs are UNSUPPORTED, not reconstructed from other output
     types. A known-mean discrepancy and one-path interval coverage are
     descriptive evidence and are INCONCLUSIVE as capability decisions.
+    The case is labelled by manifest["kind"] and manifest["seed"]. A
+    case not drawn from a TimeGym scenario (its manifest has no
+    schema_version) may leave them out: it is then labelled "case"
+    with no seed.
     """
     dependence_seed = nonnegative_int(dependence_seed, "dependence_seed")
     settings = diagnostic_settings(
@@ -278,7 +282,13 @@ def evaluate_forecast(
     )
     n_calibration, alpha = settings["n_calibration"], settings["alpha"]
     manifest = dict(case.manifest)
-    result = CaseResult(str(manifest["kind"]), manifest["seed"], manifest=manifest)
+    if (
+        "schema_version" in manifest
+    ):  # drawn from a TimeGym scenario: never guess its identity
+        kind, seed = manifest["kind"], manifest["seed"]
+    else:  # your own case may leave out kind and seed
+        kind, seed = manifest.get("kind", "case"), manifest.get("seed")
+    result = CaseResult(str(kind), seed, manifest=manifest)
     try:
         violations = forecast.validate(case.task)
     except Exception as exc:

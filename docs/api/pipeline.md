@@ -26,7 +26,7 @@ or a `Series` for a single series. A list or array has no dates, so its rows are
 taken as the requested steps in order. A DataFrame keeps its own index and
 column names, so wrong dates or a wrong series order still fail their checks.
 
-`.test(scenarios=None, seeds=None, *, seed=0, instances=None,
+`.test(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None,
 check_dependence=False, n_calibration=99, alpha=0.05,
 dependence_seed_offset=100_000)` evaluates cases and returns a TestReport. One
 `seed` drives the whole test: each scenario is run `instances` times (3 by
@@ -38,12 +38,40 @@ Scenario's default seed. Model/evaluation exceptions are recorded with
 traceback evidence. Invalid scenario configuration is a caller error and is
 raised rather than counted as a model fault.
 
+`cases=[...]` tests ready-made `Case` objects instead of drawing them, for
+example cases cut from your own data with
+[`cases_from_series`](tasks-and-forecasts.md#your-own-data). Each case gets a
+fresh model, fitted on its history only, and the same output checks and
+scores as a drawn case. Cases that share a manifest `kind` share a row of the
+plots, in the order given. `cases` cannot be combined with `scenarios`,
+`seeds`, `seed` or `instances`, and the report's metadata has no seed. Pass a
+list, even of one case.
+
+`ForecastRun.from_forecasts(cases, forecasts, *, metadata=None,
+check_dependence=False, n_calibration=99, alpha=0.05,
+dependence_seed_offset=100_000)` checks and scores forecasts made earlier,
+with no model: `forecasts[i]` belongs to `cases[i]` and can take any form a
+model's `predict` returns. `None` marks a case with no recorded forecast, which
+fails "Runs without errors". The result is a `ForecastRun`, so its report and
+plots work as usual; `metadata` is added to the run's metadata, for example
+`{"model": "weather service", "made_on": "2024-05-01"}`. With the rain `cases`
+from [Your own data](tasks-and-forecasts.md#your-own-data):
+
+```python
+import numpy as np
+from timegym import ForecastRun
+
+recorded = [np.full(7, case.task.context.iloc[-1, 0]) for case in cases]  # made elsewhere
+run = ForecastRun.from_forecasts(cases, recorded, metadata={"model": "repeat last"})
+run.report.assert_passed()
+```
+
 `.scorecard(patterns=None, *, noise_levels=2, instances=10, seed=0,
 context_length=120, horizon=24, title=None, attainable=False, interval_level=0.95)` runs the scenario grid and returns
 a `Scorecard`; see [Scorecards and the scenario grid](scorecard.md).
 
-`.run(scenarios=None, seeds=None, *, seed=0, instances=None, ...)` accepts the
-same seeding and diagnostic settings and returns a `ForecastRun`. Its `.report` is the usual `TestReport`; `.cases`
+`.run(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None, ...)` accepts the
+same seeding, ready-made cases and diagnostic settings and returns a `ForecastRun`. Its `.report` is the usual `TestReport`; `.cases`
 retains each `EvaluatedCase`, including the generated case, forecast (or `None`
 on model failure), result, and scenario/seed positions. This in-memory inspection
 object keeps arrays separate from the portable report schema.
@@ -70,7 +98,11 @@ Factories, custom models, sklearn steps and other target transforms are
 explicitly marked non-replayable. A JSON report records model configuration,
 source fingerprint, dependency versions and diagnostic settings. Use
 `report.replay_case(case_index=0)` or `python examples/reproduce_report.py report.json`
-to reproduce a supported built-in case. The script prints the comparison and exits
+to reproduce a supported built-in case. Replay draws the case again from its
+manifest, so it refuses, saying why, a case that was not drawn from a TimeGym
+scenario, such as one cut from your own data, and a report with no pipeline
+configuration, such as one made by `ForecastRun.from_forecasts`. Keep your data
+and the code that made the forecasts to reproduce those. The script prints the comparison and exits
 with status 1 when the case is not reproduced.
 Replay accepts a `TestReport`; load dictionaries through `TestReport.from_dict`
 first. The `metadata["replay"]` result contains `reproduced` (metrics, diagnostics,

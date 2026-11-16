@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- Added ways to score your own data. `timegym.cases_from_series(series,
+  origins, horizon, *, name="series", manifest=None)` cuts a series, or a
+  table of series, into cases that end their history at different times: an
+  origin is a number of rows, a share of the rows, or an index label. Each
+  case keeps the rows after its origin as what happened, has no answer key,
+  and records in its manifest where its history ends and a fingerprint of the
+  whole series. `Pipeline.test` and `Pipeline.run` take these, or any list of
+  `Case` objects, as `cases=[...]`, with a fresh model for every case.
+  `ForecastRun.from_forecasts(cases, forecasts)` checks and scores forecasts
+  made earlier, without a model, and gives a run with the usual report and
+  plots.
+- Changed `evaluate_forecast` to accept a case whose manifest has no `kind` or
+  `seed`, as your own cases may: it is labelled `"case"` with no seed. A
+  manifest written by a TimeGym scenario must still have both.
+- Changed replay to say why it cannot replay a case that was not drawn from a
+  TimeGym scenario, or a report with no pipeline configuration, such as one
+  from `ForecastRun.from_forecasts`.
+- Changed the forecast plots to name a case with no seed by where its history
+  ends, and the error messages of `plot_errors` to say `seed 2` rather than
+  `seed=2`.
+- Added a section on your own data to the scope page, a recipe on the data
+  preparation page for putting readings taken at irregular times on a regular
+  grid without looking ahead, and a page, Extend TimeGym, that lists every
+  place to plug in your own code and data. Tutorial 07 now builds its cases
+  with `cases_from_series` and scores them with `pipeline.run(cases=...)`.
+
 - Added a confidence interval to every scorecard score. `card.table` has new
   columns `score_low` and `score_high`, and `settled`, True when both ends fall
   in the score's band; `card.unsettled` lists the rows that are not settled.
