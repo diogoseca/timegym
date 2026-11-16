@@ -245,9 +245,15 @@ gives the two commands, and the [tutorials guide](tutorials/README.md) describes
 TimeGym tests forecasters; it does not fix them. It does not find the root
 cause of a bug, repair a model, detect data leakage in general, or work out an
 answer key for data you bring yourself: real data is scored against what
-happened, and the checks that need a key say `UNSUPPORTED`. Panels, hierarchies,
-and missing or irregular observations are out of scope for now.
-[What TimeGym tests, and what it does not](docs/concepts/scope.md) draws the line in more detail.
+happened, and the checks that need a key say `UNSUPPORTED`. To score your own
+data, cut a series into cases with `cases_from_series` and pass them to
+`pipeline.test(cases=...)`; forecasts made elsewhere are scored with
+`ForecastRun.from_forecasts`. Panels, hierarchies and missing observations are
+out of scope for now; [Data preparation](docs/api/data-preparation.md#irregular-readings)
+shows how to put readings taken at irregular times on a regular grid without
+letting the future in.
+[What TimeGym tests, and what it does not](docs/concepts/scope.md) draws the line in more detail,
+and [Extend TimeGym](docs/concepts/extend.md) lists every place to plug in your own code and data.
 
 The package is written in notebooks: the [source notebooks](source/README.md)
 in `source/` generate every module in `timegym/`. [Contributing](docs/contributing.md)

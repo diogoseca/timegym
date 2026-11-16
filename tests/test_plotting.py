@@ -232,7 +232,7 @@ def test_unknown_or_partly_missing_metrics_never_disappear_silently():
     with pytest.raises(ValueError, match="unknown_score"):
         run.plot_errors("unknown_score")
     del run.cases[1].result.metrics["mean_reference_mse"]
-    with pytest.raises(ValueError, match="seed=2"):
+    with pytest.raises(ValueError, match="seed 2"):
         run.plot_errors()
     axis = run.plot_errors(missing="annotate").axes[0]
     assert "1 scored / 2 evaluated cases" in axis.get_title(loc="right")

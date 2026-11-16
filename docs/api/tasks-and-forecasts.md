@@ -48,8 +48,57 @@ At least one output is required. Missing output types receive `UNSUPPORTED` when
 an evaluation needs them. Shapes, finite values, index alignment, target order and
 quantile monotonicity are checked before any score is calculated.
 
+## Your own data
+
+`cases_from_series(series, origins, horizon, *, name="series", manifest=None)`
+cuts one series, or a table of series, into cases that end their history at
+different times. `series` is a pandas Series or a DataFrame with one column per
+series and an increasing, unique index; an unnamed Series is named `name`.
+Each entry of `origins` says where one history ends:
+
+- a whole number is the number of rows of history: `60` keeps the first 60 rows;
+- a number between 0 and 1 is a share of the rows, rounded: `0.75` keeps three quarters;
+- anything else is an index label, and the history holds every row at or before
+  it: `"2024-04-10"` on a daily index ends the history on 10 April.
+
+`horizon` is the number of rows to forecast after each origin, or `"rest"` for
+every row that follows. Each case's history stops at its origin, and the rows
+after it are kept as what actually happened (`case.observed`), so no forecast
+sees the future it is scored on. The cases have no answer key
+(`reference=None`), so they are scored against what happened, and the checks
+that need a key say `UNSUPPORTED`.
+
+```python
+import numpy as np
+import pandas as pd
+from timegym import LastValueForecaster, Pipeline, cases_from_series
+
+days = pd.date_range("2024-01-01", periods=120, freq="D")
+rain = pd.Series(np.random.default_rng(0).gamma(2.0, 2.0, 120), index=days, name="rain_mm")
+cases = cases_from_series(rain, origins=[60, 80, 100], horizon=7, name="rain")
+report = Pipeline(LastValueForecaster()).test(cases=cases)
+```
+
+Each case's manifest records `kind` (`name`), `seed` (`None`), `origin` (the
+last history label, as text), `context_length`, `horizon`, `target_names` and
+`series_sha256`, a SHA-256 fingerprint of the whole series: its column names,
+its index labels as text and its values as 64-bit floats. Two cases cut from
+the same data have the same fingerprint. The keys of `manifest` are added to
+every case, for example `{"station": "north"}`, and must not reuse those
+names. Missing or infinite values in a case's history or future are refused,
+with the origin named; [Data preparation](data-preparation.md#irregular-readings)
+shows how to put irregular readings on a regular grid first.
+
+You can also build a `Case(task, observed, reference, manifest)` yourself. For
+your own data the manifest can be any JSON-safe dictionary: without `kind` the
+case is labelled `"case"`, and without `seed` it has none. Only a manifest
+written by a TimeGym scenario, the one with `schema_version`, must keep both,
+because replay rebuilds the case from it.
+
 ## Signatures
 
 ::: timegym.ForecastTask
 
 ::: timegym.Forecast
+
+::: timegym.cases_from_series

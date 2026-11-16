@@ -2,8 +2,9 @@
 
 TimeGym simulates the series it tests on, so it knows the best possible
 forecast for every future step: the answer key. That lets it answer some
-questions exactly. Others it cannot answer at all. This page says which is
-which.
+questions exactly. Others it cannot answer at all. It also scores forecasts on
+data you bring, where nobody has an answer key. This page says what each job
+can tell you.
 
 ## It checks your code, not your choice of model
 
@@ -21,6 +22,27 @@ matter there. A pipeline that scores well can still forecast your series
 badly, and one that fails a row can be the right choice for data without that
 pattern.
 
+## On your own data
+
+TimeGym does two jobs. The first, above, checks your code on series it
+simulated. The second scores forecasts on data you bring. That data has no
+answer key, so TimeGym scores each forecast against what happened. It still
+runs every output check, so a forecast for the wrong dates or with two series
+swapped still fails with the reason. That tells you how each forecaster did
+on these cases. It does not tell you how it will do on cases you have not
+seen, unless your cases are a fair sample of them.
+
+To use it, cut your series into cases with
+[`cases_from_series`](../api/tasks-and-forecasts.md#your-own-data), or build
+`Case` objects yourself, and pass them to `pipeline.test(cases=...)` or
+`pipeline.run(cases=...)`. Forecasts made earlier, by a model TimeGym cannot
+run, are scored with
+[`ForecastRun.from_forecasts`](../api/pipeline.md#signatures). The checks that
+need an answer key say `UNSUPPORTED`, and these cases cannot be replayed from
+a report, because they cannot be drawn again: keep your data with the report.
+Several cases cut from one series are several looks at one history, not
+independent tests.
+
 ## The model never sees the future
 
 During a test the model gets two things: the history, and the dates it has to
@@ -36,8 +58,11 @@ target transform is fitted on that history alone. `Pipeline.test`,
 
 What TimeGym cannot see is leakage in how you prepared your own data before
 the test. If a feature was computed with a window that reaches forward in
-time, or values were scaled using the whole series, the future has already
+time, values were scaled using the whole series, or irregular readings were
+put on a grid with a reading from after each step, the future has already
 leaked in, and no test here will notice.
+[Data preparation](../api/data-preparation.md#irregular-readings) shows how
+to put readings on a regular grid without that last leak.
 
 ## The shift check is not for every model
 

@@ -174,6 +174,14 @@ def _valid_reference(case):
 
 
 # %% ../source/11_plotting.ipynb #11_plotting-19
+def _which_case(entry):
+    """Name one case of a group: its seed, or where its history ends for your own data."""
+    if entry.result.seed is not None:
+        return f"seed {entry.result.seed}"
+    origin = entry.case.manifest.get("origin")
+    return "" if origin is None else f"history ends {origin}"
+
+
 def _run_title(run, scenario_index):
     """The run's plain-words title for a scenario position, if it has one."""
     titles = getattr(run, "titles", None) or []
@@ -411,10 +419,8 @@ def _draw_case(
             case.manifest.get("parameters"),
             target_index=dimension,
         )
-        seed = (
-            "" if entry.result.seed is None else f" · seed {entry.result.seed}"
-        )  # real data has none
-        title = f"{entry.scenario_index + 1}. {label}{f' · {target}' if several else ''}{seed}"
+        which = _which_case(entry)
+        title = f"{entry.scenario_index + 1}. {label}{f' · {target}' if several else ''}{f' · {which}' if which else ''}"
     else:
         title = f"{title}{f' · {target}' if several else ''} · instance {entry.seed_index + 1}"
     if len(title) > title_width:
@@ -554,7 +560,7 @@ def plot_errors(
     unavailable = [entry for entries in missing_by_group.values() for entry in entries]
     if unavailable and missing == "raise":
         identities = ", ".join(
-            f"scenario #{entry.scenario_index + 1} seed={entry.result.seed}"
+            f"scenario #{entry.scenario_index + 1} {_which_case(entry) or f'case {entry.seed_index + 1}'}"
             for entry in unavailable
         )
         raise ValueError(
@@ -617,7 +623,7 @@ def plot_errors(
                 for entry in missing_entries:
                     problem = _diagnostic_problems(entry)
                     messages.append(
-                        f"seed={entry.result.seed}: {problem[0] if problem else 'metric unavailable'}"
+                        f"{_which_case(entry) or f'case {entry.seed_index + 1}'}: {problem[0] if problem else 'metric unavailable'}"
                     )
                 _annotate(ax, messages)
         axes[-1, 0].set_xlabel(f"{label}, one score per case")

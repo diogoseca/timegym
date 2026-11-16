@@ -8,6 +8,8 @@ from ._internal import (
     _has_complex_values,
     _levels,
 )
+import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import Any, Callable
 import numpy as np
@@ -22,6 +24,7 @@ __all__ = [
     "Reference",
     "SimulationReference",
     "Case",
+    "cases_from_series",
 ]
 
 # %% ../source/08_forecast_contracts.ipynb #08_forecast_contract-05
@@ -624,3 +627,143 @@ class Case:
     observed: pd.DataFrame
     reference: Reference | None
     manifest: dict[str, Any]
+
+
+# %% ../source/08_forecast_contracts.ipynb #cases-from-series
+def _series_fingerprint(history: pd.DataFrame) -> str:
+    """SHA-256 of the column names, the index labels as text and the values as 64-bit floats."""
+    digest = hashlib.sha256()
+    digest.update(json.dumps([str(name) for name in history.columns]).encode())
+    digest.update(json.dumps([str(label) for label in history.index]).encode())
+    digest.update(np.ascontiguousarray(history.to_numpy(dtype="<f8")).tobytes())
+    return digest.hexdigest()
+
+
+def _history_rows(origin, index: pd.Index) -> int:
+    """How many rows of history an origin keeps: a row count, a share of the rows, or a last label."""
+    n_rows = len(index)
+    if isinstance(origin, (bool, np.bool_)):
+        raise TypeError(
+            f"origin {origin!r} must be a row count, a share between 0 and 1, or an index label"
+        )
+    if isinstance(origin, (int, np.integer)):
+        rows = int(origin)
+    elif isinstance(origin, (float, np.floating)) and 0 < origin < 1:
+        rows = int(round(float(origin) * n_rows))
+    else:
+        try:
+            rows = int(index.searchsorted(origin, side="right"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"origin {origin!r} cannot be compared with the series index"
+            ) from exc
+    if not 1 <= rows < n_rows:
+        raise ValueError(
+            f"origin {origin!r} keeps {rows} of {n_rows} rows as history; "
+            "a case needs at least one row of history and one row after it"
+        )
+    return rows
+
+
+def cases_from_series(series, origins, horizon, *, name="series", manifest=None):
+    """Cut one series, or a table of series, into cases that end their history at different times.
+
+    ``series`` is a pandas Series or a DataFrame with one column per series,
+    indexed by increasing, unique labels such as dates. An unnamed Series is
+    named ``name``. Each entry of ``origins`` says where one case's history
+    ends: a whole number is the number of rows of history, a number between 0
+    and 1 is the share of rows (rounded), and anything else is an index label,
+    the history then holding every row at or before it. ``horizon`` is the
+    number of rows to forecast after each origin, or ``"rest"`` for every row
+    that follows.
+
+    Returns a list of ``Case`` objects with no answer key (``reference=None``),
+    so each forecast is scored against what happened. Each manifest records
+    ``kind`` (``name``), ``seed`` (None), ``origin`` (the last history label as
+    text), ``context_length``, ``horizon``, ``target_names`` and
+    ``series_sha256``, a fingerprint of the whole series, then the keys of
+    ``manifest``, which must not repeat those names. Missing values in a case's
+    history or future are refused, with the origin named, because TimeGym
+    does not fill them in for you.
+    """
+    if isinstance(series, pd.Series):
+        history = series.to_frame(name=name if series.name is None else series.name)
+    elif isinstance(series, pd.DataFrame):
+        history = series
+    else:
+        raise TypeError("series must be a pandas Series or DataFrame")
+    if not isinstance(name, str) or not name:
+        raise ValueError("name must be a nonempty string")
+    if history.empty or len(history.columns) == 0:
+        raise ValueError("series must contain at least one row and one column")
+    target_names = _target_labels(history.columns, "series names")
+    index = history.index
+    problem = _index_value_problem(index)
+    if problem is not None:
+        raise ValueError(f"series index must not contain {problem} labels")
+    if not index.is_unique or not index.is_monotonic_increasing:
+        raise ValueError("series index must be unique and increasing")
+    try:
+        values = _real_array(history.to_numpy(), "series")
+    except (TypeError, ValueError) as exc:
+        raise ValueError("series values must be real numbers") from exc
+    if isinstance(origins, (str, bytes)) or not hasattr(origins, "__iter__"):
+        origins = [origins]
+    origins = list(origins)
+    if not origins:
+        raise ValueError("origins must name at least one place where a history ends")
+    if isinstance(horizon, str):
+        if horizon != "rest":
+            raise ValueError('horizon must be a positive whole number or "rest"')
+    else:
+        horizon = positive_int(horizon, "horizon")
+    extra = {} if manifest is None else manifest
+    if not isinstance(extra, dict):
+        raise TypeError("manifest must be a dictionary of extra keys")
+    recorded = (
+        "kind",
+        "seed",
+        "origin",
+        "context_length",
+        "horizon",
+        "target_names",
+        "series_sha256",
+    )
+    clashes = sorted(set(extra) & set(recorded))
+    if clashes:
+        raise ValueError(
+            f"manifest keys {clashes} are set by cases_from_series; use other names"
+        )
+    fingerprint = _series_fingerprint(history)
+    cases = []
+    for origin in origins:
+        rows = _history_rows(origin, index)
+        n_future = len(index) - rows if horizon == "rest" else horizon
+        if rows + n_future > len(index):
+            raise ValueError(
+                f"origin {origin!r} leaves {len(index) - rows} rows after it, "
+                f"fewer than the horizon of {n_future}"
+            )
+        for part, rows_of_part in (
+            ("history", values[:rows]),
+            ("future", values[rows : rows + n_future]),
+        ):
+            if not np.isfinite(rows_of_part).all():
+                raise ValueError(
+                    f"origin {origin!r}: the {part} has missing or infinite values; "
+                    "fill or drop them before cutting cases"
+                )
+        case_manifest = {
+            "kind": name,
+            "seed": None,
+            "origin": str(index[rows - 1 : rows].astype(str)[0]),
+            "context_length": rows,
+            "horizon": n_future,
+            "target_names": [str(target) for target in target_names],
+            "series_sha256": fingerprint,
+            **extra,
+        }
+        observed = history.iloc[rows : rows + n_future].copy()
+        task = ForecastTask(history.iloc[:rows].copy(), observed.index.copy())
+        cases.append(Case(task, observed, None, case_manifest))
+    return cases

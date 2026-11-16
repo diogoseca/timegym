@@ -7,7 +7,7 @@ import inspect
 import secrets
 import numpy as np
 import pandas as pd
-from .contracts import Forecast, ForecastTask
+from .contracts import Case, Forecast, ForecastTask
 from .models import (
     REDUCTIONS,
     NaiveForecaster,
@@ -128,6 +128,105 @@ def _instance_seeds(seeds, seed, instances, default_instances):
     )
     base = secrets.randbelow(2**31) if seed is None else nonnegative_int(seed, "seed")
     return [base + i for i in range(count)], {"seed": base, "instances": count}
+
+
+def _ready_made(cases):
+    """Check a list of ready-made cases and return it with each case's label and seed.
+
+    The label is the manifest's ``kind`` (``"case"`` when absent) and the seed
+    its ``seed`` (``None`` when absent): real data has neither.
+    """
+    if isinstance(cases, Case):
+        raise TypeError("cases must be a list of Case objects, not one Case")
+    cases = list(cases)
+    if not cases:
+        raise ValueError("Provide at least one case")
+    identities = []
+    for position, case in enumerate(cases):
+        if not isinstance(case, Case):
+            raise TypeError(
+                f"cases[{position}] is a {type(case).__name__}, not a timegym.Case"
+            )
+        if not isinstance(case.manifest, dict):
+            raise TypeError(f"cases[{position}].manifest must be a dictionary")
+        label = case.manifest.get("kind", "case")
+        if not isinstance(label, str) or not label:
+            raise ValueError(
+                f"cases[{position}].manifest['kind'] must be a nonempty string"
+            )
+        seed = case.manifest.get("seed")
+        if seed is not None:
+            seed = nonnegative_int(seed, f"cases[{position}].manifest['seed']")
+        identities.append((label, seed))
+    return cases, identities
+
+
+def _evaluate_case(case, make_forecast, label, seed, dependence_seed, settings):
+    """Forecast one case with ``make_forecast(case)``, then check and score the forecast.
+
+    Returns ``(forecast, result)``. An exception from the model, or from
+    reading its output, becomes the case's ``model_execution`` error, so one
+    broken case does not stop the run; ``forecast`` is then ``None`` when no
+    forecast was made.
+    """
+    forecast = None
+    try:
+        forecast = make_forecast(case)
+        result = evaluate_forecast(
+            case,
+            forecast,
+            check_dependence=settings["check_dependence"],
+            dependence_seed=dependence_seed,
+            n_calibration=settings["n_calibration"],
+            alpha=settings["alpha"],
+        )
+    except Exception as exc:
+        result = CaseResult(
+            scenario=label,
+            seed=seed,
+            diagnostics=[
+                DiagnosticResult(
+                    name="model_execution",
+                    status="ERROR",
+                    category="execution",
+                    message=f"{type(exc).__name__}: {exc}",
+                    evidence=exception_evidence(exc),
+                )
+            ],
+            metrics={},
+            manifest=case.manifest,
+        )
+    return forecast, result
+
+
+def _evaluate_ready_made(cases, make_forecast, settings):
+    """Evaluate ready-made cases in order; cases with the same label share a row of the plots."""
+    cases, identities = _ready_made(cases)
+    rows, results = {}, []
+    for position, (case, (label, seed)) in enumerate(zip(cases, identities)):
+        row = rows.setdefault(label, [len(rows), 0])
+        dependence_seed = (position if seed is None else seed) + settings[
+            "dependence_seed_offset"
+        ]
+        forecast, result = _evaluate_case(
+            case,
+            lambda c: make_forecast(position, c),
+            label,
+            seed,
+            dependence_seed,
+            settings,
+        )
+        results.append(
+            EvaluatedCase(
+                case=case,
+                forecast=forecast,
+                result=result,
+                scenario_index=row[0],
+                seed_index=row[1],
+            )
+        )
+        row[1] += 1
+    return results
 
 
 class Pipeline:
@@ -289,6 +388,7 @@ class Pipeline:
         *,
         seed=0,
         instances=None,
+        cases=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
@@ -303,6 +403,13 @@ class Pipeline:
         replaces both. ``run.report`` is the usual serializable
         ``TestReport``; ``run.plot_forecasts()`` and ``run.plot_errors()``
         inspect these exact outputs without additional fitting.
+
+        ``cases`` takes ready-made cases instead, such as your own data cut
+        with ``timegym.cases_from_series``: each is forecast as given and
+        nothing is generated, so it cannot be combined with scenarios,
+        ``seeds``, ``seed`` or ``instances``. A case's manifest needs no
+        ``kind`` or ``seed``; without them it is labelled ``case`` and has no
+        seed. Cases with the same ``kind`` share a row of the plots.
         """
         if self.steps:
             SklearnForecaster(self.steps, self.window_length)
@@ -312,6 +419,35 @@ class Pipeline:
             alpha=alpha,
             dependence_seed_offset=dependence_seed_offset,
         )
+        config = self.to_config()
+        metadata = {
+            **runtime_provenance(),
+            "model": self._model_name(),
+            "window_length": self.window_length,
+            "reduction": self.reduction,
+            "target_transform": config["target_transform"],
+            "pipeline_config": config,
+            "diagnostic_settings": settings,
+        }
+        if cases is not None:
+            if (
+                scenarios is not None
+                or seeds is not None
+                or seed != 0
+                or instances is not None
+            ):
+                raise ValueError(
+                    "Pass either cases=[...] or scenarios with seeds, seed or "
+                    "instances, not both"
+                )
+            results = _evaluate_ready_made(
+                cases,
+                lambda position, case: self.predict(
+                    case.task.context, case.task.future_index
+                ),
+                settings,
+            )
+            return ForecastRun(cases=results, metadata=metadata)
         seeds, seeding = _instance_seeds(seeds, seed, instances, 3)
         if scenarios is None:
             scenarios = default_scenarios()
@@ -322,33 +458,14 @@ class Pipeline:
         for scenario_index, scenario in enumerate(scenarios):
             for seed_index, case_seed in enumerate(seeds):
                 case = scenario.generate(seed=case_seed)
-                forecast = None
-                try:
-                    forecast = self.predict(case.task.context, case.task.future_index)
-                    result = evaluate_forecast(
-                        case,
-                        forecast,
-                        check_dependence=check_dependence,
-                        dependence_seed=int(case_seed) + dependence_seed_offset,
-                        n_calibration=n_calibration,
-                        alpha=alpha,
-                    )
-                except Exception as exc:
-                    result = CaseResult(
-                        scenario=scenario.kind,
-                        seed=int(case_seed),
-                        diagnostics=[
-                            DiagnosticResult(
-                                name="model_execution",
-                                status="ERROR",
-                                category="execution",
-                                message=f"{type(exc).__name__}: {exc}",
-                                evidence=exception_evidence(exc),
-                            )
-                        ],
-                        metrics={},
-                        manifest=case.manifest,
-                    )
+                forecast, result = _evaluate_case(
+                    case,
+                    lambda c: self.predict(c.task.context, c.task.future_index),
+                    scenario.kind,
+                    int(case_seed),
+                    int(case_seed) + dependence_seed_offset,
+                    settings,
+                )
                 results.append(
                     EvaluatedCase(
                         case=case,
@@ -358,20 +475,7 @@ class Pipeline:
                         seed_index=seed_index,
                     )
                 )
-        config = self.to_config()
-        return ForecastRun(
-            cases=results,
-            metadata={
-                **runtime_provenance(),
-                "model": self._model_name(),
-                "window_length": self.window_length,
-                "reduction": self.reduction,
-                "target_transform": config["target_transform"],
-                "pipeline_config": config,
-                "diagnostic_settings": settings,
-                **(seeding or {}),
-            },
-        )
+        return ForecastRun(cases=results, metadata={**metadata, **(seeding or {})})
 
     def test(
         self,
@@ -380,6 +484,7 @@ class Pipeline:
         *,
         seed=0,
         instances=None,
+        cases=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
@@ -387,13 +492,15 @@ class Pipeline:
     ):
         """Evaluate each scenario on each instance and return a TestReport.
 
-        Seeds work as in ``run``: instance ``i`` uses ``seed + i``.
+        Seeds work as in ``run``: instance ``i`` uses ``seed + i``. ``cases``
+        takes ready-made cases instead, as in ``run``.
         """
         return self.run(
             scenarios,
             seeds=seeds,
             seed=seed,
             instances=instances,
+            cases=cases,
             check_dependence=check_dependence,
             n_calibration=n_calibration,
             alpha=alpha,
@@ -557,6 +664,24 @@ def _replay_case(report: TestReport, case_index=0):
         raise ValueError("case_index is outside the saved report")
     original = payload["cases"][case_index]
     saved_metadata = payload["metadata"]
+    constructor_keys = (
+        "kind",
+        "context_length",
+        "horizon",
+        "parameters",
+        "n_targets",
+        "seed",
+    )
+    if any(key not in original["manifest"] for key in constructor_keys):
+        raise ValueError(
+            f"Case {case_index} was not drawn from a TimeGym scenario (for example, it came from "
+            "your own data), so it cannot be drawn again and replayed"
+        )
+    if "pipeline_config" not in saved_metadata:
+        raise ValueError(
+            "This report has no pipeline configuration, for example because its forecasts "
+            "were recorded earlier, so no model can be rebuilt to replay it"
+        )
     pipeline = Pipeline.from_config(saved_metadata.get("pipeline_config"))
     settings = saved_metadata.get("diagnostic_settings")
     setting_keys = {
@@ -574,16 +699,6 @@ def _replay_case(report: TestReport, case_index=0):
         or manifest["schema_version"] != MANIFEST_SCHEMA_VERSION
     ):
         raise ValueError("Unsupported scenario manifest schema")
-    constructor_keys = (
-        "kind",
-        "context_length",
-        "horizon",
-        "parameters",
-        "n_targets",
-        "seed",
-    )
-    if any(key not in manifest for key in constructor_keys):
-        raise ValueError("Scenario manifest lacks required reconstruction fields")
     if (
         original.get("seed") != manifest["seed"]
         or original.get("scenario") != manifest["kind"]
