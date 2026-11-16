@@ -1,0 +1,2 @@
+# The Chronos scorecard of Part 6. Install a CPU-only torch build first (from the PyTorch CPU wheel index), then this file; the full pip freeze of that environment is recorded in the run's manifest.
+chronos-forecasting==2.3.2

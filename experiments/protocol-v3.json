@@ -1,0 +1,853 @@
+{
+  "protocol_version": "3.0",
+  "study_id": "study-3-generated-mutants-learners-suites-margin-predictability-zoo",
+  "status": "draft",
+  "registration": {
+    "rule": "This protocol is registered when it is merged into main. No Study 3 outcome may exist at that moment: no mutant, and no Study 2 fault on a new learner, has been executed against any check or alarm; the margin simulation has not been run; neither predictability estimator has been run on a scorecard cell; no scorecard of a Part 6 model has been made, other than scorecards of the two built-in baselines at other seeds (the published ones, and those of the last-value forecaster made when the scorecard's interval was measured). Every computation made before registration is listed under pilots_before_registration.",
+    "registered_on": "",
+    "merge_commit": "",
+    "after_merge": "Three later commits may change this file, each one value only. The first, right after the merge, writes registered_on and merge_commit and sets status to 'registered'. The second adds the generated mutant sources and their manifest and writes the manifest's SHA-256 into part_1_generated_mutants.sources.manifest.sha256. The third writes the Chronos revision into part_6_zoo.models. Nothing else in this file changes after the merge.",
+    "start_conditions": [
+      "status is 'registered' and registration.merge_commit and registration.registered_on are filled in.",
+      "operator_list_review.reviewer and operator_list_review.date are filled in.",
+      "human_decisions_required is empty: every item is resolved and its resolution is written into this file.",
+      "For the generation of the mutant sources, Parts 1 and 2 and the zoo: the files listed in part_1_generated_mutants.subject.frozen_files exist with the SHA-256 digests written in frozen_files_sha256.",
+      "For Parts 1 and 2: the mutant manifest exists at part_1_generated_mutants.sources.manifest.path with the SHA-256 written there, so that the mutant set is committed before any mutant is executed.",
+      "For the Chronos scorecard only: the chronos_small entry of part_6_zoo.models names the model revision (see part_6_zoo.pretrained_revision).",
+      "experiments/study3_common.unmet_start_conditions checks the first five; every runner calls it before any computation and has no flag that bypasses it."
+    ]
+  },
+  "human_decisions_required": [
+    "Operator list review: the name of a person who did not write the checks, and the date on which that person checked and signed the Cosmic Ray operator list and the catalogue (operator_list_review)."
+  ],
+  "operator_list_review": {
+    "reviewer": "",
+    "date": "",
+    "scope": "The Cosmic Ray tool version and operator list (part_1_generated_mutants.sources.cosmic_ray) and every definition in part_1_generated_mutants.sources.catalogue.",
+    "eligibility": "The reviewer must not have written timegym/checks.py, timegym/diagnostics.py, experiments/model_faults.py or any Study 3 check or alarm.",
+    "rule": "The run may not start while reviewer or date is empty. A change requested by the reviewer is made before registration and recorded in this file."
+  },
+  "pilots_before_registration": {
+    "rule": "The items below are every computation made before registration that bears on this study. None executed a mutant, or a Study 2 fault on a new learner, against a check or alarm; none ran the margin simulation, either predictability estimator on a scorecard cell, or a scorecard of a Part 6 model other than the two built-in baselines, at seeds outside this protocol. Apart from the earlier records listed in the last item, no distance to an answer key, realized loss or score of any pipeline was computed.",
+    "pilot_seed_namespace": "Case seeds 6900000 + 1000 c + i (condition index c < 6, i < 2); learner training seeds from numpy.random.SeedSequence([6950000, case seed]) and SeedSequence([6960000, case seed]). These are excluded from every registered namespace.",
+    "items": [
+      {
+        "id": "cosmic-ray-install",
+        "run": "Installed cosmic-ray 8.9.0 (parso 0.8.7, stevedore 5.10.0) in a separate virtual environment under Python 3.13.18 and listed its operators with 'cosmic-ray operators'.",
+        "learned": "213 operator names in 16 families: ReplaceBinaryOperator (132), ReplaceComparisonOperator (56), ReplaceUnaryOperator (12), and one each of AddNot, ReplaceTrueWithFalse, ReplaceFalseWithTrue, ReplaceAndWithOr, ReplaceOrWithAnd, ReplaceBreakWithContinue, ReplaceContinueWithBreak, ExceptionReplacer, NumberReplacer, RemoveDecorator, ZeroIterationForLoop, VariableReplacer, VariableInserter."
+      },
+      {
+        "id": "cosmic-ray-counts",
+        "run": "'cosmic-ray init' (generation only; no test command was executed and no mutant was applied) on a copy of experiments/model_faults.py (SHA-256 3449ed9b9d74cb150ccf2a341340ff9516036c0ec1e665f4f339ae04ae0a119d) and on a counting copy of its clean branch alone (LagRidgeImplementation without fault branches or argument validation, 34 lines).",
+        "learned": "model_faults.py: 348 mutants (ReplaceBinaryOperator 165, ReplaceComparisonOperator 81, NumberReplacer 52, ReplaceUnaryOperator 29, AddNot 12, ReplaceOrWithAnd 5, ZeroIterationForLoop 2, ReplaceTrueWithFalse 1, ReplaceAndWithOr 1); by definition: normal_equation_forecast 136, predict 59, target_shift_agreement 45, __init__ 37, fit 37, point_agreement 34. Clean branch alone: 30 mutants (ReplaceBinaryOperator 11, NumberReplacer 10, ReplaceUnaryOperator 8, ZeroIterationForLoop 1). The subject module of Part 1 is expected to yield between these two counts; this fixed the cap of 400 generated mutants."
+      },
+      {
+        "id": "clean-classification-and-timing",
+        "run": "On 12 clean cases (2 per Study 2 model condition, pilot seeds), with one numerical thread: fit and forecast time, ConvergenceWarning count, and the public check_shift_equivariance (shift 10, atol 1e-8, rtol 1e-7) for clean lag pipelines with lags 1 to 6 and seasonal lag 12 and these regressors: Ridge(alpha=1) and per-target HistGradientBoostingRegressor() after global standardization; a multilayer perceptron (one hidden layer of 32, max_iter 500) on per-window standardized inputs with a free training seed and, separately, with a fixed seed; the same perceptron on raw lags with a free seed.",
+        "learned": "Public check: Ridge 12 PASS (largest error 2.5e-14); histogram gradient boosting 12 PASS (1.8e-15); window-standardized perceptron with a free seed 12 FAIL (0.69 to 3.0); the same with a fixed seed 12 PASS (1.6e-12); perceptron on raw lags with a free seed 12 FAIL (1.3 to 13.4). Median fit-and-forecast time per case: Ridge 0.003 s, gradient boosting 0.06 s, window-standardized perceptron 0.11 s, raw perceptron 0.06 s (0.01 to 0.23 s by condition). ConvergenceWarning on all 36 window-standardized fits and on 13 of 36 raw fits at max_iter 500. Hyperparameters were fixed from timing and these warnings only."
+      },
+      {
+        "id": "raw-lag-public-check",
+        "run": "The public check_shift_equivariance (shift 10, atol 1e-8, rtol 1e-7) on the 12 cases of the pilot clean-classification-and-timing, for clean lag pipelines with lags 1 to 6 and seasonal lag 12, no scaling, and seven deterministic regressors of scikit-learn 1.9.1 at their defaults: LinearRegression, Ridge(alpha=1), one HistGradientBoostingRegressor per target, one GradientBoostingRegressor(random_state=0) per target, RandomForestRegressor(random_state=0), ExtraTreesRegressor(random_state=0) and DecisionTreeRegressor(random_state=0).",
+        "learned": "PASS on 12 of 12 cases for linear regression (largest error 6.4e-14), Ridge (1.2e-13) and histogram gradient boosting (3.2e-14). FAIL on 5 of 12 for GradientBoostingRegressor, 12 of 12 for the random forest, 12 of 12 for extra trees and 8 of 12 for the single tree (errors up to 4.0). This fixed histogram gradient boosting on raw lags as the exact learner of Part 2. An earlier run of the same check on 14 November 2026 (one AR(1) scenario with context 120 and horizon 12, seeds 0 to 2, a window of 6 lags) split the regressors in the same way; on a single tree, the first split that differs after the shift has the same impurity decrease to 14 digits in both fits, so rounding decides between tied splits."
+      },
+      {
+        "id": "earlier-shift-check-on-clean-learners",
+        "run": "On 13 November 2026, before this study was designed, the public check_shift_equivariance was run on correct pipelines on three default scorecard rows at low noise (straight-line trend, repeating seasonal cycle, random walk with drift; context 120, horizon 24; series seeds 0 to 4, and training seeds 0 to 4 for the learners that have one), with a window of 24 raw lags: StandardScaler plus Ridge, Ridge, HistGradientBoostingRegressor, MLPRegressor(hidden_layer_sizes=(32,), max_iter=2000), and StandardScaler plus that perceptron with an unscaled target.",
+        "learned": "No FAIL in 15 runs for either Ridge pipeline (errors at most 1e-13) or in 75 runs for histogram gradient boosting (at most 2e-14); FAIL in 75 of 75 runs for the perceptron on raw lags (median error 4 to 8, at most 23) and for the perceptron behind a feature scaler (errors from about 1 to far above 1000). This suggested the three classes of Part 2 and its learners."
+      },
+      {
+        "id": "zoo-feasibility",
+        "run": "Installed statsforecast 2.1.1 (coreforecast 0.0.20, statsmodels 0.15.0, pandas 2.3.3, numpy 2.5.4, scikit-learn 1.9.1, scipy 1.18.1) in a separate virtual environment; imported AutoETS, AutoARIMA and AutoTheta; timed fit and 24-step forecast with season_length 12 on two generic NumPy series of length 120 (standard normal noise, and a sinusoid of period 12 plus noise), not TimeGym scenarios; no error or score was computed. Confirmed that timegym 1.4.1 imports and forecasts in that environment.",
+        "learned": "Per fit and forecast: AutoETS 26 to 28 ms, AutoARIMA 0.42 to 0.95 s, AutoTheta 8 to 9 ms. The environment occupies 0.7 GB."
+      },
+      {
+        "id": "reachability",
+        "run": "HTTPS requests from the drafting machine to package indexes, model hosts and literature servers (metadata only).",
+        "learned": "Reachable: pypi.org and files.pythonhosted.org (cosmic-ray, statsforecast, chronos-forecasting 2.3.2, torch 2.15.0 metadata), arxiv.org, export.arxiv.org, api.crossref.org, api.openalex.org. Refused by the network policy: huggingface.co (Chronos weights and revision metadata), download.pytorch.org (CPU-only torch wheels), doi.org, projecteuclid.org, esajournals.onlinelibrary.wiley.com, journals.aps.org, github.com, www.biorxiv.org, and the open repositories holding Pennekamp et al. (2019). The default torch 2.15.0 wheel on PyPI for Linux is 539 MB and requires CUDA packages of several hundred MB each (cuDNN 519 MB, NCCL 216 MB, cuSPARSELt 170 MB, NVSHMEM 135 MB, plus the CUDA toolkit), so it was not installed. A page-fetching service outside this machine reached the code repository of Feng et al. on github.com; it could not reach huggingface.co, esajournals.onlinelibrary.wiley.com or www.biorxiv.org either."
+      },
+      {
+        "id": "literature",
+        "run": "Downloaded from arXiv and read: Feng, Yuan, Ding and Li, arXiv 2509.23074v3; Cai and Ma, arXiv 1205.4219v2 (published as Bernoulli 19(5B):2359-2388, doi 10.3150/12-bej455, metadata checked on Crossref); Garland, James and Bradley, arXiv 1404.6823v2 (Physical Review E 90:052910); Zhang and Gilpin, arXiv 2505.11349v3; Ansari et al., arXiv 2403.07815. Crossref metadata only for Pennekamp et al. 2019 (Ecological Monographs 89:e01359) and Chen, Zhang and Zhong 2010 (Journal of the American Statistical Association 105:810-819, doi 10.1198/jasa.2010.tm09560).",
+        "learned": "See part_4_joint_spread_margin.statistic and part_5_predictability_estimators for what each paper gives and what is missing."
+      },
+      {
+        "id": "authors-code-spectral-bound",
+        "run": "Read, through a public web page, the implementation in the repository that Feng et al. name (github.com/WanjinVon/TS_Predictability, file DLinear/exp/exp_main.py, main branch at commit 3bd624602c95506b6f9beedfc43c041fdb6afb36, read on 14 November 2026). Nothing was executed.",
+        "learned": "The code adds 1e-8 to each auto-spectrum in the coherence; removes the mean once from each of x and y, not from each Welch window; uses a one-sided real FFT with each periodogram divided by the sum of the squared window weights; and returns Delta^2 plus the sample variance of y (denominator N) times one minus the power-weighted mean coherence. It differs from the paper's text where it matters here: the Welch window is floor(0.25 N) but never shorter than 32 points and never longer than N, so at N = 24 it is a single window, the coherence is 1 at every frequency, and the bound reduces to Delta^2. Its two code paths use different Hann windows (periodic and symmetric)."
+      },
+      {
+        "id": "formula-checks",
+        "run": "Unit checks on textbook cases with known answers, using generic random numbers and no study data: Wilson half-widths from timegym.statistics.wilson_interval for n = 85 to 99; the relative Frobenius distance of a spread multiplier in exact rational arithmetic; the Gram-matrix form of the unbiased estimator of tr(Sigma^2) against brute force on a sample of 6, and its mean over 200000 samples of size 8 from a known 3-dimensional Gaussian with nonzero mean; the exceedance count of a shared split-calibration threshold over 40000 simulations with uniform scores against the beta-binomial law; floating-point attainment of the four Holm thresholds at multiples of 1/240; bootstrap replicate time of the estimator on generic Gaussian data of dimension 12.",
+        "learned": "Smallest n with Wilson half-width at most 0.10 at every count: 93 (0.0996; 92 gives 0.1001; 96 gives 0.0981). Spread 0.75 gives exactly 7/16 = 0.4375. Estimator: brute force and Gram form agree to 1e-15; Monte Carlo mean 1.6011 +- 0.0075 against the true squared distance 1.6100, while the plug-in squared distance averages 4.11. Exceedances of a 239-case threshold at alpha 0.05 among 93 cases: simulated P(count >= 10) = 0.0391, beta-binomial(93, 12, 228) 0.0388, binomial(93, 0.05) 0.0179. All four Holm thresholds are attained exactly in floating point. One bootstrap replicate takes 0.075 ms at 64 paths and 0.45 ms at 256 paths."
+      },
+      {
+        "id": "resampling-formula-check",
+        "run": "On standard normal data of dimension 12 (identity covariance, not a study condition; 40 samples of 64 paths and 40 of 256 paths, 400 resamples each): the mean of the estimator T of Part 4 over resamples of the paths with replacement, minus T. On one sample of 9 paths in 3 dimensions: the mean of the leave-one-out values of T against T, and a leave-one-out computation through the Gram matrix against deleting rows.",
+        "learned": "Resampling with replacement moves the centre of T upward by 0.205 at 64 paths and 0.050 at 256 paths (the leading analytic term ((tr Sigma)^2 + tr(Sigma^2)) / (n ||Sigma0||_F^2) gives 0.203 and 0.051), because a resample pairs a path with its own copy; the squared margins are 0.0625 and 0.191. This ruled out a bootstrap over paths for the interval of Part 4. The mean of the leave-one-out values equals T to 1e-14 and the two leave-one-out computations agree exactly. No verdict, level or power was computed."
+      },
+      {
+        "id": "runtime-record",
+        "run": "Read experiments/results-v2/runtime.json for wall times only.",
+        "learned": "The protocol 2.0 model study took 19.3 s and the covariance study 2.7 s on one thread; used to scale the runtime estimates."
+      },
+      {
+        "id": "clean-subject-validation",
+        "run": "The clean subject, and nothing else, on the 12 pilot cases (2 per Study 2 model condition, pilot seeds; training streams numpy.random.SeedSequence([6950000, case seed])), with one numerical thread, when the frozen files were written: Forecast.validate and the time of one fit and forecast for the four learners; for Ridge with global scaling and for histogram gradient boosting on raw lags, the public check_shift_equivariance (shift 10, atol 1e-8, rtol 1e-7) and experiments.model_faults.target_shift_agreement (shifts 7 and -11); for Ridge, experiments.model_faults.point_agreement with the second implementation. In the Cosmic Ray environment the catalogue sources and the Study 2 bug sources were generated from the subject as text and compiled; none was imported or executed, and Cosmic Ray was not run on the subject.",
+        "learned": "Every forecast passes Forecast.validate (four learners, 12 cases). Public check: Ridge PASS on 12 of 12 (largest error 2.5e-14), gradient boosting PASS on 12 of 12 (3.2e-14). Per-target check: no alarm on 12 of 12 for either (7.1e-14 and 2.5e-14). Second implementation against the Ridge subject: no alarm on 12 of 12, largest difference 9.0e-13. Median time of one fit and forecast: Ridge 0.002 s, gradient boosting 0.054 s, window-standardized perceptron 0.107 s, raw perceptron 0.017 s. The 16 catalogue operators and 4 Study 2 bugs give 20 labels and 17 distinct sources. After this run the learners file changed in one place that these cases do not reach (a single target is passed to the perceptron as a vector)."
+      },
+      {
+        "id": "test-suite-runs",
+        "run": "What the tests of the Study 3 code execute each time they run, on seeds below 1000000 or on hand-made arrays: the covariance study of Part 3 on two suites with 19 calibration draws and 20 paths, compared with a second run of itself; the estimator T of Part 4 and its leave-one-out values against brute force on samples of 7 and 9 paths in 3 dimensions, and its mean over 20000 samples of 8 paths from a hand-made 3-dimensional Gaussian; the simulation loop of Part 4 on a toy 2-dimensional reference with 2 repetitions; both estimators of Part 5 on generic NumPy arrays; context parroting on hand-made periodic sequences; the zoo's model wrappers on a hand-made sine plus ramp, for shapes only; the zoo's runner and figure on a fabricated scorecard; the clean Ridge subject against the second implementation on the 12 pilot cases (as in clean-subject-validation) and on hand-made data; the four learners on hand-made data, for shapes and seed draws; the catalogue sources and the Study 2 bug sources as text against expected text, compiled and never executed; the harness, the runner of Parts 1 and 2, the statistics and the calibrated shift check end to end on a toy subject (a context mean), toy mutants of it, toy learners and toy conditions; the Cosmic Ray wrapper on a toy module of two functions, whose list of mutants was also compared once with that of 'cosmic-ray init' on the same toy module (18 mutants, same order and positions).",
+        "learned": "The tests assert structure, determinism and agreement with hand computations. None reads a rejection rate, a verdict rate, a ratio to an exact floor or a score, and none runs a mutant, a Study 2 bug or the calibrated shift check on the subject or on a learner of Part 2."
+      },
+      {
+        "id": "earlier-exploratory-records",
+        "run": "Records that existed before this protocol and bear on its parts. Protocol 2.1 (experiments/results-v2-followup) ran the answer-key alarm on the four Study 2 bugs. Protocol 2.2 (experiments/results-v2-addendum) ran the paired sign-flip check on the same bugs and Fisher's combination on the stored Study 2 covariance p-values. On 14 November 2026, while the scorecard comparison of the package was developed, its paired check was measured on the default scorecard grid for a lag regression with and without an off-by-one bug in its starting window, with and without a ridge penalty, and under two sampling seeds. On the same day the interval beside a scorecard score was measured for the last-value forecaster on the default grid (scorecards of 10, 30 and 3000 series, and per-series errors of 6000 series per cell, all at seeds below 3000000). On 16 November 2026 the interval was measured again, for five forecasters on the default grid: the built-in last-value forecaster, the mean of the history, a straight line fitted to the history, the quick start's Ridge regression on 24 lags, and each pattern's own model fitted to the history (Pattern.fitted). Per-series errors of 6000 series per cell (seeds 2000000 to 2005999) were cut into separate scorecards of 5, 10, 30 and 100 series, and the share of scorecards whose interval held the score of all 6000 series was counted at the 80%, 90%, 95% and 99% levels. Candidate intervals were also compared on simulated errors that are not TimeGym series (squared normal and gamma draws). On that evidence the package's interval was changed before this protocol was registered: its low end now reaches 1 + 1/sqrt(n) times as far below the score as its high end reaches above it, n being the number of series. The paper and the documentation show scorecards of the built-in baselines and of a Ridge lag pipeline at other seeds.",
+        "learned": "These records are the reason for Parts 1 and 3. They are exploratory, on the Study 2 fixtures or on other pipelines; none used the subject of Part 1, a generated mutant, a learner of Part 2, the seeds of this protocol, or a Part 6 model other than the two built-in baselines. The interval that the figure of Part 6 draws was therefore chosen with scores of the last-value forecaster in hand, at other seeds. Part 6 reports that interval as the package computes it and makes no claim about it."
+      }
+    ]
+  },
+  "frozen_inputs": {
+    "study_2_protocol": {
+      "path": "experiments/protocol-v2.json",
+      "sha256": "1532604c06fec3693fdc93946e727210a2059bcf8f95d4a4362075b7db042f30"
+    },
+    "follow_up_protocol": {
+      "path": "experiments/protocol-v2-followup.json",
+      "sha256": "9ec8e7b2c7b62344d128d0583afaa70b3f166e70edc9fc2be10d8d1f57ccf5dd"
+    },
+    "addendum_protocol": {
+      "path": "experiments/protocol-v2-addendum.json",
+      "sha256": "122cd540a0131353090c4332782d7d496a2f250c8abeacc99fdd71f7a1c72428"
+    },
+    "study_2_fixtures": {
+      "path": "experiments/model_faults.py",
+      "sha256": "3449ed9b9d74cb150ccf2a341340ff9516036c0ec1e665f4f339ae04ae0a119d"
+    }
+  },
+  "environment": {
+    "study_lock": "requirements-study.txt with Python 3.13 for Parts 1 to 5 and for the Part 6 models that need only scikit-learn and timegym. The interpreter used for the pilots reported pandas 3.1.1 where the lock names 3.1.0; the run must use an environment that matches the lock exactly, and the manifest records every installed version.",
+    "cosmic_ray_environment": "A separate environment with cosmic-ray==8.9.0 (parso 0.8.7, stevedore 5.10.0) is used only to generate mutant sources; its pip freeze is stored with the mutant manifest.",
+    "zoo_lock": "experiments/zoo/requirements-zoo.txt, a pip freeze of an environment with statsforecast==2.1.1, coreforecast==0.0.20, statsmodels==0.15.0, pandas==2.3.3 (statsforecast requires pandas below 3), numpy==2.5.4, scipy==1.18.1, scikit-learn==1.9.1 and matplotlib==3.11.2, with timegym installed from the registered commit. Heavy dependencies never enter pyproject.toml or requirements-study.txt.",
+    "pretrained_lock": "experiments/zoo/requirements-chronos.txt: chronos-forecasting==2.3.2 with a CPU-only torch build and its transformers and accelerate pins. It may be installed and run on another machine; see part_6_zoo.pretrained_environment.",
+    "threads": "One numerical thread per process, enforced with threadpoolctl as in the existing runners (and torch.set_num_threads(1) for Chronos). Independent units (mutants, simulation cells) may run in parallel worker processes; every random number depends only on the registered seeds of its unit, so results do not depend on the number of workers.",
+    "hardware": "CPU only. No paid resources; no network access during the run except the one-time download of the Chronos weights."
+  },
+  "shared": {
+    "alpha": 0.05,
+    "tolerances": {
+      "atol": 1e-08,
+      "rtol": 1e-07,
+      "justification": "The Study 2 tolerances, unchanged, so that deterministic verdicts are comparable with the four Study 2 bugs."
+    },
+    "monte_carlo_rank_checks": {
+      "calibration_draws": 239,
+      "rule": "timegym.diagnostics.rank_alarm: p = (1 + number of calibration values >= observed) / (B + 1); FAIL when p <= alpha.",
+      "justification": "With B = 239, p-values are multiples of 1/240 and the four Holm thresholds for a family of four at 0.05 are attained exactly: 3/240 = 0.0125, 4/240 = 0.05/3, 6/240 = 0.025, 12/240 = 0.05 (checked in floating point)."
+    },
+    "split_calibration_alarms": {
+      "calibration_cases": 239,
+      "rule": "experiments.run_supplement.conformal_threshold on 239 clean calibration scores per condition and learner; per-case alarm when the evaluation score strictly exceeds the threshold (rank ceil(240 x 0.95) = 228), equivalently rank_alarm p <= alpha.",
+      "justification": "The same resolution as the Monte Carlo checks, so that the alpha grid of the detection curves is the set of attainable levels k/240."
+    },
+    "evaluation_cases_per_condition": {
+      "value": 93,
+      "precision_target": "Wilson 95% interval (timegym.statistics.wilson_interval) with half-width at most 10 percentage points at every possible count.",
+      "arithmetic": "The Wilson half-width is largest at a rate of 1/2, where it equals z sqrt(1/(4n) + z^2/(4n^2)) / (1 + z^2/n) with z = 1.95996. n = 92 gives 0.1001; n = 93 gives 0.0996 (largest over all counts 0 to 93); every n from 93 to 133 stays below 0.10. The Wald formula z^2/(4 x 0.1^2) = 96.04 gives 96 or 97; it is not the Wilson interval the protocol uses.",
+      "applies_to": "Parts 1 and 2 (evaluation cases per condition) and Part 3 (independent suites)."
+    },
+    "per_mutant_deterministic_rule": "A deterministic check (output checks, scalar shift, per-target shift, second implementation) catches a mutant in a condition when it alarms on at least one of the evaluated cases of that condition. This rule is valid only if the clean pipeline raises no alarm of that check on any calibration or evaluation case of that condition and learner; the run verifies this. If the clean pipeline alarms on any case, the check is reported as not deterministic for that condition and learner, with the clean alarm count, and no caught verdict of that check is given there; nothing is dropped.",
+    "per_mutant_statistical_rule": {
+      "split_calibration_alarms": "For the calibrated loss alarm and the answer-key alarm, with m evaluated cases of a mutant in a condition (shared.evaluated_cases) and x per-case alarms: p = P(X >= x) for X ~ BetaBinomial(m, a = 240 - 228 = 12, b = 228), computed with scipy.stats.betabinom. Caught when Holm (experiments.run_supplement.holm_rejections) at 0.05 rejects within the family of all non-equivalent mutants of the same source and learner in that condition.",
+      "assumption": "Under the null that the mutant's evaluation scores and the 239 clean calibration scores of the condition are independent and identically distributed (a mutant that changes nothing the score sees), the number of evaluation scores above the k-th calibration order statistic follows BetaBinomial(m, n + 1 - k, k), whatever the score distribution, when ties have probability zero; ties only lower the count. The p-value is valid marginally over the calibration draw. All mutants of a condition share one calibration sample, so their p-values are positively dependent; Holm needs no independence. The exact binomial test against alpha would assume a conditional alarm probability of exactly alpha given the frozen calibration sample, which is false: that probability is Beta(12, 228) distributed with standard deviation 0.014, and the binomial tail understates the true one (for 93 cases, P(X >= 10) is 0.0179 binomial against 0.0388 beta-binomial).",
+      "calibrated_shift_check": "For the calibrated shift check of Part 2 every case draws its own 39 refits, so per-case FAILs are independent with probability exactly 2/40 = 0.05 under the null: an exact binomial test of x FAILs among the m cases that the check decided (PASS or FAIL; a case where the check returns ERROR is counted in its own column and left out of m) against 0.05 (scipy.stats.binom), with Holm as above.",
+      "paired_check": "One-sided sign-flip test of the mean paired difference d_i = mse(answer key, mutant forecast) - mse(answer key, clean forecast) over the evaluated cases: experiments.run_addendum.sign_flip_pvalue(d, 9999, numpy.random.default_rng([7600000, len(d)])), with Holm as above. A Holm family must not exceed 500 members, because the smallest attainable p-value is 1/10000 and the first Holm threshold is 0.05/m; the cap of 400 generated mutants guarantees this.",
+      "sign_flips": 9999,
+      "family_sizes": "The Holm families of the sources differ in size (4 Study 2 bugs, 16 catalogue mutants, up to 400 generic mutants), so one alarm count is not one verdict: among 93 cases a calibrated alarm needs 10 alarms unadjusted, 12 in a family of 4, 14 in a family of 16 and 18 in a family of 400. The unadjusted decision (p <= 0.05) is reported beside every Holm decision, and sources are compared on the detection curves and on per-case alarm rates, not on counts of Holm rejections.",
+      "holm_families": "A family holds the non-equivalent sources of one kind (generated by Cosmic Ray, catalogue, Study 2 bugs) for one learner, check and condition. A source without an evaluated case in the condition has no p-value there and is left out; the size of the family actually used is reported with every decision. A source that carries labels of several kinds (a catalogue operator whose source is also a Study 2 bug, or also a generated mutant) belongs to the family and to the funnel of each of its kinds."
+    },
+    "evaluated_cases": "The calibrated alarms and the paired check use the cases where the source returned a forecast that passes the output checks (Forecast.validate(case.task) reports nothing and every point is finite). The other completed cases are counted as unevaluable; cases where the source raised, and cases not finished within the time limit, have their own columns. The deterministic checks other than the output checks run on every case where the source returned a forecast.",
+    "holm": "experiments.run_supplement.holm_rejections, the step-down procedure of protocols 2.0 and 2.2.",
+    "uncertainty": "Wilson 95% intervals (timegym.statistics.wilson_interval) for every rate: over cases for case-level rates, over suites for suite-level rates, over repetitions for Part 4, and over mutants for funnel proportions (descriptive of the generated set, not of a population of real faults). Nothing is dropped after the run: every exception, timeout, unsupported or unevaluable case is counted and reported in its own column.",
+    "multiplicity": "Holm families are declared per part. No multiplicity claim spans parts, mutant sources, learners, checks or conditions unless stated.",
+    "unit_of_work": "One unit is one source (the clean subject, a Study 2 bug or a mutant) with one learner in one condition. Each unit runs in a fresh Python process that imports its source once. Before any other work the unit fits and forecasts once on the condition's warm-up context, the equivalence input i = 0, and discards the result; the clean subject gets the same warm-up. The unit then takes its cases in increasing seed order (the 8 equivalence inputs, the calibration cases for the clean subject, evaluation cases) and, within a case, the fixed order forecast, output checks, scalar shift check, per-target shift check, second implementation, calibrated shift check. The equivalence verdict of a source needs all six conditions, so a source runs as two units per condition: a screen unit (warm-up fit and the 8 equivalence inputs) and, once it is classified, an evaluation unit that repeats the warm-up fit and the 8 equivalence inputs before the evaluation cases, so that the state of its process follows the same order. Units may run in parallel; no unit reads the state of another, so results do not depend on the number of workers."
+  },
+  "seeds": {
+    "existing_ranges": [
+      "Study 1 (protocol 1.1): development 0-15; evaluation 10000-10063; reference samples 210000-210063; covariance calibration 310000-310063; mutations 410000-410063; capability 10000-10015.",
+      "Study 2 (protocol 2.0) model study: calibration 20000 + 1000 c + (0-127), c = 0-5 (20000-25127); evaluation 50000 + 1000 c + (0-63) (50000-55063).",
+      "Study 2 covariance study: cases 80000 + 10 s + c, s = 0-63 (80000-80633); reference samples 1080000-1080633; calibration 2080000-2080633; mutations 3080000-3080633.",
+      "Protocol 2.1: re-runs Study 1 and 2 seeds; scorecard precision series 0-29 with dependence seeds 100000-100029; bootstrap generator seed 0.",
+      "Protocol 2.2: sign-flip generator seed 0.",
+      "Package: attainable-score series 1000000-1000199 (timegym/scorecard.py); default scorecard series 0-9 and dependence seeds 100000-100009 (paper Figure 1).",
+      "Measurements of the scorecard's interval on 14 and 16 November 2026 (not stored in the repository): series seeds below 3000000, among them 2000000-2005999 in every cell of the default grid.",
+      "Study 3 pilots (stage 1): 6900000 + 1000 c + (0-1), c = 0-5; learner entropy SeedSequence([6950000, case]) and SeedSequence([6960000, case])."
+    ],
+    "rule": "Every Study 3 case seed lies in [7000000, 15000000) and in exactly one block of case_seed_blocks; the runner checks that the blocks are pairwise disjoint, that no generator tag falls in a block, and that every block lies above the seeds of the earlier protocols, the package and the pilots (all below 7000000), and refuses to start otherwise. The entries of namespaces describe the same seeds in words.",
+    "case_seed_blocks": {
+      "format": "name: [base, stride, blocks, count]; the seeds of a namespace are base + stride * b + i for b < blocks and i < count. The runners take every case seed from this table.",
+      "model_calibration": [
+        7000000,
+        10000,
+        6,
+        239
+      ],
+      "model_evaluation": [
+        7100000,
+        10000,
+        6,
+        93
+      ],
+      "equivalence_inputs": [
+        7200000,
+        10000,
+        6,
+        8
+      ],
+      "classification_cases": [
+        7300000,
+        10000,
+        6,
+        16
+      ],
+      "covariance_cases": [
+        8000000,
+        10,
+        93,
+        4
+      ],
+      "covariance_reference_samples": [
+        9000000,
+        10,
+        93,
+        4
+      ],
+      "covariance_calibration": [
+        10000000,
+        10,
+        93,
+        4
+      ],
+      "covariance_shuffle": [
+        11000000,
+        10,
+        93,
+        4
+      ],
+      "margin_cases": [
+        12100000,
+        1,
+        1,
+        4
+      ],
+      "predictability_series": [
+        13000000,
+        1,
+        1,
+        200
+      ],
+      "zoo_series": [
+        14000000,
+        1,
+        1,
+        30
+      ],
+      "zoo_dependence": [
+        14100000,
+        1,
+        1,
+        30
+      ]
+    },
+    "generator_tags": {
+      "format": "Integers that seed a generator directly or lead the entropy of a numpy.random.SeedSequence; each is used for one purpose and none is a case seed.",
+      "learner_training": 7400000,
+      "mutant_sampling": 7500000,
+      "generic_mutant_order": 7500001,
+      "sign_flip": 7600000,
+      "margin_ensembles": 12000000,
+      "zoo_training": 14500000,
+      "chronos_sampling": 14600000
+    },
+    "namespaces": {
+      "model_calibration": "7000000 + 10000 c + i, condition index c = 0-5 in protocol 2.0 order, i = 0-238.",
+      "model_evaluation": "7100000 + 10000 c + i, i = 0-92.",
+      "equivalence_inputs": "7200000 + 10000 c + i, i = 0-7 (i = 0-3 are the registered N = 24; i = 0 gives the sensitivity N = 6; i = 0-7 gives N = 48).",
+      "classification_cases": "7300000 + 10000 c + i, i = 0-15.",
+      "learner_training_seeds": "For a learner with a free training seed: generator numpy.random.default_rng(numpy.random.SeedSequence([7400000, learner_index, case_seed])), learner_index 0 = ridge, 1 = hgb, 2 = mlp_window_standardized, 3 = mlp_raw; each fit draws integers(0, 2**31 - 1) in the fixed order of part_2_learners.calibrated_shift_check.draw_order. On a case the forecast and the calibrated shift check share one stream (draws 1 and 2-41); the scalar and the per-target shift check each start a fresh copy of the case's stream, so their refits do not move those draws. The clean pipeline and every mutant use identical streams on the same case.",
+      "mutant_sampling": "numpy.random.default_rng(7500000) for the Part 1 stratified sample (used only if more than 400 mutants are generated); numpy.random.default_rng(7500001) for the Part 2 order of generic mutants.",
+      "sign_flip": "numpy.random.default_rng([7600000, number of pairs]), passed to experiments.run_addendum.sign_flip_pvalue.",
+      "covariance_suites": "8000000 + 10 s + c, suite s = 0-92, condition c = 0-3; reference samples +1000000 (9000000-9000923); calibration +2000000 (10000000-10000923); shuffle +3000000 (11000000-11000923).",
+      "margin_simulation": "Cases 12100000 + c, c = 0-3 (one per covariance condition); ensemble of cell j, repetition r: numpy.random.SeedSequence([12000000, j, r]). The interval of Part 4 uses no random numbers.",
+      "predictability_series": "13000000 + i, i = 0-199, the same seeds in every one of the 20 cells, as the scorecard uses common seeds across cells.",
+      "zoo_scorecard": "Pipeline.scorecard(seed=14000000, instances=30): series 14000000-14000029 and dependence seeds 14100000-14100029. A model with a free training seed draws one integer per fit, in the scorecard's order of fits, from numpy.random.default_rng(numpy.random.SeedSequence([14500000, model_index])), model_index being the position in part_6_zoo.models. Chronos calls torch.manual_seed(14600000) once before its scorecard and samples in the scorecard's order of forecasts."
+    }
+  },
+  "part_1_generated_mutants": {
+    "question": "Which checks catch generated mutants of a lag-regression pipeline that pass the output checks, and how do generated mutants compare with the four hand-placed Study 2 bugs?",
+    "subject": {
+      "module": "experiments/study3_subject.py",
+      "frozen_files": [
+        "experiments/study3_subject.py",
+        "experiments/study3_reference.py",
+        "experiments/study3_catalogue.py",
+        "experiments/study3_learners.py"
+      ],
+      "frozen_files_sha256": {
+        "experiments/study3_subject.py": "2f5ad6efdd8fc223cc9b1938328d008632f933049df32481ca27cbc0a6615032",
+        "experiments/study3_reference.py": "dd041d88a18cc65f5584ade34ef78cf7509d37edcc7c13da4a6f9d6a5b5e2475",
+        "experiments/study3_catalogue.py": "f1317ff896c335b43d4a87940f1b2bb7489b3052a697d1e8d17cedf8cf26cf88",
+        "experiments/study3_learners.py": "957a5bf60176f98196a1f318bc56260d1fdeb99faeef33b3f5fd399329ba8067"
+      },
+      "rule": "The subject is written for this study on the model of the clean branch of experiments/model_faults.LagRidgeImplementation, committed and hashed (frozen_files_sha256) before any mutant is generated, and never edited afterwards; the second implementation, the catalogue and the learners are frozen with it. It contains no argument validation, so that generated mutants act on the forecasting computation.",
+      "required_structure": {
+        "constants": "No module-level constants other than imports; window, period and scaling are constructor arguments.",
+        "functions": [
+          "training_matrix(values, window, period) -> (features, targets): start = max(window, period); for every row t in range(start, len(values)) the feature row is the flattened lag block values[t - window:t] (site T-lag) followed by the seasonal lag values[t - period] (site T-season); targets = values[start:] (site T-target).",
+          "prediction_row(history, window, period) -> array of shape (1, features): the flattened lag block history[-window:] (site P-lag) followed by history[-period] (site P-season).",
+          "fit_scaler(array) -> (center, scale): column means and population standard deviations, with a zero scale replaced by 1.",
+          "apply_scaler(array, center, scale) -> (array - center) / scale.",
+          "invert_scaler(array, center, scale) -> array * scale + center."
+        ],
+        "class": "SubjectForecaster(make_regressor, window=6, period=12, scaling='global') with clone_unfitted(), fit(context) and predict(future_index), usable as Pipeline(SubjectForecaster(...)). fit: values = context as float array; features, targets = training_matrix(...); when scaling is 'global', the feature and target scalers are fitted with fit_scaler (sites S-x and S-y) and applied with apply_scaler; regressor = make_regressor().fit(features, targets). predict: a loop for step in range(len(future_index)) (site H) builds prediction_row from the current history, scales it, calls regressor.predict, applies invert_scaler with the target scaler when scaling is 'global' (site I), appends the value to the list of points, and appends it to the history (site R); it returns timegym.Forecast(index=future_index.copy(), point=points, target_names=context columns).",
+        "site_markers": "Each site carries a trailing comment '# site: <name>' on its line, with the names above, so that the catalogue transformer finds exactly one node per site and fails loudly when the expected pattern is absent."
+      },
+      "configuration": {
+        "window": 6,
+        "period": 12,
+        "scaling": "global",
+        "regressor": "sklearn.linear_model.Ridge(alpha=1.0)",
+        "justification": "Window and penalty of Study 2; period 12 is the seasonal period of the seasonal_scales condition and gives the seasonal-period operator something to change in every condition (start = 12 rows, at most 15% of the shortest context of 80)."
+      },
+      "second_implementation": "experiments/study3_reference.py: an independent NumPy implementation of the same forecaster (lag columns built as one block per lag, seasonal column, augmented normal equations with an unpenalized intercept, solved in original target units, recursive forecasting), receiving neither the future nor generator parameters, as normal_equation_forecast in protocol 2.0. Used for Ridge only. It is written before any mutant is generated and is frozen with the subject."
+    },
+    "conditions": "The six conditions of protocol 2.0 model_study.conditions, unchanged and in the order of condition_ids.",
+    "condition_ids": [
+      "white_noise_locations",
+      "ar1_positive",
+      "ar1_negative",
+      "opposing_trends",
+      "seasonal_scales",
+      "random_walk_drifts"
+    ],
+    "cases": {
+      "calibration_cases": 239,
+      "evaluation_cases": 93,
+      "justification": "shared.split_calibration_alarms and shared.evaluation_cases_per_condition."
+    },
+    "sources": {
+      "cosmic_ray": {
+        "tool": "cosmic-ray==8.9.0",
+        "operators": "All operators that 'cosmic-ray operators' lists in that version (213 names in 16 families: ReplaceBinaryOperator, ReplaceComparisonOperator, ReplaceUnaryOperator, AddNot, ReplaceTrueWithFalse, ReplaceFalseWithTrue, ReplaceAndWithOr, ReplaceOrWithAnd, ReplaceBreakWithContinue, ReplaceContinueWithBreak, ExceptionReplacer, NumberReplacer, RemoveDecorator, ZeroIterationForLoop, VariableReplacer, VariableInserter). VariableReplacer and VariableInserter take arguments that 'cosmic-ray init' reads from its configuration; with none, as here, init makes no mutant from them, so the generated mutants come from the other 14 families. The full list, and the operators that made no mutant for this reason, are stored with the manifest.",
+        "generation": "experiments/study3_generate.py, run in the Cosmic Ray environment: it enumerates the (operator, occurrence) pairs of experiments/study3_subject.py as 'cosmic-ray init' does (on a toy module its list equals init's in content, order and positions; pilots test-suite-runs) and writes each mutated source with cosmic_ray.mutating.mutate_code, then adds the catalogue sources and the Study 2 bug sources. No Cosmic Ray test command is used: Cosmic Ray only generates sources, and the Study 3 harness executes them. The generic mutants of this protocol are the distinct generated sources that are not also a catalogue source or a Study 2 bug source.",
+        "cap": 400,
+        "sampling_rule": "If more than 400 generic mutants are generated, all catalogue sources and Study 2 bug sources are run and a sample of 400 generic mutants is drawn without replacement, stratified by operator family. Families are taken in the order of their first mutant in the manifest. A family of size s among a total of t first receives min(s, max(1, floor(400 s / t + 0.5))) places; while the places do not sum to 400, one place is added to the family, among those not yet full, whose quota 400 s / t exceeds its places by most, or removed from the family, among those with more than one place, whose places exceed its quota by most, the earlier family winning a tie. One numpy.random.default_rng(7500000) then draws a permutation of each family in turn, and the family's first places in its permutation are taken. If 400 or fewer are generated, all are run.",
+        "cap_justification": "The pilot counted 30 mutants on the 34-line clean branch of the Study 2 pipeline and 348 on the whole 132-line fixture file; the subject should fall between. 400 keeps every Holm family of the paired check below 500 members (shared.per_mutant_statistical_rule.paired_check) and the run within a few CPU-hours (runtime_estimate_cpu_hours)."
+      },
+      "manifest": {
+        "path": "experiments/results-v3/mutants/manifest.json",
+        "sha256": "",
+        "rule": "Written by experiments/study3_generate.py with one file per distinct source (sources/<SHA-256>.py): the tool version and its environment, the operator list, the subject's digest, and per source its labels (kind, operator, family, occurrence or site, enclosing definition) and SHA-256. Sources that are identical after ast.unparse(ast.parse(source)) are one source with several labels. The commit that adds these files writes the manifest's SHA-256 into sha256; Parts 1 and 2 refuse to start without it, refuse a source file whose digest differs from the manifest, and refuse a manifest not made from the frozen subject."
+      },
+      "catalogue": {
+        "implementation": "experiments/study3_catalogue.py, standard library only: each operator finds its site by the trailing '# site: <name>' comment, takes the one statement that starts on that line, checks that it has exactly the expected form and replaces it; any other form is an error. Each operator produces exactly one mutant source, written by ast.unparse, so mutant sources carry no comments. Two edits touch a line that is not a site: horizon_index_off_by_one also changes the returned points to points[1:], and the Study 2 bug swap_recursive_targets is placed after the statement value = output[0]; both are found by their exact text inside predict. The two scaler-reuse operators keep the first call's statistics in a module-level dictionary of the mutant source.",
+        "kinds": "Ten kinds of time-series bug, written as 16 operators: lag window off by one (3), lag order reversed (2), recursion state not updated (1), horizon index off by one (1), target and feature columns swapped (2: the target columns in training, the series columns of the features at prediction), scaler fitted once and reused across contexts (2), inverse transform skipped (1) or applied twice (1), seasonal period off by one (2), training rows dropped from the wrong end (1).",
+        "operators": [
+          {
+            "id": "lag_window_off_by_one_training",
+            "site": "T-lag",
+            "definition": "In training_matrix the lag block values[t - window:t] becomes values[t - window - 1:t - 1], so every training row uses lags 2 to window + 1 while prediction uses lags 1 to window."
+          },
+          {
+            "id": "lag_window_off_by_one_prediction",
+            "site": "P-lag",
+            "definition": "In prediction_row the lag block history[-window:] becomes history[-window - 1:-1], so prediction uses lags 2 to window + 1 while training used lags 1 to window."
+          },
+          {
+            "id": "lag_window_includes_target_training",
+            "site": "T-lag",
+            "definition": "In training_matrix the lag block values[t - window:t] becomes values[t - window + 1:t + 1], so every training row holds its own target as its newest lag (look-ahead within the context), while prediction uses lags 1 to window."
+          },
+          {
+            "id": "lag_order_reversed_training",
+            "site": "T-lag",
+            "definition": "In training_matrix the lag block values[t - window:t] becomes values[t - window:t][::-1], so training rows list the lags newest first while prediction rows list them oldest first."
+          },
+          {
+            "id": "lag_order_reversed_prediction",
+            "site": "P-lag",
+            "definition": "In prediction_row the lag block history[-window:] becomes history[-window:][::-1], so prediction rows list the lags newest first while training rows list them oldest first."
+          },
+          {
+            "id": "recursion_state_not_updated",
+            "site": "R",
+            "definition": "The statement that appends the forecast value to the history in predict is removed, so every step after the first is computed from the observed context alone."
+          },
+          {
+            "id": "horizon_index_off_by_one",
+            "site": "H",
+            "definition": "The loop in predict runs range(len(future_index) + 1) and the returned points are points[1:], so the value reported for step h is the recursive forecast for step h + 1."
+          },
+          {
+            "id": "target_columns_swapped",
+            "site": "T-target",
+            "definition": "In training_matrix targets = values[start:] becomes values[start:][:, ::-1], so each output column is fitted against the other series' label while the feature blocks keep their order. For a regressor that fits each target separately (Ridge, one gradient-boosting model per target) its forecasts equal those of the Study 2 bug swap_recursive_targets up to rounding, although the sources differ; both are run and reported."
+          },
+          {
+            "id": "series_columns_swapped_prediction",
+            "site": "P-lag",
+            "definition": "In prediction_row the lag block history[-window:] becomes history[-window:][:, ::-1], so at prediction each series' lags sit in the feature columns that held the other series' lags in training."
+          },
+          {
+            "id": "feature_scaler_reused_across_contexts",
+            "site": "S-x",
+            "definition": "The call fit_scaler(features) in fit is replaced by a call that keeps the center and scale of its first call in the module and returns them on every later call, so every later context is standardized with the statistics of the first. With the warm-up fit of shared.unit_of_work, these are the statistics of the condition's warm-up context."
+          },
+          {
+            "id": "target_scaler_reused_across_contexts",
+            "site": "S-y",
+            "definition": "The call fit_scaler(targets) in fit is replaced by a call that keeps the center and scale of its first call in the module and returns them on every later call, so every later forecast is inverted with the statistics of the first. With the warm-up fit of shared.unit_of_work, these are the statistics of the condition's warm-up context."
+          },
+          {
+            "id": "inverse_transform_skipped",
+            "site": "I",
+            "definition": "The call invert_scaler(output, ...) in predict is replaced by output, so forecasts and the recursive history stay in standardized units."
+          },
+          {
+            "id": "inverse_transform_applied_twice",
+            "site": "I",
+            "definition": "The call invert_scaler(output, ...) in predict is replaced by invert_scaler(invert_scaler(output, ...), ...) with the same scaler, so the inverse transform is applied twice."
+          },
+          {
+            "id": "seasonal_period_off_by_one_training",
+            "site": "T-season",
+            "definition": "In training_matrix the seasonal lag values[t - period] becomes values[t - period - 1], so training uses lag period + 1 (and the first row reads values[-1], the last context value) while prediction uses lag period."
+          },
+          {
+            "id": "seasonal_period_off_by_one_prediction",
+            "site": "P-season",
+            "definition": "In prediction_row the seasonal lag history[-period] becomes history[-period - 1], so prediction uses lag period + 1 while training used lag period."
+          },
+          {
+            "id": "training_rows_dropped_from_wrong_end",
+            "site": "T-target",
+            "definition": "In training_matrix targets = values[start:] becomes values[:len(values) - start], so the rows without a full lag history are removed from the end of the targets instead of the beginning and every feature row is paired with the target start steps earlier. With window 6 and period 12, start equals the period, so each row's target is its own seasonal-lag feature."
+          }
+        ],
+        "leakage": "No operator can leak the evaluation future: the pipeline receives only the context and the future index, never future values, so no edit of its source can read them. Look-ahead within the context can be written, and lag_window_includes_target_training is that operator; seasonal_period_off_by_one_training also produces it, on its first training row only."
+      },
+      "study2_bugs": {
+        "purpose": "The four Study 2 bugs re-expressed on the subject, run through the same funnel, so that generated mutants and hand-placed bugs are compared on one pipeline.",
+        "bugs": [
+          {
+            "id": "reverse_prediction_lags",
+            "same_source_as": "lag_order_reversed_prediction"
+          },
+          {
+            "id": "stale_recursive_state",
+            "same_source_as": "recursion_state_not_updated"
+          },
+          {
+            "id": "omit_inverse_target_scaling",
+            "same_source_as": "inverse_transform_skipped"
+          },
+          {
+            "id": "swap_recursive_targets",
+            "definition": "After value = output[0] in predict, value = value[::-1].copy(), so the two target columns are exchanged in the returned points and in the recursive history while the labels keep their order."
+          }
+        ],
+        "deduplication": "Mutant sources that are identical after ast.unparse(ast.parse(source)) are executed once and reported under every label that produced them; the number of duplicates is reported per source."
+      }
+    },
+    "funnel": {
+      "stages": [
+        "generated",
+        "duplicate",
+        "runnable",
+        "equivalent on the fixed inputs",
+        "not equivalent (evaluated)",
+        "caught by the output checks",
+        "caught by the scalar shift check",
+        "caught by the per-target shift check",
+        "caught by the second implementation",
+        "caught by the calibrated loss alarm",
+        "caught by the answer-key alarm",
+        "caught by the paired check"
+      ],
+      "runnable": "The source compiles, the module imports, and the mutant returns a forecast for at least one of the N fixed inputs within the time limit. Otherwise it is not runnable, with the reason recorded (syntax error, import error, exception on every input, timeout, or a process that ended without finishing).",
+      "equivalence": {
+        "N": 24,
+        "inputs_per_condition": {
+          "6": 1,
+          "24": 4,
+          "48": 8
+        },
+        "inputs": "The first 4 equivalence-input seeds of each of the six conditions (seeds namespace equivalence_inputs, i = 0-3), each screened inside its condition's screen unit after the warm-up fit (shared.unit_of_work). The screen unit forecasts all 8 inputs of its condition, so that N = 6, 24 and 48 are read from one run (inputs_per_condition gives the inputs per condition behind each N).",
+        "rule": "A runnable mutant is equivalent when on every one of the N inputs it returns a forecast whose index and target names equal the clean forecast's, whose point array has the clean shape and is finite, and whose points satisfy numpy.allclose(mutant, clean, atol=1e-8, rtol=1e-7); for a learner with a free training seed both use identical seed streams. An exception on any input where the clean pipeline returns a forecast makes the mutant not equivalent.",
+        "N_justification": "Four inputs in each condition cover both targets, the seasonal condition, the shortest context (80) and the random walk; the screen costs about 0.1 s per mutant with Ridge.",
+        "sensitivity": "Registered: the equivalence classification is also computed at N = 6 (i = 0) and N = 48 (i = 0-7) and both are reported beside N = 24. In addition, for every mutant classified equivalent at N = 24, forecasts (only) are computed on all evaluation cases and the number of mutants that differ from the clean forecast on at least one evaluation case is reported as screen misses; such mutants stay in the equivalent stage of the primary funnel."
+      },
+      "time_limit": {
+        "factor": 20,
+        "minimum_seconds": 120,
+        "rule": "Per unit (a source with a learner in a condition): the larger of 120 s and 20 times the wall time of the clean unit of that learner and condition for the same stages, including the start of its process and its warm-up fit. A unit that only forecasts (a screen unit, or the evaluation unit of an equivalent source) is measured against the clean unit's forecast times. A unit stopped at its limit keeps every case it finished; the others are reported as not evaluated, case by case."
+      },
+      "proportions": "Runnable over the sources run; equivalent and not equivalent over the runnable sources; caught by a check over the sources that are not equivalent."
+    },
+    "checks": {
+      "output_checks": {
+        "kind": "deterministic",
+        "alarm": "Forecast.validate(case.task) returns a violation, the point array is not finite, or the mutant raises on the case (raised cases are also reported in their own column). A violation does not stop the run."
+      },
+      "scalar_shift": {
+        "kind": "deterministic",
+        "alarm": "timegym.checks.check_shift_equivariance with shift 10.0 and the shared tolerances returns FAIL or ERROR (ERROR counts are reported separately)."
+      },
+      "per_target_shift": {
+        "kind": "deterministic",
+        "alarm": "experiments.model_faults.target_shift_agreement with shifts [7.0, -11.0] and the shared tolerances raises an alarm. An exception raised while the check refits on a shifted context counts as an alarm and is reported with its error."
+      },
+      "second_implementation": {
+        "kind": "deterministic",
+        "alarm": "experiments.model_faults.point_agreement between the mutant forecast and experiments/study3_reference.py on the same context raises an alarm; a forecast with a point that is not finite alarms. Ridge only."
+      },
+      "loss_alarm": {
+        "kind": "statistical",
+        "score": "timegym.metrics.mse(case.observed, forecast.point)",
+        "calibration": "The 239 clean calibration cases of the condition, with the clean subject and the same learner."
+      },
+      "answer_key_alarm": {
+        "kind": "statistical",
+        "score": "timegym.metrics.mse(case.reference.mean, forecast.point), the alarm of protocol 2.1",
+        "calibration": "The same 239 clean calibration cases."
+      },
+      "paired_check": {
+        "kind": "statistical",
+        "rule": "shared.per_mutant_statistical_rule.paired_check, against the clean subject on the same evaluation cases."
+      }
+    },
+    "caught": "Per mutant, check and condition, as defined in shared.per_mutant_deterministic_rule and shared.per_mutant_statistical_rule, with the unadjusted decision beside each Holm decision. A mutant is reported as caught by a check in at least one condition as a descriptive count, with no multiplicity claim across the six conditions.",
+    "curves": {
+      "alarms": [
+        "loss_alarm",
+        "answer_key_alarm"
+      ],
+      "alpha_grid": "All attainable levels k/240, k = 1-240.",
+      "detection_rate": "At each level, per source kind and condition and pooled over conditions: the alarm rate of each non-equivalent mutant among its evaluated cases (pooled over conditions first, for the pooled curve), averaged over the mutants with at least one evaluated case, so that each mutant weighs the same.",
+      "false_alarm_rate": "At each level: alarms of the clean subject among its 93 evaluation cases per condition (558 pooled).",
+      "interval": "Wilson 95% at the levels 3/240, 6/240, 12/240 and 24/240, taken over all (mutant, evaluated case) pairs without weights, because the equally weighted rate is not a binomial proportion; curves are drawn without intervals."
+    },
+    "reported": [
+      "The funnel per source (Cosmic Ray, catalogue, Study 2 bugs) and learner, with counts and Wilson intervals.",
+      "Per mutant: operator, site or occurrence, stage, and per condition the alarm counts of every check, the p-values, Holm decisions and the number of evaluated cases.",
+      "The clean pipeline's alarm counts for every check, condition and learner.",
+      "The equivalence sensitivity at N = 6, 24 and 48 and the screen misses.",
+      "The detection curves.",
+      "results.json holds, per source and condition, counts, p-values and decisions, and the clean calibration scores; the per-case ranks and paired differences behind them are recomputed by rerunning and are not stored."
+    ]
+  },
+  "part_2_learners": {
+    "question": "Do the checks transfer to learners beyond Ridge once each learner's shift relation is classified on the clean pipeline first?",
+    "learners": {
+      "hgb": {
+        "subject_scaling": "none",
+        "regressor": "sklearn.multioutput.MultiOutputRegressor(sklearn.ensemble.HistGradientBoostingRegressor()) with scikit-learn 1.9.1 defaults (max_iter 100, learning_rate 0.1, max_leaf_nodes 31, min_samples_leaf 20; early stopping is off below 10000 rows), one model per target.",
+        "expected_class": "exact",
+        "justification": "On raw lags the relation is the learner's own property: the bins follow the order of the feature values and the baseline moves with the targets. With global scaling any deterministic regressor would be exact, because the standardized inputs do not change under a shift. The pilot passed 12 of 12 clean cases on raw lags (pilots raw-lag-public-check).",
+        "training_seed": "none (deterministic at these settings)"
+      },
+      "mlp_window_standardized": {
+        "subject_scaling": "none",
+        "regressor": "experiments/study3_learners.WindowStandardizedMLP: for each row, the window lags and the seasonal lag of each target series are standardized by the mean and population standard deviation of that series' window lags in the row (the seasonal lag does not enter these statistics; a zero sd is replaced by 1), the target by the same mean and sd; sklearn.neural_network.MLPRegressor(hidden_layer_sizes=(32,), max_iter=500) with all other parameters at their defaults and random_state drawn from the free seed stream at every fit; outputs are mapped back with the row's mean and sd.",
+        "expected_class": "in distribution",
+        "training_seed": "free"
+      },
+      "mlp_raw": {
+        "subject_scaling": "none",
+        "regressor": "MLPRegressor(hidden_layer_sizes=(32,), max_iter=500) on the raw lag features and raw targets, random_state from the free seed stream at every fit.",
+        "expected_class": "not applicable",
+        "training_seed": "free"
+      },
+      "scaling": "All three learners use the subject with scaling 'none'. The four catalogue operators at the scaler sites (S-x, S-y and both at I) and the Study 2 bug omit_inverse_target_scaling change nothing there and are expected to be classed as equivalent; they are screened and reported like every other source.",
+      "hyperparameter_justification": "Fixed from the clean timing pilot only (0.06 s, 0.11 s and 0.06 s per fit and forecast). ConvergenceWarnings are counted and reported, not treated as failures; the pilot saw them on every window-standardized fit at max_iter 500."
+    },
+    "note_on_tree_models": "Random forests, extra trees, single trees and GradientBoostingRegressor failed the public check on clean raw-lag pipelines in the pilot (pilots raw-lag-public-check), so they are not used: where two splits separate the training rows equally well, rounding decides between them after the shift. Histogram gradient boosting bins features by their order, which a shift does not change.",
+    "shift_classification": {
+      "cases": "16 per condition (96), seeds namespace classification_cases, for the Ridge subject of Part 1 (global scaling, as a control) and the three learners.",
+      "rule": [
+        "exact: the public check_shift_equivariance (shift 10.0, shared tolerances) returns PASS on every one of the 96 classification cases. An ERROR of the public check counts as not PASS.",
+        "Otherwise the calibrated shift check runs on the 96 classification cases. in distribution: the number of FAILs x among the m cases that the check decided satisfies P(Binomial(m, 0.05) >= x) > 0.05; with m = 96 that is x <= 9. not applicable: otherwise (x >= 10 at m = 96, P = 0.022). A case where the calibrated check returns ERROR is counted and left out of m.",
+        "A learner classified not applicable is reported as its own outcome; it is not a FAIL of any bug."
+      ],
+      "pilot_evidence": "In the 12-case pilots, histogram gradient boosting on raw lags passed the public check on every case; the window-standardized perceptron failed it on every case with a free seed and passed on every case with a fixed seed, so its class comes from the free seed, not from the standardization; the perceptron on raw lags failed on every case.",
+      "seeds": "Each check of the classification starts the case's training seed stream afresh, so the public check and the calibrated check see the same first fit."
+    },
+    "calibrated_shift_check": {
+      "location": "experiments/study3_shift.py; not added to the package.",
+      "refits": 39,
+      "shift": 10.0,
+      "distance": "dist(a, b) = mean over horizon steps and targets of (a - b)^2.",
+      "draw_order": "On each case, from the learner's free seed stream: the forecast fit R on the context (seed draw 1, also the forecast evaluated by every other check), 39 refits F_1..F_39 on the context (draws 2-40), and one fit G on context + 10 (draw 41).",
+      "rule": "Calibration values dist(R, F_j), j = 1-39; observed dist(R, G - 10); rank_alarm(observed, calibration, alpha=0.05). p-values are multiples of 1/40; FAIL when at most one calibration distance is >= the observed one.",
+      "tolerance": "If G - 10 equals R within the shared tolerances (numpy.allclose(G - 10, R, atol=1e-8, rtol=1e-7)), the check returns PASS whatever the ranks, and the rank p-value is still recorded. A forecast that does not depend on the training seed (a mutant can produce one) has 39 calibration distances of exactly zero, so rounding in G - 10 alone would otherwise rank above them and FAIL. The rule can only turn a FAIL into a PASS, so the bound on the FAIL probability stands.",
+      "validity": "If the law of G - 10 given the context equals the law of a refit on the context, and seeds are independent draws, then G - 10, F_1, ..., F_39 are exchangeable given R and the FAIL probability is at most 0.05 on every case.",
+      "errors": "An exception in any of the 41 fits, or a refit without a finite point forecast of R's shape, gives ERROR; ERRORs are counted per source and condition and are not FAILs.",
+      "cases": "The check runs on the evaluation cases, not on the clean calibration cases: its clean false-alarm rate is the FAIL rate of the clean subject on its 93 evaluation cases per condition (558 pooled)."
+    },
+    "checks_by_class": {
+      "exact": [
+        "output_checks",
+        "scalar_shift",
+        "per_target_shift",
+        "loss_alarm",
+        "answer_key_alarm",
+        "paired_check"
+      ],
+      "in distribution": [
+        "output_checks",
+        "calibrated_shift_check",
+        "loss_alarm",
+        "answer_key_alarm",
+        "paired_check"
+      ],
+      "not applicable": [
+        "output_checks",
+        "loss_alarm",
+        "answer_key_alarm",
+        "paired_check"
+      ],
+      "note": "The second implementation exists only for Ridge."
+    },
+    "bugs": {
+      "study2": "The four Study 2 bugs of Part 1, on each learner.",
+      "catalogue": "All 16 catalogue mutants of Part 1, on each learner.",
+      "generic": "12 Cosmic Ray mutants per learner, taken from every generic mutant of the manifest (not from the Part 1 sample). One numpy.random.default_rng(7500001) first permutes the operator families (listed in the order of their first mutant in the manifest) and then, in that permuted order, the mutants of each family; the order takes one mutant from each family in turn until none is left. The first 12 in that order that are runnable and not equivalent for the learner are taken. Mutants are screened in that order in batches of max(12, number of workers), so a few beyond the twelfth taken may be screened; every screened mutant is reported. Selection uses only the order and the screens, never a check outcome.",
+      "generic_per_learner": 12,
+      "size_justification": "Per non-equivalent source over the 558 evaluation cases: about 100 s for gradient boosting, 35 s for the raw perceptron and 2500 s for the window-standardized perceptron, whose calibrated shift check needs 41 fits per case. Each learner receives 29 distinct sources (4 Study 2 bugs, 16 catalogue mutants and 12 generic mutants, three Study 2 bugs sharing their source with a catalogue mutant), of which the four at the scaler sites are expected to be equivalent: about 25 evaluated sources. The runner's --plan, which assumes that all 29 are evaluated, gives at most about 24 CPU-hours in all."
+    },
+    "cases": "The Part 1 calibration (239) and evaluation (93) seeds per condition, with each learner's own clean calibration.",
+    "caught": "As in Part 1, per learner; Holm families are per learner, source kind, check and condition.",
+    "reported": [
+      "The classification table: per learner, public-check PASS count, calibrated-check FAIL count and binomial p-value, class.",
+      "The Part 1 funnel per learner.",
+      "The clean alarm counts of every check per learner and condition, including the calibrated shift check's clean false-alarm rate with its Wilson interval."
+    ]
+  },
+  "part_3_suite_questions": {
+    "question": "Answer separately, with one declared method each, whether a covariance suite contains any failure and which condition failed.",
+    "design": "The covariance study of protocol 2.0, repeated with n_calibration = 239 and new seeds; conditions, variants and every other setting unchanged.",
+    "prior_evidence": "Protocol 2.2 (exploratory) applied Fisher's combination to the stored Study 2 p-values after those results were known: 63 of 64 suites flagged under the reduced spread and 5 of 64 clean suites. Part 3 repeats the comparison on new seeds with the method declared first.",
+    "conditions": "The four conditions of protocol 2.0 covariance_study.conditions, in the order of condition_ids.",
+    "condition_ids": [
+      "factorized_white_noise",
+      "correlated_white_noise",
+      "negative_ar1",
+      "correlated_random_walk"
+    ],
+    "variants": [
+      "clean",
+      "partial_shuffle",
+      "reduced_spread"
+    ],
+    "settings": {
+      "independent_suites": 93,
+      "n_samples": 64,
+      "n_calibration": 239,
+      "alpha": 0.05,
+      "shuffle_strength": 0.5,
+      "spread_multiplier": 0.75,
+      "suite_seed_stride": 10,
+      "reference_sample_seed_offset": 1000000,
+      "calibration_seed_offset": 2000000,
+      "mutation_seed_offset": 3000000,
+      "seed_base": 8000000
+    },
+    "suites_justification": "shared.evaluation_cases_per_condition: 93 suites give Wilson half-widths of at most 10 points for every suite-level rate.",
+    "check": "timegym.diagnostics.covariance_dependence_check(case.reference, ensemble, seed=case seed + 2000000, n_calibration=239, alpha=0.05), exactly as experiments.run_supplement.run_covariance_study calls it.",
+    "questions": {
+      "any_failure": "Fisher's combination of the four p-values of a suite and variant: X = -2 sum log p against the chi-square law with 8 degrees of freedom (experiments.run_addendum.fisher_combination); the suite is flagged when the probability is <= 0.05. Valid because the four checks use independent seeds and each p-value is valid; discrete valid p-values make it conservative.",
+      "which_condition": "Holm at 0.05 over the four checks of a suite and variant (experiments.run_supplement.holm_rejections)."
+    },
+    "true_nulls": "All four conditions in the clean variant; factorized_white_noise under the partial shuffle (negative control); none under the reduced spread.",
+    "reported": [
+      "Per variant: suites flagged by Fisher, suites with any Holm rejection, suites with any raw rejection, with Wilson intervals.",
+      "Per variant: suites rejecting a true null under each method. Fisher's combination tests that all four nulls of a suite hold, so its count is reported for the clean variant only.",
+      "Per condition and variant: raw and Holm rejections with Wilson intervals.",
+      "All p-values."
+    ]
+  },
+  "part_4_joint_spread_margin": {
+    "question": "With what probability does a margin-based joint-spread decision return FAIL, WITHIN_TOLERANCE or INCONCLUSIVE when the true relative distance lies below, at or above the margin?",
+    "location": "experiments/study3_margin.py; not added to the package.",
+    "statistic": {
+      "target": "D = ||Sigma - Sigma0||_F / ||Sigma0||_F, the relative Frobenius distance of covariance_dependence_check, with Sigma the covariance of the ensemble's sample paths (horizon and targets flattened in C order) and Sigma0 the reference covariance.",
+      "estimator_of_D_squared": "T = (tr_hat(Sigma^2) - 2 tr(S Sigma0) + tr(Sigma0^2)) / ||Sigma0||_F^2, with S the unbiased sample covariance (denominator n - 1) and tr_hat(Sigma^2) = Y1 - 2 Y2 + Y3, where Y1 averages (X_i'X_j)^2 over ordered pairs of distinct paths, Y2 averages (X_i'X_j)(X_j'X_k) over ordered triples of distinct paths, and Y3 averages (X_i'X_j)(X_k'X_l) over ordered quadruples of distinct paths; computed from the Gram matrix in O(n^2 p).",
+      "unbiasedness": "E[T] = D^2 for independent paths with any common mean and finite fourth moments: tr_hat(Sigma^2) is unbiased for tr(Sigma^2) and tr(S Sigma0) for tr(Sigma Sigma0). Checked before registration by brute force and by Monte Carlo on a known case (pilots formula-checks).",
+      "citations": "Cai and Ma (2013), Bernoulli 19(5B):2359-2388, doi 10.3150/12-bej455, Section 3.1, equations (6) and (7): for mean-zero Gaussian samples, the U-statistic with kernel h(X1, X2) = (X1'X2)^2 - (X1'X1 + X2'X2) + p is unbiased for ||Sigma - I||_F^2, and the test built on it is rate optimal when p/n is bounded. The general-target, unknown-mean form above extends that kernel; the tr(Sigma^2) estimator with unknown mean is the one of Chen, Zhang and Zhong (2010), JASA 105:810-819, doi 10.1198/jasa.2010.tm09560, which Cai and Ma cite as their reference [7]. Only Crossref metadata of Chen, Zhang and Zhong was reachable; the formula registered here was verified independently."
+    },
+    "decision": {
+      "estimate": "D_hat = sqrt(max(T, 0)).",
+      "standard_error": "The leave-one-out (jackknife) standard error of T: with T_(i) the estimator recomputed without path i and T_bar the mean of the n values, se^2 = ((n - 1) / n) sum_i (T_(i) - T_bar)^2.",
+      "interval": "For D^2: from T - z se to T + z se with z = 1.6448536, the 95th percentile of the standard normal law. This is a two-sided 90% interval, so that each one-sided verdict is a claim at level 0.05, as in the two one-sided tests procedure (Schuirmann 1987, doi 10.1007/BF01068419). The interval reported for D takes the square roots of its ends, with a negative end set to 0.",
+      "verdict": "FAIL when T - z se is greater than the squared margin; WITHIN_TOLERANCE when T + z se is less than the squared margin; INCONCLUSIVE otherwise, including equality.",
+      "justification": "A bootstrap over the paths, the first design, is not used: a resample pairs a path with its own copy, which moves the centre of T upward by about ((tr Sigma)^2 + tr(Sigma^2)) / (n ||Sigma0||_F^2), measured as 0.205 at 64 paths on an identity covariance of dimension 12 (pilots resampling-formula-check), more than either squared margin. The jackknife leaves paths out and adds none. Its variance estimate is biased upward in expectation (Efron and Stein 1981, doi 10.1214/aos/1176345462), which pushes toward INCONCLUSIVE and away from both one-sided verdicts, and it is consistent for a U-statistic with a normal limit (Arvesen 1969, doi 10.1214/aoms/1177697287), the case D > 0. The normal quantile is an approximation at 64 and 256 paths; this simulation measures its error. The decision uses no random numbers."
+    },
+    "margins": {
+      "values": [
+        0.25,
+        0.4375
+      ],
+      "justification": "0.25 is a stricter tolerance; 0.4375 = |0.75^2 - 1| is the exact relative distance of the Study 2 spread multiplier 0.75 (verified in rational arithmetic), so that the Study 2 reduced spread sits exactly on the margin."
+    },
+    "sample_paths": [
+      64,
+      256
+    ],
+    "conditions": "The four Part 3 covariance conditions, in the order of part_3_suite_questions.condition_ids (reference covariance of dimension 12 = 6 steps x 2 targets).",
+    "ensemble_construction": "For a true distance d: spread multiplier c = sqrt(1 - d) (shrink) or c = sqrt(1 + d) (inflate); paths = reference.mean + c (Z - reference.mean) with Z the n draws case.reference.sample(n, seed) from the condition's exact conditional law, seed = int(numpy.random.SeedSequence([12000000, j, r]).generate_state(1)[0]), on the case generated with seed 12100000 + condition index (one fixed case per condition). Then Sigma = c^2 Sigma0 exactly and D = |c^2 - 1| = d. Only proportional departures from the reference covariance are simulated.",
+    "distance_grid": {
+      "multiples_of_margin": [
+        0.0,
+        0.5,
+        0.8,
+        0.9,
+        1.0,
+        1.1,
+        1.2,
+        1.5
+      ],
+      "directions": "Each nonzero distance in both directions (shrink and inflate); d = 0 once. 15 distances per margin.",
+      "justification": "Dense around the margin, where the verdict rates change, with one point at half and one at 1.5 times the margin; the largest shrink, 1.5 x 0.4375 = 0.656, needs c = sqrt(1 - 0.65625) = 0.586."
+    },
+    "repetitions": {
+      "value": 381,
+      "precision_target": "Wilson 95% half-width at most 5 percentage points at any rate (381 is the smallest n meeting it).",
+      "justification": "The rate at d = margin is a level to be compared with 5%; 93 repetitions could not tell 5% from 12%. The simulation costs about 1.5 CPU-hours at 381."
+    },
+    "cells": "4 conditions x 2 margins x 15 distances x 2 path counts = 240 cells, indexed j from 0 in that nesting order: conditions in the order of part_3_suite_questions.condition_ids, margins 0.25 then 0.4375, the 15 distances of a margin as d = 0 first and then each nonzero multiple in increasing order with the shrink before the inflation, and 64 paths before 256.",
+    "reported": [
+      "For every cell: counts and Wilson intervals of FAIL, WITHIN_TOLERANCE and INCONCLUSIVE.",
+      "The mean of T against d^2 per cell, as a check of unbiasedness."
+    ],
+    "expectations_written_before_run": "From the Gaussian variance of the estimator (Cai and Ma 2013, equation (9), with Sigma - Sigma0 in place of Sigma - I: 4 (tr^2(Sigma^2) + tr(Sigma^4)) / (n (n - 1)) + 8 tr((Sigma (Sigma - Sigma0))^2) / n, in units of ||Sigma0||_F^4), not from a simulation. At d = 0 and d = 0.5 margin the verdict is mostly WITHIN_TOLERANCE for the margin 0.4375 at both path counts and for the margin 0.25 at 256 paths; at 64 paths and the margin 0.25 INCONCLUSIVE is the most frequent verdict even at d = 0. At d = margin each of FAIL and WITHIN_TOLERANCE occurs in at most about 5% of repetitions, and in fewer where the jackknife overstates the variance. Above the margin FAIL grows with d and with the number of paths. At equal distance an inflated spread is harder to decide than a shrunken one, because the variance of the estimator grows with the spread of the ensemble."
+  },
+  "part_5_predictability_estimators": {
+    "question": "How close do two published model-free predictability estimators come to the exact unavoidable error that the answer key provides?",
+    "cells": "The 20 default scorecard cells: timegym.grid.scenario_grid() (ten patterns, noise sd 0.5 and 2.0, context 120, horizon 24).",
+    "series_per_cell": 200,
+    "series_justification": "200 matches the number of series behind each attainable mark (timegym.scorecard._ATTAINABLE_SERIES), enough to state a median and a 5 to 95 percentile range of a per-series ratio.",
+    "exact_floor": "Per series: mean over the 24 horizon steps of case.reference.variance, the unavoidable error of the scorecard (timegym.scorecard._case_numbers).",
+    "spectral_bound": {
+      "source": "Feng, Yuan, Ding and Li, arXiv 2509.23074v3, Algorithm 1 and Appendix A.4.",
+      "inputs": "As the paper defines it, the bound needs a history segment x and the realized future segment y of equal length N: x = the last 24 context values, y = case.observed (the 24 realized values), N = 24. It is not an estimate from the history alone.",
+      "steps": [
+        "Delta^2 = (mean(y) - mean(x))^2; the mean of each segment is then removed once.",
+        "Welch windows of length floor(0.25 N) = 6 with 50% overlap, starting at 0, 3, ..., 18: seven windows per segment, paired by position between x and y. Each window is multiplied by the periodic Hann window scipy.signal.windows.hann(6, sym=False) and transformed with numpy.fft.rfft (frequencies 0, 1/6, 1/3 and 1/2); windows are not detrended separately.",
+        "S_xx(f) and S_yy(f) are the means over the seven windows of |X_k(f)|^2 / U and |Y_k(f)|^2 / U, and S_xy(f) the mean of X_k(f) conj(Y_k(f)) / U, with U the sum of the squared window weights.",
+        "gamma^2(f) = |S_xy(f)|^2 / ((S_xx(f) + epsilon)(S_yy(f) + epsilon)), clipped to [0, 1], with epsilon = 1e-8.",
+        "MSE_lb = Delta^2 + V (1 - sum_f S_yy(f) gamma^2(f) / sum_f S_yy(f)), with V the sample variance of y with denominator N. This is the paper's Delta^2 + sum_f S_e(f) under its normalization sum_f S_yy(f) = V (equation 6)."
+      ],
+      "undefined": "MSE_lb is undefined when V = 0 or sum_f S_yy(f) = 0 (a constant future segment), and the ratio MSE_lb / exact floor is also undefined when the exact floor is 0. Such series are recorded with a null value, counted per cell and for each of the two inputs, and left out of that cell's median and percentiles.",
+      "constants_not_in_the_paper": "The paper gives neither epsilon nor the Hann convention. epsilon = 1e-8 is the value in the authors' code (pilots authors-code-spectral-bound); the periodic Hann window is the convention of Welch routines and of one of that code's two paths.",
+      "difference_from_the_authors_code": "The authors' code never uses a Welch window shorter than 32 points, so at N = 24 it would use one window, give a coherence of 1 at every frequency and return Delta^2 alone. This protocol follows the paper's text (a window of floor(0.25 N)); the code's value is not computed.",
+      "secondary_history_only": "Also computed, and reported in its own columns: the same procedure with x = context values 73 to 96 and y = context values 97 to 120 (1-based), which uses the history alone."
+    },
+    "permutation_entropy": {
+      "source": "Weighted permutation entropy as defined by Garland, James and Bradley (2014), Section V (arXiv 1404.6823v2), used for intrinsic predictability by Pennekamp et al. (2019).",
+      "definition": "For word length l and delay 1 over the 120 context values: each window of l consecutive values gets its ordinal pattern and the weight w = (1/l) sum (x_j - window mean)^2; P_w(pi) = sum of weights of windows with pattern pi divided by the sum of all weights; WPE = -sum P_w(pi) log2 P_w(pi) / log2(l!).",
+      "word_length": 3,
+      "ties": "Ordinal patterns come from a stable sort, so equal values rank in order of occurrence.",
+      "parameters": "Garland et al.'s rule l = argmax{N >= 100 l!} admits no l >= 2 at N = 120 (l = 3 would need 600 values). l = 3 is the smallest length in the range 3 to 6 that they call standard, and leaves 118 windows for 6 patterns. The parameters used by Pennekamp et al. (2019) were not checked, because their text was not reachable.",
+      "undefined": "WPE is undefined when every window has weight zero (a constant context). Such series are recorded with a null value, counted per cell and left out of the cell's median."
+    },
+    "table": "One row per cell: median and 5th to 95th percentile (numpy.percentile, linear interpolation) of MSE_lb / exact floor over the series where it is defined, for the primary inputs and for the history-only inputs; the number of series where each ratio is undefined; median WPE and the number of series where it is undefined; the row's exact floor, which is the median over its 200 series of the per-series exact floor; and the row's scale-free floor, the median over its series of the exact floor divided by the variance of the 120 context values (denominator 120). The two random-walk rows are labelled as having no stationary spectrum. Below the table: the Spearman rank correlation (scipy.stats.spearmanr, average ranks for ties) across the 20 rows between median WPE and the row's exact floor. Twelve of the 20 rows share one of two floor values (the noise variances 0.25 and 4.0), so that correlation mostly separates the two noise levels, and WPE does not depend on scale; a second correlation is therefore reported, between median WPE and the row's scale-free floor.",
+    "expectations_written_before_run": "Spectral bound over exact floor, primary inputs. Close to 1 on the stationary rows (pure noise, noise around a fixed level, mean reversion, irregular cycles): a median between 0.5 and 1.5, and a little below 1 on the first two, because the coherence of two unrelated segments estimated from seven overlapping windows is positive on average. Off on straight-line trend, repeating seasonal cycle, trend plus seasonal cycle and sudden level shift, where the predictable part is deterministic; above 1 on the two trend rows, where the mean term Delta^2 dominates. On the two random-walk rows the bound is not defined in theory (no stationary spectrum); its values are reported and labelled so. Weighted permutation entropy is highest on the pure-noise and fixed-level rows, and its rank correlation with the scale-free floor is positive.",
+    "restriction": "Neither estimator was run on any scorecard cell before registration."
+  },
+  "part_6_zoo": {
+    "question": "What scorecards do commonly used forecasting models get on the default grid, beside each row's attainable mark?",
+    "location": "experiments/zoo/ with its own lock files; no dependency enters the package or the study lock.",
+    "scorecard": "Pipeline(model).scorecard(seed=14000000, instances=30) with every other argument at its default (ten patterns, two noise levels, context 120, horizon 24); the attainable mark is the stored one of timegym.scorecard._ATTAINABLE.",
+    "models": [
+      {
+        "id": "last_value",
+        "implementation": "timegym.models.NaiveForecaster()"
+      },
+      {
+        "id": "seasonal_naive",
+        "implementation": "timegym.models.NaiveForecaster('seasonal', 12)"
+      },
+      {
+        "id": "ets",
+        "implementation": "statsforecast 2.1.1 statsforecast.models.AutoETS(season_length=12), other arguments at defaults, point = 'mean' of forecast(y, h)"
+      },
+      {
+        "id": "auto_arima",
+        "implementation": "statsforecast 2.1.1 statsforecast.models.AutoARIMA(season_length=12), defaults"
+      },
+      {
+        "id": "theta",
+        "implementation": "statsforecast 2.1.1 statsforecast.models.AutoTheta(season_length=12), defaults"
+      },
+      {
+        "id": "hgb_lags",
+        "implementation": "The clean subject with the Part 2 hgb learner (raw lags)."
+      },
+      {
+        "id": "mlp_lags",
+        "implementation": "The clean subject with the Part 2 mlp_window_standardized learner (free training seed)."
+      },
+      {
+        "id": "chronos_small",
+        "implementation": "chronos-forecasting 2.3.2, ChronosPipeline.from_pretrained('amazon/chronos-t5-small', revision=<the revision field of this entry, see pretrained_revision>, device_map='cpu', torch_dtype=float32); 100 sample paths per forecast (the package default is 20), so that the Monte Carlo error of the sample mean adds about 1% to the squared error instead of 5%; the forecast carries the samples and point = their mean.",
+        "reference": "Ansari et al., arXiv 2403.07815",
+        "revision": null
+      },
+      {
+        "id": "context_parroting",
+        "implementation": "experiments/zoo/parroting.py, NumPy only, Algorithm 1 of Zhang and Gilpin (arXiv 2505.11349v3): with embedding dimension D = 10 (the value of the paper's Figure 5; it also uses 5 and reports little sensitivity), find the length-D motif in x_1..x_(L-D) nearest in Euclidean distance to the last D values (candidate motifs start at s = 1, ..., L - 2D + 1), and copy the values that followed it, x_(s+D)..x_L, repeating that copy from its start until 24 values. Each target is forecast alone. Ties go to the earliest motif, a convention of this protocol. Deterministic; no training.",
+        "reference": "Zhang and Gilpin, arXiv 2505.11349"
+      }
+    ],
+    "hyperparameters": "Fixed for every row; no per-row tuning. season_length 12 is the grid's seasonal period.",
+    "figure": "One figure: rows the ten patterns, columns the nine models in the order of models; each cell shows the low-noise and high-noise scores with their intervals (the scorecard's score_low and score_high, as the package computes them at the registered commit) beside the row's attainable mark. It is drawn from the saved files alone. No ranking claim is made and no model is ordered by score.",
+    "declared_overlap": "Chronos was pretrained on real datasets, TSMixup combinations of them, and KernelSynth series drawn from Gaussian processes whose kernels combine Constant, White Noise, Linear, RBF, Rational Quadratic and Periodic kernels (periods including 12), by sum or product (arXiv 2403.07815, Table 2). Rows resembling that synthetic data: pure noise, fixed level, straight-line trend, repeating seasonal cycle (period 12) and trend plus seasonal cycle. Partly: irregular cycles (a Periodic times RBF composition is quasi-periodic). Not in the kernel bank: sudden level shift, mean reversion (an exponential kernel is not in the bank), random walk and random walk with drift. The overlap with the real pretraining data cannot be stated.",
+    "pretrained_revision": "The commit hash of amazon/chronos-t5-small could not be read when this protocol was drafted (the model host was not reachable). It is written into the revision field of the chronos_small entry of models, which is null until then, before the Chronos scorecard runs, by a commit that changes only that value, and the manifest must show the same hash. The other eight scorecards do not depend on it.",
+    "pretrained_environment": "The Chronos scorecard may run on another machine. It installs experiments/zoo/requirements-chronos.txt with a CPU-only torch, sets torch.set_num_threads(1), and records in its manifest: Python version, platform string, CPU model, pip freeze, torch.__version__ and torch.__config__.show(), the Hugging Face model id, the resolved commit hash (which must equal the registered one), the SHA-256 of every downloaded weight and configuration file, and the timegym commit. Its scorecard baseline (Scorecard.save_baseline) and manifest are committed to experiments/results-v3/zoo/ beside the others; the figure is drawn from the saved baselines.",
+    "runtime_estimate": "About 20 minutes here for the eight local models (600 series each; AutoARIMA about 1 s per series); Chronos on one CPU thread is expected to take tens of minutes; not timed, because the weights were not reachable.",
+    "prior_scorecards": "Scorecards of the two built-in baselines and of a Ridge lag pipeline on the default grid at other seeds are in the paper and the documentation, and the last-value forecaster was scored on other seeds again, on 14 and on 16 November 2026, when the scorecard's interval was measured and then changed (pilots_before_registration, earlier-exploratory-records). The other seven models have not been scored.",
+    "outputs": "Four files per model in experiments/results-v3/zoo/: <model id>.json (Scorecard.save_baseline), <model id>.table.csv (per cell: score, score_low, score_high, attainable, instances, failed_checks), <model id>.manifest.json (protocol digest, digests of the two files and of the zoo's sources, seeds, library versions, and for Chronos what pretrained_environment lists) and <model id>.runtime.json (wall time and thread pools). A model's existing files are refused unless --force."
+  },
+  "order_of_run": [
+    "0. Preconditions of registration.start_conditions; the runner validates this protocol and every seed namespace.",
+    "1. Generate mutant sources (Cosmic Ray environment and the catalogue transformer); write and commit the manifest with every source's SHA-256 before anything is executed.",
+    "2. Part 1: clean calibration and clean evaluation for Ridge (including the verification that every deterministic check is silent on the clean pipeline), the runnable and equivalence screens, then every non-equivalent mutant.",
+    "3. Part 2: shift classification on the classification cases; clean calibration and evaluation per learner; the screens; the bug and mutant runs.",
+    "4. Part 3.",
+    "5. Part 4.",
+    "6. Part 5.",
+    "7. Part 6: the eight local models here; Chronos where its environment can reach the weights."
+  ],
+  "outputs": "experiments/results-v3/ with one subdirectory per part (part-1 ... part-5, zoo), each holding results.json, manifest.json (protocol digest, frozen input digests, source digests, mutant manifest digest, Python, platform and library versions), runtime.json (wall times and thread pools, excluded from numerical records) and CSV tables. Runners refuse existing artifacts unless --force, as the existing runners do. The zoo subdirectory holds four files per model instead (part_6_zoo.outputs) and the figure.",
+  "runtime_estimate_cpu_hours": {
+    "part_1": "at most about 3 at the cap of 400 generic mutants (the runner's --plan: 5010 units; about 2 hours of it is the start of a fresh process for each unit, about 1.5 s each)",
+    "part_2": "at most about 24 (the runner's --plan; about 21.5 of it is the window-standardized perceptron, whose calibrated shift check needs 41 fits per evaluation case)",
+    "part_3": "under 0.1",
+    "part_4": "about 1.5",
+    "part_5": "under 0.1",
+    "part_6": "about 0.4 plus the Chronos run",
+    "disk": "under 1 GB of records; the zoo environment 0.7 GB; a CPU-only torch environment about 1 to 1.5 GB (a default PyPI torch with CUDA packages several GB)"
+  },
+  "limits": [
+    "One subject pipeline written for the study; generated mutants describe that code, not a population of real forecasting bugs.",
+    "Cosmic Ray's standard operators are generic; the catalogue was written by the study's authors after Study 2 and is checked by one person who did not write the checks.",
+    "Two catalogue operators coincide in behaviour with other sources for some learners (target_columns_swapped with a Study 2 bug), and the four at the scaler sites are inactive for the learners of Part 2, which use no scaling.",
+    "Holm families differ in size between sources; sources are compared on curves and per-case rates.",
+    "The second implementation exists only for Ridge and was written by the study's authors.",
+    "Three learners, classified on clean pipelines only; the classification does not establish the relation on other data.",
+    "Part 4 simulates proportional departures of the spread only, and its interval rests on a normal approximation.",
+    "Part 5 applies the spectral bound to segments of 24 values, shorter than those of its paper, with two constants the paper does not give; the entropy parameters are this protocol's.",
+    "Synthetic Gaussian conditions only; no real-data transfer claim; no ranking claim for Part 6."
+  ]
+}
