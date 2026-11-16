@@ -9,9 +9,11 @@ import os
 import textwrap
 import warnings
 from dataclasses import dataclass
+from numbers import Real
 from pathlib import Path
 import numpy as np
 import pandas as pd
+from scipy import special, stats
 from ._internal import positive_int, _deprecated
 from .contracts import _describe_shift, _index_shift
 from .diagnostics import rank_alarm
@@ -76,42 +78,95 @@ def _score(best, avoidable):
     return 100.0 if total == 0 else 100.0 * best / total
 
 
-# Bootstrap resamples behind each cell's interval.
-_RESAMPLES = 2000
+def _interval_level(value):
+    """``value`` as a float strictly between 0 and 1; anything else raises ValueError."""
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, Real)
+        or not 0 < float(value) < 1
+    ):
+        raise ValueError(
+            f"interval_level must be a number between 0 and 1, such as 0.95; got {value!r}"
+        )
+    return float(value)
 
 
-def _interval(pairs, valid, score, seed):
-    """95% percentile bootstrap interval of a cell score over its series, or two NaNs.
+def _percent(level):
+    """An interval level as people write it: 0.95 is ``95%``, 0.995 is ``99.5%``."""
+    return f"{100 * level:g}%"
+
+
+def _interval(pairs, valid, score, level=0.95):
+    """Leave-one-out interval of a cell score over its series at ``level``, or two NaNs.
 
     ``pairs`` holds each scorable instance's (unavoidable, avoidable) error, in
     instance order, with (0, 0) for one that crashed or failed an output check;
-    ``valid`` marks the instances that passed. Every resample draws the
-    instances with replacement and applies the cell score formula to them.
-    The generator depends only on ``seed`` and the number of instances, so a
-    cell's interval does not depend on which other cells were scored.
+    ``valid`` marks the instances that passed. Each instance is left out in turn
+    and the rest are scored as the cell is scored. The jackknife spread of those
+    scores times the Student t quantile at ``level``, with one degree of freedom
+    fewer than the instances, is how far the interval reaches above the score.
+    Below the score it reaches ``_low_end_stretch`` times as far. Both distances
+    are taken on the log-odds of the score, so both ends stay between 0 and 100.
+    When the score or a leave-one-out score is exactly 0 or 100, they are taken
+    on the score itself and cut to 0 to 100. Nothing is drawn at random: the
+    interval depends only on the cell's series and ``level``.
     """
     count = len(pairs)
     if count < 2 or not np.isfinite(score):
         return np.nan, np.nan
     unavoidable, avoidable = np.asarray(pairs, dtype=float).T
-    draws = np.random.default_rng([int(seed), count]).integers(
-        0, count, size=(_RESAMPLES, count)
+    kept = np.array(
+        [np.delete(np.arange(count), left_out) for left_out in range(count)]
     )
-    scores = _resampled_scores(
-        unavoidable, avoidable, np.asarray(valid, dtype=bool), draws
-    )
-    low, high = np.percentile(scores, [2.5, 97.5])
-    # Percentiles of a few series can miss the score itself; the interval always holds it.
+    scores = _subset_scores(unavoidable, avoidable, np.asarray(valid, dtype=bool), kept)
+    above = float(stats.t.ppf(0.5 + level / 2, count - 1))
+    below = above * _low_end_stretch(count)
+    if 0 < score < 100 and np.all((scores > 0) & (scores < 100)):
+        centre, spread = _logit(score), _jackknife_spread(_logit(scores))
+        low = 100 * special.expit(centre - below * spread)
+        high = 100 * special.expit(centre + above * spread)
+    else:
+        spread = _jackknife_spread(scores)
+        low, high = max(score - below * spread, 0.0), min(score + above * spread, 100.0)
+    # Rounding on the way to log-odds and back must not put the score outside its own interval.
     return float(min(low, score)), float(max(high, score))
 
 
-def _resampled_scores(unavoidable, avoidable, valid, draws):
-    """The cell score of every row of instance positions in ``draws``."""
-    count = draws.shape[1]
-    passed = valid[draws].sum(axis=1)
-    best, worse = unavoidable[draws].sum(axis=1), avoidable[draws].sum(axis=1)
+def _low_end_stretch(count):
+    """How many times further the interval reaches below a score than above it: ``1 + 1 / sqrt(count)``.
+
+    A cell's score comes from squared errors, and a few series carry most of
+    them. A card that happens to draw none of those few scores too high, and
+    its series also look alike, so an interval that reached equally far both
+    ways would lie above the long-run score too often. This factor puts the low
+    end within a few percent of where simulation says it has to be for the
+    interval to lie above the long-run score no more often than its level
+    allows when each series' avoidable error is a squared normal draw (5 to 500
+    instances, levels from 50% to 99%).
+    """
+    return 1.0 + 1.0 / math.sqrt(count)
+
+
+def _logit(score):
+    """The log-odds of a score strictly between 0 and 100."""
+    return np.log(score / (100 - score))
+
+
+def _jackknife_spread(values):
+    """The jackknife spread of leave-one-out values: sqrt((n - 1) / n * sum of squared deviations)."""
+    values = np.asarray(values, dtype=float)
+    return float(
+        np.sqrt((len(values) - 1) / len(values) * np.sum((values - values.mean()) ** 2))
+    )
+
+
+def _subset_scores(unavoidable, avoidable, valid, subsets):
+    """The cell score of the instances at every row of positions in ``subsets``."""
+    count = subsets.shape[1]
+    passed = valid[subsets].sum(axis=1)
+    best, worse = unavoidable[subsets].sum(axis=1), avoidable[subsets].sum(axis=1)
     total = best + worse
-    # As in _score: 100 when both errors are zero; a resample with no valid instance scores 0.
+    # As in _score: 100 when both errors are zero; a subset with no valid instance scores 0.
     ratio = np.divide(best, total, out=np.ones_like(total), where=total > 0)
     return 100.0 * ratio * passed / count
 
@@ -391,9 +446,11 @@ def _scorecard(
     horizon=24,
     title=None,
     attainable=False,
+    interval_level=0.95,
 ):
     """Run ``pipeline`` on the pattern-by-noise grid and score every cell (``Pipeline.scorecard``)."""
     instances = positive_int(instances, "instances")
+    interval_level = _interval_level(interval_level)
     cells = scenario_grid(
         patterns, noise_levels, context_length=context_length, horizon=horizon
     )
@@ -419,7 +476,7 @@ def _scorecard(
             if numbers
             else (0.0 if broken else np.nan)
         )
-        low, high = _interval(*_instance_pairs(entries), score, run.metadata["seed"])
+        low, high = _interval(*_instance_pairs(entries), score, interval_level)
         mistakes = _check_problems(entries)
         if numbers and round(score) < 70:  # as the verdict reads it
             mistakes += _mistakes(numbers)
@@ -461,6 +518,7 @@ def _scorecard(
         cells=cells,
         seed=run.metadata["seed"],
         instances=instances,
+        interval_level=interval_level,
     )
 
 
@@ -475,6 +533,7 @@ def scorecard(
     horizon=24,
     title=None,
     attainable=False,
+    interval_level=0.95,
 ):
     """Score ``pipeline`` on the pattern-by-noise grid; the same as ``pipeline.scorecard(...)``."""
     _deprecated(
@@ -490,6 +549,7 @@ def scorecard(
         horizon=horizon,
         title=title,
         attainable=attainable,
+        interval_level=interval_level,
     )
 
 
@@ -506,12 +566,21 @@ class Scorecard:
     ``report`` is the JSON-ready TestReport. In a notebook a Scorecard shows
     as its image; ``print`` gives Markdown and ``save`` writes the image.
 
-    ``score_low`` to ``score_high`` is a 95% percentile bootstrap interval
-    over the cell's series: each resample draws the series with replacement
-    and scores them as the cell is scored. With ten series it is rough and
-    tends to be too narrow; raise ``instances`` to tighten it. Fewer than two
-    series give no interval (NaN). A verdict is ``settled`` when both ends of
-    the interval fall in its band; ``unsettled`` lists the rows that are not.
+    ``score_low`` to ``score_high`` is the interval around the score: with
+    other series of the same kind the score would come out a little
+    different, and the interval shows by how much. ``interval_level`` says
+    how cautious it is, 0.95 unless the card was made with another. With ten
+    series it is wide; raise ``instances`` to tighten it. It reaches further
+    below the score than above it: a few series usually carry most of the
+    error, so a small card more often flatters a model than it wrongs it. It
+    only knows the series the card drew, so it cannot see a model that fails
+    on a kind of series the card did not draw. Fewer than two series give no
+    interval (NaN). A verdict is ``settled`` when both ends of the interval
+    fall in its band; ``unsettled`` lists the rows that are not. For the
+    statistics: each series is left out in turn, the rest are scored, and the
+    spread of those scores on the log-odds scale, times a Student t quantile,
+    gives how far the interval reaches above the score; below it reaches
+    ``1 + 1/sqrt(n)`` times as far, with ``n`` the number of series.
 
     ``attainable`` is what the pattern's own model family (``Pattern.fitted``),
     fitted to each history, scores on 200 fresh series of the row: 100 minus
@@ -535,6 +604,7 @@ class Scorecard:
     cells: list[GridCell]
     seed: int
     instances: int
+    interval_level: float = 0.95
 
     @property
     def score(self):
@@ -633,7 +703,7 @@ class Scorecard:
                 for row in self.checks
             ),
             "",
-            _LEGEND + " " + _UNSETTLED_LEGEND,
+            _LEGEND + " " + _unsettled_legend(self.interval_level),
         ]
         closing = _unsettled_line(
             len(self.unsettled), int(self.table["score"].notna().sum()), self.instances
@@ -712,7 +782,14 @@ _LEGEND = (
     "Score: 100 = as close as a forecaster that knows the true process; 50 = its avoidable error "
     "equals the unavoidable noise. Bands: 90+ nails it, 70+ good, 40+ struggles, below 40 fails."
 )
-_UNSETTLED_LEGEND = "A question mark means the verdict is not settled: the score's 95% interval reaches into another band."
+
+
+def _unsettled_legend(level):
+    """The printed card's sentence on question marks, naming the card's interval level."""
+    return (
+        f"A question mark means the verdict is not settled: the score's {_percent(level)} interval "
+        "reaches into another band."
+    )
 
 
 def _unsettled_line(count, total, instances):
@@ -896,8 +973,8 @@ def _check_same_series(record, card, name):
 def _sign_flip_pvalue(differences, seed):
     """One-sided sign-flip p-value for a mean difference above zero, from ``rank_alarm``.
 
-    The generator depends only on ``seed`` and the number of differences, as in
-    ``_interval``, so a cell's p-value does not depend on which other cells were scored.
+    The generator depends only on ``seed`` and the number of differences, so a
+    cell's p-value does not depend on which other cells were scored.
     """
     differences = np.asarray(differences, dtype=float)
     signs = np.random.default_rng([int(seed), len(differences)]).choice(
@@ -1375,7 +1452,7 @@ def _plot_scorecard(card, *, compact=False):
             checks_at = 0.95 + 0.24 * (verdict_text.count("\n") + 1) + 0.1
             legend = _wrap(
                 _LEGEND
-                + " The line beside each score is its 95% interval on a 0 to 100 scale, "
+                + f" The line beside each score is its {_percent(card.interval_level)} interval on a 0 to 100 scale, "
                 "ticked at 40, 70 and 90; a question mark means it reaches into another band. The small "
                 "triangle above it is what a correctly specified model, fitted to the same history, "
                 "would score. "

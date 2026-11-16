@@ -39,7 +39,7 @@ traceback evidence. Invalid scenario configuration is a caller error and is
 raised rather than counted as a model fault.
 
 `.scorecard(patterns=None, *, noise_levels=2, instances=10, seed=0,
-context_length=120, horizon=24, title=None, attainable=False)` runs the scenario grid and returns
+context_length=120, horizon=24, title=None, attainable=False, interval_level=0.95)` runs the scenario grid and returns
 a `Scorecard`; see [Scorecards and the scenario grid](scorecard.md).
 
 `.run(scenarios=None, seeds=None, *, seed=0, instances=None, ...)` accepts the

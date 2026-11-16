@@ -83,9 +83,13 @@ error, and 50 means the extra error is as large as the noise. The formula is
   series, not a ceiling: a model can land above it on a given card
   ([What a fitted model could score](../api/scorecard.md#what-a-fitted-model-could-score)).
 - **Within its interval.** With other series of the same kind the score would
-  come out a little different. `score_low` and `score_high` show by how much
-  (a 95% interval), and `settled` says whether the whole interval stays in the
-  printed band ([How sure a score is](../api/scorecard.md#how-sure-a-score-is)).
+  come out a little different. `score_low` and `score_high` show by how much:
+  a 95% confidence interval, or another level if you pass `interval_level`. `settled`
+  says whether the whole interval stays in the printed band
+  ([How sure a score is](../api/scorecard.md#how-sure-a-score-is)). The
+  interval only knows the series the card drew. It cannot see a model that
+  fails on a kind of series the card did not happen to draw, and it says
+  nothing about data that the patterns do not resemble.
 - **Against a saved baseline.** On the same series, is a new version of the
   pipeline further from the answer key than the version you trusted?
   ([Compare with a saved baseline](../api/scorecard.md#compare-with-a-saved-baseline)).
