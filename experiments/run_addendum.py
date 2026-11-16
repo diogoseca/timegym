@@ -22,6 +22,7 @@ import platform
 import numpy as np
 
 import timegym
+from timegym.diagnostics import rank_alarm
 from timegym.statistics import wilson_interval
 
 from .common import protect_output, sha256
@@ -151,7 +152,7 @@ def sign_flip_pvalue(differences, flips, generator):
     """One-sided sign-flip p-value for a positive mean paired difference."""
     differences = np.asarray(differences, dtype=float)
     simulated = (generator.choice([-1, 1], size=(flips, len(differences))) * differences).mean(axis=1)
-    return float((1 + np.sum(simulated >= differences.mean())) / (flips + 1))
+    return rank_alarm(differences.mean(), simulated).p_value
 
 
 def paired_answer_key(spec, conditions, records):

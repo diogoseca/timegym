@@ -33,6 +33,36 @@
   you pass `scorecard(attainable=True)`, which simulates the missing values
   once per session: about 3 to 5 seconds for each autoregressive or
   random-walk cell and well under a second for the others.
+- Added `Scorecard.save_baseline(path)` and `Scorecard.compare(baseline)`,
+  to compare a new version of a pipeline with the version you trusted on the
+  same series. `save_baseline` writes a small JSON file with each series'
+  avoidable error (about 17 kB for the default grid at 30 instances), and
+  `compare` accepts that file or another `Scorecard` and returns a
+  `ScorecardComparison`. Each cell is "unchanged", "changed, no worse" or
+  "changed and worse": worse when, on the same series, the new version is
+  further from the answer key by more than chance would explain (a paired
+  sign-flip test with Holm's correction across the changed cells), or when a
+  series scored in the baseline now crashes or fails an output check.
+  `assert_no_regression()` raises on the worse cells. A different
+  grid, seed or number of instances raises `ValueError`, and fewer than 20
+  instances warn; use 30. The test does not say that the new version is
+  better, and a regression too small for the number of series passes.
+- Added `timegym.diagnostics.rank_alarm(observed, calibration, *, alpha=0.05)`,
+  the one function that now computes the p-value of TimeGym's statistical
+  checks: it asks whether a number is unusually large next to numbers you know
+  are fine. Its `RankAlarm` result holds the p-value
+  `(1 + number of calibration values >= observed) / (n + 1)`, the status, and
+  the threshold the observed value must exceed to fail.
+  `covariance_dependence_check` now calls it. Its statuses, messages and
+  p-values are unchanged. Its `critical_value` now always agrees with the
+  p-value: for some uncommon pairs of `n_calibration` and `alpha`, where
+  `(n_calibration + 1) * (1 - alpha)` rounds to just above a whole number
+  (999 calibration ensembles at `alpha=0.059`, or 99 at `alpha=0.41`), it
+  used to be the next calibration value up. At `alpha` 0.001, 0.005, 0.01,
+  0.025, 0.05, 0.1 and 0.2 it is unchanged for every `n_calibration` up to
+  200,000.
+- Added a documentation page,
+  [What TimeGym tests, and what it does not](docs/concepts/scope.md).
 
 ## 1.4.1 — 2026-11-14
 
