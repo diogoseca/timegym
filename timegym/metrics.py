@@ -10,11 +10,17 @@ __all__ = [
     "mae",
     "mean_reference_mse",
     "mase",
+    "rmse",
+    "rmsse",
     "pinball",
+    "interval_score",
+    "weighted_interval_score",
     "crps",
     "energy_score",
     "variogram_score",
     "empirical_crps",
+    "brier",
+    "log_loss",
 ]
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-05
@@ -103,9 +109,40 @@ def mase(observed, predicted, context, seasonality=1):
     return float(np.mean(np.abs(observed - predicted) / scale))
 
 
+# %% ../source/09_scores_and_diagnostics.ipynb #metrics-rmse
+def rmse(observed, predicted):
+    """Root mean squared error over observation coordinates, in the data's units."""
+    return float(np.sqrt(mse(observed, predicted)))
+
+
+def rmsse(observed, predicted, context, seasonality=1):
+    """RMSSE: each series' RMSE over its in-context seasonal naive RMSE, averaged over series.
+
+    Time is axis zero. Each series is scaled by the root mean squared change
+    over ``seasonality`` steps in its context. A constant series or too short
+    a history makes the score undefined and raises ``UndefinedMetricError``,
+    as ``mase`` does.
+    """
+    observed, predicted = _pair(observed, predicted)
+    context = _array(context, "context")
+    seasonality = positive_int(seasonality, "seasonality")
+    if context.ndim != observed.ndim or context.shape[1:] != observed.shape[1:]:
+        raise ValueError("context and observed must have identical non-time dimensions")
+    if len(context) <= seasonality:
+        raise UndefinedMetricError(
+            "RMSSE needs more context observations than seasonality"
+        )
+    scale = np.mean((context[seasonality:] - context[:-seasonality]) ** 2, axis=0)
+    if np.any(scale == 0):
+        raise UndefinedMetricError(
+            "RMSSE is undefined for a zero naive-error denominator"
+        )
+    return float(np.mean(np.sqrt(np.mean((observed - predicted) ** 2, axis=0) / scale)))
+
+
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-23
-def pinball(observed, quantiles, levels):
-    """Mean quantile (pinball) loss, without the optional factor of two."""
+def _quantile_set(observed, quantiles, levels):
+    """Check observations, quantiles and their levels together, as every quantile score needs."""
     observed = _array(observed, "observed")
     quantiles = _array(quantiles, "quantiles")
     levels = _array(levels, "levels")
@@ -119,8 +156,59 @@ def pinball(observed, quantiles, levels):
         raise ValueError("quantiles must have shape (*observed.shape, n_levels)")
     if np.any(quantiles[..., 1:] < quantiles[..., :-1]):
         raise ValueError("quantiles must not cross")
+    return observed, quantiles, levels
+
+
+def pinball(observed, quantiles, levels):
+    """Mean quantile (pinball) loss, without the optional factor of two."""
+    observed, quantiles, levels = _quantile_set(observed, quantiles, levels)
     residual = observed[..., None] - quantiles
     return float(np.mean(np.maximum(levels * residual, (levels - 1) * residual)))
+
+
+# %% ../source/09_scores_and_diagnostics.ipynb #metrics-interval
+def _symmetric(levels, *, median):
+    """Refuse levels whose pairs are not symmetric around 0.5, or that lack 0.5 when it is needed."""
+    paired = np.allclose(levels + levels[::-1], 1.0, rtol=0.0, atol=1e-9)
+    has_median = len(levels) % 2 == 1 and abs(levels[len(levels) // 2] - 0.5) <= 1e-9
+    if median and not (paired and has_median):
+        raise ValueError(
+            f"levels must be 0.5 plus pairs symmetric around it, such as (0.1, 0.5, 0.9); got {levels.tolist()}"
+        )
+    if not median and (len(levels) < 2 or abs(levels[0] + levels[-1] - 1.0) > 1e-9):
+        raise ValueError(
+            f"the lowest and highest levels must be symmetric, such as 0.1 and 0.9; got {levels.tolist()}"
+        )
+
+
+def interval_score(observed, quantiles, levels):
+    """Mean interval score of the band from the lowest to the highest level.
+
+    For a central band holding ``1 - alpha`` of the outcomes, the score is its
+    width plus ``2 / alpha`` times the distance by which an outcome falls
+    outside it. The lowest and highest levels must be symmetric around 0.5.
+    """
+    observed, quantiles, levels = _quantile_set(observed, quantiles, levels)
+    _symmetric(levels, median=False)
+    alpha = 2.0 * levels[0]
+    lower, upper = quantiles[..., 0], quantiles[..., -1]
+    below = np.maximum(lower - observed, 0.0)
+    above = np.maximum(observed - upper, 0.0)
+    return float(np.mean((upper - lower) + 2.0 / alpha * (below + above)))
+
+
+def weighted_interval_score(observed, quantiles, levels):
+    """Mean weighted interval score over 0.5 and pairs of levels symmetric around it.
+
+    With K pairs, the score is the median's absolute error times 1/2 plus each
+    pair's interval score times alpha/2, all divided by K + 1/2 (Bracher et
+    al. 2021). That equals twice the mean pinball loss over the levels.
+    """
+    observed, quantiles, levels = _quantile_set(observed, quantiles, levels)
+    _symmetric(levels, median=True)
+    residual = observed[..., None] - quantiles
+    loss = np.maximum(levels * residual, (levels - 1) * residual)
+    return float(np.mean(np.sum(loss, axis=-1) / (len(levels) / 2.0)))
 
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-25
@@ -201,3 +289,61 @@ def empirical_crps(observed, samples):
     """Deprecated name for ``crps``; returns the same score."""
     _deprecated("empirical_crps", "use crps instead")
     return crps(observed, samples)
+
+
+# %% ../source/09_scores_and_diagnostics.ipynb #metrics-yes-no
+def _first_outside(values, allowed, name, what):
+    """Raise ValueError naming the first value for which ``allowed`` is False."""
+    bad = np.argwhere(~allowed)
+    if len(bad):
+        where = tuple(int(i) for i in bad[0])
+        raise ValueError(
+            f"{name} must be {what}; got {float(values[where]):g} at position {where}"
+        )
+
+
+def _probabilities(observed, predicted):
+    """Outcomes that are 0 or 1 and forecasts that are probabilities, with identical shapes."""
+    observed, predicted = _pair(observed, predicted)
+    _first_outside(observed, (observed == 0) | (observed == 1), "observed", "0 or 1")
+    _first_outside(
+        predicted, (predicted >= 0) & (predicted <= 1), "predicted", "between 0 and 1"
+    )
+    return observed, predicted
+
+
+def brier(observed, predicted):
+    """Brier score: the mean squared distance between a probability and the 0/1 outcome."""
+    observed, predicted = _probabilities(observed, predicted)
+    return float(np.mean((predicted - observed) ** 2))
+
+
+def log_loss(observed, predicted, *, eps=None):
+    """Mean of minus the natural log of the probability given to what happened.
+
+    A forecast of exactly 0 or 1 that turned out wrong makes the score
+    infinite, so it raises ``UndefinedMetricError`` unless ``eps`` is given;
+    ``eps`` (between 0 and 0.5) first clips every forecast to
+    ``[eps, 1 - eps]``. Nothing is clipped without being asked.
+    """
+    observed, predicted = _probabilities(observed, predicted)
+    if eps is not None:
+        if (
+            isinstance(eps, bool)
+            or not isinstance(eps, (int, float, np.floating))
+            or not 0 < eps < 0.5
+        ):
+            raise ValueError(
+                f"eps must be a number between 0 and 0.5, such as 1e-6; got {eps!r}"
+            )
+        predicted = np.clip(predicted, eps, 1 - eps)
+    given = np.where(
+        observed == 1, predicted, 1 - predicted
+    )  # the probability of what happened
+    if np.any(given == 0):
+        where = tuple(int(i) for i in np.argwhere(given == 0)[0])
+        raise UndefinedMetricError(
+            f"a forecast of exactly {predicted[where]:g} at position {where} turned out wrong, so the log "
+            "loss is infinite; pass eps, such as eps=1e-6, to clip forecasts to [eps, 1 - eps] first"
+        )
+    return float(np.mean(-np.log(given)))

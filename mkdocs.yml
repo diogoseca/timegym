@@ -41,6 +41,9 @@ plugins:
   - search
   - mkdocs-jupyter:
       include: ["tutorials/[0-9][0-9]_*.ipynb"]
+      # Skip Markdown pages: with pandoc installed, reading each one as a notebook takes
+      # time that doubles with every ::: line, minutes on the API pages.
+      ignore: ["*.md"]
       execute: false
       include_source: true
       ignore_h1_titles: true

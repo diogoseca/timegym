@@ -2,6 +2,7 @@
 from pathlib import Path
 import re
 
+import numpy as np
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +46,28 @@ def test_extend_examples_show_what_they_say():
     assert [(case.scenario, case.seed) for case in report.cases] == [("noisy_line", 0), ("noisy_line", 1), ("noisy_line", 2)]
     assert all("mean_reference_mse" in case.metrics for case in report.cases)
     assert namespace["run"].metadata["model"] == "weather service"
+
+
+def test_own_scores_example_on_the_scores_page_runs():
+    namespace = {}
+    exec(python_blocks("docs/api/diagnostics.md")[0], namespace)  # the later block needs your own data
+    close = namespace["within_10_percent"]
+    assert close(observed=np.array([10.0, 20.0]), predicted=np.array([10.5, 25.0])) == 0.5
+    assert set(namespace["scores"]) == {"log_loss", "close"}
+
+
+def test_own_scores_on_the_extend_page_land_in_the_report():
+    import matplotlib
+
+    matplotlib.use("Agg")
+    namespace = {"__name__": "docs"}
+    for block in python_blocks("docs/concepts/extend.md"):
+        exec(block, namespace)
+        if "rainy" in namespace and "scored" not in namespace:
+            namespace["scored"] = namespace["report"]
+    scored = namespace["scored"]
+    assert all({"brier", "log_loss"} <= set(case.metrics) for case in scored.cases)
+    assert scored.metadata["scores"][0]["name"] == "brier"
 
 
 def test_irregular_readings_recipe_never_looks_ahead():

@@ -27,6 +27,42 @@
   grid without looking ahead, and a page, Extend TimeGym, that lists every
   place to plug in your own code and data. Tutorial 07 now builds its cases
   with `cases_from_series` and scores them with `pipeline.run(cases=...)`.
+- Added scores for forecasts of yes/no outcomes, such as rain or no rain:
+  `timegym.metrics.brier(observed, predicted)`, the mean squared gap between
+  the forecast chance and what happened (0 or 1), and `log_loss(observed,
+  predicted, *, eps=None)`, which punishes a confident wrong forecast hard.
+  A forecast of exactly 0 or 1 that turns out wrong makes the log loss
+  infinite, so `log_loss` raises `UndefinedMetricError` naming its position
+  unless you pass `eps`, such as `eps=1e-6`, to clip forecasts first. Both
+  refuse observations other than 0 and 1 and chances outside [0, 1].
+- Added four scores to `timegym.metrics`: `rmse`, the root mean squared error;
+  `rmsse(observed, predicted, context, seasonality=1)`, the root mean squared
+  error divided by that of repeating the value one season back in the history;
+  `interval_score(observed, quantiles, levels)`, the width of the widest
+  symmetric interval plus a penalty for each value outside it; and
+  `weighted_interval_score(observed, quantiles, levels)`, the mean of interval
+  scores over every symmetric pair of levels and the median, which needs 0.5
+  among the levels. MAPE and sMAPE are left out on purpose: they blow up near
+  zero and treat over- and under-forecasts unevenly.
+- Added `scores=` to `evaluate_forecast`, `Pipeline.test`, `Pipeline.run` and
+  `ForecastRun.from_forecasts`, to record scores beyond the usual ones. Give a
+  list of names from `timegym.metrics` and functions of your own, or a
+  dictionary that names each, for example to pass settings with
+  `functools.partial`. A function says what it needs by its argument names:
+  `observed`, `predicted`, `quantiles`, `levels`, `samples` and `context`.
+  Each value lands in `case.metrics` under its name. A request that cannot
+  work, such as an unknown name, a name every report records already, or an
+  argument TimeGym cannot give, is refused before anything runs. For each
+  case, a score whose input the forecast lacks gives a `metric_<name>`
+  diagnostic marked `UNSUPPORTED`, and one that raises gives `ERROR` with the
+  exception named. With no `scores=`, reports are unchanged.
+- Changed replay to compute again the requested scores from `timegym.metrics`,
+  with their settings, which the run records under `metadata["scores"]`. Your
+  own functions cannot be rebuilt from a saved report, so replay leaves them
+  out of the comparison and lists them under `"not_recomputed"`.
+- Added the new scores and `scores=` to the scores page and the Extend TimeGym
+  page, and a section to the scores notebook that scores two forecasts of rain
+  or no rain with the Brier score and the log loss.
 
 - Added a confidence interval to every scorecard score. `card.table` has new
   columns `score_low` and `score_high`, and `settled`, True when both ends fall

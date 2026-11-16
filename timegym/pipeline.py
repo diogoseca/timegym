@@ -16,7 +16,12 @@ from .models import (
     is_sklearn_regressor,
 )
 from .scenarios import Scenario, MANIFEST_SCHEMA_VERSION, default_scenarios
-from .diagnostics import evaluate_forecast, exception_evidence
+from .diagnostics import (
+    evaluate_forecast,
+    exception_evidence,
+    _describe_scores,
+    _rebuild_scores,
+)
 from .reporting import CaseResult, DiagnosticResult, TestReport
 from .evaluation import EvaluatedCase, ForecastRun
 from .provenance import (
@@ -161,7 +166,9 @@ def _ready_made(cases):
     return cases, identities
 
 
-def _evaluate_case(case, make_forecast, label, seed, dependence_seed, settings):
+def _evaluate_case(
+    case, make_forecast, label, seed, dependence_seed, settings, scores=None
+):
     """Forecast one case with ``make_forecast(case)``, then check and score the forecast.
 
     Returns ``(forecast, result)``. An exception from the model, or from
@@ -179,6 +186,7 @@ def _evaluate_case(case, make_forecast, label, seed, dependence_seed, settings):
             dependence_seed=dependence_seed,
             n_calibration=settings["n_calibration"],
             alpha=settings["alpha"],
+            scores=scores,
         )
     except Exception as exc:
         result = CaseResult(
@@ -199,7 +207,7 @@ def _evaluate_case(case, make_forecast, label, seed, dependence_seed, settings):
     return forecast, result
 
 
-def _evaluate_ready_made(cases, make_forecast, settings):
+def _evaluate_ready_made(cases, make_forecast, settings, scores=None):
     """Evaluate ready-made cases in order; cases with the same label share a row of the plots."""
     cases, identities = _ready_made(cases)
     rows, results = {}, []
@@ -215,6 +223,7 @@ def _evaluate_ready_made(cases, make_forecast, settings):
             seed,
             dependence_seed,
             settings,
+            scores,
         )
         results.append(
             EvaluatedCase(
@@ -389,6 +398,7 @@ class Pipeline:
         seed=0,
         instances=None,
         cases=None,
+        scores=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
@@ -410,6 +420,12 @@ class Pipeline:
         ``seeds``, ``seed`` or ``instances``. A case's manifest needs no
         ``kind`` or ``seed``; without them it is labelled ``case`` and has no
         seed. Cases with the same ``kind`` share a row of the plots.
+
+        ``scores`` records more scores in every case, as in
+        ``timegym.diagnostics.evaluate_forecast``: names of functions in
+        ``timegym.metrics`` such as ``"brier"``, your own functions, or a
+        dictionary from name to function. ``run.metadata["scores"]`` lists
+        them, and says which replay can compute again.
         """
         if self.steps:
             SklearnForecaster(self.steps, self.window_length)
@@ -429,6 +445,10 @@ class Pipeline:
             "pipeline_config": config,
             "diagnostic_settings": settings,
         }
+        if scores is not None:
+            metadata["scores"] = _describe_scores(
+                scores
+            )  # refuses a bad request before anything runs
         if cases is not None:
             if (
                 scenarios is not None
@@ -446,6 +466,7 @@ class Pipeline:
                     case.task.context, case.task.future_index
                 ),
                 settings,
+                scores,
             )
             return ForecastRun(cases=results, metadata=metadata)
         seeds, seeding = _instance_seeds(seeds, seed, instances, 3)
@@ -465,6 +486,7 @@ class Pipeline:
                     int(case_seed),
                     int(case_seed) + dependence_seed_offset,
                     settings,
+                    scores,
                 )
                 results.append(
                     EvaluatedCase(
@@ -485,6 +507,7 @@ class Pipeline:
         seed=0,
         instances=None,
         cases=None,
+        scores=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
@@ -493,7 +516,8 @@ class Pipeline:
         """Evaluate each scenario on each instance and return a TestReport.
 
         Seeds work as in ``run``: instance ``i`` uses ``seed + i``. ``cases``
-        takes ready-made cases instead, as in ``run``.
+        takes ready-made cases instead, and ``scores`` records more scores,
+        as in ``run``.
         """
         return self.run(
             scenarios,
@@ -501,6 +525,7 @@ class Pipeline:
             seed=seed,
             instances=instances,
             cases=cases,
+            scores=scores,
             check_dependence=check_dependence,
             n_calibration=n_calibration,
             alpha=alpha,
@@ -656,6 +681,9 @@ def _replay_case(report: TestReport, case_index=0):
 
     The return value is a new TestReport. ``metadata['replay']`` records exact
     result equality excluding tracebacks, plus traceback and environment agreement.
+    Scores asked for by name from ``timegym.metrics`` are computed again; your
+    own functions cannot be rebuilt from a report, so they are left out of the
+    comparison and listed in ``metadata['replay']['not_recomputed']``.
     Replaying in a different environment is allowed and reported.
     """
     payload = report.to_dict()
@@ -705,15 +733,31 @@ def _replay_case(report: TestReport, case_index=0):
     ):
         raise ValueError("Case identity and scenario manifest disagree")
     scenario = Scenario(**{key: manifest[key] for key in constructor_keys})
-    regenerated = pipeline.test([scenario], seeds=[manifest["seed"]], **settings)
+    # Scores asked for by name from timegym.metrics are computed again; your own are left out of the comparison.
+    requested = saved_metadata.get("scores")
+    scores, not_recomputed = (
+        (None, []) if requested is None else _rebuild_scores(requested)
+    )
+    regenerated = pipeline.test(
+        [scenario], seeds=[manifest["seed"]], scores=scores, **settings
+    )
     actual = regenerated.cases[0].to_dict()
+    left_out = {"metric_" + name for name in not_recomputed}
+    original_metrics = {
+        key: value
+        for key, value in original.get("metrics", {}).items()
+        if key not in not_recomputed
+    }
+    original_diagnostics = [
+        item for item in original["diagnostics"] if item.get("name") not in left_out
+    ]
     regenerated.metadata["replay"] = {
         "case_index": case_index,
-        "metrics_match": actual["metrics"] == original.get("metrics"),
+        "metrics_match": actual["metrics"] == original_metrics,
         "diagnostics_match": _without_tracebacks(actual["diagnostics"])
-        == _without_tracebacks(original["diagnostics"]),
+        == _without_tracebacks(original_diagnostics),
         "traceback_match": _tracebacks(actual["diagnostics"])
-        == _tracebacks(original["diagnostics"]),
+        == _tracebacks(original_diagnostics),
         "manifest_match": actual["manifest"] == manifest,
         "source_matches": regenerated.metadata["source"]
         == saved_metadata.get("source"),
@@ -723,6 +767,8 @@ def _replay_case(report: TestReport, case_index=0):
         == saved_metadata.get("python"),
     }
     comparison = regenerated.metadata["replay"]
+    if requested is not None:
+        comparison["not_recomputed"] = not_recomputed
     comparison["reproduced"] = all(
         comparison[key]
         for key in ("metrics_match", "diagnostics_match", "manifest_match")

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 from ._internal import nonnegative_int, _exception_evidence, _real_array
+import inspect
 import math
 import numbers
 from dataclasses import dataclass
+from functools import partial
 import numpy as np
 from . import metrics
 from .contracts import SimulationReference
@@ -255,6 +257,181 @@ def covariance_dependence_check(
     )
 
 
+# %% ../source/09_scores_and_diagnostics.ipynb #own-scores
+_SCORE_INPUTS = ("observed", "predicted", "quantiles", "levels", "samples", "context")
+# Scores the evaluator records on its own, so a request may not reuse their names.
+_RECORDED_SCORES = frozenset(
+    {
+        "mse",
+        "mae",
+        "mase",
+        "mean_reference_mse",
+        "pinball",
+        "interval_coverage",
+        "interval_nominal_coverage",
+        "interval_width",
+        "crps",
+        "energy_score",
+        "variogram_score",
+    }
+)
+# The functions of timegym.metrics that can be asked for by name.
+_METRIC_NAMES = (
+    "mse",
+    "mae",
+    "rmse",
+    "mase",
+    "rmsse",
+    "mean_reference_mse",
+    "pinball",
+    "interval_score",
+    "weighted_interval_score",
+    "crps",
+    "energy_score",
+    "variogram_score",
+    "brier",
+    "log_loss",
+)
+
+
+def _score_inputs(name, function):
+    """The inputs a score asks for, split into those it needs and those it may take."""
+    try:
+        parameters = inspect.signature(function).parameters.values()
+    except (TypeError, ValueError) as exc:
+        raise TypeError(f"score {name!r} has no signature TimeGym can read") from exc
+    needs, may_take = [], []
+    for parameter in parameters:
+        if parameter.kind in (parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD):
+            continue
+        if (
+            parameter.name in _SCORE_INPUTS
+            and parameter.kind != parameter.POSITIONAL_ONLY
+        ):
+            (needs if parameter.default is parameter.empty else may_take).append(
+                parameter.name
+            )
+        elif parameter.default is parameter.empty:
+            raise TypeError(
+                f"score {name!r} needs {parameter.name!r}, which TimeGym cannot give; "
+                f"a score can ask for {', '.join(_SCORE_INPUTS)}"
+            )
+    return tuple(needs), tuple(may_take)
+
+
+def _score_requests(scores):
+    """Turn ``scores=`` into ``(name, function, needs, may_take)`` tuples, refusing what cannot work."""
+    if scores is None:
+        return ()
+    if isinstance(scores, dict):
+        entries = list(scores.items())
+    elif isinstance(scores, (str, bytes)) or callable(scores):
+        raise TypeError(
+            "scores must be a list or a dictionary, such as scores=['brier']"
+        )
+    else:
+        entries = [(None, entry) for entry in scores]
+    requests, names = [], set()
+    for name, entry in entries:
+        if isinstance(entry, str):
+            if entry not in _METRIC_NAMES or not callable(
+                getattr(metrics, entry, None)
+            ):
+                raise ValueError(
+                    f"timegym.metrics has no score {entry!r}; the scores it has are "
+                    f"{', '.join(_METRIC_NAMES)}"
+                )
+            function = getattr(metrics, entry)
+            name = entry if name is None else name
+        elif callable(entry):
+            function = entry
+            if name is None:
+                name = getattr(entry, "__name__", None)
+                if not isinstance(name, str) or name == "<lambda>":
+                    raise ValueError(
+                        "this score has no name of its own; name it with a dictionary, "
+                        "such as scores={'my_score': ...}"
+                    )
+        else:
+            raise TypeError(
+                f"a score must be a name from timegym.metrics or a function; got {entry!r}"
+            )
+        if not isinstance(name, str) or not name:
+            raise ValueError("a score's name must be a nonempty string")
+        if name in _RECORDED_SCORES:
+            raise ValueError(
+                f"{name!r} is recorded in every report already; to record it with other "
+                f"settings, give it another name, such as scores={{'{name}_2': ...}}"
+            )
+        if name in names:
+            raise ValueError(f"the score name {name!r} is asked for twice")
+        names.add(name)
+        requests.append((name, function, *_score_inputs(name, function)))
+    return tuple(requests)
+
+
+def _score_record(name, function):
+    """Describe one requested score for the report, and say whether replay can compute it again."""
+    base, settings = function, {}
+    if isinstance(function, partial):
+        base, settings = function.func, dict(function.keywords)
+        if function.args:
+            settings = None
+    label = getattr(base, "__name__", None)
+    from_metrics = label in _METRIC_NAMES and getattr(metrics, label, None) is base
+    simple = settings is not None and all(
+        isinstance(value, (str, bool, int, float, type(None)))
+        for value in settings.values()
+    )
+    where = f"{getattr(base, '__module__', None) or ''}.{getattr(base, '__qualname__', repr(base))}".lstrip(
+        "."
+    )
+    return {
+        "name": name,
+        "function": f"timegym.metrics.{label}" if from_metrics else where,
+        "settings": settings if simple else None,
+        "replayable": bool(from_metrics and simple),
+    }
+
+
+def _describe_scores(scores):
+    """Check ``scores=`` and describe each requested score as a report records it in its metadata.
+
+    Raises before anything runs when a name is unknown, taken or repeated, or
+    when a function needs an argument TimeGym cannot give. Each record has the
+    score's ``name``, its ``function``, its keyword ``settings`` (from
+    ``functools.partial``) and ``replayable``, True when it is a function of
+    ``timegym.metrics`` with plain settings, so replay can compute it again.
+    """
+    return [
+        _score_record(name, function) for name, function, *_ in _score_requests(scores)
+    ]
+
+
+def _rebuild_scores(records):
+    """From a report's score records, rebuild the scores replay can compute again and name the rest."""
+    if not isinstance(records, list) or not all(
+        isinstance(record, dict) and isinstance(record.get("name"), str)
+        for record in records
+    ):
+        raise ValueError("Report score requests are malformed")
+    rebuilt, not_recomputed = {}, []
+    for record in records:
+        function, settings = record.get("function"), record.get("settings")
+        label = function.rpartition(".")[2] if isinstance(function, str) else None
+        if (
+            record.get("replayable") is True
+            and function == f"timegym.metrics.{label}"
+            and label in _METRIC_NAMES
+            and isinstance(settings, dict)
+        ):
+            base = getattr(metrics, label)
+            rebuilt[record["name"]] = partial(base, **settings) if settings else base
+        else:
+            not_recomputed.append(record["name"])
+    return rebuilt, not_recomputed
+
+
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-38
 def evaluate_forecast(
     case,
@@ -264,6 +441,7 @@ def evaluate_forecast(
     dependence_seed=0,
     n_calibration=99,
     alpha=0.05,
+    scores=None,
 ):
     """Validate a forecast and record scores without inventing pass thresholds.
 
@@ -271,11 +449,20 @@ def evaluate_forecast(
     or ensemble outputs are UNSUPPORTED, not reconstructed from other output
     types. A known-mean discrepancy and one-path interval coverage are
     descriptive evidence and are INCONCLUSIVE as capability decisions.
-    The case is labelled by manifest["kind"] and manifest["seed"]. A
+    The case is labelled by ``manifest["kind"]`` and ``manifest["seed"]``. A
     case not drawn from a TimeGym scenario (its manifest has no
-    schema_version) may leave them out: it is then labelled "case"
+    ``schema_version``) may leave them out: it is then labelled ``"case"``
     with no seed.
+
+    ``scores`` records more scores in ``result.metrics``: names of functions
+    in ``timegym.metrics``, your own functions, or a dictionary from name to
+    function. A score asks for ``observed``, ``predicted``, ``quantiles``,
+    ``levels``, ``samples`` or ``context`` by its argument names. One whose
+    input the forecast lacks is UNSUPPORTED, ``UndefinedMetricError`` makes
+    it INCONCLUSIVE and any other exception an ERROR, each as
+    ``metric_<name>``.
     """
+    requests = _score_requests(scores)
     dependence_seed = nonnegative_int(dependence_seed, "dependence_seed")
     settings = diagnostic_settings(
         check_dependence=check_dependence, n_calibration=n_calibration, alpha=alpha
@@ -323,9 +510,16 @@ def evaluate_forecast(
         )
     )
 
-    def score(name, function, *args, **kwargs):
+    def score(name, function, *args, requested=False, **kwargs):
         try:
             value = function(*args, **kwargs)
+            if requested and (
+                isinstance(value, (bool, np.bool_))
+                or not isinstance(value, numbers.Real)
+            ):
+                raise TypeError(
+                    f"a score must return one number; got {type(value).__name__}"
+                )
             if not np.isfinite(value):
                 raise ValueError("score calculation returned a nonfinite value")
             result.metrics[name] = float(value)
@@ -340,12 +534,18 @@ def evaluate_forecast(
                 )
             )
         except Exception as exc:
+            # A score you asked for names its error, so a report says what went wrong.
+            message = (
+                f"Score calculation raised {type(exc).__name__}: {exc}"
+                if requested
+                else "Score calculation raised an exception."
+            )
             result.diagnostics.append(
                 DiagnosticResult(
                     "metric_" + name,
                     "ERROR",
                     "capability",
-                    "Score calculation raised an exception.",
+                    message,
                     exception_evidence(exc),
                 )
             )
@@ -528,6 +728,34 @@ def evaluate_forecast(
             "Empirical marginal and joint scores are descriptive; no capability acceptance tolerance was declared.",
             ("crps", "energy_score", "variogram_score"),
         )
+
+    available = {
+        "observed": observed,
+        "predicted": forecast.point,
+        "context": case.task.context.to_numpy(),
+        "quantiles": forecast.quantiles,
+        "levels": None if forecast.quantiles is None else forecast.levels,
+        "samples": forecast.samples,
+    }
+    for name, function, needs, may_take in requests:
+        missing = [need for need in needs if available[need] is None]
+        if missing:
+            result.diagnostics.append(
+                DiagnosticResult(
+                    "metric_" + name,
+                    "UNSUPPORTED",
+                    "capability",
+                    f"The score needs {missing[0]}, which this forecast does not have.",
+                    {"needs": list(needs)},
+                )
+            )
+            continue
+        given = {
+            key: np.asarray(available[key], dtype=float)
+            for key in (*needs, *may_take)
+            if available[key] is not None
+        }
+        score(name, function, requested=True, **given)
 
     if check_dependence:
         try:
