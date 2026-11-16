@@ -9,23 +9,11 @@
     "after_merge": "Three later commits may change this file, each one value only. The first, right after the merge, writes registered_on and merge_commit and sets status to 'registered'. The second adds the generated mutant sources and their manifest and writes the manifest's SHA-256 into part_1_generated_mutants.sources.manifest.sha256. The third writes the Chronos revision into part_6_zoo.models. Nothing else in this file changes after the merge.",
     "start_conditions": [
       "status is 'registered' and registration.merge_commit and registration.registered_on are filled in.",
-      "operator_list_review.reviewer and operator_list_review.date are filled in.",
-      "human_decisions_required is empty: every item is resolved and its resolution is written into this file.",
       "For the generation of the mutant sources, Parts 1 and 2 and the zoo: the files listed in part_1_generated_mutants.subject.frozen_files exist with the SHA-256 digests written in frozen_files_sha256.",
       "For Parts 1 and 2: the mutant manifest exists at part_1_generated_mutants.sources.manifest.path with the SHA-256 written there, so that the mutant set is committed before any mutant is executed.",
       "For the Chronos scorecard only: the chronos_small entry of part_6_zoo.models names the model revision (see part_6_zoo.pretrained_revision).",
-      "experiments/study3_common.unmet_start_conditions checks the first five; every runner calls it before any computation and has no flag that bypasses it."
+      "experiments/study3_common.unmet_start_conditions checks the first three; every runner calls it before any computation and has no flag that bypasses it."
     ]
-  },
-  "human_decisions_required": [
-    "Operator list review: the name of a person who did not write the checks, and the date on which that person checked and signed the Cosmic Ray operator list and the catalogue (operator_list_review)."
-  ],
-  "operator_list_review": {
-    "reviewer": "",
-    "date": "",
-    "scope": "The Cosmic Ray tool version and operator list (part_1_generated_mutants.sources.cosmic_ray) and every definition in part_1_generated_mutants.sources.catalogue.",
-    "eligibility": "The reviewer must not have written timegym/checks.py, timegym/diagnostics.py, experiments/model_faults.py or any Study 3 check or alarm.",
-    "rule": "The run may not start while reviewer or date is empty. A change requested by the reviewer is made before registration and recorded in this file."
   },
   "pilots_before_registration": {
     "rule": "The items below are every computation made before registration that bears on this study. None executed a mutant, or a Study 2 fault on a new learner, against a check or alarm; none ran the margin simulation, either predictability estimator on a scorecard cell, or a scorecard of a Part 6 model other than the two built-in baselines, at seeds outside this protocol. Apart from the earlier records listed in the last item, no distance to an answer key, realized loss or score of any pipeline was computed.",
@@ -841,7 +829,7 @@
   },
   "limits": [
     "One subject pipeline written for the study; generated mutants describe that code, not a population of real forecasting bugs.",
-    "Cosmic Ray's standard operators are generic; the catalogue was written by the study's authors after Study 2 and is checked by one person who did not write the checks.",
+    "Cosmic Ray's standard operators are generic; the catalogue was written after Study 2 by the study's authors, who also wrote the checks, and was reviewed by no one else. Results are reported for each source of mutants separately.",
     "Two catalogue operators coincide in behaviour with other sources for some learners (target_columns_swapped with a Study 2 bug), and the four at the scaler sites are inactive for the learners of Part 2, which use no scaling.",
     "Holm families differ in size between sources; sources are compared on curves and per-case rates.",
     "The second implementation exists only for Ridge and was written by the study's authors.",

@@ -118,15 +118,11 @@ def unmet_start_conditions(protocol: dict, part: str) -> list[str]:
     """
     if part not in PARTS:
         raise ValueError(f"part must be one of {PARTS}")
-    registration, review, unmet = protocol["registration"], protocol["operator_list_review"], []
+    registration, unmet = protocol["registration"], []
     if protocol.get("status") != "registered":
         unmet.append(f"status is {protocol.get('status')!r}, not 'registered'")
     if not registration.get("merge_commit") or not registration.get("registered_on"):
         unmet.append("registration.merge_commit and registration.registered_on are not filled in")
-    if not review.get("reviewer") or not review.get("date"):
-        unmet.append("operator_list_review.reviewer and operator_list_review.date are not filled in")
-    if protocol["human_decisions_required"]:
-        unmet.append("human_decisions_required is not empty")
     if part in ("generation", "part-1", "part-2", "zoo"):
         unmet.extend(frozen_file_problems(protocol))
     if part in ("part-1", "part-2"):

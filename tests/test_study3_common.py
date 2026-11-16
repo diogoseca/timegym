@@ -99,13 +99,13 @@ def test_a_draft_protocol_may_not_start(protocol):
 
 def test_start_conditions_name_what_is_missing(protocol):
     ready = copy.deepcopy(protocol)
-    ready.update(status="registered", human_decisions_required=[])
+    ready.update(status="registered")
     ready["registration"].update(merge_commit="0" * 40, registered_on="2026-12-01")
-    ready["operator_list_review"].update(reviewer="A reviewer", date="2026-12-01")
     assert common.unmet_start_conditions(ready, "part-3") == []
-    ready["operator_list_review"]["reviewer"] = ""
-    assert any("reviewer" in reason for reason in common.unmet_start_conditions(ready, "part-4"))
-    ready["operator_list_review"]["reviewer"] = "A reviewer"
+    ready["registration"]["registered_on"] = ""
+    assert common.unmet_start_conditions(ready, "part-4") == [
+        "registration.merge_commit and registration.registered_on are not filled in"]
+    ready["registration"]["registered_on"] = "2026-12-01"
     assert common.unmet_start_conditions(ready, "generation") == common.unmet_start_conditions(ready, "zoo") == []
     assert common.unmet_start_conditions(ready, "part-1") == [
         "part_1_generated_mutants.sources.manifest.sha256 is not filled in"]

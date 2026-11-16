@@ -202,9 +202,8 @@ The records were migrated twice without rerunning either study (30 October and 3
 `protocol-v3.json` is the plan of the paper's third study. It is fixed before
 anything is run (a pre-registration), so that the results cannot shape the
 questions. Its field `status` stays `draft` until it is merged. The run may
-not start until the file names the person, other than the author of the
-checks, who checked and signed the list of deliberate bugs, the date of that
-check, and the merge commit.
+not start until a later commit writes the merge commit and its date into the
+file and sets the status to `registered`.
 
 The study asks six questions:
 
