@@ -87,6 +87,22 @@ time was handled.
 - Credit: Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Electricity Demand (Elecdemand) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656069. The archive took the series from the R package fpp2.
 - Changes: Converted from the archive's .tsf file and rounded to three decimals, which is one megawatt. The file holds one row per day and one column per half-hour; the loader returns one row per half-hour.
 
+## Hospital patients
+
+`hospital-patients.csv`: the number of patients per month for 114 medical
+products, 84 months from January 2000 to December 2006. There is one column
+per product, under the archive's labels (`T3`, `T21` and so on); the archive
+does not say what each product is. The 114 are every second product among the
+227 with at least 100 patients a month on average.
+
+- Source: Hospital Dataset, Monash Time Series Forecasting Archive, on Zenodo,
+  <https://zenodo.org/records/4656014>
+- License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Credit: Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Hospital Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656014. The archive took the series from the R package expsmooth.
+- Changes: Converted from the archive's .tsf file to a table with one row per month and one column per product, under the archive's labels. The sample keeps every second product among the 227 with at least 100 patients a month on average.
+- Full version: all 767 products. Most of them have far fewer patients a
+  month; the smallest average 10.
+
 ## Rain
 
 `rain.csv`: daily weather at Sydney (Observatory Hill), Bureau of Meteorology

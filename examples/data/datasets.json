@@ -130,6 +130,32 @@
     "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Electricity Demand (Elecdemand) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656069. The archive took the series from the R package fpp2.",
     "changes": "Converted from the archive's .tsf file and rounded to three decimals, which is one megawatt. The file holds one row per day and one column per half-hour; the loader returns one row per half-hour."
   },
+  "hospital-patients": {
+    "title": "Monthly patient counts for medical products, January 2000 to December 2006",
+    "sample": {
+      "file": "hospital-patients.csv",
+      "sha256": "a4b61192f6c972770201219366506100523a7307ca3e2631847e491f3af84eb6",
+      "holds": "114 products, 84 months of patients per month"
+    },
+    "full": "All 767 products",
+    "source": {
+      "name": "Hospital Dataset",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656014",
+      "doi": "10.5281/zenodo.4656014",
+      "download": "https://zenodo.org/api/records/4656014/files/hospital_dataset.zip/content",
+      "file": "hospital_dataset.zip",
+      "bytes": 78110,
+      "sha256": "8fd4085efb4517508e30fc69247eee9b74b300765bc6e94482c5d250efba66e5",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Hospital Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656014. The archive took the series from the R package expsmooth.",
+    "changes": "Converted from the archive's .tsf file to a table with one row per month and one column per product, under the archive's labels. The sample keeps every second product among the 227 with at least 100 patients a month on average."
+  },
   "rain": {
     "title": "Daily rain, temperature and the official chance of rain at Australian weather stations, May 2015 to April 2017",
     "sample": {

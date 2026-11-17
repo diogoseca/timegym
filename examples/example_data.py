@@ -304,7 +304,7 @@ def _sample_river_flow(table):
 # Monthly sales of spare parts
 
 
-def _write_spare_parts(table, path):
+def _write_monthly_counts(table, path):
     # Whole units; a month the source has no figure for stays empty.
     table.astype("Int64").to_csv(path, index_label="month", lineterminator="\n")
 
@@ -320,6 +320,22 @@ def _sample_spare_parts(table):
     """Every eighth part among those with a figure for every month."""
     complete = table.loc[:, table.notna().all()]
     return complete.iloc[:, ::8].astype(int)
+
+
+# Monthly patient counts for medical products
+
+
+def _build_hospital(source):
+    """Patients per month for every product."""
+    table = pd.DataFrame(_archive_series(source, "hospital_dataset.tsf"))
+    table.index = table.index.to_period("M").rename("month")
+    return table.rename_axis(columns="product")
+
+
+def _sample_hospital(table):
+    """Every second product among those with at least 100 patients a month on average."""
+    busy = table.loc[:, table.mean() >= 100]
+    return busy.iloc[:, ::2].astype(int)
 
 
 # Daily rain and the official chance of rain
@@ -449,7 +465,7 @@ _DATASETS = {
     "spare-parts": {
         "read": _read_monthly,
         "build": _build_spare_parts,
-        "write": _write_spare_parts,
+        "write": _write_monthly_counts,
         "sample": _sample_spare_parts,
     },
     "electricity-demand": {
@@ -457,6 +473,12 @@ _DATASETS = {
         "build": _build_electricity,
         "write": _write_electricity,
         "sample": lambda table: table,
+    },
+    "hospital-patients": {
+        "read": _read_monthly,
+        "build": _build_hospital,
+        "write": _write_monthly_counts,
+        "sample": _sample_hospital,
     },
     "rain": {
         "read": _read_rain,
