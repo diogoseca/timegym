@@ -35,6 +35,21 @@ links to the tutorials for the tools it uses.
 
     Data: monthly sales of 314 car parts, 1998 to 2002. Runs in about 10 seconds.
 
+-   [![December sales of a souvenir shop in five years as bars, with three forecasts made at the end of each September; the straight line fitted in units falls to half of the last two bars, and the same line fitted in logarithms stays close](images/examples/christmas-order.png)](../examples/christmas-order.ipynb)
+
+    **[The Christmas order: five Decembers cannot pick the forecaster](../examples/christmas-order.ipynb)**
+
+    *Demand and operations*
+
+    A souvenir shop orders its Christmas stock in September and has five
+    Decembers to test a forecaster on. One argument moves a straight line
+    from the worst forecast to level with the best. Two forecasters then
+    tie, and five Decembers cannot choose. Generated shops with a known
+    kind of growth show what each choice costs and how much to order on
+    top of the forecast.
+
+    Data: monthly sales of a souvenir shop in Queensland, 1987 to 1993. Runs in about 20 seconds.
+
 -   [![One day of calls per half hour: the forecast made the evening before runs well below the calls that came, and the forecast made again at 10:00 lies between the two](images/examples/call-center.png)](../examples/call-center.ipynb)
 
     **[Call center staffing: forecast again at ten o'clock](../examples/call-center.ipynb)**
@@ -279,7 +294,6 @@ everything = load("store-sales", full=True)   # every product, downloaded on fir
 These examples are planned. Each one is added once its notebook has run on real
 data and we know what the result is.
 
-- **Demand and operations:** bakery demand around holidays, bike-share
-  stations, emergency room arrivals.
+- **Demand and operations:** bike-share stations, emergency room arrivals.
 - **Chaotic but partly predictable:** flu season.
 - **Lessons that cut across domains:** a ready-made model against your own.
