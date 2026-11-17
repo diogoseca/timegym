@@ -1,0 +1,80 @@
+{
+  "store-sales": {
+    "title": "Weekly units sold by a UK online gift shop, December 2009 to November 2011",
+    "sample": {
+      "file": "store-sales.csv",
+      "sha256": "584fd976dd1c45b1bdd2eb4720a50909a09d0ab5bc95cf0a0492fb7a8fbaeee0",
+      "holds": "30 steady-selling products, 104 weeks of units sold per week (weeks start on Monday)"
+    },
+    "full": "Every product in the order log, 4,669 of them, in the same weekly layout",
+    "source": {
+      "name": "Online Retail II",
+      "publisher": "UCI Machine Learning Repository",
+      "page": "https://archive.ics.uci.edu/dataset/502/online+retail+ii",
+      "doi": "10.24432/C5CG6D",
+      "download": "https://archive.ics.uci.edu/static/public/502/online+retail+ii.zip",
+      "file": "online_retail_ii.zip",
+      "bytes": 45622418,
+      "sha256": "572e36277c2390fbfde10664750731e0a86f55e33470d91919085f0408e67bfb",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Chen, D. (2012). Online Retail II [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5CG6D",
+    "changes": "Order lines summed into units per product and week, with cancelled orders subtracted and totals below zero set to zero. Postage, fees and other non-product lines removed. The nine days repeated across the two sheets counted once. Weeks with no orders set to zero; the first and last weeks, which the log cuts short, dropped. Product names put in sentence case."
+  },
+  "bitcoin": {
+    "title": "Daily Bitcoin price in US dollars, July 2010 to July 2021",
+    "sample": {
+      "file": "bitcoin.csv",
+      "sha256": "a082d872274577c0ec7f7d91fbfc5e2a5f94bf8bb7ab7b16942b1c9eb4570f97",
+      "holds": "The daily price, 4,021 days"
+    },
+    "full": "The price and 17 other daily series, such as transactions, hash rate, search interest and tweets",
+    "source": {
+      "name": "Bitcoin Dataset without Missing Values",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/5122101",
+      "doi": "10.5281/zenodo.5122101",
+      "download": "https://zenodo.org/api/records/5122101/files/bitcoin_dataset_without_missing_values.zip/content",
+      "file": "bitcoin_dataset_without_missing_values.zip",
+      "bytes": 220635,
+      "sha256": "0da1727e15b6c332d37500553dcfabd9a096a9af10de95e503baad6ccdb538c4",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2021). Bitcoin Dataset without Missing Values (Version 1) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.5122101. The figures were collected from https://bitinfocharts.com.",
+    "changes": "Converted from the archive's .tsf file to a table with one row per day. The sample keeps the price only. Days the source had no figure for were already filled with the last known value by the archive."
+  },
+  "airline-passengers": {
+    "title": "Monthly international airline passengers in thousands, 1949 to 1960",
+    "sample": {
+      "file": "airline-passengers.csv",
+      "sha256": "d27dd74f3654ab4c688afccf2348870410902f480cea900d872be2ae33184411",
+      "holds": "The whole series, 144 months",
+      "complete": true
+    },
+    "full": "The same 144 months",
+    "source": {
+      "name": "AirPassengers",
+      "publisher": "R datasets package, as a CSV file in Rdatasets",
+      "page": "https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/AirPassengers.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/datasets/AirPassengers.csv",
+      "file": "AirPassengers.csv",
+      "bytes": 3032,
+      "sha256": "bdb98adbd418a6de6842a742e0602f363c3b841c26677e7e61a1e055e9509bd8",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-2 | GPL-3 (R datasets package)",
+      "url": "https://stat.ethz.ch/R-manual/R-devel/library/datasets/DESCRIPTION"
+    },
+    "credit": "Box, G. E. P., Jenkins, G. M., & Reinsel, G. C. (1994). Time Series Analysis: Forecasting and Control (3rd ed.), series G. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The fractional-year column replaced by the month, and the value column named passengers."
+  }
+}
