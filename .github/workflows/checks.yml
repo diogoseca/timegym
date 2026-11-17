@@ -165,7 +165,7 @@ jobs:
           cache-dependency-path: |
             pyproject.toml
             requirements-study.txt
-      - run: python -m pip install -e '.[notebooks]'
+      - run: python -m pip install -e '.[notebooks,examples]'
       - run: python tools/check_notebooks.py
   paper:
     # Always started, so it always reports a result; the compile runs only when

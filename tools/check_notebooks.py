@@ -1,4 +1,4 @@
-"""Execute the source notebooks and tutorials in fresh kernels using this Python runtime.
+"""Execute the source notebooks, tutorials and examples in fresh kernels using this Python runtime.
 
 Run from a source checkout with ``python tools/check_notebooks.py``. Existing
 outputs are cleared in memory before execution. Use --write to retain the new
@@ -23,7 +23,9 @@ from nbclient import NotebookClient
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FOLDERS = {"source": ROOT / "source", "tutorials": ROOT / "tutorials"}
+FOLDERS = {"source": ROOT / "source", "tutorials": ROOT / "tutorials", "examples": ROOT / "examples"}
+# Source notebooks and tutorials are numbered; every notebook in examples/ is an example.
+PATTERNS = {"source": "[0-9][0-9]_*.ipynb", "tutorials": "[0-9][0-9]_*.ipynb", "examples": "*.ipynb"}
 
 
 def execute(path: Path, scratch: Path, *, write: bool, html_dir: Path | None) -> dict:
@@ -101,20 +103,21 @@ def execute(path: Path, scratch: Path, *, write: bool, html_dir: Path | None) ->
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("notebooks", nargs="*", type=Path, help="Selected notebook paths; default: every source notebook and tutorial")
+    parser.add_argument("notebooks", nargs="*", type=Path, help="Selected notebook paths; default: every source notebook, tutorial and example")
     parser.add_argument("--write", action="store_true", help="Save successfully executed outputs in the notebooks")
-    parser.add_argument("--group", choices=["all", "source", "tutorials"], default="all",
-                        help="Execute all notebooks, or only the source notebooks or the tutorials")
+    parser.add_argument("--group", choices=["all", *FOLDERS], default="all",
+                        help="Execute all notebooks, or only the source notebooks, the tutorials or the examples")
     parser.add_argument("--html-dir", type=Path, help="Also export executed notebooks as HTML for inspection")
     args = parser.parse_args()
     group = args.group
-    folders = list(FOLDERS.values()) if group == "all" else [FOLDERS[group]]
+    groups = list(FOLDERS) if group == "all" else [group]
+    folders = [FOLDERS[name] for name in groups]
     if args.notebooks:
         paths = [p for p in args.notebooks if p.resolve().parent in {f.resolve() for f in folders}]
     else:
-        paths = [p for folder in folders for p in sorted(folder.glob("[0-9][0-9]_*.ipynb"))]
+        paths = [p for name in groups for p in sorted(FOLDERS[name].glob(PATTERNS[name]))]
     if not paths:
-        parser.error("No source notebooks or tutorials found")
+        parser.error("No source notebooks, tutorials or examples found")
     with TemporaryDirectory(prefix="timegym-notebook-") as temporary:
         for path in paths:
             result = execute(path.resolve(), Path(temporary), write=args.write, html_dir=args.html_dir)
