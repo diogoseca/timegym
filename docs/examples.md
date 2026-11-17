@@ -74,6 +74,19 @@ links to the tutorials for the tools it uses.
 
     Data: daily rain and the official chance of rain in Sydney, 2015 to 2017. Runs in about 10 seconds.
 
+-   [![How much each of seven cities cuts the miss on Sydney's high when added to the table, by days ahead; Melbourne most for tomorrow, Perth most for later, Darwin below zero](images/examples/daily-temperature.png)](../examples/daily-temperature.ipynb)
+
+    **[Tomorrow's temperature: which city should Sydney watch?](../examples/daily-temperature.ipynb)**
+
+    *Energy and environment*
+
+    Adding Melbourne's temperatures to the table cuts the miss on tomorrow's
+    high in Sydney by 14%. Perth helps most two and three days out, and Darwin
+    makes the forecast worse. Two cities give what all eight give. Each test
+    is one more column, on the same days, with an interval for the gain.
+
+    Data: daily highs in eight Australian cities, 2015 to 2017. Runs in about 25 seconds.
+
 -   [![Average miss by years ahead for four forecasters; the regression leads for two years, then matches the rule that copies one cycle back](images/examples/sunspots.png)](../examples/sunspots.ipynb)
 
     **[The sunspot cycle: how far ahead is a forecast worth making?](../examples/sunspots.ipynb)**
@@ -169,8 +182,7 @@ data and we know what the result is.
 
 - **Demand and operations:** bakery demand around holidays, call center
   staffing, bike-share stations, emergency room arrivals.
-- **Energy and environment:** solar farm output, air quality tomorrow, daily
-  temperature.
+- **Energy and environment:** solar farm output, air quality tomorrow.
 - **Chaotic but partly predictable:** flu season, El Niño.
 - **Web and product:** signups after a launch, server load for capacity
   planning.

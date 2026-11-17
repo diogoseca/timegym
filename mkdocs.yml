@@ -105,6 +105,7 @@ nav:
           - "Tomorrow's electricity demand: let the worst days say what is missing": examples/electricity-demand.ipynb
           - "River flow: checking the range, not only the forecast": examples/river-flow.ipynb
           - "Will it rain tomorrow? Score the forecast you already have": examples/rain.ipynb
+          - "Tomorrow's temperature: which city should Sydney watch?": examples/daily-temperature.ipynb
       - Chaotic but partly predictable:
           - "The sunspot cycle: how far ahead is a forecast worth making?": examples/sunspots.ipynb
       - Finance:
