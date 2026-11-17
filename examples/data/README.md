@@ -191,6 +191,24 @@ Ontario, in cubic meters per second, 10,957 days from 1 January 1950 to
 - Changes: Converted from the archive's .tsf file to a table with one row per day. The sample keeps 1950 to 1979.
 - Full version: the same series from 1 January 1915, 23,741 days.
 
+## Share index
+
+`sp500.csv`: the level of the S&P 500 share index at the close of the last
+trading day of each week, 3,444 weeks ending on Fridays from 6 January 1950
+to 1 January 2016. The index leaves out dividends.
+
+- Source: sp500, R package gt, as a CSV file in Rdatasets,
+  <https://vincentarelbundock.github.io/Rdatasets/doc/gt/sp500.html>
+- License: [MIT (R package gt)](https://github.com/rstudio/gt/blob/master/LICENSE.md), the license
+  of the package the table ships in. The package does not say where its
+  figures were collected.
+- Credit: Iannone, R., Cheng, J., Schloerke, B., and others. gt: Easily Create Presentation-Ready Display Tables (R package, Posit Software, PBC), dataset sp500. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets). The index is calculated by S&P Dow Jones Indices.
+- Changes: Rows put in date order; the row-number column and the adjusted close, which equals the close on every day, dropped. The sample keeps the close of the last trading day of each week.
+- Full version: open, high, low, close and volume for each of the 16,607
+  trading days from 3 January 1950 to 31 December 2015, on a calendar of
+  business days. A row is empty where the market was closed. Before 1962 the
+  source gives the close in all four price columns.
+
 ## Sunspots
 
 `sunspots.csv`: the yearly sunspot number, 289 years from 1700 to 1988. The

@@ -262,6 +262,31 @@
     "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Saugeen River Flow (SaugeenDay) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656058. The archive took the series from the R package deseasonalize.",
     "changes": "Converted from the archive's .tsf file to a table with one row per day. The sample keeps 1950 to 1979."
   },
+  "sp500": {
+    "title": "The S&P 500 share index, 1950 to 2015",
+    "sample": {
+      "file": "sp500.csv",
+      "sha256": "4b8b57a10d5e2f32350f21160f2f44075732c44877afa5be203aadb79a1a614e",
+      "holds": "The closing level on the last trading day of each week, 3,444 weeks ending on Fridays from 6 January 1950 to 1 January 2016"
+    },
+    "full": "Open, high, low, close and volume for each of the 16,607 trading days, on a calendar of business days with empty rows where the market was closed",
+    "source": {
+      "name": "sp500",
+      "publisher": "R package gt, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/gt/sp500.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/gt/sp500.csv",
+      "file": "sp500.csv",
+      "bytes": 994600,
+      "sha256": "5acfcefea0055687a7ab03e32c552d7a32cc75c3517498304cea4c187a5ca373",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "MIT (R package gt)",
+      "url": "https://github.com/rstudio/gt/blob/master/LICENSE.md"
+    },
+    "credit": "Iannone, R., Cheng, J., Schloerke, B., and others. gt: Easily Create Presentation-Ready Display Tables (R package, Posit Software, PBC), dataset sp500. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets). The index is calculated by S&P Dow Jones Indices.",
+    "changes": "Rows put in date order; the row-number column and the adjusted close, which equals the close on every day, dropped. The sample keeps the close of the last trading day of each week."
+  },
   "sunspots": {
     "title": "Yearly sunspot numbers, 1700 to 1988",
     "sample": {

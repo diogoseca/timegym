@@ -499,6 +499,28 @@ def _build_sunspots(source):
     return pd.DataFrame({"sunspots": values["value"].to_numpy(float)}, index=years)
 
 
+# The S&P 500 share index
+
+
+def _read_sp500(path):
+    """Weekly closes in the sample; every column by business day in the full table."""
+    table = pd.read_csv(path, index_col="date", parse_dates=True)
+    weekly = (table.index[1] - table.index[0]).days == 7
+    table.index = pd.DatetimeIndex(table.index, freq="W-FRI" if weekly else "B", name="date")
+    return table
+
+
+def _build_sp500(source):
+    """Open, high, low, close and volume by business day, empty on days the market was closed."""
+    days = pd.read_csv(source, index_col="date", parse_dates=True).sort_index()
+    return days[["open", "high", "low", "close", "volume"]].asfreq("B").rename_axis("date")
+
+
+def _sample_sp500(table):
+    """The last close of each week, with weeks ending on Friday."""
+    return table[["close"]].resample("W-FRI").last()
+
+
 _DATASETS = {
     "store-sales": {
         "read": _read_store_sales,
@@ -559,6 +581,12 @@ _DATASETS = {
         "build": _build_river_flow,
         "write": _write_daily,
         "sample": _sample_river_flow,
+    },
+    "sp500": {
+        "read": _read_sp500,
+        "build": _build_sp500,
+        "write": _write_daily,
+        "sample": _sample_sp500,
     },
     "sunspots": {
         "read": _read_sunspots,
