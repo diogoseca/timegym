@@ -423,10 +423,11 @@ What the parts show:
 
    For each learner the first 84 Cosmic Ray mutants of the seeded order were
    screened to find 12 that run and change a forecast: 24 raise an error on
-   every input and 48 are equivalent, because scaling is off for these
-   learners and a mutant in the scaling code changes nothing. The same 12
-   were taken for all three learners. Of the 16 catalogue mutants 4 are
-   equivalent and of the four Study 2 bugs one is, as the protocol expected.
+   every input and 48 are equivalent. Scaling is off for these learners, and
+   34 of the 48 are mutants of the three scaling functions, which then do not
+   run. The same 12 were taken for all three learners. Of the 16 catalogue
+   mutants 4 are equivalent and of the four Study 2 bugs one is, as the
+   protocol expected.
    Each cell counts the mutants that the check caught in at least one
    condition, as Cosmic Ray (of 12) / catalogue (of 12) / Study 2 bugs (of 3).
 

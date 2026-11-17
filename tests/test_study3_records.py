@@ -152,6 +152,9 @@ def test_part_2_counts_stated_in_the_readme():
     funnel = {(row["learner"], row["kind"], row["stage"]): int(row["count"])
               for row in table(RESULTS / "part-2/funnel.csv")}
     kinds = ("cosmic_ray", "catalogue", "study2")
+    mutants = {entry["sha256"]: entry for entry in load(RESULTS / "mutants/manifest.json")["sources"]}
+    defined_in = {source["id"]: mutants[source["sha256"]]["labels"][0].get("definition")
+                  for source in load(RESULTS / "part-1/results.json")["ridge"]["sources"]}
 
     def caught(learner, check):
         return [funnel.get((learner, kind, f"caught_{check}")) for kind in kinds]
@@ -164,6 +167,9 @@ def test_part_2_counts_stated_in_the_readme():
         screen = [entry["sizes"]["24"] for entry in results[learner]["generic_screen"].values()]
         assert len(screen) == 84 and sum(not entry["runnable"] for entry in screen) == 24
         assert sum(entry["runnable"] and entry["equivalent"] for entry in screen) == 48
+        unchanged = [name for name, entry in results[learner]["generic_screen"].items()
+                     if entry["sizes"]["24"]["runnable"] and entry["sizes"]["24"]["equivalent"]]
+        assert sum(defined_in[name] in ("fit_scaler", "apply_scaler", "invert_scaler") for name in unchanged) == 34
         assert results[learner]["generic_selected"] == results["hgb"]["generic_selected"]
         assert len(results[learner]["generic_selected"]) == 12
         assert [results[learner]["funnel"][kind]["screen_misses"] for kind in kinds] == [0, 0, 0]
