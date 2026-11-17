@@ -101,6 +101,7 @@ nav:
       - Demand and operations:
           - "Weekly shop sales: from forecast to stock order": examples/store-sales.ipynb
           - "Spare parts: the best score goes to a forecast of zero": examples/spare-parts.ipynb
+          - "Call center staffing: forecast again at ten o'clock": examples/call-center.ipynb
       - Energy and environment:
           - "Tomorrow's electricity demand: let the worst days say what is missing": examples/electricity-demand.ipynb
           - "River flow: checking the range, not only the forecast": examples/river-flow.ipynb

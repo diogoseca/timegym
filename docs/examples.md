@@ -35,6 +35,20 @@ links to the tutorials for the tools it uses.
 
     Data: monthly sales of 314 car parts, 1998 to 2002. Runs in about 10 seconds.
 
+-   [![One day of calls per half hour: the forecast made the evening before runs well below the calls that came, and the forecast made again at 10:00 lies between the two](images/examples/call-center.png)](../examples/call-center.ipynb)
+
+    **[Call center staffing: forecast again at ten o'clock](../examples/call-center.ipynb)**
+
+    *Demand and operations*
+
+    A bank's call center plans its agents half hour by half hour. A forecast
+    made the evening before is no better than one made two weeks ahead, until
+    it looks at how yesterday went. The calls taken by 10:00 improve the rest
+    of the day again, if the morning is weighed and not taken at face value.
+    And "last week" found by counting rows is 18% worse than by date.
+
+    Data: calls per half hour on 164 working days of 2003. Runs in about 15 seconds.
+
 -   [![Average miss by weekday for three forecasters; copying yesterday is far worse on Mondays and Saturdays](images/examples/electricity-demand.png)](../examples/electricity-demand.ipynb)
 
     **[Tomorrow's electricity demand: let the worst days say what is missing](../examples/electricity-demand.ipynb)**
@@ -208,8 +222,8 @@ everything = load("store-sales", full=True)   # every product, downloaded on fir
 These examples are planned. Each one is added once its notebook has run on real
 data and we know what the result is.
 
-- **Demand and operations:** bakery demand around holidays, call center
-  staffing, bike-share stations, emergency room arrivals.
+- **Demand and operations:** bakery demand around holidays, bike-share
+  stations, emergency room arrivals.
 - **Energy and environment:** solar farm output.
 - **Chaotic but partly predictable:** flu season, El Niño.
 - **Web and product:** signups after a launch, server load for capacity
