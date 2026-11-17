@@ -211,6 +211,20 @@ Ontario, in cubic meters per second, 10,957 days from 1 January 1950 to
 - Changes: Converted from the archive's .tsf file to a table with one row per day. The sample keeps 1950 to 1979.
 - Full version: the same series from 1 January 1915, 23,741 days.
 
+## Site views
+
+`site-views.csv`: the page views of the whole OTexts.com site, which publishes
+textbooks online, on each day from 1 January 2018 to 10 April 2022, 1,561
+days. The package says the counts are as recorded by Google Analytics. The
+sample is the whole series.
+
+- Source: otexts_views, R package fpp3, as a CSV file in Rdatasets,
+  <https://vincentarelbundock.github.io/Rdatasets/doc/fpp3/otexts_views.html>
+- License: [GPL-3 (R package fpp3)](https://github.com/robjhyndman/fpp3-package/blob/master/DESCRIPTION), the license
+  of the package the table ships in.
+- Credit: Hyndman, R. J., and others. fpp3: Data for "Forecasting: Principles and Practice" (3rd Edition) (R package), dataset otexts_views. The package describes the series as daily page views on the OTexts website (https://OTexts.com/) as recorded by Google Analytics. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
+- Changes: The row-number column dropped; the columns named date and views.
+
 ## Southern Oscillation
 
 `southern-oscillation.csv`: the Southern Oscillation Index for every month

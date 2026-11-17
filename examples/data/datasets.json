@@ -288,6 +288,32 @@
     "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Saugeen River Flow (SaugeenDay) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656058. The archive took the series from the R package deseasonalize.",
     "changes": "Converted from the archive's .tsf file to a table with one row per day. The sample keeps 1950 to 1979."
   },
+  "site-views": {
+    "title": "Daily page views of the OTexts textbook site, January 2018 to April 2022",
+    "sample": {
+      "file": "site-views.csv",
+      "sha256": "d5ea8821e896e032fc3d9e719a7804fdf34fe10b93ccd9beb932ecbc9910e8b2",
+      "holds": "The whole series, 1,561 days from 1 January 2018 to 10 April 2022",
+      "complete": true
+    },
+    "full": "The same 1,561 days",
+    "source": {
+      "name": "otexts_views",
+      "publisher": "R package fpp3, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/fpp3/otexts_views.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/fpp3/otexts_views.csv",
+      "file": "otexts_views.csv",
+      "bytes": 33052,
+      "sha256": "d791a068687d6cc1fc6e1d7464e69c3f6c6f9dba89454f8ee29a8b072dfa82a2",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-3 (R package fpp3)",
+      "url": "https://github.com/robjhyndman/fpp3-package/blob/master/DESCRIPTION"
+    },
+    "credit": "Hyndman, R. J., and others. fpp3: Data for \"Forecasting: Principles and Practice\" (3rd Edition) (R package), dataset otexts_views. The package describes the series as daily page views on the OTexts website (https://OTexts.com/) as recorded by Google Analytics. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column dropped; the columns named date and views."
+  },
   "southern-oscillation": {
     "title": "The Southern Oscillation Index by month, 1900 to 2005",
     "sample": {

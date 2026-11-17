@@ -502,6 +502,16 @@ def _build_sunspots(source):
     return pd.DataFrame({"sunspots": values["value"].to_numpy(float)}, index=years)
 
 
+# Daily page views of a textbook site
+
+
+def _build_site_views(source):
+    """Page views of the whole site, one row a day."""
+    table = pd.read_csv(source, usecols=["Date", "Pageviews"], index_col="Date", parse_dates=True)
+    days = pd.DatetimeIndex(table.index, freq="D", name="date")
+    return pd.DataFrame({"views": table["Pageviews"].to_numpy()}, index=days)
+
+
 # The Southern Oscillation Index, month by month
 
 
@@ -656,6 +666,12 @@ _DATASETS = {
         "build": _build_river_flow,
         "write": _write_daily,
         "sample": _sample_river_flow,
+    },
+    "site-views": {
+        "read": _read_daily,
+        "build": _build_site_views,
+        "write": _write_daily,
+        "sample": lambda table: table,
     },
     "southern-oscillation": {
         "read": _read_monthly,
