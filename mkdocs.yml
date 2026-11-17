@@ -111,6 +111,7 @@ nav:
           - "Bitcoin: finding out you have nothing": examples/bitcoin.ipynb
       - Lessons that cut across domains:
           - The forest that cannot follow growth: examples/passenger-growth.ipynb
+          - "You tried 50 models: is the winner real?": examples/best-of-fifty.ipynb
   - Tutorials:
       - Overview: docs/tutorials.md
       - Start:

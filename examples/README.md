@@ -14,6 +14,7 @@ documentation, or run them here.
 | [Will it rain tomorrow? Score the forecast you already have](rain.ipynb) | Give the chance of rain tomorrow in Sydney | Our best forecaster gains 11% on "it rains one day in three" and the weather service's published forecast 53%; why the forecaster that is right most often scores worst, and which days have no score |
 | [The sunspot cycle: how far ahead is a forecast worth making?](sunspots.ipynb) | Forecast a cycle eleven years ahead | A regression that leads for two years and adds nothing after, and how little room an irregular cycle leaves a cleverer model |
 | [The forest that cannot follow growth](passenger-growth.ipynb) | Forecast next year's airline passengers | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
+| [You tried 50 models: is the winner real?](best-of-fifty.ipynb) | Choose a model for next year's patient numbers of 114 medical products | The backtest's winner leads by 0.2%, nine others cannot be told apart from it, a winning score flatters by about 4%, and the next year the winner comes tenth |
 | [Bitcoin: finding out you have nothing](bitcoin.ipynb) | Forecast tomorrow's price | A 79% hit rate that came from one input reaching into the future; the honest model ties with yesterday's price |
 
 ## Run them

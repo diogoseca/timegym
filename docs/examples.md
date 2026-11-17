@@ -111,6 +111,19 @@ links to the tutorials for the tools it uses.
 
     Data: monthly airline passengers, 1949 to 1960. Runs in about 80 seconds.
 
+-   [![Place of 50 model settings on a backtest against their place the next year; the backtest's winner comes tenth](images/examples/best-of-fifty.png)](../examples/best-of-fifty.ipynb)
+
+    **[You tried 50 models: is the winner real?](../examples/best-of-fifty.ipynb)**
+
+    *Lessons that cut across domains*
+
+    Fifty settings on one backtest, and a winner ahead by 0.2%. Each case's
+    score shows nine others cannot be told apart from it, and that a winning
+    score flatters by about 4%. The next year the winner comes tenth. The
+    scorecard gives better reasons to choose among the tied.
+
+    Data: monthly patient counts for 114 medical products, 2000 to 2006. Runs in about 40 seconds.
+
 </div>
 
 ## Run an example yourself
@@ -163,5 +176,4 @@ data and we know what the result is.
   planning.
 - **Finance:** an S&P 500 fund, where the direction of a move and its size are
   different questions.
-- **Lessons that cut across domains:** picking the best of 50 models, and a
-  ready-made model against your own.
+- **Lessons that cut across domains:** a ready-made model against your own.

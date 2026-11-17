@@ -236,6 +236,7 @@ shows them with their results and says how to run them.
 | [Will it rain tomorrow? Score the forecast you already have](https://diogoseca.github.io/timegym/examples/rain/) | A yes/no forecast scored as a probability: our best forecaster gains 11% on the long-run share, the weather service's published forecast 53% |
 | [The sunspot cycle: how far ahead is a forecast worth making?](https://diogoseca.github.io/timegym/examples/sunspots/) | A regression that leads for two years ahead and adds nothing after |
 | [The forest that cannot follow growth](https://diogoseca.github.io/timegym/examples/passenger-growth/) | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
+| [You tried 50 models: is the winner real?](https://diogoseca.github.io/timegym/examples/best-of-fifty/) | The winner of a 50-setting backtest leads by 0.2%; nine others cannot be told apart from it, and the next year it comes tenth |
 | [Bitcoin: finding out you have nothing](https://diogoseca.github.io/timegym/examples/bitcoin/) | A 79% hit rate that came from one input reaching into the future |
 
 ## Tutorials
