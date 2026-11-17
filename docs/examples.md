@@ -142,6 +142,20 @@ links to the tutorials for the tools it uses.
 
     Data: the monthly Southern Oscillation Index, 1900 to 2005. Runs in about 20 seconds.
 
+-   [![Paired bars for four forecasters: on any day all are off by a factor of about 1.5; three days into a jump the last three days are off by 3.8 and the four-week average by 2.3](images/examples/traffic-jump.png)](../examples/traffic-jump.ipynb)
+
+    **[A traffic jump: is this the new normal?](../examples/traffic-jump.ipynb)**
+
+    *Web and product*
+
+    On ordinary days, following the last three days is as good as anything
+    and a four-week average is the worst. Three days into a jump the order
+    turns over, and the usual backtest cannot show it: jumps are 0.2% of its
+    days. Most jumps fade, so a forecaster that learns the fade from earlier
+    jumps beats all four. Two weeks later the ordinary order is back.
+
+    Data: daily views of 136 Wikipedia pages, 2015 to 2017. Runs in about 35 seconds.
+
 -   [![The days each model input uses; the smoothed price reaches three days past the day being forecast](images/examples/bitcoin.png)](../examples/bitcoin.ipynb)
 
     **[Bitcoin: finding out you have nothing](../examples/bitcoin.ipynb)**
@@ -240,6 +254,5 @@ data and we know what the result is.
   stations, emergency room arrivals.
 - **Energy and environment:** solar farm output.
 - **Chaotic but partly predictable:** flu season.
-- **Web and product:** signups after a launch, server load for capacity
-  planning.
+- **Web and product:** server load for capacity planning.
 - **Lessons that cut across domains:** a ready-made model against your own.

@@ -4,7 +4,7 @@
 
 - Added an Examples section to the documentation, placed right after the home
   page: forecasting jobs on real public data, from the first model to a
-  decision, with TimeGym in the loop. The first fourteen are weekly shop
+  decision, with TimeGym in the loop. The first fifteen are weekly shop
   sales turned into stock orders, spare parts where the lowest average error
   goes to a forecast of zero, a call center's forecast made again at ten
   o'clock, a day-ahead electricity forecast improved by asking which days
@@ -12,9 +12,10 @@
   the weather service's own forecast, Sydney's temperature forecast with
   other cities' help, London's air scored only where it was measured, the
   sunspot cycle split by years ahead, an El Niño forecast whose reach
-  depends on the month it is made, a Bitcoin backtest whose edge was one
-  input reaching into the future, a range for the S&P 500's next week that
-  holds in crashes, a random forest that cannot follow growing airline
+  depends on the month it is made, a jump in a page's traffic where the
+  ordinary backtest picks the wrong forecaster, a Bitcoin backtest whose edge
+  was one input reaching into the future, a range for the S&P 500's next week
+  that holds in crashes, a random forest that cannot follow growing airline
   traffic, and the winner of a 50-setting backtest that comes tenth the next
   year. The notebooks are in `examples/`, with a small sample of each dataset
   committed in `examples/data` beside its source, license and credit, so they

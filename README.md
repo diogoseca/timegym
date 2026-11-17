@@ -241,6 +241,7 @@ shows them with their results and says how to run them.
 | [El Niño: how far ahead depends on the month you ask](https://diogoseca.github.io/timegym/examples/el-nino/) | A backtest's "seven months ahead" split by the month each forecast was made: nothing gets across April, and the rest is still ahead at nine months |
 | [The forest that cannot follow growth](https://diogoseca.github.io/timegym/examples/passenger-growth/) | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
 | [You tried 50 models: is the winner real?](https://diogoseca.github.io/timegym/examples/best-of-fifty/) | The winner of a 50-setting backtest leads by 0.2%; nine others cannot be told apart from it, and the next year it comes tenth |
+| [A traffic jump: is this the new normal?](https://diogoseca.github.io/timegym/examples/traffic-jump/) | The forecaster that is as good as any on ordinary days is the worst three days into a jump, and the usual backtest cannot show it |
 | [Bitcoin: finding out you have nothing](https://diogoseca.github.io/timegym/examples/bitcoin/) | A 79% hit rate that came from one input reaching into the future |
 | [The S&P 500 next week: the direction and the size are different questions](https://diogoseca.github.io/timegym/examples/sp500/) | The direction cannot be forecast and the size can: a range that follows recent weeks holds in crashes, checked year by year |
 

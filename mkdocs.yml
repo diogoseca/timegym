@@ -111,6 +111,8 @@ nav:
       - Chaotic but partly predictable:
           - "The sunspot cycle: how far ahead is a forecast worth making?": examples/sunspots.ipynb
           - "El Niño: how far ahead depends on the month you ask": examples/el-nino.ipynb
+      - Web and product:
+          - "A traffic jump: is this the new normal?": examples/traffic-jump.ipynb
       - Finance:
           - "Bitcoin: finding out you have nothing": examples/bitcoin.ipynb
           - "The S&P 500 next week: the direction and the size are different questions": examples/sp500.ipynb
