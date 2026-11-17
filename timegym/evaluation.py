@@ -51,6 +51,7 @@ class ForecastRun:
         forecasts,
         *,
         metadata=None,
+        scores=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
@@ -64,9 +65,11 @@ class ForecastRun:
         and that case fails "Runs without errors". Each forecast gets the output
         checks and scores of ``Pipeline.run``, and the run's report and plots
         work as usual. ``metadata`` is added to the run's metadata, for example
-        ``{"model": "weather service"}``. No model is kept, so these cases
-        cannot be replayed.
+        ``{"model": "weather service"}``. ``scores`` records more scores, as
+        in ``Pipeline.run``. No model is kept, so these cases cannot be
+        replayed.
         """
+        from timegym.diagnostics import _describe_scores
         from timegym.pipeline import _as_forecast, _evaluate_ready_made
         from timegym.provenance import diagnostic_settings, runtime_provenance
 
@@ -86,19 +89,21 @@ class ForecastRun:
             alpha=alpha,
             dependence_seed_offset=dependence_seed_offset,
         )
+        requested = {} if scores is None else {"scores": _describe_scores(scores)}
 
         def recorded(position, case):
             if forecasts[position] is None:
                 raise ValueError("No forecast was recorded for this case")
             return _as_forecast(forecasts[position], case.task)
 
-        results = _evaluate_ready_made(cases, recorded, settings)
+        results = _evaluate_ready_made(cases, recorded, settings, scores)
         return cls(
             cases=results,
             metadata={
                 **runtime_provenance(),
                 "model": "recorded forecasts",
                 "diagnostic_settings": settings,
+                **requested,
                 **(metadata or {}),
             },
         )

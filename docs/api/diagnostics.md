@@ -2,7 +2,9 @@
 
 **In short.** Scores measure how far a forecast is, both from what actually
 happened (`mse`, `mae`, `mase`) and from the answer key (`mean_reference_mse`);
-lower is better. A diagnostic is one check's result: a verdict (`PASS`, `FAIL`,
+lower is better. Every report records these; more scores, such as `brier` and
+`log_loss` for yes/no outcomes, or functions of your own, are recorded when you
+ask for them with `scores=`. A diagnostic is one check's result: a verdict (`PASS`, `FAIL`,
 `INCONCLUSIVE`, `UNSUPPORTED` or `ERROR`), a message, and the numbers it rests
 on, called its evidence. Accuracy diagnostics are always `INCONCLUSIVE`,
 because TimeGym sets no pass mark for accuracy; that threshold is yours.
@@ -28,11 +30,17 @@ distribution, so it has to match what the point denotes
 | `mse(observed, predicted)` | Mean squared error over all coordinates | The mean: squared error is minimized in expectation by the predictive mean | With a point output |
 | `mae(observed, predicted)` | Mean absolute error over all coordinates | The median: absolute error is minimized in expectation by the predictive median | With a point output |
 | `mase(observed, predicted, context, seasonality=1)` | Absolute error divided, per target, by the mean absolute `seasonality`-step change of that target in the context (time is axis zero), then averaged | The median, as for `mae`, because each target's scale is fixed by the context | With a point output, always with `seasonality=1` |
+| `rmse(observed, predicted)` | Square root of `mse`, in the data's units | The mean, as for `mse` | When asked for with `scores=` |
+| `rmsse(observed, predicted, context, seasonality=1)` | Each target's RMSE divided by the root mean squared `seasonality`-step change of that target in the context, then averaged over targets: the scaled error of the M5 competition ([Makridakis, Spiliotis and Assimakopoulos 2022](https://doi.org/10.1016/j.ijforecast.2021.11.013)) | The mean, as for `mse` | When asked for with `scores=` |
 | `mean_reference_mse(reference_mean, predicted)` | Mean squared distance from a supplied conditional mean | The conditional mean itself: with a valid conditional mean it is the conditional excess squared-error risk, not realized loss against a future observation | With a point output and a case reference |
 
-`mase` raises `UndefinedMetricError` when a target's naive-error scale is zero,
-as for a constant target, or when the context is no longer than `seasonality`;
-it adds no epsilon to the denominator and does not drop constant targets.
+`mase` and `rmsse` raise `UndefinedMetricError` when a target's naive-error
+scale is zero, as for a constant target, or when the context is no longer than
+`seasonality`; they add no epsilon to the denominator and do not drop constant
+targets. MAPE and sMAPE are left out on purpose: they are undefined when an
+actual value is zero and favour forecasts that are too low
+([Hyndman and Koehler 2006](https://doi.org/10.1016/j.ijforecast.2006.03.001));
+`mase` and `rmsse` meet the same need.
 `evaluate_forecast` always calls `mase` with `seasonality=1`, so the evaluator
 scales each target by its lag-1 naive in-context MAE whatever the scenario's
 seasonal period; `point_accuracy` evidence records `mase_seasonality: 1`.
@@ -53,6 +61,8 @@ forecast is the distribution the observation is drawn from
 | Function | What it computes | What it scores | Evaluator records it |
 | --- | --- | --- | --- |
 | `pinball(observed, quantiles, levels)` | Mean quantile (pinball) loss over coordinates and levels, without the optional factor of two; levels must increase strictly in (0, 1) and quantiles must not cross | The quantile at each level: pinball loss at level α is minimized in expectation by the α-quantile | With a quantile output |
+| `interval_score(observed, quantiles, levels)` | For the band from the lowest to the highest level, which must be symmetric (such as 0.1 and 0.9, a central band of 1 − α = 80%): its width plus 2/α times the distance by which the outcome falls outside it, averaged over coordinates ([Winkler 1972](https://doi.org/10.1080/01621459.1972.10481224); [Gneiting and Raftery 2007](https://doi.org/10.1198/016214506000001437)) | The band's two quantiles, as a proper score for a central interval: narrow bands that still hold the outcome score best | When asked for with `scores=` |
+| `weighted_interval_score(observed, quantiles, levels)` | The median's absolute error times 1/2 plus each symmetric pair's interval score times α/2, divided by the number of pairs plus 1/2 ([Bracher et al. 2021](https://doi.org/10.1371/journal.pcbi.1008618)); levels must be 0.5 plus pairs symmetric around it. It equals twice `pinball` over the same levels | Every quantile at once, as a proper score that approximates CRPS | When asked for with `scores=` |
 | `crps(observed, samples)` | Mean marginal CRPS of the finite empirical ensemble: the expected absolute error of a draw minus half the expected absolute difference between two draws, diagonal pairs included | Each coordinate's whole marginal distribution, as a proper scoring rule; it is unchanged when samples are permuted independently per coordinate, so it cannot see dependence | With a sample output |
 | `energy_score(observed, samples, chunk_size=128)` | Energy score of the whole flattened horizon-target vector with the Euclidean norm, not divided by the number of coordinates; diagonal pairs included | The whole joint distribution, as a proper scoring rule for multivariate forecasts; with one coordinate it equals CRPS | With a sample output |
 | `variogram_score(observed, samples, exponent=0.5)` | Mean squared difference between the realized and the expected `abs(x_i - x_j) ** exponent` over all distinct coordinate pairs, equally weighted; `exponent` lies in (0, 2) | Pairwise dependence between coordinates; it ignores a shift shared by all coordinates and is not strictly proper over unrestricted joint distributions | With a sample output; undefined for one coordinate |
@@ -68,6 +78,72 @@ quantile; `interval_nominal_coverage`, the highest level minus the lowest; and
 on calibration and width on sharpness. One path's coverage across possibly
 dependent coordinates does not establish calibration, so the `interval_coverage`
 diagnostic stays `INCONCLUSIVE`.
+
+### Yes/no outcomes
+
+A forecast of a yes/no outcome, such as rain tomorrow, a customer leaving this
+month or a machine failing within a day, is a probability, and the outcome is
+1 or 0. Put the probability in `Forecast.point`, the predictive mean.
+
+| Function | What it computes | What it scores | Evaluator records it |
+| --- | --- | --- | --- |
+| `brier(observed, predicted)` | Mean squared distance between the probability and the 0/1 outcome ([Brier 1950](https://doi.org/10.1175/1520-0493(1950)078%3C0001:VOFEIT%3E2.0.CO;2)): `mse`, after checking that outcomes are 0 or 1 and forecasts lie in [0, 1] | The probability, as a proper score | When asked for with `scores=` |
+| `log_loss(observed, predicted, *, eps=None)` | Mean of minus the natural log of the probability given to what happened ([Good 1952](https://doi.org/10.1111/j.2517-6161.1952.tb00104.x)) | The probability, as a strictly proper score that punishes confident mistakes hard | When asked for with `scores=` |
+
+Both raise `ValueError` naming the first outcome that is not 0 or 1, or the
+first forecast outside [0, 1]. A forecast of exactly 0 or 1 that turned out
+wrong gives an infinite log loss, so `log_loss` raises `UndefinedMetricError`,
+which a report shows as `INCONCLUSIVE` with the reason. Pass `eps` (between 0
+and 0.5, such as `1e-6`) to clip every forecast to [eps, 1 − eps] first; nothing
+is clipped unless you ask, and the size of `eps` sets how much a confident
+mistake costs.
+
+### Your own scores
+
+`evaluate_forecast`, `Pipeline.test`, `Pipeline.run` and
+`ForecastRun.from_forecasts` take `scores=`: a list of names of functions in
+`timegym.metrics` and functions of your own, or a dictionary from the name to
+record to a function. Each value is stored in `case.metrics` under its name,
+beside the scores every report records, so `plot_errors(name)`, the saved JSON
+and comparisons can use it.
+
+```python
+from functools import partial
+
+import numpy as np
+from timegym.metrics import log_loss
+
+
+def within_10_percent(observed, predicted):
+    """Share of forecasts within 10% of what happened; higher is better."""
+    return float(np.mean(np.abs(predicted - observed) <= 0.1 * np.abs(observed)))
+
+
+scores = ["rmse", within_10_percent]                                  # by name, or your own
+scores = {"log_loss": partial(log_loss, eps=1e-6), "close": within_10_percent}  # with settings
+```
+
+A score says what it needs by its argument names: `observed` (what happened),
+`predicted` (the point forecast), `quantiles`, `levels`, `samples` and `context`
+(the history), each a NumPy array shaped as above, time on the first axis of
+`observed` and `context`. An argument with a default is passed only when the
+forecast has it; any other argument must have a default, or the request is
+refused before anything runs. A request is also refused when its name is
+already recorded in every report, such as `"mse"`, or asked for twice: record a
+score again with other settings under a new name, such as
+`{"mase_12": partial(mase, seasonality=12)}`. A function needs a name of its
+own, so give a `lambda` or a `partial` one with a dictionary.
+
+For each case, a score whose required input the forecast lacks is
+`UNSUPPORTED`, one that raises `UndefinedMetricError` is `INCONCLUSIVE`, and one
+that raises anything else, or returns something other than one finite number,
+is an `ERROR` whose message names the exception. Each appears as
+`metric_<name>`. The report's metadata lists what was asked for under
+`"scores"`: each score's `name`, `function`, keyword `settings` and whether it is
+`replayable`. Replay computes again the scores that come from
+`timegym.metrics`, with plain settings, and leaves the others out of the
+comparison, listing them in `metadata["replay"]["not_recomputed"]`. Nothing is
+recorded unless you ask, so reports saved earlier replay exactly as before.
 
 ## Statistical and metamorphic diagnostics
 
@@ -141,7 +217,7 @@ time. A row without a threshold is descriptive and returns `INCONCLUSIVE`.
 | `point_accuracy` | `capability` | `INCONCLUSIVE`, `UNSUPPORTED` | None (descriptive) | Simplified data with known results |
 | `quantile_accuracy` | `capability` | `INCONCLUSIVE`, `UNSUPPORTED` | None (descriptive) | Simplified data with known results |
 | `sample_scores` | `capability` | `INCONCLUSIVE`, `UNSUPPORTED` | None (descriptive) | Simplified data with known results |
-| `metric_<name>` | `capability` | `INCONCLUSIVE`, `ERROR` | None (descriptive) | Simplified data with known results |
+| `metric_<name>` | `capability` | `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR` | None (descriptive) | Simplified data with known results |
 | `interval_coverage` | `uncertainty` | `INCONCLUSIVE`, `UNSUPPORTED` | None (descriptive) | Simplified data with known results |
 | `reference_covariance` | `distribution` | `PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR` | `alpha`, default 0.05 | Statistical metamorphic test |
 | `shift_equivariance` | `metamorphic` | `PASS`, `FAIL`, `UNSUPPORTED`, `ERROR` | `atol` and `rtol` | Known properties |
@@ -211,10 +287,10 @@ diagnostic, so it has no row.
 
 ### `metric_<name>`
 
-- **Emitted by:** `evaluate_forecast`, only when a score cannot be recorded; `<name>` is `mse`, `mae`, `mase`, `mean_reference_mse`, `pinball`, `interval_width`, `crps`, `energy_score` or `variogram_score`
-- **Evidence keys:** `INCONCLUSIVE`: `reason` (`undefined_metric`). `ERROR`: exception evidence
+- **Emitted by:** `evaluate_forecast`, only when a score cannot be recorded; `<name>` is `mse`, `mae`, `mase`, `mean_reference_mse`, `pinball`, `interval_width`, `crps`, `energy_score`, `variogram_score`, or the name of a score asked for with `scores=`
+- **Evidence keys:** `INCONCLUSIVE`: `reason` (`undefined_metric`). `ERROR`: exception evidence. `UNSUPPORTED`: `needs`, the inputs the requested score needs
 - **Threshold or tolerance:** None: descriptive
-- **What a FAIL or ERROR usually means:** `ERROR`: the calculation raised or returned a nonfinite value, such as an overflowing interval width; the score is missing from `metrics`. `INCONCLUSIVE`: the score is undefined for valid data, such as `mase` on a constant target or `variogram_score` with one coordinate.
+- **What a FAIL or ERROR usually means:** `ERROR`: the calculation raised or returned a nonfinite value, such as an overflowing interval width, or a requested score raised, such as `brier` on outcomes that are not 0 or 1; the score is missing from `metrics`. `INCONCLUSIVE`: the score is undefined for valid data, such as `mase` on a constant target, `variogram_score` with one coordinate or `log_loss` on a confident mistake without `eps`. `UNSUPPORTED`: a requested score needs an output the forecast lacks, such as samples.
 
 ### `interval_coverage`
 
@@ -261,15 +337,27 @@ The t interval is for continuous score differences, not differences in alarm rat
 
 ::: timegym.metrics.mase
 
+::: timegym.metrics.rmse
+
+::: timegym.metrics.rmsse
+
 ::: timegym.metrics.mean_reference_mse
 
 ::: timegym.metrics.pinball
+
+::: timegym.metrics.interval_score
+
+::: timegym.metrics.weighted_interval_score
 
 ::: timegym.metrics.crps
 
 ::: timegym.metrics.energy_score
 
 ::: timegym.metrics.variogram_score
+
+::: timegym.metrics.brier
+
+::: timegym.metrics.log_loss
 
 ::: timegym.metrics.UndefinedMetricError
 
