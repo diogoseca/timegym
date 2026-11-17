@@ -335,7 +335,7 @@
       },
       "manifest": {
         "path": "experiments/results-v3/mutants/manifest.json",
-        "sha256": "",
+        "sha256": "8d07b11389002ef2c9350fd3043194f9c462e6a1ea4c9d2c57d6ee41b18f8730",
         "rule": "Written by experiments/study3_generate.py with one file per distinct source (sources/<SHA-256>.py): the tool version and its environment, the operator list, the subject's digest, and per source its labels (kind, operator, family, occurrence or site, enclosing definition) and SHA-256. Sources that are identical after ast.unparse(ast.parse(source)) are one source with several labels. The commit that adds these files writes the manifest's SHA-256 into sha256; Parts 1 and 2 refuse to start without it, refuse a source file whose digest differs from the manifest, and refuse a manifest not made from the frozen subject."
       },
       "catalogue": {

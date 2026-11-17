@@ -1,0 +1,3275 @@
+{
+  "catalogue": {
+    "path": "experiments/study3_catalogue.py",
+    "sha256": "f1317ff896c335b43d4a87940f1b2bb7489b3052a697d1e8d17cedf8cf26cf88"
+  },
+  "counts": {
+    "by_kind": {
+      "catalogue": 16,
+      "cosmic_ray": 119,
+      "study2": 4
+    },
+    "distinct_sources": 136,
+    "labels": 139
+  },
+  "sources": [
+    {
+      "file": "sources/486c96de580e6f2caaab964278a2b04db510884f149c8e25189bdd6ff55793aa.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_Sub#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_Sub",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "486c96de580e6f2caaab964278a2b04db510884f149c8e25189bdd6ff55793aa"
+    },
+    {
+      "file": "sources/14939f9075240c0d49549c35234d0121324b29cbff56090ed2a5431f3806933e.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_Mul#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_Mul",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "14939f9075240c0d49549c35234d0121324b29cbff56090ed2a5431f3806933e"
+    },
+    {
+      "file": "sources/d0ccf16c3f60b17d33c091dcb8bdae2fa1fce42c9de8b2e074c968ccdb35da08.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_Div#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_Div",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "d0ccf16c3f60b17d33c091dcb8bdae2fa1fce42c9de8b2e074c968ccdb35da08"
+    },
+    {
+      "file": "sources/8abfd9519d42a5c2cc58f77cfd65f5175d5432b7979f93f7005b0f5167c6f025.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_FloorDiv#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_FloorDiv",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "8abfd9519d42a5c2cc58f77cfd65f5175d5432b7979f93f7005b0f5167c6f025"
+    },
+    {
+      "file": "sources/9772b2226a42792e90c0f40572adeda6d0cebacf114d409ed969a6b29410d521.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_Mod#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_Mod",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "9772b2226a42792e90c0f40572adeda6d0cebacf114d409ed969a6b29410d521"
+    },
+    {
+      "file": "sources/7b508bc63d2791ccc59550206e87a841ed84c8bccfc0d2ba95bcb9b53dd1d156.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_Pow#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_Pow",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "7b508bc63d2791ccc59550206e87a841ed84c8bccfc0d2ba95bcb9b53dd1d156"
+    },
+    {
+      "file": "sources/080e293abb35cee1c5132c400f1dab450b432cfd2158ac19b946de3b8069b6e7.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_RShift#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_RShift",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "080e293abb35cee1c5132c400f1dab450b432cfd2158ac19b946de3b8069b6e7"
+    },
+    {
+      "file": "sources/8a16c7ea20a8493c61d9f41d7f1fcb80bc126989a2887c65bf332699d83897e4.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_LShift#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_LShift",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "8a16c7ea20a8493c61d9f41d7f1fcb80bc126989a2887c65bf332699d83897e4"
+    },
+    {
+      "file": "sources/50d10bd1911225c684b37216926045916423f25d52656062c1d1278063efc498.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_BitOr#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_BitOr",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "50d10bd1911225c684b37216926045916423f25d52656062c1d1278063efc498"
+    },
+    {
+      "file": "sources/b37e99056b32b2ac8eec7cc94f8e028f7dbe41e5559fd359662eb3f0cb7dc0a5.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_BitAnd#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_BitAnd",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "b37e99056b32b2ac8eec7cc94f8e028f7dbe41e5559fd359662eb3f0cb7dc0a5"
+    },
+    {
+      "file": "sources/2c30276eabfb2a0c5e29acb2a21b6f5d297e5dee64f66f1eb53ddf52b7a0aab9.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            26
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Add_BitXor#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Add_BitXor",
+          "start": [
+            41,
+            25
+          ]
+        }
+      ],
+      "sha256": "2c30276eabfb2a0c5e29acb2a21b6f5d297e5dee64f66f1eb53ddf52b7a0aab9"
+    },
+    {
+      "file": "sources/ed94fa12e961143e840bf7fa6139c84f487d0904a9ad56a35d93ee68d35768dd.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Add#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_Add",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "ed94fa12e961143e840bf7fa6139c84f487d0904a9ad56a35d93ee68d35768dd"
+    },
+    {
+      "file": "sources/8d6370d7d95247881331d744a327a5f8d9145f0ee560b64554c3462f9dda58d6.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Add#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_Add",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "8d6370d7d95247881331d744a327a5f8d9145f0ee560b64554c3462f9dda58d6"
+    },
+    {
+      "file": "sources/82ebbadca142720b35850e7808475b50f0c742562a9fa638f3416cfe44986927.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Add#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_Add",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "82ebbadca142720b35850e7808475b50f0c742562a9fa638f3416cfe44986927"
+    },
+    {
+      "file": "sources/77fe7010079385028d805ac2814770719ec62763f054e99b6474dfb55f465bef.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Mul#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_Mul",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "77fe7010079385028d805ac2814770719ec62763f054e99b6474dfb55f465bef"
+    },
+    {
+      "file": "sources/5516eb23bec0ca7e5025253f95c5ce4aaf7c8c3aa574c12bed7de720cc59696f.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Mul#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_Mul",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "5516eb23bec0ca7e5025253f95c5ce4aaf7c8c3aa574c12bed7de720cc59696f"
+    },
+    {
+      "file": "sources/5148ae2282824ae5de01810af775049d0cfe3262227fc883a0f0170859f1beb6.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Mul#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_Mul",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "5148ae2282824ae5de01810af775049d0cfe3262227fc883a0f0170859f1beb6"
+    },
+    {
+      "file": "sources/2dc6f9d3d823dbf5202776a15cd5399e7a4709a09f678d3a55ec392e9ef408c0.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Div#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_Div",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "2dc6f9d3d823dbf5202776a15cd5399e7a4709a09f678d3a55ec392e9ef408c0"
+    },
+    {
+      "file": "sources/666e898eafecbf8ce1e42e7044b29ab271442bd4608e7bc8d47a9869a4e8050f.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Div#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_Div",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "666e898eafecbf8ce1e42e7044b29ab271442bd4608e7bc8d47a9869a4e8050f"
+    },
+    {
+      "file": "sources/880e684074151ad11a87144cc97a98a418372f17136404f7366a7dd492816006.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Div#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_Div",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "880e684074151ad11a87144cc97a98a418372f17136404f7366a7dd492816006"
+    },
+    {
+      "file": "sources/1a12e92fac0689bfe9a6db5ba5e8002cc047f7482d8e3120e839b2ac433d9774.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_FloorDiv#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_FloorDiv",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "1a12e92fac0689bfe9a6db5ba5e8002cc047f7482d8e3120e839b2ac433d9774"
+    },
+    {
+      "file": "sources/9d39c115b97b52def5327bc6d2a74f9d696aeeed937b6f60fe1e073bd02ea4ea.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_FloorDiv#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_FloorDiv",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "9d39c115b97b52def5327bc6d2a74f9d696aeeed937b6f60fe1e073bd02ea4ea"
+    },
+    {
+      "file": "sources/65ae94db4f643eee0aad7f93a0a37c25b5a1f8e5624b3225583dd9b24dc9e756.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_FloorDiv#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_FloorDiv",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "65ae94db4f643eee0aad7f93a0a37c25b5a1f8e5624b3225583dd9b24dc9e756"
+    },
+    {
+      "file": "sources/06483e6fd88608d48b03cc88d3bc3865187daa0c3632b909240dac4ce3a67218.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Mod#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_Mod",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "06483e6fd88608d48b03cc88d3bc3865187daa0c3632b909240dac4ce3a67218"
+    },
+    {
+      "file": "sources/0af01aa7521d3ccb8c2497d605eb7fdc052c46ba10de45412810cafe5dd0749e.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Mod#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_Mod",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "0af01aa7521d3ccb8c2497d605eb7fdc052c46ba10de45412810cafe5dd0749e"
+    },
+    {
+      "file": "sources/1c7b83bf7c33b4d081c0c5fbb9b033f6b631e3683fbad4449dac602432c1c639.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Mod#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_Mod",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "1c7b83bf7c33b4d081c0c5fbb9b033f6b631e3683fbad4449dac602432c1c639"
+    },
+    {
+      "file": "sources/dc65552453b2da0a6148ff2abd683b9bcea447abad05aac8e89bec89c1bcd637.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Pow#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_Pow",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "dc65552453b2da0a6148ff2abd683b9bcea447abad05aac8e89bec89c1bcd637"
+    },
+    {
+      "file": "sources/06c47f39e9f69ddb38d4798d5b6f6ba0672e1c9dc1e09a08e4d61aaae1465621.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Pow#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_Pow",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "06c47f39e9f69ddb38d4798d5b6f6ba0672e1c9dc1e09a08e4d61aaae1465621"
+    },
+    {
+      "file": "sources/056722b9bcb0a44a23e61f31f9a56a366ce9fe990b96657aa7fd14133549e22d.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_Pow#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_Pow",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "056722b9bcb0a44a23e61f31f9a56a366ce9fe990b96657aa7fd14133549e22d"
+    },
+    {
+      "file": "sources/b4d31faba13e8015d1c8c93b493bd867a7d40d5502a6b3e4c8b06fd35d65991b.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_RShift#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_RShift",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "b4d31faba13e8015d1c8c93b493bd867a7d40d5502a6b3e4c8b06fd35d65991b"
+    },
+    {
+      "file": "sources/bcb2e4eece0b4e24088b272b3667f00d13496c34d5ade54dc15fbddabe4849d4.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_RShift#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_RShift",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "bcb2e4eece0b4e24088b272b3667f00d13496c34d5ade54dc15fbddabe4849d4"
+    },
+    {
+      "file": "sources/e7d2b70eb54d75f51e091f86f58a8b108bb101aed6a946db6778dc116937a72b.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_RShift#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_RShift",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "e7d2b70eb54d75f51e091f86f58a8b108bb101aed6a946db6778dc116937a72b"
+    },
+    {
+      "file": "sources/b418c88ee407cc2c9b5ee97dd50ea90dabd14524f9b53a0458fd0e967eda63fe.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_LShift#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_LShift",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "b418c88ee407cc2c9b5ee97dd50ea90dabd14524f9b53a0458fd0e967eda63fe"
+    },
+    {
+      "file": "sources/9a21edf3fb06ba56ddc5b15ce38029267a259e87249143e870cb1a79fc439698.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_LShift#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_LShift",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "9a21edf3fb06ba56ddc5b15ce38029267a259e87249143e870cb1a79fc439698"
+    },
+    {
+      "file": "sources/d01768faa6bf1245327af4c15970b7744843bc51dd1272769d84c08c4803eb66.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_LShift#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_LShift",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "d01768faa6bf1245327af4c15970b7744843bc51dd1272769d84c08c4803eb66"
+    },
+    {
+      "file": "sources/473e62d1a74cbbc91400eda819d5a46a5ba7ee28e44946e18e00460b4215a544.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_BitOr#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_BitOr",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "473e62d1a74cbbc91400eda819d5a46a5ba7ee28e44946e18e00460b4215a544"
+    },
+    {
+      "file": "sources/7c82e2732b4245c16a2047ab23f21869ded9ff21cfc9de294ac01c4b1de7a154.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_BitOr#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_BitOr",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "7c82e2732b4245c16a2047ab23f21869ded9ff21cfc9de294ac01c4b1de7a154"
+    },
+    {
+      "file": "sources/bd2922ba0055b69fbf3962814e437bc527cfd2af4309dda5d9a6777f9c55695f.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_BitOr#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_BitOr",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "bd2922ba0055b69fbf3962814e437bc527cfd2af4309dda5d9a6777f9c55695f"
+    },
+    {
+      "file": "sources/57d3f999bc1ad00cb913f6bed7a566fe80b2a7c6ecbd24c173fe6060bf8d50ba.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_BitAnd#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_BitAnd",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "57d3f999bc1ad00cb913f6bed7a566fe80b2a7c6ecbd24c173fe6060bf8d50ba"
+    },
+    {
+      "file": "sources/fdc8ce8ebd668f8983e2436e2d10472d92744565708a4725dd4d93761191eb27.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_BitAnd#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_BitAnd",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "fdc8ce8ebd668f8983e2436e2d10472d92744565708a4725dd4d93761191eb27"
+    },
+    {
+      "file": "sources/e6b4f9856ccbc039755dcbf25ca65b2858b2ee6e51f4759482cb2cbbe311a1e6.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_BitAnd#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_BitAnd",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "e6b4f9856ccbc039755dcbf25ca65b2858b2ee6e51f4759482cb2cbbe311a1e6"
+    },
+    {
+      "file": "sources/f78c8e142e35a020a572abf35357d61cb52f12efb9f4a41b832797464d6b4e5e.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            17,
+            25
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_BitXor#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Sub_BitXor",
+          "start": [
+            17,
+            24
+          ]
+        }
+      ],
+      "sha256": "f78c8e142e35a020a572abf35357d61cb52f12efb9f4a41b832797464d6b4e5e"
+    },
+    {
+      "file": "sources/09b8628847c59fead2ba21c893c1c5923a96b17ffb57cba10150156592583f3e.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            18,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_BitXor#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceBinaryOperator_Sub_BitXor",
+          "start": [
+            18,
+            28
+          ]
+        }
+      ],
+      "sha256": "09b8628847c59fead2ba21c893c1c5923a96b17ffb57cba10150156592583f3e"
+    },
+    {
+      "file": "sources/4ae838d568231d68d8a04503cfe8510c6572edf066af565280eb63d3b404773f.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            19
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Sub_BitXor#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceBinaryOperator_Sub_BitXor",
+          "start": [
+            37,
+            18
+          ]
+        }
+      ],
+      "sha256": "4ae838d568231d68d8a04503cfe8510c6572edf066af565280eb63d3b404773f"
+    },
+    {
+      "file": "sources/8a310aed4c400123767fe73393a20a70f17a111ed9772b575f218eacabe5b419.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_Add#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_Add",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "8a310aed4c400123767fe73393a20a70f17a111ed9772b575f218eacabe5b419"
+    },
+    {
+      "file": "sources/10398575f3c0cae4d7db1b6a7ba20ff6a5b6b72b2d83806d1c3e5fb9349f865a.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_Sub#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_Sub",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "10398575f3c0cae4d7db1b6a7ba20ff6a5b6b72b2d83806d1c3e5fb9349f865a"
+    },
+    {
+      "file": "sources/ebb018ff2a82f110da080155c1e54b0f63b6b20d5612668b139f95668b9c07b5.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_Div#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_Div",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "ebb018ff2a82f110da080155c1e54b0f63b6b20d5612668b139f95668b9c07b5"
+    },
+    {
+      "file": "sources/786388ef2263682af3218ec61fa25b04930df56c1c9ced1e5485b13577d05534.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_FloorDiv#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_FloorDiv",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "786388ef2263682af3218ec61fa25b04930df56c1c9ced1e5485b13577d05534"
+    },
+    {
+      "file": "sources/f07cc67795ba1d2a00eb62c783cb5d23b57921cc33c33d57d64f099021517215.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_Mod#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_Mod",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "f07cc67795ba1d2a00eb62c783cb5d23b57921cc33c33d57d64f099021517215"
+    },
+    {
+      "file": "sources/2cd9e8dbbb286145e99a8efc6464b34f4fb0cd8e97dcc0b7599c401acb08d08d.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_Pow#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_Pow",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "2cd9e8dbbb286145e99a8efc6464b34f4fb0cd8e97dcc0b7599c401acb08d08d"
+    },
+    {
+      "file": "sources/952e9e1f5e221d798381b39376c775cee6bff21bbd6ede2aeb7589643fea651a.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_RShift#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_RShift",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "952e9e1f5e221d798381b39376c775cee6bff21bbd6ede2aeb7589643fea651a"
+    },
+    {
+      "file": "sources/6419c71bf948959b83a34329c7d9103a1eb596d36a95ec9f240e0ab22835535e.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_LShift#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_LShift",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "6419c71bf948959b83a34329c7d9103a1eb596d36a95ec9f240e0ab22835535e"
+    },
+    {
+      "file": "sources/fd725a8b3e6d865e8422f56ddce85a62df7c9af047d1377e47fe56bb412da61c.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_BitOr#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_BitOr",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "fd725a8b3e6d865e8422f56ddce85a62df7c9af047d1377e47fe56bb412da61c"
+    },
+    {
+      "file": "sources/48fa18992b9fda9dbfe6b7b776afeda13ac62bf23ee67a715852a7beeb95e5b5.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_BitAnd#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_BitAnd",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "48fa18992b9fda9dbfe6b7b776afeda13ac62bf23ee67a715852a7beeb95e5b5"
+    },
+    {
+      "file": "sources/1b48171fbac2393b622ea7cd8a643fcf450bb6ba3c08e73c9dbfd4d370364fdd.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "invert_scaler",
+          "end": [
+            41,
+            18
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Mul_BitXor#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Mul_BitXor",
+          "start": [
+            41,
+            17
+          ]
+        }
+      ],
+      "sha256": "1b48171fbac2393b622ea7cd8a643fcf450bb6ba3c08e73c9dbfd4d370364fdd"
+    },
+    {
+      "file": "sources/3e784964d9bff2e83b3201b13b1e00f7e43b9fcc9e2f64e2cf4488c8cd4a1679.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_Add#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_Add",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "3e784964d9bff2e83b3201b13b1e00f7e43b9fcc9e2f64e2cf4488c8cd4a1679"
+    },
+    {
+      "file": "sources/5114d29dbc7eef3ea006856afcfa1eb7628af67aad401a29208f78e5c61dd44e.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_Sub#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_Sub",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "5114d29dbc7eef3ea006856afcfa1eb7628af67aad401a29208f78e5c61dd44e"
+    },
+    {
+      "file": "sources/3a5b7f2422e751692f6517f8ecd1095089c52c56eea658ebf4ffd44d4520cfce.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_Mul#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_Mul",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "3a5b7f2422e751692f6517f8ecd1095089c52c56eea658ebf4ffd44d4520cfce"
+    },
+    {
+      "file": "sources/b4e61642d7b85ca3594a143df81dcde5cf6bbb7880cb0f608913f4287f408bb2.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_FloorDiv#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_FloorDiv",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "b4e61642d7b85ca3594a143df81dcde5cf6bbb7880cb0f608913f4287f408bb2"
+    },
+    {
+      "file": "sources/ab1a6c88badb2b4405a5f4cafee4316ac321052f0d0ccb45ae710d51011d155b.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_Mod#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_Mod",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "ab1a6c88badb2b4405a5f4cafee4316ac321052f0d0ccb45ae710d51011d155b"
+    },
+    {
+      "file": "sources/a87b781d9f12f317cd42ebafd86985055759204428c0655dfa549c6db984044f.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_Pow#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_Pow",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "a87b781d9f12f317cd42ebafd86985055759204428c0655dfa549c6db984044f"
+    },
+    {
+      "file": "sources/0387e9551fc6abdd6d6af56c54dc59eb5a3be593012ac7cfc858708d6f2a0ea1.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_RShift#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_RShift",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "0387e9551fc6abdd6d6af56c54dc59eb5a3be593012ac7cfc858708d6f2a0ea1"
+    },
+    {
+      "file": "sources/bf7c68e250be40274807af1fc4d3e967e96e4fd531b9c6ba6eeb2a6be16039da.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_LShift#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_LShift",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "bf7c68e250be40274807af1fc4d3e967e96e4fd531b9c6ba6eeb2a6be16039da"
+    },
+    {
+      "file": "sources/497c8d9df3cd5aeea0efa9b1ec2621068f2227a4d8ec9f445a2c2369332da5b2.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_BitOr#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_BitOr",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "497c8d9df3cd5aeea0efa9b1ec2621068f2227a4d8ec9f445a2c2369332da5b2"
+    },
+    {
+      "file": "sources/ce8a4e145840eb0ed24c2e57e66f3a3c2301f85cc121f211c5c29762af5908fe.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_BitAnd#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_BitAnd",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "ce8a4e145840eb0ed24c2e57e66f3a3c2301f85cc121f211c5c29762af5908fe"
+    },
+    {
+      "file": "sources/530b796177c67cb4d3067ce54b32fc11e0e38eaf452971b21b5e71cfb1c2f6a4.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "apply_scaler",
+          "end": [
+            37,
+            29
+          ],
+          "family": "ReplaceBinaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceBinaryOperator_Div_BitXor#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceBinaryOperator_Div_BitXor",
+          "start": [
+            37,
+            28
+          ]
+        }
+      ],
+      "sha256": "530b796177c67cb4d3067ce54b32fc11e0e38eaf452971b21b5e71cfb1c2f6a4"
+    },
+    {
+      "file": "sources/c8fba5cfe63a112dd2ef1ff20e380f4870b5719e3e7357558d7d57e2234da6dc.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            33,
+            36
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_NotEq#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceComparisonOperator_Eq_NotEq",
+          "start": [
+            33,
+            34
+          ]
+        }
+      ],
+      "sha256": "c8fba5cfe63a112dd2ef1ff20e380f4870b5719e3e7357558d7d57e2234da6dc"
+    },
+    {
+      "file": "sources/7a96b25cbcf0bb25146252112ef6751b202b9bc0d1aa3804fbf74e414f331d85.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit",
+          "end": [
+            59,
+            26
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_NotEq#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceComparisonOperator_Eq_NotEq",
+          "start": [
+            59,
+            24
+          ]
+        }
+      ],
+      "sha256": "7a96b25cbcf0bb25146252112ef6751b202b9bc0d1aa3804fbf74e414f331d85"
+    },
+    {
+      "file": "sources/92ac6daa66b1589300c241b29b0684dfadb437637f4bfde24c004f812d058d0a.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            74,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_NotEq#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceComparisonOperator_Eq_NotEq",
+          "start": [
+            74,
+            28
+          ]
+        }
+      ],
+      "sha256": "92ac6daa66b1589300c241b29b0684dfadb437637f4bfde24c004f812d058d0a"
+    },
+    {
+      "file": "sources/f6df2bdee2a3d6921a2a40cf226d5fe5b18727057a0a79930b8c6aa98767c530.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            77,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_NotEq#3",
+          "occurrence": 3,
+          "operator": "core/ReplaceComparisonOperator_Eq_NotEq",
+          "start": [
+            77,
+            28
+          ]
+        }
+      ],
+      "sha256": "f6df2bdee2a3d6921a2a40cf226d5fe5b18727057a0a79930b8c6aa98767c530"
+    },
+    {
+      "file": "sources/bfae7f19eeb5eeb526ec3d6d2b78bfa3a4f4df8fe2c03a8438df378636157f88.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            33,
+            36
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Lt#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceComparisonOperator_Eq_Lt",
+          "start": [
+            33,
+            34
+          ]
+        }
+      ],
+      "sha256": "bfae7f19eeb5eeb526ec3d6d2b78bfa3a4f4df8fe2c03a8438df378636157f88"
+    },
+    {
+      "file": "sources/9641e302fef49dd7c1905238559f3be14c614a479f163d33acdb9fc05747d0c8.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit",
+          "end": [
+            59,
+            26
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Lt#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceComparisonOperator_Eq_Lt",
+          "start": [
+            59,
+            24
+          ]
+        }
+      ],
+      "sha256": "9641e302fef49dd7c1905238559f3be14c614a479f163d33acdb9fc05747d0c8"
+    },
+    {
+      "file": "sources/92bff03ddfe6674e01e610687aa58e1175712aff853ad19e699c5f30b540dd2e.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            74,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Lt#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceComparisonOperator_Eq_Lt",
+          "start": [
+            74,
+            28
+          ]
+        }
+      ],
+      "sha256": "92bff03ddfe6674e01e610687aa58e1175712aff853ad19e699c5f30b540dd2e"
+    },
+    {
+      "file": "sources/c68984e26b1df6d8031f9e82b48793ed2d01dcb1e7f3bdacfe2289bcc04c953a.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            77,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Lt#3",
+          "occurrence": 3,
+          "operator": "core/ReplaceComparisonOperator_Eq_Lt",
+          "start": [
+            77,
+            28
+          ]
+        }
+      ],
+      "sha256": "c68984e26b1df6d8031f9e82b48793ed2d01dcb1e7f3bdacfe2289bcc04c953a"
+    },
+    {
+      "file": "sources/fb74ccf3393965ee9185c0a30f1ea4811f804a163aa9e3e4a826539e7aeccb7d.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            33,
+            36
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_LtE#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceComparisonOperator_Eq_LtE",
+          "start": [
+            33,
+            34
+          ]
+        }
+      ],
+      "sha256": "fb74ccf3393965ee9185c0a30f1ea4811f804a163aa9e3e4a826539e7aeccb7d"
+    },
+    {
+      "file": "sources/1762decca2c2aaba07c5fba1e330cfc97c6cbeda413a5861ed3d7f9ff0d180c0.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit",
+          "end": [
+            59,
+            26
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_LtE#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceComparisonOperator_Eq_LtE",
+          "start": [
+            59,
+            24
+          ]
+        }
+      ],
+      "sha256": "1762decca2c2aaba07c5fba1e330cfc97c6cbeda413a5861ed3d7f9ff0d180c0"
+    },
+    {
+      "file": "sources/5115324c0098178d2ec567a27cc382b943acb555fd8138f92646861317500b6d.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            74,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_LtE#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceComparisonOperator_Eq_LtE",
+          "start": [
+            74,
+            28
+          ]
+        }
+      ],
+      "sha256": "5115324c0098178d2ec567a27cc382b943acb555fd8138f92646861317500b6d"
+    },
+    {
+      "file": "sources/52c4036731b8b21d548c1fbd5635adeff467087eb71af98b2f68828be49a1f2d.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            77,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_LtE#3",
+          "occurrence": 3,
+          "operator": "core/ReplaceComparisonOperator_Eq_LtE",
+          "start": [
+            77,
+            28
+          ]
+        }
+      ],
+      "sha256": "52c4036731b8b21d548c1fbd5635adeff467087eb71af98b2f68828be49a1f2d"
+    },
+    {
+      "file": "sources/78556f0c8a9b3a71ecfc733987247e4cca825c19cf4d4446bae1ef1a65d6245b.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            33,
+            36
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Gt#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceComparisonOperator_Eq_Gt",
+          "start": [
+            33,
+            34
+          ]
+        }
+      ],
+      "sha256": "78556f0c8a9b3a71ecfc733987247e4cca825c19cf4d4446bae1ef1a65d6245b"
+    },
+    {
+      "file": "sources/3086a9f5f27a32b5a044171d31df319b6e921aacf43dbbd02783faea6568f596.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit",
+          "end": [
+            59,
+            26
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Gt#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceComparisonOperator_Eq_Gt",
+          "start": [
+            59,
+            24
+          ]
+        }
+      ],
+      "sha256": "3086a9f5f27a32b5a044171d31df319b6e921aacf43dbbd02783faea6568f596"
+    },
+    {
+      "file": "sources/b92356d19e68149dc859caaf6abbe03724a82eff30d2d53e29fe0787487c4fa0.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            74,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Gt#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceComparisonOperator_Eq_Gt",
+          "start": [
+            74,
+            28
+          ]
+        }
+      ],
+      "sha256": "b92356d19e68149dc859caaf6abbe03724a82eff30d2d53e29fe0787487c4fa0"
+    },
+    {
+      "file": "sources/aaf0cbec86ba34969aaa9ee06b299fa564465733cef59affe0a0707a5bb395b8.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            77,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Gt#3",
+          "occurrence": 3,
+          "operator": "core/ReplaceComparisonOperator_Eq_Gt",
+          "start": [
+            77,
+            28
+          ]
+        }
+      ],
+      "sha256": "aaf0cbec86ba34969aaa9ee06b299fa564465733cef59affe0a0707a5bb395b8"
+    },
+    {
+      "file": "sources/4fceebc0936df0dda315d09634fb7132d729844147f51ecec4a6f96a76dfa3f6.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            33,
+            36
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_GtE#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceComparisonOperator_Eq_GtE",
+          "start": [
+            33,
+            34
+          ]
+        }
+      ],
+      "sha256": "4fceebc0936df0dda315d09634fb7132d729844147f51ecec4a6f96a76dfa3f6"
+    },
+    {
+      "file": "sources/4c85654c8db6276292ebfc8b53b874fd45d3bbd399d501ac4709b87b4e4addfe.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit",
+          "end": [
+            59,
+            26
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_GtE#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceComparisonOperator_Eq_GtE",
+          "start": [
+            59,
+            24
+          ]
+        }
+      ],
+      "sha256": "4c85654c8db6276292ebfc8b53b874fd45d3bbd399d501ac4709b87b4e4addfe"
+    },
+    {
+      "file": "sources/71b3baa7bcb509fb679e9d56ebcc16f09328f26a4700b2c7c336a645179dd1b9.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            74,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_GtE#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceComparisonOperator_Eq_GtE",
+          "start": [
+            74,
+            28
+          ]
+        }
+      ],
+      "sha256": "71b3baa7bcb509fb679e9d56ebcc16f09328f26a4700b2c7c336a645179dd1b9"
+    },
+    {
+      "file": "sources/d40bf966ce8393d0436b5fcf715afbc3c25f89dae9b948d7a462e6862eca122d.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            77,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_GtE#3",
+          "occurrence": 3,
+          "operator": "core/ReplaceComparisonOperator_Eq_GtE",
+          "start": [
+            77,
+            28
+          ]
+        }
+      ],
+      "sha256": "d40bf966ce8393d0436b5fcf715afbc3c25f89dae9b948d7a462e6862eca122d"
+    },
+    {
+      "file": "sources/76110abbd5745ce592817581ee6f2d596668a0a23e4f9249480cc55a98ec3803.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit",
+          "end": [
+            59,
+            26
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Is#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceComparisonOperator_Eq_Is",
+          "start": [
+            59,
+            24
+          ]
+        }
+      ],
+      "sha256": "76110abbd5745ce592817581ee6f2d596668a0a23e4f9249480cc55a98ec3803"
+    },
+    {
+      "file": "sources/e3694027dc3c14925b28ec4e4c40e1b7256af59673cc7e0f1d0dd7e839db0fc5.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            74,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Is#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceComparisonOperator_Eq_Is",
+          "start": [
+            74,
+            28
+          ]
+        }
+      ],
+      "sha256": "e3694027dc3c14925b28ec4e4c40e1b7256af59673cc7e0f1d0dd7e839db0fc5"
+    },
+    {
+      "file": "sources/00b56ea003865ac390680442ac367bb736ebd2569dc99d3e46075bd4d118993b.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            77,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_Is#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceComparisonOperator_Eq_Is",
+          "start": [
+            77,
+            28
+          ]
+        }
+      ],
+      "sha256": "00b56ea003865ac390680442ac367bb736ebd2569dc99d3e46075bd4d118993b"
+    },
+    {
+      "file": "sources/98767c29fe1969544475847250822a01e9e980f5b2da7652222d9f698143e96c.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit",
+          "end": [
+            59,
+            26
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_IsNot#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceComparisonOperator_Eq_IsNot",
+          "start": [
+            59,
+            24
+          ]
+        }
+      ],
+      "sha256": "98767c29fe1969544475847250822a01e9e980f5b2da7652222d9f698143e96c"
+    },
+    {
+      "file": "sources/acbbbd6e11b53884df1f0a8d0ab67b9245c949fd476c136e8f9490066f689d11.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            74,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_IsNot#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceComparisonOperator_Eq_IsNot",
+          "start": [
+            74,
+            28
+          ]
+        }
+      ],
+      "sha256": "acbbbd6e11b53884df1f0a8d0ab67b9245c949fd476c136e8f9490066f689d11"
+    },
+    {
+      "file": "sources/0575c4440eaf79f826fbec19465c5b77fea9d9061e9461cc39e7452e5c0691cf.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            77,
+            30
+          ],
+          "family": "ReplaceComparisonOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceComparisonOperator_Eq_IsNot#2",
+          "occurrence": 2,
+          "operator": "core/ReplaceComparisonOperator_Eq_IsNot",
+          "start": [
+            77,
+            28
+          ]
+        }
+      ],
+      "sha256": "0575c4440eaf79f826fbec19465c5b77fea9d9061e9461cc39e7452e5c0691cf"
+    },
+    {
+      "file": "sources/b75bb8494c38615c1df17c158b8cc0837a582425a2e3ca0aee8665716242c35b.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "prediction_row",
+          "end": [
+            25,
+            20
+          ],
+          "family": "ReplaceUnaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceUnaryOperator_USub_UAdd#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceUnaryOperator_USub_UAdd",
+          "start": [
+            25,
+            19
+          ]
+        }
+      ],
+      "sha256": "b75bb8494c38615c1df17c158b8cc0837a582425a2e3ca0aee8665716242c35b"
+    },
+    {
+      "file": "sources/0fdafdd479336bcdcb47e54228d493330385624ca1c9779c710dc8725b0b933e.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "prediction_row",
+          "end": [
+            26,
+            24
+          ],
+          "family": "ReplaceUnaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceUnaryOperator_USub_UAdd#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceUnaryOperator_USub_UAdd",
+          "start": [
+            26,
+            23
+          ]
+        }
+      ],
+      "sha256": "0fdafdd479336bcdcb47e54228d493330385624ca1c9779c710dc8725b0b933e"
+    },
+    {
+      "file": "sources/4ae13c6f9188d6033548d3ef5d400048ed1539b53d695d37ede92a6914e161b8.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "prediction_row",
+          "end": [
+            25,
+            20
+          ],
+          "family": "ReplaceUnaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceUnaryOperator_USub_Invert#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceUnaryOperator_USub_Invert",
+          "start": [
+            25,
+            19
+          ]
+        }
+      ],
+      "sha256": "4ae13c6f9188d6033548d3ef5d400048ed1539b53d695d37ede92a6914e161b8"
+    },
+    {
+      "file": "sources/2579b2551e0764ade1c427e0980600fa859a3d6d8267af9bb903d6fafc5261f1.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "prediction_row",
+          "end": [
+            26,
+            24
+          ],
+          "family": "ReplaceUnaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceUnaryOperator_USub_Invert#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceUnaryOperator_USub_Invert",
+          "start": [
+            26,
+            23
+          ]
+        }
+      ],
+      "sha256": "2579b2551e0764ade1c427e0980600fa859a3d6d8267af9bb903d6fafc5261f1"
+    },
+    {
+      "file": "sources/547fe7c562512f990f5f49e28fb0b62d4abc2b5eda83211e13a20b139736b34b.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "prediction_row",
+          "end": [
+            25,
+            20
+          ],
+          "family": "ReplaceUnaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceUnaryOperator_USub_Not#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceUnaryOperator_USub_Not",
+          "start": [
+            25,
+            19
+          ]
+        }
+      ],
+      "sha256": "547fe7c562512f990f5f49e28fb0b62d4abc2b5eda83211e13a20b139736b34b"
+    },
+    {
+      "file": "sources/b12de7410ae81c51dadeaa381b9929236ecf381ed86b43822d780cec551fa589.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "prediction_row",
+          "end": [
+            26,
+            24
+          ],
+          "family": "ReplaceUnaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceUnaryOperator_USub_Not#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceUnaryOperator_USub_Not",
+          "start": [
+            26,
+            23
+          ]
+        }
+      ],
+      "sha256": "b12de7410ae81c51dadeaa381b9929236ecf381ed86b43822d780cec551fa589"
+    },
+    {
+      "file": "sources/182a029d07d015a02a13c58f4070b2c3a69409afce4024bbeebb18243faa3c24.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "prediction_row",
+          "end": [
+            25,
+            20
+          ],
+          "family": "ReplaceUnaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceUnaryOperator_Delete_USub#0",
+          "occurrence": 0,
+          "operator": "core/ReplaceUnaryOperator_Delete_USub",
+          "start": [
+            25,
+            19
+          ]
+        }
+      ],
+      "sha256": "182a029d07d015a02a13c58f4070b2c3a69409afce4024bbeebb18243faa3c24"
+    },
+    {
+      "file": "sources/962bb40963b309299684b27c5945d957d97efda800e82ecb036fe436e77b52c4.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "prediction_row",
+          "end": [
+            26,
+            24
+          ],
+          "family": "ReplaceUnaryOperator",
+          "kind": "cosmic_ray",
+          "label": "core/ReplaceUnaryOperator_Delete_USub#1",
+          "occurrence": 1,
+          "operator": "core/ReplaceUnaryOperator_Delete_USub",
+          "start": [
+            26,
+            23
+          ]
+        }
+      ],
+      "sha256": "962bb40963b309299684b27c5945d957d97efda800e82ecb036fe436e77b52c4"
+    },
+    {
+      "file": "sources/09c64475d3908e29799cdf4f2712f0c456f4f85dc62912ff420e1634d79beb7e.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit",
+          "end": [
+            59,
+            35
+          ],
+          "family": "AddNot",
+          "kind": "cosmic_ray",
+          "label": "core/AddNot#0",
+          "occurrence": 0,
+          "operator": "core/AddNot",
+          "start": [
+            59,
+            11
+          ]
+        }
+      ],
+      "sha256": "09c64475d3908e29799cdf4f2712f0c456f4f85dc62912ff420e1634d79beb7e"
+    },
+    {
+      "file": "sources/f8d8a624df93d3a83c87965386587c5489354f117b9644f4260b56019b16680f.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            74,
+            39
+          ],
+          "family": "AddNot",
+          "kind": "cosmic_ray",
+          "label": "core/AddNot#1",
+          "occurrence": 1,
+          "operator": "core/AddNot",
+          "start": [
+            74,
+            15
+          ]
+        }
+      ],
+      "sha256": "f8d8a624df93d3a83c87965386587c5489354f117b9644f4260b56019b16680f"
+    },
+    {
+      "file": "sources/f37e96f54139dd11881da37ba62cac3e33b69ee83695ba3f267a1dbc22b23f70.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            77,
+            39
+          ],
+          "family": "AddNot",
+          "kind": "cosmic_ray",
+          "label": "core/AddNot#2",
+          "occurrence": 2,
+          "operator": "core/AddNot",
+          "start": [
+            77,
+            15
+          ]
+        }
+      ],
+      "sha256": "f37e96f54139dd11881da37ba62cac3e33b69ee83695ba3f267a1dbc22b23f70"
+    },
+    {
+      "file": "sources/d1cd29b28747996164650e2ca60806418c8aa1d606dc719aa1f129540bd12889.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            31,
+            30
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#0",
+          "occurrence": 0,
+          "operator": "core/NumberReplacer",
+          "start": [
+            31,
+            29
+          ]
+        }
+      ],
+      "sha256": "d1cd29b28747996164650e2ca60806418c8aa1d606dc719aa1f129540bd12889"
+    },
+    {
+      "file": "sources/0bb97585ac216a30adfbfe3dd1266f70b46f6054e4412b1df1eb46ad087771df.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            31,
+            30
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#1",
+          "occurrence": 1,
+          "operator": "core/NumberReplacer",
+          "start": [
+            31,
+            29
+          ]
+        }
+      ],
+      "sha256": "0bb97585ac216a30adfbfe3dd1266f70b46f6054e4412b1df1eb46ad087771df"
+    },
+    {
+      "file": "sources/8b676033308a68e744c14f53eea1c70895412e1feee806007ac0781196e0ea35.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            32,
+            28
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#2",
+          "occurrence": 2,
+          "operator": "core/NumberReplacer",
+          "start": [
+            32,
+            27
+          ]
+        }
+      ],
+      "sha256": "8b676033308a68e744c14f53eea1c70895412e1feee806007ac0781196e0ea35"
+    },
+    {
+      "file": "sources/9beaa8b11013ecbbf76b1c3f8cc88c155ef95aba2e5a754824c6d9228642029f.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            32,
+            28
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#3",
+          "occurrence": 3,
+          "operator": "core/NumberReplacer",
+          "start": [
+            32,
+            27
+          ]
+        }
+      ],
+      "sha256": "9beaa8b11013ecbbf76b1c3f8cc88c155ef95aba2e5a754824c6d9228642029f"
+    },
+    {
+      "file": "sources/7cb177731cf5a7fd709af2ca2b57064ecd4af811e511fbab1440008dff17c319.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            33,
+            38
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#4",
+          "occurrence": 4,
+          "operator": "core/NumberReplacer",
+          "start": [
+            33,
+            37
+          ]
+        }
+      ],
+      "sha256": "7cb177731cf5a7fd709af2ca2b57064ecd4af811e511fbab1440008dff17c319"
+    },
+    {
+      "file": "sources/daedd326ad161c6d5947e1ac07c061e197256383099cce85e13fd9e3f821d0f2.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            33,
+            38
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#5",
+          "occurrence": 5,
+          "operator": "core/NumberReplacer",
+          "start": [
+            33,
+            37
+          ]
+        }
+      ],
+      "sha256": "daedd326ad161c6d5947e1ac07c061e197256383099cce85e13fd9e3f821d0f2"
+    },
+    {
+      "file": "sources/479f41c9dcf24e241ab7bfa35a0dbeaf5e602f99af3580483f55274cc60c2381.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            33,
+            43
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#6",
+          "occurrence": 6,
+          "operator": "core/NumberReplacer",
+          "start": [
+            33,
+            40
+          ]
+        }
+      ],
+      "sha256": "479f41c9dcf24e241ab7bfa35a0dbeaf5e602f99af3580483f55274cc60c2381"
+    },
+    {
+      "file": "sources/d0e84d0291cd2fce49a958579f80eaf352e2417ad414e3f52edbe0d65e3f85ee.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "fit_scaler",
+          "end": [
+            33,
+            43
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#7",
+          "occurrence": 7,
+          "operator": "core/NumberReplacer",
+          "start": [
+            33,
+            40
+          ]
+        }
+      ],
+      "sha256": "d0e84d0291cd2fce49a958579f80eaf352e2417ad414e3f52edbe0d65e3f85ee"
+    },
+    {
+      "file": "sources/e2ebda6ea953e45bbb22cf7420e9c04fc38c47878bd2fd7d02f9ad7d021b6703.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "__init__",
+          "end": [
+            47,
+            47
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#8",
+          "occurrence": 8,
+          "operator": "core/NumberReplacer",
+          "start": [
+            47,
+            46
+          ]
+        }
+      ],
+      "sha256": "e2ebda6ea953e45bbb22cf7420e9c04fc38c47878bd2fd7d02f9ad7d021b6703"
+    },
+    {
+      "file": "sources/13a3bd342c41f230b3c10c88e6aec08b7477716961a5d37533234322cdc50aff.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "__init__",
+          "end": [
+            47,
+            47
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#9",
+          "occurrence": 9,
+          "operator": "core/NumberReplacer",
+          "start": [
+            47,
+            46
+          ]
+        }
+      ],
+      "sha256": "13a3bd342c41f230b3c10c88e6aec08b7477716961a5d37533234322cdc50aff"
+    },
+    {
+      "file": "sources/15f2a52f08e4bcf094be13976bf731fc31edf51f0ba04e30ba7fd3b483b536dc.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "__init__",
+          "end": [
+            47,
+            58
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#10",
+          "occurrence": 10,
+          "operator": "core/NumberReplacer",
+          "start": [
+            47,
+            56
+          ]
+        }
+      ],
+      "sha256": "15f2a52f08e4bcf094be13976bf731fc31edf51f0ba04e30ba7fd3b483b536dc"
+    },
+    {
+      "file": "sources/3ac018b1999edcc5d55b1f36923ecc1ea54c8c3c8320bdfe8ec2eead09dd7cd0.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "__init__",
+          "end": [
+            47,
+            58
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#11",
+          "occurrence": 11,
+          "operator": "core/NumberReplacer",
+          "start": [
+            47,
+            56
+          ]
+        }
+      ],
+      "sha256": "3ac018b1999edcc5d55b1f36923ecc1ea54c8c3c8320bdfe8ec2eead09dd7cd0"
+    },
+    {
+      "file": "sources/f5b8ba0e4527d25e5d45c2424e0e6850aa5bfad4a8c161452ce1a218742a1241.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            79,
+            28
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#12",
+          "occurrence": 12,
+          "operator": "core/NumberReplacer",
+          "start": [
+            79,
+            27
+          ]
+        }
+      ],
+      "sha256": "f5b8ba0e4527d25e5d45c2424e0e6850aa5bfad4a8c161452ce1a218742a1241"
+    },
+    {
+      "file": "sources/47b9e44a5bc74e95e62ddf98c80f0bd4d3cd9674d15522a2fc5ca280013a16ff.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            79,
+            28
+          ],
+          "family": "NumberReplacer",
+          "kind": "cosmic_ray",
+          "label": "core/NumberReplacer#13",
+          "occurrence": 13,
+          "operator": "core/NumberReplacer",
+          "start": [
+            79,
+            27
+          ]
+        }
+      ],
+      "sha256": "47b9e44a5bc74e95e62ddf98c80f0bd4d3cd9674d15522a2fc5ca280013a16ff"
+    },
+    {
+      "file": "sources/35990534d21099be4ee186b3254e314538764e185f84ee970ebcff1f1193d5b4.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "training_matrix",
+          "end": [
+            16,
+            38
+          ],
+          "family": "ZeroIterationForLoop",
+          "kind": "cosmic_ray",
+          "label": "core/ZeroIterationForLoop#0",
+          "occurrence": 0,
+          "operator": "core/ZeroIterationForLoop",
+          "start": [
+            16,
+            13
+          ]
+        }
+      ],
+      "sha256": "35990534d21099be4ee186b3254e314538764e185f84ee970ebcff1f1193d5b4"
+    },
+    {
+      "file": "sources/06359e9faa240344867f209b8496c0f2ef012006e080a7b6ae7f3b6a4cbe0b0d.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "definition": "predict",
+          "end": [
+            72,
+            44
+          ],
+          "family": "ZeroIterationForLoop",
+          "kind": "cosmic_ray",
+          "label": "core/ZeroIterationForLoop#1",
+          "occurrence": 1,
+          "operator": "core/ZeroIterationForLoop",
+          "start": [
+            72,
+            20
+          ]
+        }
+      ],
+      "sha256": "06359e9faa240344867f209b8496c0f2ef012006e080a7b6ae7f3b6a4cbe0b0d"
+    },
+    {
+      "file": "sources/b24ff452c5adbe7b4227440a3ed2635e647394a86cabc9a4f4b1884b629bc159.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "lag_window_off_by_one_training",
+          "operator": "lag_window_off_by_one_training",
+          "site": "T-lag"
+        }
+      ],
+      "sha256": "b24ff452c5adbe7b4227440a3ed2635e647394a86cabc9a4f4b1884b629bc159"
+    },
+    {
+      "file": "sources/5c36cf3b8467b3d4766466c29ce9983b88feb9f3fa95a15b4d83170bad336266.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "lag_window_off_by_one_prediction",
+          "operator": "lag_window_off_by_one_prediction",
+          "site": "P-lag"
+        }
+      ],
+      "sha256": "5c36cf3b8467b3d4766466c29ce9983b88feb9f3fa95a15b4d83170bad336266"
+    },
+    {
+      "file": "sources/e036779b90be310c5ff5f947ab7cd54c4d43e5a0ac3a6c5e0f0e1da6c4a867c4.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "lag_window_includes_target_training",
+          "operator": "lag_window_includes_target_training",
+          "site": "T-lag"
+        }
+      ],
+      "sha256": "e036779b90be310c5ff5f947ab7cd54c4d43e5a0ac3a6c5e0f0e1da6c4a867c4"
+    },
+    {
+      "file": "sources/b0a6bc265431647aaf3b5411c557febdc514b96f8c3f167b144377a56f5c7489.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "lag_order_reversed_training",
+          "operator": "lag_order_reversed_training",
+          "site": "T-lag"
+        }
+      ],
+      "sha256": "b0a6bc265431647aaf3b5411c557febdc514b96f8c3f167b144377a56f5c7489"
+    },
+    {
+      "file": "sources/a12a361efe6c29ec1b9b5ff8da8ba644c0fc23e254738365fcd818c3a75e48ff.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "lag_order_reversed_prediction",
+          "operator": "lag_order_reversed_prediction",
+          "site": "P-lag"
+        },
+        {
+          "family": null,
+          "kind": "study2",
+          "label": "reverse_prediction_lags",
+          "operator": "reverse_prediction_lags",
+          "same_source_as": "lag_order_reversed_prediction"
+        }
+      ],
+      "sha256": "a12a361efe6c29ec1b9b5ff8da8ba644c0fc23e254738365fcd818c3a75e48ff"
+    },
+    {
+      "file": "sources/2d8e8ec7b6b330aafc71521b0d5fc338aafca8db2e8a6782067e9e67639b52a0.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "recursion_state_not_updated",
+          "operator": "recursion_state_not_updated",
+          "site": "R"
+        },
+        {
+          "family": null,
+          "kind": "study2",
+          "label": "stale_recursive_state",
+          "operator": "stale_recursive_state",
+          "same_source_as": "recursion_state_not_updated"
+        }
+      ],
+      "sha256": "2d8e8ec7b6b330aafc71521b0d5fc338aafca8db2e8a6782067e9e67639b52a0"
+    },
+    {
+      "file": "sources/3e1119f322d4942b7d14d4a0e22850cf3776ca1a44143b3504da1d23e9fb11a6.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "horizon_index_off_by_one",
+          "operator": "horizon_index_off_by_one",
+          "site": "H"
+        }
+      ],
+      "sha256": "3e1119f322d4942b7d14d4a0e22850cf3776ca1a44143b3504da1d23e9fb11a6"
+    },
+    {
+      "file": "sources/729af76ee01d4a4837d93b59246fe7a776873297ef30feca0ad4162670c83cc1.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "target_columns_swapped",
+          "operator": "target_columns_swapped",
+          "site": "T-target"
+        }
+      ],
+      "sha256": "729af76ee01d4a4837d93b59246fe7a776873297ef30feca0ad4162670c83cc1"
+    },
+    {
+      "file": "sources/46a85f7e6798c9e5734facc68b23d5b673ff3a987cf95683e7a193686406787b.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "series_columns_swapped_prediction",
+          "operator": "series_columns_swapped_prediction",
+          "site": "P-lag"
+        }
+      ],
+      "sha256": "46a85f7e6798c9e5734facc68b23d5b673ff3a987cf95683e7a193686406787b"
+    },
+    {
+      "file": "sources/219c6cdd7d79a97a09c60fee548f0d6dfe28c9fdbdd866d80899272e9f34c8c6.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "feature_scaler_reused_across_contexts",
+          "operator": "feature_scaler_reused_across_contexts",
+          "site": "S-x"
+        }
+      ],
+      "sha256": "219c6cdd7d79a97a09c60fee548f0d6dfe28c9fdbdd866d80899272e9f34c8c6"
+    },
+    {
+      "file": "sources/2693cff0916fc36e2ee5320bec00f0412bbb3d16cf492c5ed82b3b1cf8f48de7.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "target_scaler_reused_across_contexts",
+          "operator": "target_scaler_reused_across_contexts",
+          "site": "S-y"
+        }
+      ],
+      "sha256": "2693cff0916fc36e2ee5320bec00f0412bbb3d16cf492c5ed82b3b1cf8f48de7"
+    },
+    {
+      "file": "sources/6402464b439dc5c554fde425793854e534669efcc6598d02de11638fe45b7c68.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "inverse_transform_skipped",
+          "operator": "inverse_transform_skipped",
+          "site": "I"
+        },
+        {
+          "family": null,
+          "kind": "study2",
+          "label": "omit_inverse_target_scaling",
+          "operator": "omit_inverse_target_scaling",
+          "same_source_as": "inverse_transform_skipped"
+        }
+      ],
+      "sha256": "6402464b439dc5c554fde425793854e534669efcc6598d02de11638fe45b7c68"
+    },
+    {
+      "file": "sources/3e42bbcdb7153b193406a1eff6f01de53615340f90e6f0aaef1035fa19751938.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "inverse_transform_applied_twice",
+          "operator": "inverse_transform_applied_twice",
+          "site": "I"
+        }
+      ],
+      "sha256": "3e42bbcdb7153b193406a1eff6f01de53615340f90e6f0aaef1035fa19751938"
+    },
+    {
+      "file": "sources/9ec423607c902cc2404465f6720f4f3916637b11b5d032473d83e41f383bed60.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "seasonal_period_off_by_one_training",
+          "operator": "seasonal_period_off_by_one_training",
+          "site": "T-season"
+        }
+      ],
+      "sha256": "9ec423607c902cc2404465f6720f4f3916637b11b5d032473d83e41f383bed60"
+    },
+    {
+      "file": "sources/9639fe1eec5d596d47db8290d4d2a26c8f5e58d3604616e1511e031f155fc423.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "seasonal_period_off_by_one_prediction",
+          "operator": "seasonal_period_off_by_one_prediction",
+          "site": "P-season"
+        }
+      ],
+      "sha256": "9639fe1eec5d596d47db8290d4d2a26c8f5e58d3604616e1511e031f155fc423"
+    },
+    {
+      "file": "sources/955c034f4b67f0e5477c4745dcf2fbc372994d39db155e79537f692e33bdc40a.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "catalogue",
+          "label": "training_rows_dropped_from_wrong_end",
+          "operator": "training_rows_dropped_from_wrong_end",
+          "site": "T-target"
+        }
+      ],
+      "sha256": "955c034f4b67f0e5477c4745dcf2fbc372994d39db155e79537f692e33bdc40a"
+    },
+    {
+      "file": "sources/44406c23b988d528c17ec14c44e87e483223af0cc1b6035fd5438d752ba04c20.py",
+      "identical_to_subject": false,
+      "labels": [
+        {
+          "family": null,
+          "kind": "study2",
+          "label": "swap_recursive_targets",
+          "operator": "swap_recursive_targets",
+          "same_source_as": null
+        }
+      ],
+      "sha256": "44406c23b988d528c17ec14c44e87e483223af0cc1b6035fd5438d752ba04c20"
+    }
+  ],
+  "subject": {
+    "path": "experiments/study3_subject.py",
+    "sha256": "2f5ad6efdd8fc223cc9b1938328d008632f933049df32481ca27cbc0a6615032"
+  },
+  "tool": {
+    "environment": {
+      "installed": [
+        "GitPython==3.2.1",
+        "Pygments==2.21.0",
+        "SQLAlchemy==2.1.8",
+        "aiohappyeyeballs==2.7.1",
+        "aiohttp==3.14.5",
+        "aiosignal==1.4.0",
+        "anybadge==1.18.0",
+        "attrs==26.1.0",
+        "click==8.5.1",
+        "cosmic_ray==8.9.0",
+        "decorator==5.3.1",
+        "exit-codes==1.3.0",
+        "frozenlist==1.8.0",
+        "gitdb==4.0.12",
+        "idna==3.20",
+        "markdown-it-py==4.3.0",
+        "mdurl==0.1.2",
+        "multidict==7.2.1",
+        "packaging==26.3",
+        "parso==0.8.7",
+        "pip==26.2.2",
+        "propcache==0.5.4",
+        "rich==15.0.0",
+        "smmap==5.0.3",
+        "stevedore==5.10.0",
+        "toml==0.10.2",
+        "typing_extensions==4.16.0",
+        "yarl==1.25.1",
+        "yattag==1.16.1"
+      ],
+      "platform": "Linux-6.18.44-fc-v553-x86_64-with-glibc2.39",
+      "python": "3.13.18"
+    },
+    "name": "cosmic-ray",
+    "operators": [
+      "core/ReplaceBinaryOperator_Add_Sub",
+      "core/ReplaceBinaryOperator_Add_Mul",
+      "core/ReplaceBinaryOperator_Add_Div",
+      "core/ReplaceBinaryOperator_Add_FloorDiv",
+      "core/ReplaceBinaryOperator_Add_Mod",
+      "core/ReplaceBinaryOperator_Add_Pow",
+      "core/ReplaceBinaryOperator_Add_RShift",
+      "core/ReplaceBinaryOperator_Add_LShift",
+      "core/ReplaceBinaryOperator_Add_BitOr",
+      "core/ReplaceBinaryOperator_Add_BitAnd",
+      "core/ReplaceBinaryOperator_Add_BitXor",
+      "core/ReplaceBinaryOperator_Sub_Add",
+      "core/ReplaceBinaryOperator_Sub_Mul",
+      "core/ReplaceBinaryOperator_Sub_Div",
+      "core/ReplaceBinaryOperator_Sub_FloorDiv",
+      "core/ReplaceBinaryOperator_Sub_Mod",
+      "core/ReplaceBinaryOperator_Sub_Pow",
+      "core/ReplaceBinaryOperator_Sub_RShift",
+      "core/ReplaceBinaryOperator_Sub_LShift",
+      "core/ReplaceBinaryOperator_Sub_BitOr",
+      "core/ReplaceBinaryOperator_Sub_BitAnd",
+      "core/ReplaceBinaryOperator_Sub_BitXor",
+      "core/ReplaceBinaryOperator_Mul_Add",
+      "core/ReplaceBinaryOperator_Mul_Sub",
+      "core/ReplaceBinaryOperator_Mul_Div",
+      "core/ReplaceBinaryOperator_Mul_FloorDiv",
+      "core/ReplaceBinaryOperator_Mul_Mod",
+      "core/ReplaceBinaryOperator_Mul_Pow",
+      "core/ReplaceBinaryOperator_Mul_RShift",
+      "core/ReplaceBinaryOperator_Mul_LShift",
+      "core/ReplaceBinaryOperator_Mul_BitOr",
+      "core/ReplaceBinaryOperator_Mul_BitAnd",
+      "core/ReplaceBinaryOperator_Mul_BitXor",
+      "core/ReplaceBinaryOperator_Div_Add",
+      "core/ReplaceBinaryOperator_Div_Sub",
+      "core/ReplaceBinaryOperator_Div_Mul",
+      "core/ReplaceBinaryOperator_Div_FloorDiv",
+      "core/ReplaceBinaryOperator_Div_Mod",
+      "core/ReplaceBinaryOperator_Div_Pow",
+      "core/ReplaceBinaryOperator_Div_RShift",
+      "core/ReplaceBinaryOperator_Div_LShift",
+      "core/ReplaceBinaryOperator_Div_BitOr",
+      "core/ReplaceBinaryOperator_Div_BitAnd",
+      "core/ReplaceBinaryOperator_Div_BitXor",
+      "core/ReplaceBinaryOperator_FloorDiv_Add",
+      "core/ReplaceBinaryOperator_FloorDiv_Sub",
+      "core/ReplaceBinaryOperator_FloorDiv_Mul",
+      "core/ReplaceBinaryOperator_FloorDiv_Div",
+      "core/ReplaceBinaryOperator_FloorDiv_Mod",
+      "core/ReplaceBinaryOperator_FloorDiv_Pow",
+      "core/ReplaceBinaryOperator_FloorDiv_RShift",
+      "core/ReplaceBinaryOperator_FloorDiv_LShift",
+      "core/ReplaceBinaryOperator_FloorDiv_BitOr",
+      "core/ReplaceBinaryOperator_FloorDiv_BitAnd",
+      "core/ReplaceBinaryOperator_FloorDiv_BitXor",
+      "core/ReplaceBinaryOperator_Mod_Add",
+      "core/ReplaceBinaryOperator_Mod_Sub",
+      "core/ReplaceBinaryOperator_Mod_Mul",
+      "core/ReplaceBinaryOperator_Mod_Div",
+      "core/ReplaceBinaryOperator_Mod_FloorDiv",
+      "core/ReplaceBinaryOperator_Mod_Pow",
+      "core/ReplaceBinaryOperator_Mod_RShift",
+      "core/ReplaceBinaryOperator_Mod_LShift",
+      "core/ReplaceBinaryOperator_Mod_BitOr",
+      "core/ReplaceBinaryOperator_Mod_BitAnd",
+      "core/ReplaceBinaryOperator_Mod_BitXor",
+      "core/ReplaceBinaryOperator_Pow_Add",
+      "core/ReplaceBinaryOperator_Pow_Sub",
+      "core/ReplaceBinaryOperator_Pow_Mul",
+      "core/ReplaceBinaryOperator_Pow_Div",
+      "core/ReplaceBinaryOperator_Pow_FloorDiv",
+      "core/ReplaceBinaryOperator_Pow_Mod",
+      "core/ReplaceBinaryOperator_Pow_RShift",
+      "core/ReplaceBinaryOperator_Pow_LShift",
+      "core/ReplaceBinaryOperator_Pow_BitOr",
+      "core/ReplaceBinaryOperator_Pow_BitAnd",
+      "core/ReplaceBinaryOperator_Pow_BitXor",
+      "core/ReplaceBinaryOperator_RShift_Add",
+      "core/ReplaceBinaryOperator_RShift_Sub",
+      "core/ReplaceBinaryOperator_RShift_Mul",
+      "core/ReplaceBinaryOperator_RShift_Div",
+      "core/ReplaceBinaryOperator_RShift_FloorDiv",
+      "core/ReplaceBinaryOperator_RShift_Mod",
+      "core/ReplaceBinaryOperator_RShift_Pow",
+      "core/ReplaceBinaryOperator_RShift_LShift",
+      "core/ReplaceBinaryOperator_RShift_BitOr",
+      "core/ReplaceBinaryOperator_RShift_BitAnd",
+      "core/ReplaceBinaryOperator_RShift_BitXor",
+      "core/ReplaceBinaryOperator_LShift_Add",
+      "core/ReplaceBinaryOperator_LShift_Sub",
+      "core/ReplaceBinaryOperator_LShift_Mul",
+      "core/ReplaceBinaryOperator_LShift_Div",
+      "core/ReplaceBinaryOperator_LShift_FloorDiv",
+      "core/ReplaceBinaryOperator_LShift_Mod",
+      "core/ReplaceBinaryOperator_LShift_Pow",
+      "core/ReplaceBinaryOperator_LShift_RShift",
+      "core/ReplaceBinaryOperator_LShift_BitOr",
+      "core/ReplaceBinaryOperator_LShift_BitAnd",
+      "core/ReplaceBinaryOperator_LShift_BitXor",
+      "core/ReplaceBinaryOperator_BitOr_Add",
+      "core/ReplaceBinaryOperator_BitOr_Sub",
+      "core/ReplaceBinaryOperator_BitOr_Mul",
+      "core/ReplaceBinaryOperator_BitOr_Div",
+      "core/ReplaceBinaryOperator_BitOr_FloorDiv",
+      "core/ReplaceBinaryOperator_BitOr_Mod",
+      "core/ReplaceBinaryOperator_BitOr_Pow",
+      "core/ReplaceBinaryOperator_BitOr_RShift",
+      "core/ReplaceBinaryOperator_BitOr_LShift",
+      "core/ReplaceBinaryOperator_BitOr_BitAnd",
+      "core/ReplaceBinaryOperator_BitOr_BitXor",
+      "core/ReplaceBinaryOperator_BitAnd_Add",
+      "core/ReplaceBinaryOperator_BitAnd_Sub",
+      "core/ReplaceBinaryOperator_BitAnd_Mul",
+      "core/ReplaceBinaryOperator_BitAnd_Div",
+      "core/ReplaceBinaryOperator_BitAnd_FloorDiv",
+      "core/ReplaceBinaryOperator_BitAnd_Mod",
+      "core/ReplaceBinaryOperator_BitAnd_Pow",
+      "core/ReplaceBinaryOperator_BitAnd_RShift",
+      "core/ReplaceBinaryOperator_BitAnd_LShift",
+      "core/ReplaceBinaryOperator_BitAnd_BitOr",
+      "core/ReplaceBinaryOperator_BitAnd_BitXor",
+      "core/ReplaceBinaryOperator_BitXor_Add",
+      "core/ReplaceBinaryOperator_BitXor_Sub",
+      "core/ReplaceBinaryOperator_BitXor_Mul",
+      "core/ReplaceBinaryOperator_BitXor_Div",
+      "core/ReplaceBinaryOperator_BitXor_FloorDiv",
+      "core/ReplaceBinaryOperator_BitXor_Mod",
+      "core/ReplaceBinaryOperator_BitXor_Pow",
+      "core/ReplaceBinaryOperator_BitXor_RShift",
+      "core/ReplaceBinaryOperator_BitXor_LShift",
+      "core/ReplaceBinaryOperator_BitXor_BitOr",
+      "core/ReplaceBinaryOperator_BitXor_BitAnd",
+      "core/ReplaceComparisonOperator_Eq_NotEq",
+      "core/ReplaceComparisonOperator_Eq_Lt",
+      "core/ReplaceComparisonOperator_Eq_LtE",
+      "core/ReplaceComparisonOperator_Eq_Gt",
+      "core/ReplaceComparisonOperator_Eq_GtE",
+      "core/ReplaceComparisonOperator_Eq_Is",
+      "core/ReplaceComparisonOperator_Eq_IsNot",
+      "core/ReplaceComparisonOperator_NotEq_Eq",
+      "core/ReplaceComparisonOperator_NotEq_Lt",
+      "core/ReplaceComparisonOperator_NotEq_LtE",
+      "core/ReplaceComparisonOperator_NotEq_Gt",
+      "core/ReplaceComparisonOperator_NotEq_GtE",
+      "core/ReplaceComparisonOperator_NotEq_Is",
+      "core/ReplaceComparisonOperator_NotEq_IsNot",
+      "core/ReplaceComparisonOperator_Lt_Eq",
+      "core/ReplaceComparisonOperator_Lt_NotEq",
+      "core/ReplaceComparisonOperator_Lt_LtE",
+      "core/ReplaceComparisonOperator_Lt_Gt",
+      "core/ReplaceComparisonOperator_Lt_GtE",
+      "core/ReplaceComparisonOperator_Lt_Is",
+      "core/ReplaceComparisonOperator_Lt_IsNot",
+      "core/ReplaceComparisonOperator_LtE_Eq",
+      "core/ReplaceComparisonOperator_LtE_NotEq",
+      "core/ReplaceComparisonOperator_LtE_Lt",
+      "core/ReplaceComparisonOperator_LtE_Gt",
+      "core/ReplaceComparisonOperator_LtE_GtE",
+      "core/ReplaceComparisonOperator_LtE_Is",
+      "core/ReplaceComparisonOperator_LtE_IsNot",
+      "core/ReplaceComparisonOperator_Gt_Eq",
+      "core/ReplaceComparisonOperator_Gt_NotEq",
+      "core/ReplaceComparisonOperator_Gt_Lt",
+      "core/ReplaceComparisonOperator_Gt_LtE",
+      "core/ReplaceComparisonOperator_Gt_GtE",
+      "core/ReplaceComparisonOperator_Gt_Is",
+      "core/ReplaceComparisonOperator_Gt_IsNot",
+      "core/ReplaceComparisonOperator_GtE_Eq",
+      "core/ReplaceComparisonOperator_GtE_NotEq",
+      "core/ReplaceComparisonOperator_GtE_Lt",
+      "core/ReplaceComparisonOperator_GtE_LtE",
+      "core/ReplaceComparisonOperator_GtE_Gt",
+      "core/ReplaceComparisonOperator_GtE_Is",
+      "core/ReplaceComparisonOperator_GtE_IsNot",
+      "core/ReplaceComparisonOperator_Is_Eq",
+      "core/ReplaceComparisonOperator_Is_NotEq",
+      "core/ReplaceComparisonOperator_Is_Lt",
+      "core/ReplaceComparisonOperator_Is_LtE",
+      "core/ReplaceComparisonOperator_Is_Gt",
+      "core/ReplaceComparisonOperator_Is_GtE",
+      "core/ReplaceComparisonOperator_Is_IsNot",
+      "core/ReplaceComparisonOperator_IsNot_Eq",
+      "core/ReplaceComparisonOperator_IsNot_NotEq",
+      "core/ReplaceComparisonOperator_IsNot_Lt",
+      "core/ReplaceComparisonOperator_IsNot_LtE",
+      "core/ReplaceComparisonOperator_IsNot_Gt",
+      "core/ReplaceComparisonOperator_IsNot_GtE",
+      "core/ReplaceComparisonOperator_IsNot_Is",
+      "core/ReplaceUnaryOperator_UAdd_USub",
+      "core/ReplaceUnaryOperator_UAdd_Invert",
+      "core/ReplaceUnaryOperator_UAdd_Not",
+      "core/ReplaceUnaryOperator_USub_UAdd",
+      "core/ReplaceUnaryOperator_USub_Invert",
+      "core/ReplaceUnaryOperator_USub_Not",
+      "core/ReplaceUnaryOperator_Delete_USub",
+      "core/ReplaceUnaryOperator_Invert_UAdd",
+      "core/ReplaceUnaryOperator_Invert_USub",
+      "core/ReplaceUnaryOperator_Invert_Not",
+      "core/ReplaceUnaryOperator_Delete_Invert",
+      "core/ReplaceUnaryOperator_Delete_Not",
+      "core/AddNot",
+      "core/ReplaceTrueWithFalse",
+      "core/ReplaceFalseWithTrue",
+      "core/ReplaceAndWithOr",
+      "core/ReplaceOrWithAnd",
+      "core/ReplaceBreakWithContinue",
+      "core/ReplaceContinueWithBreak",
+      "core/ExceptionReplacer",
+      "core/NumberReplacer",
+      "core/RemoveDecorator",
+      "core/ZeroIterationForLoop",
+      "core/VariableReplacer",
+      "core/VariableInserter"
+    ],
+    "operators_without_mutants_needing_arguments": [
+      "core/VariableReplacer",
+      "core/VariableInserter"
+    ],
+    "version": "8.9.0"
+  }
+}
