@@ -1,0 +1,51 @@
+{
+  "baseline_sha256": "85508ecdb0bacac49753e122b0e02d5fd0ff845af72749dc618045932211274a",
+  "dependence_seeds": [
+    14100000,
+    14100029
+  ],
+  "implementation": "statsforecast 2.1.1 statsforecast.models.AutoARIMA(season_length=12), defaults",
+  "model_id": "auto_arima",
+  "model_index": 3,
+  "platform": "Linux-6.18.44-fc-v553-x86_64-with-glibc2.39",
+  "protocol_sha256": "f7ec88835118db61f763da69539f49373b70e0fcf3a4d6a4dab01c6c0b7249e7",
+  "python": "3.13.18",
+  "scorecard": {
+    "instances": 30,
+    "other_arguments": "defaults",
+    "seed": 14000000
+  },
+  "series_seeds": [
+    14000000,
+    14000029
+  ],
+  "source_files": {
+    "experiments/common.py": "cedd7261786543de5651ed127c295135dfc3487750736295ef4fa1036432b5e7",
+    "experiments/study3_common.py": "3473d2286395f30969bf5f65964af3bb146e8ea2ef77f7a3c48ccdf940e7bfd4",
+    "experiments/study3_learners.py": "957a5bf60176f98196a1f318bc56260d1fdeb99faeef33b3f5fd399329ba8067",
+    "experiments/study3_subject.py": "2f5ad6efdd8fc223cc9b1938328d008632f933049df32481ca27cbc0a6615032",
+    "experiments/study3_threads.py": "0178c75f7d7092067dc764656e5feecd06d7af551c581b8a49bcd7d19fa180d7",
+    "experiments/zoo/__init__.py": "a9ad94acc9b367cbaec092a07065207798af980b0ab745ffa6272b0b9593ade7",
+    "experiments/zoo/figure.py": "ea1c4c8dbe33c9f41e6f9ebb89ad196e75cef05ce274b401fae983569ee41a0e",
+    "experiments/zoo/models.py": "4d05e7501d7ff49bb2da1004223e7fbe0c8128030e64274212a98caf94f0de18",
+    "experiments/zoo/parroting.py": "c15ce455fc020cda8012536e922a45a2fdaa916434592c5ed9ae62ec6b959e4f",
+    "experiments/zoo/run_zoo.py": "057c1c7be64bb8a7d9ebd0b82400b7a2914e5b6934bf787bfc12fe8c4a888fd1"
+  },
+  "table_sha256": "eefa050e072d91878b886d5e909beaafade3bc57f040e32678b597e7b89ac2c8",
+  "timegym_commit": "6c729e8801c02eac403dadc4181a896b3e6911b7",
+  "versions": {
+    "accelerate": null,
+    "chronos-forecasting": null,
+    "coreforecast": "0.0.20",
+    "matplotlib": "3.11.2",
+    "numpy": "2.5.4",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.18.1",
+    "statsforecast": "2.1.1",
+    "statsmodels": "0.15.0",
+    "threadpoolctl": "3.8.0",
+    "torch": null,
+    "transformers": null
+  }
+}
