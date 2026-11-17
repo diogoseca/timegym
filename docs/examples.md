@@ -62,6 +62,21 @@ links to the tutorials for the tools it uses.
 
     Data: half-hourly demand in Victoria, Australia, 2014. Runs in about 15 seconds.
 
+-   [![The 90% range for each day's energy from two forecasts with the same half-hour ranges: the one from whole days is wide and holds most days, the one from shuffled half hours is a narrow band that two days in three fall outside](images/examples/solar-farm.png)](../examples/solar-farm.ipynb)
+
+    **[Solar farm output: a range for every half hour is not a range for the day](../examples/solar-farm.ipynb)**
+
+    *Energy and environment*
+
+    Two forecasts of a solar farm's next day give the same range for every
+    half hour and score the same to the last digit. Asked for the day's
+    energy, one range holds on 84% of days and the other on 33%: it depends
+    on whether a forecast keeps whole days together. TimeGym scores sampled
+    forecasts for the whole day at once, and generated series with a known
+    answer show when the gap opens.
+
+    Data: half-hourly output of an Australian solar farm, 2019 to 2020. Runs in about 15 seconds.
+
 -   [![Width of a 90% range and how often it held, by month, with and without a log transform](images/examples/river-flow.png)](../examples/river-flow.ipynb)
 
     **[River flow: checking the range, not only the forecast](../examples/river-flow.ipynb)**
@@ -266,6 +281,5 @@ data and we know what the result is.
 
 - **Demand and operations:** bakery demand around holidays, bike-share
   stations, emergency room arrivals.
-- **Energy and environment:** solar farm output.
 - **Chaotic but partly predictable:** flu season.
 - **Lessons that cut across domains:** a ready-made model against your own.

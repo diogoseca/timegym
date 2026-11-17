@@ -104,6 +104,7 @@ nav:
           - "Call center staffing: forecast again at ten o'clock": examples/call-center.ipynb
       - Energy and environment:
           - "Tomorrow's electricity demand: let the worst days say what is missing": examples/electricity-demand.ipynb
+          - "Solar farm output: a range for every half hour is not a range for the day": examples/solar-farm.ipynb
           - "River flow: checking the range, not only the forecast": examples/river-flow.ipynb
           - "Will it rain tomorrow? Score the forecast you already have": examples/rain.ipynb
           - "Tomorrow's temperature: which city should Sydney watch?": examples/daily-temperature.ipynb
