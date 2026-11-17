@@ -130,6 +130,33 @@
     "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Electricity Demand (Elecdemand) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656069. The archive took the series from the R package fpp2.",
     "changes": "Converted from the archive's .tsf file and rounded to three decimals, which is one megawatt. The file holds one row per day and one column per half-hour; the loader returns one row per half-hour."
   },
+  "rain": {
+    "title": "Daily rain, temperature and the official chance of rain at Australian weather stations, May 2015 to April 2017",
+    "sample": {
+      "file": "rain.csv",
+      "sha256": "03bee1458bc1b1a417c50bb68a19e5e06d26bb198752efef746abdc0fe16b2ea",
+      "gaps": true,
+      "holds": "Sydney (Observatory Hill), station 66062: 725 days of rain, highest and lowest temperature, and the Bureau of Meteorology's chance of rain for each day as forecast 0 to 5 days before"
+    },
+    "full": "The same nine columns for all 422 stations, with the station number above each column",
+    "source": {
+      "name": "Temperature Rain Dataset with Missing Values",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/5129073",
+      "doi": "10.5281/zenodo.5129073",
+      "download": "https://zenodo.org/api/records/5129073/files/temperature_rain_dataset_with_missing_values.zip/content",
+      "file": "temperature_rain_dataset_with_missing_values.zip",
+      "bytes": 25747139,
+      "sha256": "36a8c8cce2a99a8372ff8f82450b50dcc1b5eff653820c7a828d56730fe325fb",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY-SA 3.0 AU",
+      "url": "https://creativecommons.org/licenses/by-sa/3.0/au/"
+    },
+    "credit": "Bureau of Meteorology, Australian Government: Historical rainfall and temperature forecast and observations hourly data - weather forecasting verification data (2015-05 to 2016-04), and Rainfall and temperature forecast and observations - verification 2016-05 to 2017-04, both on data.gov.au. Put together as one file by Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2021). Temperature Rain Dataset with Missing Values (Version 1) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.5129073",
+    "changes": "Rain, highest and lowest temperature and the chance of rain taken from the archive's .tsf file; its other series left out. Each forecast moved from the day it was issued to the day it is for. Columns renamed. Days without a figure left empty. The sample keeps one station."
+  },
   "river-flow": {
     "title": "Daily flow of the Saugeen River at Walkerton, Ontario, 1915 to 1979",
     "sample": {

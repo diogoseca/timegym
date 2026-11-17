@@ -87,6 +87,34 @@ time was handled.
 - Credit: Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Electricity Demand (Elecdemand) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656069. The archive took the series from the R package fpp2.
 - Changes: Converted from the archive's .tsf file and rounded to three decimals, which is one megawatt. The file holds one row per day and one column per half-hour; the loader returns one row per half-hour.
 
+## Rain
+
+`rain.csv`: daily weather at Sydney (Observatory Hill), Bureau of Meteorology
+station 66062, 725 days from 2 May 2015 to 25 April 2017. Each row has the
+rain that fell, in millimeters (`rain_mm`), the highest and lowest
+temperature, in degrees Celsius, and the chance of rain, in percent, that the
+Bureau gave for that day in the forecast it issued on the day itself and in
+those it issued one to five days before (`bureau_same_day` to
+`bureau_5_days_before`). The chance is for more than 0.2 millimeters of rain.
+
+A row is the 24 hours that start at 15:00 on its date. The source does not
+name the time zone; read as universal time, that is 1 am the next morning in
+Sydney. Each forecast column has 10 days with no figure in the source, and
+the first days of the table are too early to have a forecast from days
+before; those cells are empty.
+
+- Source: Temperature Rain Dataset with Missing Values, Monash Time Series Forecasting Archive, on Zenodo,
+  <https://zenodo.org/records/5129073>
+- License: [CC BY-SA 3.0 AU](https://creativecommons.org/licenses/by-sa/3.0/au/). This is the
+  license data.gov.au lists for the Bureau's data, which asks for credit and
+  for copies and changed versions to be shared under the same license. The
+  archive lists its own file as CC BY 4.0. We follow the stricter of the two.
+- Credit: Bureau of Meteorology, Australian Government: Historical rainfall and temperature forecast and observations hourly data - weather forecasting verification data (2015-05 to 2016-04), and Rainfall and temperature forecast and observations - verification 2016-05 to 2017-04, both on data.gov.au. Put together as one file by Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2021). Temperature Rain Dataset with Missing Values (Version 1) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.5129073
+- Changes: Rain, highest and lowest temperature and the chance of rain taken from the archive's .tsf file; its other series left out. Each forecast moved from the day it was issued to the day it is for. Columns renamed. Days without a figure left empty. The sample keeps one station.
+- Full version: the same nine columns for all 422 stations, with the station
+  number above each column. `load("rain", full=True)["86282"]` is Melbourne
+  Airport. The download is 26 MB.
+
 ## River flow
 
 `river-flow.csv`: the daily mean flow of the Saugeen River at Walkerton,

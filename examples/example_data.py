@@ -228,22 +228,32 @@ def _sample_store_sales(table):
 # Files from the Monash Time Series Forecasting Archive
 
 
-def _archive_series(source, member):
-    """Every series in one of the archive's ``.tsf`` files, by name, with its dates as the index."""
+def _archive_series(source, member, keep=None):
+    """Series from one of the archive's ``.tsf`` files, each with its dates as the index.
+
+    A series is filed under its name, or under its other labels (such as station and
+    measurement) when the file gives any. ``keep`` chooses series by those labels.
+    """
     steps = {"half_hourly": "30min", "daily": "D", "monthly": "MS"}
-    with zipfile.ZipFile(source) as archive:
-        text = archive.read(member).decode("utf-8")
-    step, series = None, {}
-    for line in text.splitlines():
-        if line.startswith("@frequency"):
-            step = steps[line.split()[1]]
-        if not line or line[0] in "#@":
-            continue
-        name, start, values = line.split(":", 2)
-        # The archive writes a missing value as "?".
-        values = pd.to_numeric(pd.Series(values.split(",")), errors="coerce")
-        values.index = pd.date_range(start.split(" ")[0], periods=len(values), freq=step)
-        series[name] = values
+    step, labels, series = None, [], {}
+    with zipfile.ZipFile(source) as archive, archive.open(member) as lines:
+        for line in io.TextIOWrapper(lines, encoding="utf-8"):
+            line = line.strip()
+            if line.startswith("@attribute"):
+                labels.append(line.split()[1])
+            elif line.startswith("@frequency"):
+                step = steps[line.split()[1]]
+            if not line or line[0] in "#@":
+                continue
+            *fields, values = line.split(":", len(labels))
+            record = dict(zip(labels, fields))
+            name, start = record.pop("series_name"), record.pop("start_timestamp").split(" ")[0]
+            if keep is not None and not keep(record):
+                continue
+            # The archive writes a missing value as "?".
+            values = pd.to_numeric(pd.Series(values.split(",")), errors="coerce")
+            values.index = pd.date_range(start, periods=len(values), freq=step)
+            series[tuple(record.values()) if record else name] = values
     return series
 
 
@@ -310,6 +320,53 @@ def _sample_spare_parts(table):
     """Every eighth part among those with a figure for every month."""
     complete = table.loc[:, table.notna().all()]
     return complete.iloc[:, ::8].astype(int)
+
+
+# Daily rain and the official chance of rain
+
+_RAIN_STATION = "66062"   # Sydney (Observatory Hill)
+_RAIN_COLUMNS = {"PRCP_SUM": "rain_mm", "T_MAX": "max_temp", "T_MIN": "min_temp"}
+_RAIN_FORECASTS = {
+    0: "bureau_same_day", 1: "bureau_1_day_before", 2: "bureau_2_days_before",
+    3: "bureau_3_days_before", 4: "bureau_4_days_before", 5: "bureau_5_days_before",
+}
+
+
+def _read_rain(path):
+    """One station's table, or every station's with the station number above each column."""
+    with open(path, encoding="utf-8") as handle:
+        every_station = handle.readline().startswith("station,")
+    table = pd.read_csv(path, header=[0, 1] if every_station else 0, index_col=0, parse_dates=True)
+    table.index = pd.DatetimeIndex(table.index, freq="D", name="date")
+    return table
+
+
+def _write_rain(table, path):
+    table.to_csv(path, index_label="date" if table.columns.nlevels == 1 else None,
+                 date_format="%Y-%m-%d", lineterminator="\n")
+
+
+def _build_rain(source):
+    """Rain, temperature and the Bureau's chance of rain for all 422 stations.
+
+    The archive files each forecast under the day it was issued. Here it is moved to the
+    day it is for, so a row holds what happened and what had been forecast for it.
+    """
+    wanted = {**_RAIN_COLUMNS, **{f"fcst_{days}_DailyPoP": name for days, name in _RAIN_FORECASTS.items()}}
+    series = _archive_series(source, "temperature_rain_dataset_with_missing_values.tsf",
+                             keep=lambda labels: labels["obs_or_fcst"] in wanted)
+    columns = {}
+    for (station, kind), values in series.items():
+        days_before = int(kind.split("_")[1]) if kind.startswith("fcst_") else 0
+        columns[(station, wanted[kind])] = values.shift(days_before)
+    table = pd.DataFrame(columns).rename_axis(index="date", columns=["station", None])
+    order = [*_RAIN_COLUMNS.values(), *_RAIN_FORECASTS.values()]
+    return table.reindex(columns=[(station, name) for station in table.columns.levels[0] for name in order])
+
+
+def _sample_rain(table):
+    """One station: Sydney (Observatory Hill)."""
+    return table[_RAIN_STATION]
 
 
 # Half-hourly electricity demand
@@ -401,6 +458,12 @@ _DATASETS = {
         "write": _write_electricity,
         "sample": lambda table: table,
     },
+    "rain": {
+        "read": _read_rain,
+        "build": _build_rain,
+        "write": _write_rain,
+        "sample": _sample_rain,
+    },
     "river-flow": {
         "read": _read_daily,
         "build": _build_river_flow,
@@ -432,7 +495,8 @@ def check():
             problems.append(f"{name}: {path.name} does not match its recorded checksum")
         else:
             table = load(name)
-            if table.index.freq is None or table.isna().any().any():
+            gaps = table.isna().any().any() and not entry["sample"].get("gaps", False)
+            if table.index.freq is None or gaps:
                 problems.append(f"{name}: the sample needs a regular date index and no gaps")
     problems += [f"{name}: missing from datasets.json" for name in _DATASETS if name not in _records()]
     return problems
