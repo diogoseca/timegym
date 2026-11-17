@@ -366,6 +366,32 @@
     "credit": "Maindonald, J. H., & Braun, W. J. DAAG: Data Analysis and Graphics Data and Functions (R package), dataset bomsoi. The package gives the web pages of the Australian Bureau of Meteorology as the source of the figures. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
     "changes": "The twelve monthly columns of each year put in one column in date order, named soi; the yearly average and the rainfall columns left out."
   },
+  "souvenir-sales": {
+    "title": "Monthly sales of a souvenir shop in Queensland, January 1987 to December 1993",
+    "sample": {
+      "file": "souvenir-sales.csv",
+      "sha256": "b389d3dfdbf4ca1803c767fdce073ebb822290ad8fdd069010e097dd55243a48",
+      "holds": "The whole series, 84 months from January 1987 to December 1993",
+      "complete": true
+    },
+    "full": "The same 84 months",
+    "source": {
+      "name": "souvenirs",
+      "publisher": "R package fpp3, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/fpp3/souvenirs.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/fpp3/souvenirs.csv",
+      "file": "souvenirs.csv",
+      "bytes": 1721,
+      "sha256": "b9ab74363aee0e3d7a2008dff96447a8587df4c8001795af5537dd228fc3ad07",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-3 (R package fpp3)",
+      "url": "https://github.com/robjhyndman/fpp3-package/blob/master/DESCRIPTION"
+    },
+    "credit": "Hyndman, R. J., and others. fpp3: Data for \"Forecasting: Principles and Practice\" (3rd Edition) (R package), dataset souvenirs. The package describes the series as monthly sales for a souvenir shop on the wharf at a beach resort town in Queensland, Australia, and gives Makridakis, Wheelwright and Hyndman (1998), Forecasting: Methods and Applications, exercise 5.8, as its source. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column dropped; the columns named month and sales, with the month written as year and month number."
+  },
   "sp500": {
     "title": "The S&P 500 share index, 1950 to 2015",
     "sample": {

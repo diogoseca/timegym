@@ -577,6 +577,18 @@ def _build_southern_oscillation(source):
     return pd.DataFrame({"soi": years[names].to_numpy(float).ravel()}, index=months)
 
 
+# Monthly sales of a souvenir shop
+
+
+def _build_souvenir_sales(source):
+    """One row a month, with the months checked to run without a gap."""
+    table = pd.read_csv(source)
+    months = pd.PeriodIndex(pd.to_datetime(table["Month"], format="%Y %b"), freq="M", name="month")
+    if not months.equals(pd.period_range(months[0], periods=len(months), freq="M", name="month")):
+        raise ValueError("the source skips a month, so it cannot be put on a regular calendar")
+    return pd.DataFrame({"sales": table["Sales"].to_numpy(float)}, index=months)
+
+
 # The S&P 500 share index
 
 
@@ -734,6 +746,12 @@ _DATASETS = {
     "southern-oscillation": {
         "read": _read_monthly,
         "build": _build_southern_oscillation,
+        "write": _write_airline,
+        "sample": lambda table: table,
+    },
+    "souvenir-sales": {
+        "read": _read_monthly,
+        "build": _build_souvenir_sales,
         "write": _write_airline,
         "sample": lambda table: table,
     },

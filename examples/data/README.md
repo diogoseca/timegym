@@ -272,6 +272,21 @@ series.
 - Credit: Maindonald, J. H., & Braun, W. J. DAAG: Data Analysis and Graphics Data and Functions (R package), dataset bomsoi. The package gives the web pages of the Australian Bureau of Meteorology as the source of the figures. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
 - Changes: The twelve monthly columns of each year put in one column in date order, named soi; the yearly average and the rainfall columns left out.
 
+## Souvenir sales
+
+`souvenir-sales.csv`: the monthly sales of a souvenir shop on the wharf of a
+beach resort town in Queensland, Australia, from January 1987 to December
+1993, 84 months. The package does not say what unit the sales are in. The
+sample is the whole series.
+
+- Source: souvenirs, R package fpp3, as a CSV file in Rdatasets,
+  <https://vincentarelbundock.github.io/Rdatasets/doc/fpp3/souvenirs.html>
+- License: [GPL-3 (R package fpp3)](https://github.com/robjhyndman/fpp3-package/blob/master/DESCRIPTION), the license
+  of the package the table ships in. The package gives a textbook exercise as
+  its source and does not name the shop.
+- Credit: Hyndman, R. J., and others. fpp3: Data for "Forecasting: Principles and Practice" (3rd Edition) (R package), dataset souvenirs. The package describes the series as monthly sales for a souvenir shop on the wharf at a beach resort town in Queensland, Australia, and gives Makridakis, Wheelwright and Hyndman (1998), Forecasting: Methods and Applications, exercise 5.8, as its source. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
+- Changes: The row-number column dropped; the columns named month and sales, with the month written as year and month number.
+
 ## Share index
 
 `sp500.csv`: the level of the S&P 500 share index at the close of the last
