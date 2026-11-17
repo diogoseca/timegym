@@ -114,9 +114,12 @@ def test_every_dataset_is_used_by_an_example():
         assert f'load("{name}"' in sources, f"no example loads {name}"
 
 
-def test_loader_returns_regular_date_indexes():
-    for name in RECORDS:
+def test_loader_returns_date_indexes_with_a_regular_step_unless_recorded():
+    for name, entry in RECORDS.items():
         table = example_data.load(name)
         assert len(table) > 0 and table.index.is_monotonic_increasing and table.index.is_unique
-        assert table.index.freq is not None, f"{name}: TimeGym needs a regular date index"
+        if entry["sample"].get("regular", True):
+            assert table.index.freq is not None, f"{name}: TimeGym's built-in forecasters need a regular step"
+        else:
+            assert table.index.freq is None, f"{name}: recorded as having no regular step, but it has one"
         assert "License" in example_data.about(name)

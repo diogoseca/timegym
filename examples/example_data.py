@@ -11,8 +11,10 @@ its license, what was changed and the checksum of every file.
     everything = load("store-sales", full=True)  # downloads the source once
     print(about("store-sales"))                  # source, license and credit
 
-Every table comes back with a regular date index (from half-hourly to yearly),
-which is what TimeGym needs to hand a forecaster the dates it must forecast.
+Every table comes back indexed by date. All but one have a regular step (from
+half-hourly to yearly), which TimeGym's built-in forecasters need to work out
+the dates they must forecast. ``bank-calls`` follows a call center's opening
+hours instead: it has no rows for nights, weekends and holidays.
 
 From a terminal, ``python examples/example_data.py --check`` verifies the
 committed samples and ``--rebuild NAME`` writes a sample again from its source.
@@ -521,6 +523,27 @@ def _sample_sp500(table):
     return table[["close"]].resample("W-FRI").last()
 
 
+# Calls to a bank's call center
+
+
+def _read_opening_hours(path):
+    """Rows only for the times the center was open, so the index has no regular step."""
+    return pd.read_csv(path, index_col="time", parse_dates=True)
+
+
+def _build_bank_calls(source):
+    """Calls in every five minutes the center was open, by its own clock."""
+    table = pd.read_csv(source, usecols=["DateTime", "Calls"])
+    times = pd.to_datetime(table["DateTime"]).dt.tz_localize(None)
+    return pd.DataFrame({"calls": table["Calls"].to_numpy()}, index=pd.DatetimeIndex(times, name="time"))
+
+
+def _sample_bank_calls(table):
+    """Calls in each half hour from 7:00 to 21:00."""
+    calls = table.loc[table.index.hour < 21, "calls"]
+    return calls.groupby(calls.index.floor("30min")).sum().to_frame()
+
+
 _DATASETS = {
     "store-sales": {
         "read": _read_store_sales,
@@ -545,6 +568,12 @@ _DATASETS = {
         "build": _build_spare_parts,
         "write": _write_monthly_counts,
         "sample": _sample_spare_parts,
+    },
+    "bank-calls": {
+        "read": _read_opening_hours,
+        "build": _build_bank_calls,
+        "write": _write_hourly,
+        "sample": _sample_bank_calls,
     },
     "city-temperatures": {
         "read": _read_daily,
@@ -614,7 +643,8 @@ def check():
         else:
             table = load(name)
             gaps = table.isna().any().any() and not entry["sample"].get("gaps", False)
-            if table.index.freq is None or gaps:
+            uneven = table.index.freq is None and entry["sample"].get("regular", True)
+            if uneven or gaps:
                 problems.append(f"{name}: the sample needs a regular date index and no gaps")
     problems += [f"{name}: missing from datasets.json" for name in _DATASETS if name not in _records()]
     return problems

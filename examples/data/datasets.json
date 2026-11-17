@@ -103,6 +103,32 @@
     "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Car Parts Dataset (with Missing Values) (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656022. The archive took the series from the R package expsmooth.",
     "changes": "Converted from the archive's .tsf file to a table with one row per month and one column per part, under the archive's part labels. The sample keeps every eighth part among the 2,509 that have a figure for every month."
   },
+  "bank-calls": {
+    "title": "Calls to a bank's call center, March to October 2003",
+    "sample": {
+      "file": "bank-calls.csv",
+      "sha256": "da946d6312d53e264236a37b70f65cd96078393dfdb05aac9d330ce8df41f8ac",
+      "holds": "Calls in each half hour from 7:00 to 21:00 on 164 working days, 3 March to 24 October 2003: 4,592 half hours",
+      "regular": false
+    },
+    "full": "Calls in every five minutes from 7:00 to 21:05 on the same 164 days, 27,716 rows",
+    "source": {
+      "name": "bank_calls",
+      "publisher": "R package fpp3, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/fpp3/bank_calls.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/fpp3/bank_calls.csv",
+      "file": "bank_calls.csv",
+      "bytes": 843018,
+      "sha256": "6e430180c3fa8a284e38b8367e9a7d6dae4921ca1b184cbaba7aae9b07a8f9a5",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-3 (R package fpp3)",
+      "url": "https://github.com/robjhyndman/fpp3-package/blob/master/DESCRIPTION"
+    },
+    "credit": "Hyndman, R. J., and others. fpp3: Data for \"Forecasting: Principles and Practice\" (3rd Edition) (R package), dataset bank_calls. The package gives Jonathan Weinberg as the source of the series, which is studied in Weinberg, J., Brown, L. D., & Stroud, J. R. (2007). Bayesian forecasting of an inhomogeneous Poisson process with applications to call center data. Journal of the American Statistical Association, 102(480), 1185-1198. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column dropped; times kept as the center's clock time, without the time zone mark the file carries; the columns named time and calls. The sample adds the five-minute counts up to half hours and leaves out the last five minutes of each day, 21:00 to 21:05."
+  },
   "city-temperatures": {
     "title": "Daily highest temperature at Australian weather stations, May 2015 to April 2017",
     "sample": {

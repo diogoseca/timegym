@@ -73,6 +73,26 @@ month.
 - Full version: all 2,674 parts. 165 of them have no figures from early 1999 on,
   and those months are empty.
 
+## Bank calls
+
+`bank-calls.csv`: calls handled by the call center of a large North American
+bank in each half hour from 7:00 to 21:00, on 164 working days from 3 March
+to 24 October 2003: 4,592 half hours. The table has rows only for the times
+the center was open, so there are none for nights and weekends, and six
+weekdays in that span have no rows either (4 and 7 April, 26 May, 4 July,
+1 September and 14 October). The index therefore has no regular step, and
+`datasets.json` records that with `"regular": false`.
+
+- Source: bank_calls, R package fpp3, as a CSV file in Rdatasets,
+  <https://vincentarelbundock.github.io/Rdatasets/doc/fpp3/bank_calls.html>
+- License: [GPL-3 (R package fpp3)](https://github.com/robjhyndman/fpp3-package/blob/master/DESCRIPTION), the license
+  of the package the table ships in. The package names Jonathan Weinberg as
+  the source of the series and does not give the bank's name.
+- Credit: Hyndman, R. J., and others. fpp3: Data for "Forecasting: Principles and Practice" (3rd Edition) (R package), dataset bank_calls. The package gives Jonathan Weinberg as the source of the series, which is studied in Weinberg, J., Brown, L. D., & Stroud, J. R. (2007). Bayesian forecasting of an inhomogeneous Poisson process with applications to call center data. Journal of the American Statistical Association, 102(480), 1185-1198. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
+- Changes: The row-number column dropped; times kept as the center's clock time, without the time zone mark the file carries; the columns named time and calls. The sample adds the five-minute counts up to half hours and leaves out the last five minutes of each day, 21:00 to 21:05.
+- Full version: the calls of every five minutes from 7:00 to 21:05 on the
+  same 164 days, 27,716 rows.
+
 ## City temperatures
 
 `city-temperatures.csv`: the highest temperature of each day, in degrees
