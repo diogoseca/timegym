@@ -64,6 +64,21 @@ links to the tutorials for the tools it uses.
 
     Data: calls per half hour on 164 working days of 2003. Runs in about 15 seconds.
 
+-   [![A bar for each of 20 train stations showing how much smaller the weekend miss is when the forecaster is told the day's weather: 24% at the top, more than 10% at twelve stations, and below zero at two](images/examples/station-riders.png)](../examples/station-riders.ipynb)
+
+    **[Train station riders: what is the weather worth, at best?](../examples/station-riders.ipynb)**
+
+    *Demand and operations*
+
+    Before building a feed of weather forecasts, hand the forecaster the
+    weather that really came: no forecast can beat that. At 20 Chicago
+    train stations it takes under 2% off the miss on weekdays and 8% on
+    weekends, 24% at one station and nothing at two. "Tomorrow like today"
+    keeps half of the weekend gain. Same cases, same scoring, one table
+    added.
+
+    Data: daily riders at 20 Chicago train stations with the day's weather, 2011 to 2016. Runs in about 20 seconds.
+
 -   [![Average miss by weekday for three forecasters; copying yesterday is far worse on Mondays and Saturdays](images/examples/electricity-demand.png)](../examples/electricity-demand.ipynb)
 
     **[Tomorrow's electricity demand: let the worst days say what is missing](../examples/electricity-demand.ipynb)**
@@ -294,6 +309,6 @@ everything = load("store-sales", full=True)   # every product, downloaded on fir
 These examples are planned. Each one is added once its notebook has run on real
 data and we know what the result is.
 
-- **Demand and operations:** bike-share stations, emergency room arrivals.
+- **Demand and operations:** emergency room arrivals.
 - **Chaotic but partly predictable:** flu season.
 - **Lessons that cut across domains:** a ready-made model against your own.

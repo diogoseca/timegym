@@ -103,6 +103,7 @@ nav:
           - "Spare parts: the best score goes to a forecast of zero": examples/spare-parts.ipynb
           - "The Christmas order: five Decembers cannot pick the forecaster": examples/christmas-order.ipynb
           - "Call center staffing: forecast again at ten o'clock": examples/call-center.ipynb
+          - "Train station riders: what is the weather worth, at best?": examples/station-riders.ipynb
       - Energy and environment:
           - "Tomorrow's electricity demand: let the worst days say what is missing": examples/electricity-demand.ipynb
           - "Solar farm output: a range for every half hour is not a range for the day": examples/solar-farm.ipynb
