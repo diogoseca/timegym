@@ -40,8 +40,9 @@ class _Links(HTMLParser):
 
 def local_link_targets(source: str) -> list[str]:
     # Markdown escapes fenced/inline code and separates optional link titles.
+    # md_in_html reads the Markdown inside blocks such as the example gallery's card grid.
     parser = _Links()
-    parser.feed(markdown(source, extensions=["fenced_code"]))
+    parser.feed(markdown(source, extensions=["fenced_code", "md_in_html"]))
     return parser.targets
 
 
@@ -53,7 +54,8 @@ def on_config(config):
     stage = Path(temporary.name)
     pending = [root / "README.md", *[path for path in [root / "CHANGELOG.md"] if path.exists()],
                *sorted((root / "docs").rglob("*.md")), *sorted((root / "docs").rglob("*.css")),
-               *sorted((root / "tutorials").glob("[0-9][0-9]_*.ipynb"))]
+               *sorted((root / "tutorials").glob("[0-9][0-9]_*.ipynb")),
+               *sorted((root / "examples").glob("*.ipynb"))]
     copied = set()
     while pending:
         source = pending.pop()

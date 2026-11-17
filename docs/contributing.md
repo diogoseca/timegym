@@ -46,6 +46,29 @@ Source notebooks [14](../source/14_controlled_processes.ipynb) and
 [15](../source/15_joint_processes.ipynb) explain and build the univariate and
 joint stress generators that tutorials 11 and 12 use.
 
+## Add an example
+
+An example is a notebook in `examples/` that does a forecasting job on real
+public data with TimeGym in the loop. It reports what happened when it ran: if
+the result is not the one you planned to show, change the story, not the
+numbers.
+
+1. Add the dataset as [Example data](../examples/data/README.md#add-a-dataset)
+   describes: a license that allows sharing a sample with credit, a record in
+   `datasets.json`, a reader in `example_data.py` and a small committed sample.
+2. Write the notebook so that it reads only that sample, runs in about a minute
+   or less, and protects each number its text quotes with an `assert`. Name
+   the file after the problem, set `metadata.timegym.role` to `example`, and
+   name the code cell whose plot goes on the gallery card in
+   `metadata.timegym.gallery_figure`.
+3. Execute it with `python tools/check_notebooks.py examples/<name>.ipynb --write`,
+   then run `python tools/example_figures.py` to copy that plot to
+   `docs/images/examples/`.
+4. List it in the `Examples` section of `mkdocs.yml`, as a card on the
+   [examples page](examples.md) and in the table of the
+   [examples guide](../examples/README.md). `tests/test_examples.py` keeps the
+   three in step with the folder and checks the data records and pictures.
+
 ## Check the documentation site
 
 ```bash

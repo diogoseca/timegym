@@ -1,16 +1,57 @@
-# Python examples
+# Examples
 
-This folder has two terminal examples. The Jupyter tutorials are in
-[`tutorials/`](../tutorials/README.md): start with
-[01 · Quick start](../tutorials/01_quick_start.ipynb), then
-[02 · Write and test a custom model](../tutorials/02_custom_model.ipynb).
+Forecasting jobs on real public data, from the first model to a decision, with
+TimeGym in the loop. Read them with their results on the
+[examples page](https://diogoseca.github.io/timegym/docs/examples/) of the
+documentation, or run them here.
+
+| Example | The job | What TimeGym showed |
+| --- | --- | --- |
+| [Weekly shop sales: from forecast to stock order](store-sales.ipynb) | Restock 30 products of an online gift shop every four weeks | Why the usual regression loses to a plain average, which simpler forecaster fits, and that neither knows about Christmas |
+| [The forest that cannot follow growth](passenger-growth.ipynb) | Forecast next year's airline passengers | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
+| [Bitcoin: finding out you have nothing](bitcoin.ipynb) | Forecast tomorrow's price | A 79% hit rate that came from one input reaching into the future; the honest model ties with yesterday's price |
+
+## Run them
+
+From a clone of the repository:
+
+```bash
+python -m pip install -e '.[examples]'
+python -m jupyterlab examples
+```
+
+Every notebook reads a small sample committed in [`data/`](data/README.md), so
+it runs offline, and is saved with its outputs. Installing the wheel alone does
+not install these notebooks.
+
+## The data
+
+[`example_data.py`](example_data.py) loads the datasets:
+
+```python
+from example_data import load, about
+
+sales = load("store-sales")                   # the committed sample
+everything = load("store-sales", full=True)   # downloads the public source once
+print(about("store-sales"))                   # source, license and credit
+```
+
+[`data/README.md`](data/README.md) gives each dataset's source, license, credit
+and checksums. `python examples/example_data.py --check` verifies the committed
+samples, and `--rebuild NAME` writes one again from its source.
+
+## Add an example
+
+[Contributing](../docs/contributing.md#add-an-example) lists the steps.
+
+## Terminal scripts
+
+Two scripts from before the notebooks, still used by the tests:
 
 - [`quickstart.py`](quickstart.py): generate controlled cases and inspect a
   diagnostic report.
 - [`reproduce_report.py`](reproduce_report.py): replay a saved report case for a
   supported built-in model.
-
-From the project root:
 
 ```bash
 python examples/quickstart.py

@@ -18,6 +18,7 @@ where it fails.
 
 **[Documentation](https://diogoseca.github.io/timegym/)** ·
 [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) ·
+[Examples](https://diogoseca.github.io/timegym/docs/examples/) ·
 [Tutorials](https://diogoseca.github.io/timegym/docs/tutorials/) ·
 [API](https://diogoseca.github.io/timegym/docs/reference/) ·
 [Changelog](CHANGELOG.md)
@@ -219,6 +220,18 @@ Each check returns one of five verdicts (`PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPP
 ## Scenarios
 
 The scorecard's rows are ten kinds of series, from pure noise to random walks with drift, each drawn at low noise (standard deviation 0.5) and high noise (2.0). For each one TimeGym knows what a forecast *can* get right and what nobody can predict; the scorecard prints both, and [Scorecards and the scenario grid](docs/api/scorecard.md#the-grid) lists all ten. The [scenario guide](docs/stress-cases.md) explains each kind in plain terms, why mean reversion and the random walk are the same equation, and the composed and financial ones beyond the scorecard: price jumps, volatility clusters (GARCH) and hidden regime switches, alone or across several correlated series.
+
+## Examples
+
+Forecasting jobs on real public data, from the first model to a decision, with
+TimeGym in the loop. The [examples page](https://diogoseca.github.io/timegym/docs/examples/)
+shows them with their results and says how to run them.
+
+| Example | What TimeGym showed |
+|---|---|
+| [Weekly shop sales: from forecast to stock order](https://diogoseca.github.io/timegym/examples/store-sales/) | Why the usual regression loses to a plain average on a gift shop's products, and which simpler forecaster leaves fewer units out of stock |
+| [The forest that cannot follow growth](https://diogoseca.github.io/timegym/examples/passenger-growth/) | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
+| [Bitcoin: finding out you have nothing](https://diogoseca.github.io/timegym/examples/bitcoin/) | A 79% hit rate that came from one input reaching into the future |
 
 ## Tutorials
 
