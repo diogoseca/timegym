@@ -122,6 +122,34 @@ does not say what each product is. The 114 are every second product among the
 - Full version: all 767 products. Most of them have far fewer patients a
   month; the smallest average 10.
 
+## London air
+
+`london-air.csv`: fine particles in the air (PM2.5, in micrograms per cubic
+meter) for every hour at 24 air quality monitors in London, 3,624 hours from
+1 November 2017 to 31 March 2018. Each column is one monitor, under the
+network's site code. A cell is empty where the monitor reported nothing for
+that hour, which is 23% of the cells: three monitors (`LH0`, `HR1` and `BX1`)
+report nothing in these five months. The values are the archive's, with
+nothing filled in or removed, and 0.7% of them are below zero.
+
+- Source: KDD Cup Dataset (with Missing Values), Monash Time Series Forecasting Archive, on Zenodo,
+  <https://zenodo.org/records/4656719>
+- License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), the archive's
+  license for its file. The archive does not say under which terms the
+  London Air Quality Network shared the readings with the competition.
+- Credit: Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). KDD Cup Dataset (with Missing Values) (Version 4) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656719. The archive took the series from the data of the KDD Cup 2018 forecasting competition; the London readings in it were made by the London Air Quality Network.
+- Changes: The fine-particle (PM2.5) series of the 24 London monitors taken from the archive's .tsf file, one column per monitor under the network's site code; the Beijing series and the other measurements left out. Nothing filled in. The sample keeps the last five months.
+- Full version: the same 24 monitors for all 15 months from 1 January 2017,
+  10,920 hours. One monitor, `CT2`, starts on 1 March 2017.
+
+The archive also publishes this dataset
+[without missing values](https://zenodo.org/records/4656756): a monitor's
+empty hours before its first reading are set to zero and every later empty
+hour repeats the last reading. Applying that rule to the file used here gives
+the archive's filled file value for value, for all 270 series (checked on
+17 November 2026). The [air quality example](../air-quality.ipynb) shows what
+that does to a forecast's score.
+
 ## Rain
 
 `rain.csv`: daily weather at Sydney (Observatory Hill), Bureau of Meteorology

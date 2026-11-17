@@ -238,7 +238,7 @@ def _archive_series(source, member, keep=None):
     A series is filed under its name, or under its other labels (such as station and
     measurement) when the file gives any. ``keep`` chooses series by those labels.
     """
-    steps = {"half_hourly": "30min", "daily": "D", "monthly": "MS"}
+    steps = {"half_hourly": "30min", "hourly": "h", "daily": "D", "monthly": "MS"}
     step, labels, series = None, [], {}
     with zipfile.ZipFile(source) as archive, archive.open(member) as lines:
         for line in io.TextIOWrapper(lines, encoding="utf-8"):
@@ -251,7 +251,10 @@ def _archive_series(source, member, keep=None):
                 continue
             *fields, values = line.split(":", len(labels))
             record = dict(zip(labels, fields))
-            name, start = record.pop("series_name"), record.pop("start_timestamp").split(" ")[0]
+            # A start is written as "2017-01-01 14-00-00": a day, and an hour that counts
+            # for series with more than one value a day.
+            name, (day, _, clock) = record.pop("series_name"), record.pop("start_timestamp").partition(" ")
+            start = pd.Timestamp(day) + pd.Timedelta(hours=int(clock[:2]) if step in ("30min", "h") else 0)
             if keep is not None and not keep(record):
                 continue
             # The archive writes a missing value as "?".
@@ -410,6 +413,34 @@ def _sample_city_temperatures(table):
     return table[list(_CITY_STATIONS.values())].set_axis(list(_CITY_STATIONS), axis=1)
 
 
+# Hourly fine particles in London's air
+
+
+def _read_hourly(path):
+    table = pd.read_csv(path, index_col="time", parse_dates=True)
+    table.index = pd.DatetimeIndex(table.index, freq="h", name="time")
+    return table
+
+
+def _write_hourly(table, path):
+    table.to_csv(path, index_label="time", date_format="%Y-%m-%d %H:%M", lineterminator="\n")
+
+
+def _build_london_air(source):
+    """Fine particles (PM2.5) for every hour at London's 24 monitors, empty where nothing was reported."""
+    series = _archive_series(
+        source, "kdd_cup_2018_dataset_with_missing_values.tsf",
+        keep=lambda labels: labels["city"] == "London" and labels["air_quality_measurement"] == "PM2.5",
+    )
+    table = pd.DataFrame({station: values for (_, station, _), values in series.items()})
+    return table.asfreq("h").rename_axis(index="time", columns="monitor")
+
+
+def _sample_london_air(table):
+    """The last five months."""
+    return table.loc["2017-11-01":]
+
+
 # Half-hourly electricity demand
 
 
@@ -510,6 +541,12 @@ _DATASETS = {
         "build": _build_hospital,
         "write": _write_monthly_counts,
         "sample": _sample_hospital,
+    },
+    "london-air": {
+        "read": _read_hourly,
+        "build": _build_london_air,
+        "write": _write_hourly,
+        "sample": _sample_london_air,
     },
     "rain": {
         "read": _read_rain,

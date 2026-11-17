@@ -182,6 +182,33 @@
     "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Hospital Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656014. The archive took the series from the R package expsmooth.",
     "changes": "Converted from the archive's .tsf file to a table with one row per month and one column per product, under the archive's labels. The sample keeps every second product among the 227 with at least 100 patients a month on average."
   },
+  "london-air": {
+    "title": "Hourly fine particles (PM2.5) at 24 air quality monitors in London, January 2017 to March 2018",
+    "sample": {
+      "file": "london-air.csv",
+      "sha256": "908a0d8665692ffbc5b99fe595e152f01408d982990501cfc26334a3fcd00d92",
+      "holds": "24 monitors, 3,624 hours from 1 November 2017 to 31 March 2018; a cell is empty where a monitor reported nothing",
+      "gaps": true
+    },
+    "full": "The same 24 monitors for all 15 months, 10,920 hours",
+    "source": {
+      "name": "KDD Cup Dataset (with Missing Values)",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656719",
+      "doi": "10.5281/zenodo.4656719",
+      "download": "https://zenodo.org/api/records/4656719/files/kdd_cup_2018_dataset_with_missing_values.zip/content",
+      "file": "kdd_cup_2018_dataset_with_missing_values.zip",
+      "bytes": 2456948,
+      "sha256": "3d0d2dbec3621b20c7a8ae6e6f00a63bfaebb962dca34d9f60f0ddbbde03e9bd",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). KDD Cup Dataset (with Missing Values) (Version 4) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656719. The archive took the series from the data of the KDD Cup 2018 forecasting competition; the London readings in it were made by the London Air Quality Network.",
+    "changes": "The fine-particle (PM2.5) series of the 24 London monitors taken from the archive's .tsf file, one column per monitor under the network's site code; the Beijing series and the other measurements left out. Nothing filled in. The sample keeps the last five months."
+  },
   "rain": {
     "title": "Daily rain, temperature and the official chance of rain at Australian weather stations, May 2015 to April 2017",
     "sample": {
