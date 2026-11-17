@@ -57,6 +57,62 @@ source file in [`experiments/data`](../../experiments/data/README.md).
 - Credit: Box, G. E. P., Jenkins, G. M., & Reinsel, G. C. (1994). Time Series Analysis: Forecasting and Control (3rd ed.), series G. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
 - Changes: The fractional-year column replaced by the month, and the value column named passengers.
 
+## Spare parts
+
+`spare-parts.csv`: units sold per month for 314 car parts, 51 months from
+January 1998 to March 2002. There is one column per part, under the archive's
+labels (`T8`, `T20` and so on); the archive does not say what each part is.
+The 314 are every eighth part among the 2,509 that have a figure for every
+month.
+
+- Source: Car Parts Dataset (with Missing Values), Monash Time Series Forecasting Archive, on Zenodo,
+  <https://zenodo.org/records/4656022>
+- License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Credit: Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Car Parts Dataset (with Missing Values) (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656022. The archive took the series from the R package expsmooth.
+- Changes: Converted from the archive's .tsf file to a table with one row per month and one column per part, under the archive's part labels. The sample keeps every eighth part among the 2,509 that have a figure for every month.
+- Full version: all 2,674 parts. 165 of them have no figures from early 1999 on,
+  and those months are empty.
+
+## Electricity demand
+
+`electricity-demand.csv`: electricity demand in Victoria, Australia, for every
+half-hour of 2014, in gigawatts. The file has one row per day and one column
+per half-hour, and `load` returns one row per half-hour. The sample is the
+whole series. The source does not say how the clock change for daylight saving
+time was handled.
+
+- Source: Electricity Demand (Elecdemand) Dataset, Monash Time Series Forecasting Archive, on Zenodo,
+  <https://zenodo.org/records/4656069>
+- License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Credit: Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Electricity Demand (Elecdemand) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656069. The archive took the series from the R package fpp2.
+- Changes: Converted from the archive's .tsf file and rounded to three decimals, which is one megawatt. The file holds one row per day and one column per half-hour; the loader returns one row per half-hour.
+
+## River flow
+
+`river-flow.csv`: the daily mean flow of the Saugeen River at Walkerton,
+Ontario, in cubic meters per second, 10,957 days from 1 January 1950 to
+31 December 1979.
+
+- Source: Saugeen River Flow (SaugeenDay) Dataset, Monash Time Series Forecasting Archive, on Zenodo,
+  <https://zenodo.org/records/4656058>
+- License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Credit: Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Saugeen River Flow (SaugeenDay) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656058. The archive took the series from the R package deseasonalize.
+- Changes: Converted from the archive's .tsf file to a table with one row per day. The sample keeps 1950 to 1979.
+- Full version: the same series from 1 January 1915, 23,741 days.
+
+## Sunspots
+
+`sunspots.csv`: the yearly sunspot number, 289 years from 1700 to 1988. The
+sample is the whole series. These are the numbers as published up to 1988;
+the keepers of the series, WDC-SILSO at the Royal Observatory of Belgium, have
+since revised and extended it.
+
+- Source: sunspot.year, R datasets package, as a CSV file in Rdatasets,
+  <https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/sunspot.year.html>
+- License: [GPL-2 | GPL-3 (R datasets package)](https://stat.ethz.ch/R-manual/R-devel/library/datasets/DESCRIPTION)
+- Credit: Tong, H. (1996). Non-Linear Time Series. Clarendon Press, Oxford, p. 471. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
+- Changes: The row-number column dropped, and the columns named year and sunspots.
+
 ## Check or rebuild a sample
 
 ```bash

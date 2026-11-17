@@ -76,5 +76,110 @@
     },
     "credit": "Box, G. E. P., Jenkins, G. M., & Reinsel, G. C. (1994). Time Series Analysis: Forecasting and Control (3rd ed.), series G. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
     "changes": "The fractional-year column replaced by the month, and the value column named passengers."
+  },
+  "spare-parts": {
+    "title": "Monthly sales of car spare parts, January 1998 to March 2002",
+    "sample": {
+      "file": "spare-parts.csv",
+      "sha256": "85806946f84c7d1fdf3a8d2b3e908e36f837b793a0dc07e9be7d0ce01338c0c6",
+      "holds": "314 parts, 51 months of units sold per month"
+    },
+    "full": "All 2,674 parts; 165 of them have no figures from early 1999 on",
+    "source": {
+      "name": "Car Parts Dataset (with Missing Values)",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656022",
+      "doi": "10.5281/zenodo.4656022",
+      "download": "https://zenodo.org/api/records/4656022/files/car_parts_dataset_with_missing_values.zip/content",
+      "file": "car_parts_dataset_with_missing_values.zip",
+      "bytes": 39656,
+      "sha256": "80557703397c7dca6c007bd28930b0e213e529f428afd02e5af87804fdc38ee1",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Car Parts Dataset (with Missing Values) (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656022. The archive took the series from the R package expsmooth.",
+    "changes": "Converted from the archive's .tsf file to a table with one row per month and one column per part, under the archive's part labels. The sample keeps every eighth part among the 2,509 that have a figure for every month."
+  },
+  "electricity-demand": {
+    "title": "Half-hourly electricity demand in Victoria, Australia, 2014",
+    "sample": {
+      "file": "electricity-demand.csv",
+      "sha256": "800f49e30b0c55ca55826257ec59cf995bd1b98cb7488480eefeab5af00431b6",
+      "holds": "The whole year, 17,520 half-hours of demand in gigawatts",
+      "complete": true
+    },
+    "full": "The same 17,520 half-hours",
+    "source": {
+      "name": "Electricity Demand (Elecdemand) Dataset",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656069",
+      "doi": "10.5281/zenodo.4656069",
+      "download": "https://zenodo.org/api/records/4656069/files/elecdemand_dataset.zip/content",
+      "file": "elecdemand_dataset.zip",
+      "bytes": 89963,
+      "sha256": "1bec32e9bba6ada6eca5db675a981ce62817e60c909f0be007c0b7927cb5491f",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Electricity Demand (Elecdemand) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656069. The archive took the series from the R package fpp2.",
+    "changes": "Converted from the archive's .tsf file and rounded to three decimals, which is one megawatt. The file holds one row per day and one column per half-hour; the loader returns one row per half-hour."
+  },
+  "river-flow": {
+    "title": "Daily flow of the Saugeen River at Walkerton, Ontario, 1915 to 1979",
+    "sample": {
+      "file": "river-flow.csv",
+      "sha256": "cbad0c4b59a9892cec8ef874938c1a8b3ce62b06a35406bd17517304b1ddb860",
+      "holds": "The daily mean flow in cubic meters per second for 1950 to 1979, 10,957 days"
+    },
+    "full": "The same series from 1 January 1915, 23,741 days",
+    "source": {
+      "name": "Saugeen River Flow (SaugeenDay) Dataset",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656058",
+      "doi": "10.5281/zenodo.4656058",
+      "download": "https://zenodo.org/api/records/4656058/files/saugeenday_dataset.zip/content",
+      "file": "saugeenday_dataset.zip",
+      "bytes": 28721,
+      "sha256": "061cb56ee6829d5686e5e08f1a61f4c0af682e32c37824e79926fc11148747df",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Saugeen River Flow (SaugeenDay) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656058. The archive took the series from the R package deseasonalize.",
+    "changes": "Converted from the archive's .tsf file to a table with one row per day. The sample keeps 1950 to 1979."
+  },
+  "sunspots": {
+    "title": "Yearly sunspot numbers, 1700 to 1988",
+    "sample": {
+      "file": "sunspots.csv",
+      "sha256": "0ba7d3b720401fc02bf700dad2304e2c6876b3f88de07985cb56487b99d0a42c",
+      "holds": "The whole series, 289 years",
+      "complete": true
+    },
+    "full": "The same 289 years",
+    "source": {
+      "name": "sunspot.year",
+      "publisher": "R datasets package, as a CSV file in Rdatasets",
+      "page": "https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/sunspot.year.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/datasets/sunspot.year.csv",
+      "file": "sunspot.year.csv",
+      "bytes": 3792,
+      "sha256": "f6d6b62da79feac7408cd876efff2bf9c9853fd6b76b59ed3717a51d997764f9",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-2 | GPL-3 (R datasets package)",
+      "url": "https://stat.ethz.ch/R-manual/R-devel/library/datasets/DESCRIPTION"
+    },
+    "credit": "Tong, H. (1996). Non-Linear Time Series. Clarendon Press, Oxford, p. 471. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column dropped, and the columns named year and sunspots."
   }
 }

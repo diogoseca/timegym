@@ -11,7 +11,7 @@ its license, what was changed and the checksum of every file.
     everything = load("store-sales", full=True)  # downloads the source once
     print(about("store-sales"))                  # source, license and credit
 
-Every table comes back with a regular date index (daily, weekly or monthly),
+Every table comes back with a regular date index (from half-hourly to yearly),
 which is what TimeGym needs to hand a forecaster the dates it must forecast.
 
 From a terminal, ``python examples/example_data.py --check`` verifies the
@@ -225,12 +225,37 @@ def _sample_store_sales(table):
     return sample
 
 
-# Daily Bitcoin price and network figures
+# Files from the Monash Time Series Forecasting Archive
 
 
-def _read_bitcoin(path):
+def _archive_series(source, member):
+    """Every series in one of the archive's ``.tsf`` files, by name, with its dates as the index."""
+    steps = {"half_hourly": "30min", "daily": "D", "monthly": "MS"}
+    with zipfile.ZipFile(source) as archive:
+        text = archive.read(member).decode("utf-8")
+    step, series = None, {}
+    for line in text.splitlines():
+        if line.startswith("@frequency"):
+            step = steps[line.split()[1]]
+        if not line or line[0] in "#@":
+            continue
+        name, start, values = line.split(":", 2)
+        # The archive writes a missing value as "?".
+        values = pd.to_numeric(pd.Series(values.split(",")), errors="coerce")
+        values.index = pd.date_range(start.split(" ")[0], periods=len(values), freq=step)
+        series[name] = values
+    return series
+
+
+def _read_daily(path):
     table = pd.read_csv(path, index_col="date", parse_dates=True)
     table.index = pd.DatetimeIndex(table.index, freq="D", name="date")
+    return table
+
+
+def _read_monthly(path):
+    table = pd.read_csv(path)
+    table.index = pd.PeriodIndex(table.pop("month"), freq="M", name="month")
     return table
 
 
@@ -238,19 +263,12 @@ def _write_daily(table, path):
     table.to_csv(path, index_label="date", date_format="%Y-%m-%d", lineterminator="\n")
 
 
+# Daily Bitcoin price and network figures
+
+
 def _build_bitcoin(source):
     """All 18 daily series, one column each; a series is empty before its first day."""
-    with zipfile.ZipFile(source) as archive:
-        text = archive.read("bitcoin_dataset_without_missing_values.tsf").decode("utf-8")
-    series = {}
-    for line in text.splitlines():
-        if not line or line[0] in "#@":
-            continue
-        name, start, values = line.split(":", 2)
-        values = pd.to_numeric(pd.Series(values.split(",")), errors="coerce")
-        values.index = pd.date_range(start.split(" ")[0], periods=len(values), freq="D")
-        series[name] = values
-    table = pd.DataFrame(series)
+    table = pd.DataFrame(_archive_series(source, "bitcoin_dataset_without_missing_values.tsf"))
     return table[["price", *(name for name in table.columns if name != "price")]]
 
 
@@ -259,13 +277,68 @@ def _sample_bitcoin(table):
     return table[["price"]].dropna()
 
 
+# Daily flow of a river
+
+
+def _build_river_flow(source):
+    """The daily mean flow from 1915, in cubic meters per second."""
+    flow = _archive_series(source, "saugeenday_dataset.tsf")["T1"]
+    return pd.DataFrame({"flow": flow})
+
+
+def _sample_river_flow(table):
+    """The last 30 years, 1950 to 1979."""
+    return table.loc["1950-01-01":]
+
+
+# Monthly sales of spare parts
+
+
+def _write_spare_parts(table, path):
+    # Whole units; a month the source has no figure for stays empty.
+    table.astype("Int64").to_csv(path, index_label="month", lineterminator="\n")
+
+
+def _build_spare_parts(source):
+    """Units sold per month for every part; a part's months without a figure are empty."""
+    table = pd.DataFrame(_archive_series(source, "car_parts_dataset_with_missing_values.tsf"))
+    table.index = table.index.to_period("M").rename("month")
+    return table.rename_axis(columns="part")
+
+
+def _sample_spare_parts(table):
+    """Every eighth part among those with a figure for every month."""
+    complete = table.loc[:, table.notna().all()]
+    return complete.iloc[:, ::8].astype(int)
+
+
+# Half-hourly electricity demand
+
+
+def _read_electricity(path):
+    """Demand for each half-hour, from a file with one row per day and one column per half-hour."""
+    days = pd.read_csv(path, index_col="date", parse_dates=True)
+    times = pd.date_range(days.index[0], periods=days.size, freq="30min", name="time")
+    return pd.DataFrame({"demand": days.to_numpy().ravel()}, index=times)
+
+
+def _write_electricity(table, path):
+    days = pd.DataFrame(
+        table["demand"].to_numpy().reshape(-1, 48),
+        index=pd.Index(table.index[::48].strftime("%Y-%m-%d"), name="date"),
+        columns=table.index[:48].strftime("%H:%M"),
+    )
+    days.to_csv(path, float_format="%.3f", lineterminator="\n")
+
+
+def _build_electricity(source):
+    """Demand in gigawatts for every half-hour of 2014, rounded to the megawatt."""
+    demand = _archive_series(source, "elecdemand_dataset.tsf")["T1"]
+    demand.index = demand.index.rename("time")
+    return pd.DataFrame({"demand": demand.round(3)})
+
+
 # Monthly airline passengers
-
-
-def _read_airline(path):
-    table = pd.read_csv(path)
-    table.index = pd.PeriodIndex(table.pop("month"), freq="M", name="month")
-    return table
 
 
 def _write_airline(table, path):
@@ -278,6 +351,25 @@ def _build_airline(source):
     return pd.DataFrame({"passengers": values.to_numpy()}, index=months)
 
 
+# Yearly sunspot numbers
+
+
+def _read_sunspots(path):
+    table = pd.read_csv(path, dtype={"year": str})
+    table.index = pd.PeriodIndex(table.pop("year"), freq="Y", name="year")
+    return table
+
+
+def _write_sunspots(table, path):
+    table.to_csv(path, index_label="year", lineterminator="\n")
+
+
+def _build_sunspots(source):
+    values = pd.read_csv(source)
+    years = pd.PeriodIndex(values["time"].astype(str), freq="Y", name="year")
+    return pd.DataFrame({"sunspots": values["value"].to_numpy(float)}, index=years)
+
+
 _DATASETS = {
     "store-sales": {
         "read": _read_store_sales,
@@ -286,15 +378,39 @@ _DATASETS = {
         "sample": _sample_store_sales,
     },
     "bitcoin": {
-        "read": _read_bitcoin,
+        "read": _read_daily,
         "build": _build_bitcoin,
         "write": _write_daily,
         "sample": _sample_bitcoin,
     },
     "airline-passengers": {
-        "read": _read_airline,
+        "read": _read_monthly,
         "build": _build_airline,
         "write": _write_airline,
+        "sample": lambda table: table,
+    },
+    "spare-parts": {
+        "read": _read_monthly,
+        "build": _build_spare_parts,
+        "write": _write_spare_parts,
+        "sample": _sample_spare_parts,
+    },
+    "electricity-demand": {
+        "read": _read_electricity,
+        "build": _build_electricity,
+        "write": _write_electricity,
+        "sample": lambda table: table,
+    },
+    "river-flow": {
+        "read": _read_daily,
+        "build": _build_river_flow,
+        "write": _write_daily,
+        "sample": _sample_river_flow,
+    },
+    "sunspots": {
+        "read": _read_sunspots,
+        "build": _build_sunspots,
+        "write": _write_sunspots,
         "sample": lambda table: table,
     },
 }
