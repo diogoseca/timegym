@@ -18,6 +18,7 @@ documentation, or run them here.
 | [The forest that cannot follow growth](passenger-growth.ipynb) | Forecast next year's airline passengers | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
 | [You tried 50 models: is the winner real?](best-of-fifty.ipynb) | Choose a model for next year's patient numbers of 114 medical products | The backtest's winner leads by 0.2%, nine others cannot be told apart from it, a winning score flatters by about 4%, and the next year the winner comes tenth |
 | [Bitcoin: finding out you have nothing](bitcoin.ipynb) | Forecast tomorrow's price | A 79% hit rate that came from one input reaching into the future; the honest model ties with yesterday's price |
+| [The S&P 500 next week: the direction and the size are different questions](sp500.ipynb) | Say something useful each Friday about the index's next week | No forecaster calls the direction better than "always up"; a 90% range that follows the last 26 weeks holds in crashes, where one built from all history held on 60% of the weeks of 2008 |
 
 ## Run them
 

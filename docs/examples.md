@@ -126,6 +126,20 @@ links to the tutorials for the tools it uses.
 
     Data: daily Bitcoin price, 2014 to 2021. Runs in about 15 seconds.
 
+-   [![Share of each year's weeks that fell inside a 90% range, 1970 to 2015; the range built from all history drops to 56% in 1974 and 60% in 2008, the one built from the last 26 weeks stays near 90%](images/examples/sp500.png)](../examples/sp500.ipynb)
+
+    **[The S&P 500 next week: the direction and the size are different questions](../examples/sp500.ipynb)**
+
+    *Finance*
+
+    No forecaster here calls next week's direction better than always saying
+    "up". The size of the move can be forecast: a 90% range built from the
+    last 26 weeks held in calm years and in crashes, while one built from all
+    of history held on 60% of the weeks of 2008. The same weeks in random
+    order show the gain comes from the market, not the code.
+
+    Data: the S&P 500 index week by week, 1950 to 2015. Runs in about 85 seconds.
+
 -   [![Six yearly forecasts from a random forest, each staying below the busiest month seen so far](images/examples/passenger-growth.png)](../examples/passenger-growth.ipynb)
 
     **[The forest that cannot follow growth](../examples/passenger-growth.ipynb)**
@@ -200,6 +214,4 @@ data and we know what the result is.
 - **Chaotic but partly predictable:** flu season, El Niño.
 - **Web and product:** signups after a launch, server load for capacity
   planning.
-- **Finance:** an S&P 500 fund, where the direction of a move and its size are
-  different questions.
 - **Lessons that cut across domains:** a ready-made model against your own.
