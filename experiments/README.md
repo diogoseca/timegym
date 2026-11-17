@@ -364,3 +364,177 @@ and no Study 2 bug was executed on a new learner, the margin simulation was
 not run, neither predictability estimator was run on a scorecard cell, and no
 scorecard of a Part 6 model was made other than those of the two built-in
 baselines, at seeds outside this protocol.
+
+### The run and its records
+
+The study was run on 17 November 2026 on Linux (x86-64, four cores) with
+Python 3.13 and the study lock, from the protocol as registered. Each part's
+record is a folder of `experiments/results-v3/`:
+
+| Folder | Files |
+|---|---|
+| `mutants/` | `manifest.json` and the 136 mutant sources, committed before any was executed |
+| `part-1/`, `part-2/` | `results.json`, `funnel.csv` (counts at each step), `decisions.csv` (every source, condition and check), `clean.csv` (alarms on the clean pipeline), `warnings.csv` (warnings raised while fitting and forecasting); Part 2 also `shift_classification.csv` |
+| `part-3/` | `results.json`, `variants.csv`, `conditions.csv`, `suites.csv`, `p-values.csv` |
+| `part-4/` | `results.json`, `cells.csv` (verdict counts of the 240 cells) |
+| `part-5/` | `results.json`, `table.csv` (one row per scorecard cell), `series.csv` |
+| `zoo/` | four files per model and `zoo-scorecards.pdf`, the figure drawn from them |
+
+Every folder also has `manifest.json` (digests of the protocol, the results,
+the frozen inputs and the source files, and the library versions) and
+`runtime.json` (wall time and thread pools). `tests/test_study3_records.py`
+checks each record against its manifest, the protocol and the lock file, and
+reads back every count stated below.
+
+What the parts show:
+
+1. **Generated mutants (Ridge).** Cosmic Ray generated 119 mutants of the
+   82-line subject. 55 raise an error on every input, 20 of the other 64 are
+   equivalent on the 24 fixed inputs, and 44 are not. Of the 16 catalogue
+   mutants one is equivalent, and none of the four Study 2 bugs is. The table
+   counts the mutants that each check caught in at least one of the six
+   conditions.
+
+   | Check | Cosmic Ray (44) | Catalogue (15) | Study 2 bugs (4) |
+   |---|---|---|---|
+   | Output checks | 3 | 0 | 0 |
+   | Common shift check | 22 | 2 | 1 |
+   | Per-series shift check | 22 | 4 | 2 |
+   | Second implementation | 44 | 15 | 4 |
+   | Calibrated loss alarm | 37 | 13 | 4 |
+   | Answer-key alarm | 40 | 14 | 4 |
+   | Paired check against the clean pipeline | 43 | 15 | 4 |
+
+   No deterministic check alarmed on the clean pipeline (332 cases in each
+   condition). At the 5% level the loss alarm fired on 29 of the 558 clean
+   evaluation cases and the answer-key alarm on 33. The equivalent mutants
+   were run on all evaluation cases as well, and none differed from the clean
+   pipeline there. No unit reached its time limit.
+2. **Learners beyond Ridge.** The classification on the clean pipeline
+   gave every learner the class that the protocol expected (16 cases in each
+   of the six conditions):
+
+   | Learner | Public shift check: PASS | Calibrated shift check: FAIL | Class |
+   |---|---|---|---|
+   | Ridge with global scaling (control) | 96 of 96 | not needed | exact |
+   | Histogram gradient boosting | 96 of 96 | not needed | exact |
+   | Window-standardized perceptron | 0 of 96 | 4 of 96 (binomial p = 0.71) | in distribution |
+   | Perceptron on raw lags | 0 of 96 | 51 of 96 (p < 0.001) | not applicable |
+
+   For each learner the first 84 Cosmic Ray mutants of the seeded order were
+   screened to find 12 that run and change a forecast: 24 raise an error on
+   every input and 48 are equivalent, because scaling is off for these
+   learners and a mutant in the scaling code changes nothing. The same 12
+   were taken for all three learners. Of the 16 catalogue mutants 4 are
+   equivalent and of the four Study 2 bugs one is, as the protocol expected.
+   Each cell counts the mutants that the check caught in at least one
+   condition, as Cosmic Ray (of 12) / catalogue (of 12) / Study 2 bugs (of 3).
+
+   | Check | Gradient boosting | Window-standardized perceptron | Perceptron on raw lags |
+   |---|---|---|---|
+   | Output checks | 3 / 0 / 0 | 3 / 0 / 0 | 3 / 0 / 0 |
+   | Common shift check | 6 / 0 / 0 | not run | not run |
+   | Per-series shift check | 6 / 2 / 1 | not run | not run |
+   | Calibrated shift check | not run | 0 / 0 / 0 | not run |
+   | Calibrated loss alarm | 8 / 11 / 3 | 5 / 8 / 3 | 8 / 6 / 3 |
+   | Answer-key alarm | 9 / 12 / 3 | 5 / 7 / 3 | 8 / 7 / 3 |
+   | Paired check against the clean pipeline | 11 / 12 / 3 | 6 / 9 / 3 | 11 / 12 / 3 |
+
+   The calibrated shift check kept its level and caught no mutant. On the
+   clean window-standardized pipeline it returned FAIL on 27 of the 558
+   evaluation cases (4.8%, 95% interval 3.3% to 6.9%) and ERROR on none. On
+   the 25 evaluated mutants it returned FAIL on 608 of the 12,648 cases it
+   decided (4.8%); 5 of the 136 pairs of a mutant and a condition have an
+   unadjusted p-value below 0.05, and none is left after Holm's correction.
+   With this learner the paired check also caught fewer Cosmic Ray and
+   catalogue mutants than with the other two: 6 and 9 of 12, against 11 and
+   12 for both.
+
+   No deterministic check alarmed on a clean pipeline (332 cases for each
+   learner and condition). At the 5% level, on the 558 clean evaluation cases
+   of gradient boosting, the window-standardized perceptron and the raw
+   perceptron, the loss alarm fired on 30, 28 and 29 and the answer-key alarm
+   on 17, 32 and 22. The equivalent catalogue and Study 2 sources were run on
+   all evaluation cases as well, and none differed from the clean pipeline
+   there. No unit reached its time limit or crashed, and the run of 5.5 hours
+   on four workers was not interrupted.
+
+   ConvergenceWarning is the only warning that the learners raised
+   (`warnings.csv`). The window-standardized perceptron stopped at its
+   iteration limit on every clean case, on all 41 fits of each evaluation
+   case (22,878 warnings on 558 cases). The raw perceptron did so on 888 of
+   its 1,992 clean calibration and evaluation cases. Gradient boosting and
+   Ridge raised none. In Part 1 the clean pipeline raised no warning; 191 of
+   the 6,528 screening records of its mutants carry a RuntimeWarning.
+3. **Two questions about a suite.** Of 93 clean suites, 17 have at least one
+   unadjusted rejection among their four checks, 2 have a Holm rejection and
+   Fisher's combination flags 5. With the dependence between series shuffled,
+   all three flag every suite; on the one condition where the shuffle changes
+   nothing, the unadjusted check rejects in 4 suites and Holm in 3. With the
+   spread reduced to 0.75, Fisher flags all 93 suites, while Holm rejects at
+   least one condition in 68 and a given condition in 14 to 45.
+4. **A joint-spread check with a margin.** With a true distance exactly on the
+   margin, each one-sided verdict was meant to occur in at most about 5% of
+   repetitions. FAIL does: between 0 and 29 of 381 repetitions in the 32 such
+   cells, and its 95% interval lies above 5% in one cell. WITHIN_TOLERANCE
+   does not: between 5 and 111 of 381, with the interval above 5% in 16 of
+   the 32 cells, most of them with an inflated spread or in the two
+   autocorrelated conditions; with the distance 10% beyond the margin it was
+   still returned in up to 95 of 381 repetitions. The expectation written in
+   the protocol for this verdict was therefore wrong, and the decision cannot
+   be used to declare a spread close enough at 64 or 256 paths. At a distance
+   of zero, WITHIN_TOLERANCE was returned in 670 of 1,524 repetitions at 64
+   paths and 1,482 at 256 with the margin 0.25, and in 1,443 and 1,524 with
+   the margin 0.4375.
+5. **Predictability estimators against the exact floor.** The median ratio of
+   the spectral bound to the exact unavoidable error lies between 0.86 and
+   0.98 on the eight stationary rows, as expected. It is above 1 on the four
+   rows with a trend (24.0 and 24.3 at low noise, 2.35 and 2.47 at high
+   noise), as expected. On the seasonal rows (1.12 and 1.03) and on the
+   level-shift rows (0.83) it is close to 1, where the protocol expected it
+   to be off; computed from the history alone, the level-shift ratio is 81.1
+   at low noise. On the random-walk rows, which have no stationary spectrum,
+   it is 0.85 and 0.83, and 2.46 and 1.52 with drift. Weighted permutation
+   entropy is highest on the pure-noise and fixed-level rows, and its rank
+   correlation with the scale-free floor is 0.72 (0.26 with the floor
+   itself).
+6. **Scorecards of models people use.** The eight local models are scored; the
+   Chronos scorecard needs a machine that can reach its weights. No check
+   failed for any model. Each scorecard shows where its model stops, beside
+   the row's attainable mark. At low noise, ETS scores 35 on irregular cycles
+   (mark 93), gradient boosting on lags scores 5 on a straight-line trend
+   (mark 95) and 93 on a sudden level shift (mark 97), Theta scores 22 on
+   that level shift, and the perceptron on lags scores 4 on a random walk
+   (mark 100). No ranking of the models is claimed.
+
+What differs from the plan:
+
+- **Order.** The protocol lists Parts 1 to 6 in order. They were run as
+  Parts 3, 5, 4, the zoo, 1 and 2. No part reads the output of another.
+- **Threads.** Three minutes into Part 2 its processes were found to use four
+  threads each. The limit of one thread was set with threadpoolctl before the
+  numerical libraries were loaded, and threadpoolctl limits only loaded
+  libraries. The same held for the first run of Part 1 and for the gradient
+  boosting model of the zoo. The run was stopped, the runners were changed
+  (`experiments/study3_threads.py`), and Part 1 and all eight zoo models were
+  run again under the rule. Every result file of the second runs is identical
+  to the first, byte for byte. The second runs are the ones recorded, and each
+  unit's last line now lists its thread pools. Parts 3, 4 and 5 kept the rule
+  from the start (their `runtime.json`).
+- **Continuing a stopped run.** Part 2 writes its record at the end of a run
+  of several hours. Before it started, the runner got `--resume`. It was
+  checked on Part 1: stopped on purpose after eight minutes and continued, it
+  wrote a `results.json` identical to that of the uninterrupted run.
+- **Where the mutants were run from.** Parts 1 and 2 were run from the commit
+  that added the mutant sources and their digest, before that commit was
+  merged. The protocol asks that the set be committed before any mutant is
+  executed.
+- **Warning counts.** The protocol asks that ConvergenceWarnings be counted
+  and reported. Each unit wrote the count with every case, but the runner did
+  not add the counts to `results.json`. `experiments/study3_warnings.py`
+  tallied them afterwards from the unit records into `warnings.csv`. The unit
+  records are not kept in the repository, and the manifests do not list this
+  table.
+- **Commit named by the zoo records.** The zoo manifests name commit 6c729e8:
+  the registered commit plus the registration record, the mutant sources and
+  the two runner changes above. The package (`timegym/`) is the same in both.
