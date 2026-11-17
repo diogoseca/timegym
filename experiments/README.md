@@ -252,7 +252,11 @@ and the others the study lock:
 Every runner first asks `experiments/study3_common.py` whether its part may
 start and stops with the list of what is missing; no flag bypasses that. With
 `--plan` a runner prints what it would run and computes nothing, which also
-works on the draft. After the merge, three commits may each change one value
+works on the draft. Part 2 takes hours and writes its record at the end, so
+`run_study3_mutants` has `--resume` for a run that a stop of the machine
+interrupted: started again with the same `--output`, it keeps every unit of
+work that the stopped run ended under the same specification and time limit
+and runs the others. After the merge, three commits may each change one value
 of the protocol and nothing else: the one that registers it (date, merge
 commit and status), the one that adds the generated mutant sources and writes
 the digest of their manifest, without which Parts 1 and 2 do not start, and

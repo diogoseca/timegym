@@ -59,13 +59,17 @@ def source(name, text, *kinds):
             "labels": [{"label": f"{name}-{i}", "kind": kind} for i, kind in enumerate(kinds)]}
 
 
+def part1_sources():
+    return [source("wrong", WRONG, "cosmic_ray"), source("stateful", STATEFUL, "catalogue", "study2"),
+            source("equivalent", EQUIVALENT, "cosmic_ray", "cosmic_ray"), source("raising", RAISING, "study2"),
+            source("syntax", SYNTAX, "cosmic_ray")]
+
+
 @pytest.fixture(scope="module")
 def part1(tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("part1")
     config = toy_config(tmp_path, workers=4)
-    sources = [source("wrong", WRONG, "cosmic_ray"), source("stateful", STATEFUL, "catalogue", "study2"),
-               source("equivalent", EQUIVALENT, "cosmic_ray", "cosmic_ray"), source("raising", RAISING, "study2"),
-               source("syntax", SYNTAX, "cosmic_ray")]
+    sources = part1_sources()
     result = runner.run_part1(config, {"name": "mean", "index": 0}, sources, {item["id"] for item in sources})
     return config, result, {item["id"]: item for item in result["sources"]}
 
@@ -161,6 +165,76 @@ def test_units_do_not_depend_on_the_number_of_workers(tmp_path):
     statuses = [record["calibrated_shift"]["status"] for record in one[0]["records"]
                 if record.get("stage") == "evaluation"]
     assert statuses and set(statuses) <= {"PASS", "FAIL"}
+
+
+def test_a_stopped_run_is_continued_from_the_units_it_ended(tmp_path):
+    import os
+    import sys
+
+    sys.path.insert(0, str(FIXTURES))
+    import study3_toys
+
+    base = {"learner": {"module": TOYS, "name": "noisy", "index": 1, "tag": 400}, "settings": SETTINGS,
+            "condition": study3_toys.CONDITIONS[0], "warmup_seed": 100,
+            "stages": [["screen", [100, 101]], ["evaluation", [3000, 3001]]], "checks": ["scores"]}
+    specs = [{**base, "output": str(tmp_path / f"{name}.jsonl"), "source": text, "module_name": f"toy_{name}"}
+             for name, text in (("clean", CLEAN), ("wrong", WRONG), ("syntax", SYNTAX))]
+    limits = [None, 60.0, 60.0]
+
+    def written():
+        return [os.stat(spec["output"]).st_mtime_ns for spec in specs]
+
+    def numbers(results):
+        return [[{key: value for key, value in record.items() if "seconds" not in key}
+                 for record in result["records"]] for result in results]
+
+    first, stamps = harness.run_units(specs, limits, workers=3), written()
+    assert [result["finished"] for result in first] == [True, True, False]
+    assert all(harness.outcome_path(spec).is_file() for spec in specs)
+    # Nothing is run again: the stored results, wall times included, come back.
+    assert harness.run_units(specs, limits, workers=3, resume=True) == first and written() == stamps
+    # The machine stopped during the second unit: half of its lines are on disk and it has no outcome file.
+    lines = Path(specs[1]["output"]).read_text().splitlines(keepends=True)
+    Path(specs[1]["output"]).write_text("".join(lines[:3]) + lines[3][:10])
+    harness.outcome_path(specs[1]).unlink()
+    again, after = harness.run_units(specs, limits, workers=3, resume=True), written()
+    assert numbers(again) == numbers(first) and again[0] == first[0] and again[2] == first[2]
+    assert [new != old for new, old in zip(after, stamps)] == [False, True, False]
+    # A unit is run again when its limit or its specification differs, when its lines changed after it ended,
+    # and when it crashed; the others are kept.
+    stamps = after
+    harness.run_units(specs, [None, 61.0, 60.0], workers=3, resume=True)
+    assert [new != old for new, old in zip(written(), stamps)] == [False, True, False]
+    stamps = written()
+    changed = [dict(specs[0], warmup_seed=101)] + specs[1:]
+    harness.run_units(changed, [None, 61.0, 60.0], workers=3, resume=True)
+    assert [new != old for new, old in zip(written(), stamps)] == [True, False, False]
+    stamps = written()
+    with open(specs[2]["output"], "a") as handle:
+        handle.write("{}\n")
+    outcome = json.loads(harness.outcome_path(specs[1]).read_text())
+    harness.outcome_path(specs[1]).write_text(json.dumps({**outcome, "crashed": True}))
+    stamps = written()
+    harness.run_units(changed, [None, 61.0, 60.0], workers=3, resume=True)
+    assert [new != old for new, old in zip(written(), stamps)] == [False, True, True]
+    # Without resume every unit is run.
+    stamps = written()
+    fresh = harness.run_units(specs, limits, workers=3)
+    assert numbers(fresh) == numbers(first) and all(new != old for new, old in zip(written(), stamps))
+
+
+def test_part1_gives_the_same_result_when_it_is_continued(part1):
+    config, result, _ = part1
+    outcomes = sorted(Path(config["scratch"]).rglob("*.outcome.json"))
+    lines = sorted(Path(config["scratch"]).rglob("*.jsonl"))
+    assert len(outcomes) == len(lines) == 18
+    # The run stopped late: the outcome files of the last evaluation units are missing.
+    for path in [path for path in outcomes if path.name.startswith("evaluation-")][-3:]:
+        path.unlink()
+    learner, sources = {"name": "mean", "index": 0}, copy.deepcopy(part1_sources())
+    continued = runner.run_part1({**config, "resume": True}, learner, sources, {item["id"] for item in sources})
+    assert json.dumps(continued, sort_keys=True) == json.dumps(result, sort_keys=True)
+    assert len(sorted(Path(config["scratch"]).rglob("*.outcome.json"))) == len(outcomes)
 
 
 def test_sampling_and_generic_order():
