@@ -6,6 +6,9 @@
 
 main() calls study3_common.require_start before any computation; no flag bypasses it. --plan prints the units,
 cases and fits that would run and an estimate of CPU time, computes nothing and works on a draft protocol.
+--resume continues a run that was stopped before it wrote its record: units that the stopped run ended under the
+same specification and time limit are read from --output/units and the others are run (study3_harness.run_unit);
+runtime.json then says "resumed" and its seconds cover the last start only.
 
 The runner reads the committed mutant manifest (experiments/study3_generate.py), whose digest the protocol holds,
 and refuses a source whose digest differs. Part 1, for Ridge: the clean subject on the calibration and evaluation cases of every condition, the
@@ -100,7 +103,7 @@ def run_clean(config, learner, checks):
              for c in range(len(config["conditions"]))]
     from .study3_harness import run_units
 
-    results = run_units(specs, [None] * len(specs), config["workers"])
+    results = run_units(specs, [None] * len(specs), config["workers"], config.get("resume", False))
     for condition, result in zip(config["conditions"], results):
         if not result["finished"]:
             raise RuntimeError(f"The clean subject did not finish in {condition['id']}")
@@ -120,7 +123,7 @@ def run_screens(config, learner, sources, clean):
             specs.append(_unit_spec(config, learner, source["source"], c, _stages(config, c, "screen"), (),
                                     source["id"], "screen"))
             limits.append(_limit(config, clean[c], ("screen",), forecast_only=True))
-    results = run_units(specs, limits, config["workers"])
+    results = run_units(specs, limits, config["workers"], config.get("resume", False))
     return [results[i * n:(i + 1) * n] for i in range(len(sources))]
 
 
@@ -140,7 +143,7 @@ def run_evaluations(config, learner, sources, classes, clean, checks):
                                     () if forecast_only else checks, source["id"], "evaluation"))
             limits.append(_limit(config, clean[c], ("screen", "evaluation"), forecast_only))
             owners.append(source["id"])
-    results = run_units(specs, limits, config["workers"])
+    results = run_units(specs, limits, config["workers"], config.get("resume", False))
     grouped: dict[str, list] = {}
     for owner, result in zip(owners, results):
         grouped.setdefault(owner, []).append(result)
@@ -531,7 +534,7 @@ def classify_learners(config, learners):
     def classification_units(mode, chosen):
         specs = [_unit_spec(config, learner, config["clean_source"], c, _stages(config, c, "classification"), (),
                             "clean", mode, mode=mode) for learner in chosen for c in range(n)]
-        results = run_units(specs, [None] * len(specs), config["workers"])
+        results = run_units(specs, [None] * len(specs), config["workers"], config.get("resume", False))
         return {learner["name"]: [record for result in results[i * n:(i + 1) * n] for record in result["records"]
                                   if record.get("kind") == "case"] for i, learner in enumerate(chosen)}
 
@@ -793,6 +796,8 @@ def main(argv=None):
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--force", action="store_true", help="Replace existing study artifacts")
     parser.add_argument("--plan", action="store_true", help="Print what would run and compute nothing")
+    parser.add_argument("--resume", action="store_true",
+                        help="Continue a stopped run in --output: keep the units it ended, run the others")
     args = parser.parse_args(argv)
     protocol = common.load_protocol()
     part = f"part-{args.part}"
@@ -808,11 +813,17 @@ def main(argv=None):
     subject = common.ROOT / protocol["part_1_generated_mutants"]["subject"]["module"]
     manifest, sources = manifest_sources(mutants, subject)
     config = bind(protocol, output, args.workers)
+    config["resume"] = args.resume
     generic = [source for source in sources if {label["kind"] for label in source["labels"]} == {"cosmic_ray"}]
     fixed = [source for source in sources if source not in generic]
     started = time.perf_counter()
-    from threadpoolctl import threadpool_info, threadpool_limits
+    from threadpoolctl import threadpool_limits
 
+    from .study3_threads import require_one_thread, start_with_one_thread
+
+    # The statistics load NumPy and SciPy after this point, and the units are new processes: both start with one
+    # thread, and the pools are read back before the record is written.
+    start_with_one_thread()
     with threadpool_limits(limits=1):
         if args.part == 1:
             sampled = sample_generic(generic, config["cap"], config["mutant_sampling"])
@@ -827,16 +838,17 @@ def main(argv=None):
             result = run_part2(config, [learner_entry(name) for name in LEARNERS[1:]], fixed, ordered,
                                [learner_entry(name) for name in LEARNERS])
             learner_results = list(result["learners"].values())
-        pools = threadpool_info()
+        pools = require_one_thread()
     seconds = time.perf_counter() - started
     results = {"study_id": protocol["study_id"], "protocol_version": protocol["protocol_version"], "part": part,
                "mutant_manifest_sha256": sha256(mutants), **_strip(result)}
     paths = [Path(__file__)] + [common.ROOT / name for name in protocol["part_1_generated_mutants"]["subject"]
                                 ["frozen_files"]]
     paths += [common.ROOT / f"experiments/{name}.py" for name in ("study3_harness", "study3_stats", "study3_shift",
-                                                                   "study3_common")]
+                                                                   "study3_common", "study3_threads")]
     common.write_record(output, results, sources=tuple(paths), force=args.force,
-                        runtime={"seconds": seconds, "workers": args.workers, "threadpools": pools},
+                        runtime={"seconds": seconds, "workers": args.workers, "thread_limit": 1,
+                                 "threadpools": pools, "resumed": args.resume},
                         extra={"mutant_manifest_sha256": sha256(mutants),
                                "cosmic_ray_version": manifest.get("tool", {}).get("version")})
     rows = {"funnel": [], "decisions": [], "clean": []}

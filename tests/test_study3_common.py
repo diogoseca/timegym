@@ -1,6 +1,7 @@
 """The protocol 3.0 file and the pieces every Study 3 runner shares. No test here computes a study outcome."""
 import copy
 import json
+from pathlib import Path
 
 import pytest
 
@@ -101,6 +102,7 @@ def test_start_conditions_name_what_is_missing(protocol):
     ready = copy.deepcopy(protocol)
     ready.update(status="registered")
     ready["registration"].update(merge_commit="0" * 40, registered_on="2026-12-01")
+    ready["part_1_generated_mutants"]["sources"]["manifest"]["sha256"] = ""
     assert common.unmet_start_conditions(ready, "part-3") == []
     ready["registration"]["registered_on"] = ""
     assert common.unmet_start_conditions(ready, "part-4") == [
@@ -123,6 +125,23 @@ def test_the_frozen_files_match_their_registered_digests(protocol):
     subject = protocol["part_1_generated_mutants"]["subject"]
     assert sorted(subject["frozen_files_sha256"]) == sorted(subject["frozen_files"])
     assert common.frozen_file_problems(protocol) == []
+
+
+def test_the_committed_mutant_manifest_and_its_sources_match_their_digests(protocol):
+    registered = protocol["part_1_generated_mutants"]["sources"]["manifest"]
+    if not registered["sha256"]:
+        pytest.skip("the mutant manifest is not registered yet")
+    assert common.manifest_problems(protocol) == []
+    folder = (common.ROOT / registered["path"]).parent
+    manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+    subject = protocol["part_1_generated_mutants"]["subject"]
+    assert manifest["subject"]["sha256"] == subject["frozen_files_sha256"][manifest["subject"]["path"]]
+    assert manifest["catalogue"]["sha256"] == subject["frozen_files_sha256"][manifest["catalogue"]["path"]]
+    for entry in manifest["sources"]:
+        assert sha256(folder / entry["file"]) == entry["sha256"]
+    assert sorted(path.name for path in (folder / "sources").iterdir()) == sorted(
+        Path(entry["file"]).name for entry in manifest["sources"])
+    assert manifest["counts"]["distinct_sources"] == len(manifest["sources"])
 
 
 def test_the_mutant_manifest_must_match_its_registered_digest(protocol, tmp_path, monkeypatch):

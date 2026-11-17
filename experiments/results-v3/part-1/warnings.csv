@@ -1,0 +1,10 @@
+learner,subject,phase,stage,records,records_with_warnings,RuntimeWarning
+ridge,clean,full,calibration,1434,0,0
+ridge,clean,full,evaluation,558,0,0
+ridge,clean,full,screen,48,0,0
+ridge,clean,full,warmup,6,0,0
+ridge,mutants,evaluation,evaluation,45198,0,0
+ridge,mutants,evaluation,screen,3888,0,0
+ridge,mutants,evaluation,warmup,486,0,0
+ridge,mutants,screen,screen,6528,191,479
+ridge,mutants,screen,warmup,816,24,60

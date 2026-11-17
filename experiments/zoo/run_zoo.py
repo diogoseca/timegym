@@ -26,13 +26,14 @@ import subprocess
 import sys
 import time
 
-from threadpoolctl import threadpool_info, threadpool_limits
+from threadpoolctl import threadpool_limits
 
 from timegym import Pipeline
 from timegym.grid import scenario_grid
 
 from experiments import study3_common as common
 from experiments.common import sha256
+from experiments.study3_threads import require_one_thread, start_with_one_thread
 
 from . import models
 
@@ -65,7 +66,7 @@ def check_scorecard_seeds(protocol, seed=SEED, instances=INSTANCES):
 
 def source_files():
     """The zoo's Python files and the modules it imports from experiments/, for the manifest."""
-    shared = ("study3_common.py", "common.py", "study3_learners.py", "study3_subject.py")
+    shared = ("study3_common.py", "common.py", "study3_learners.py", "study3_subject.py", "study3_threads.py")
     return sorted(ZOO.glob("*.py")) + [common.ROOT / "experiments" / name for name in shared
                                        if (common.ROOT / "experiments" / name).exists()]
 
@@ -164,8 +165,9 @@ def run_models(model_ids, output, protocol, *, make=models.build, score=scorecar
 
                 torch.set_num_threads(1)
                 torch.manual_seed(common.generator_tag(protocol, "chronos_sampling"))
-            card = score(model)
-            pools = threadpool_info()
+            with threadpool_limits(limits=1):  # also the libraries that building the model loaded
+                card = score(model)
+                pools = require_one_thread()
         seconds = time.perf_counter() - started
         card.save_baseline(paths["baseline"])
         _write_table(paths["table"], table_rows(card))
@@ -208,6 +210,8 @@ def main():
         print(json.dumps(plan(protocol, args.models), indent=2))
         return
     common.require_start(protocol, PART)
+    # A model's library may be loaded when the model is built, after threadpoolctl has set its limit.
+    start_with_one_thread()
     revision = models.chronos_revision(protocol)
     if "chronos_small" in args.models and revision is None:
         parser.error("part_6_zoo.models holds no Chronos revision; the Chronos scorecard may not run")
