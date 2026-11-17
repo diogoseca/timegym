@@ -61,6 +61,19 @@ links to the tutorials for the tools it uses.
 
     Data: daily flow of the Saugeen River, Ontario, 1950 to 1979. Runs in about 50 seconds.
 
+-   [![Brier score for rain tomorrow in Sydney: four forecasters of our own, and the weather service's forecast issued the day before, which is far ahead](images/examples/rain.png)](../examples/rain.ipynb)
+
+    **[Will it rain tomorrow? Score the forecast you already have](../examples/rain.ipynb)**
+
+    *Energy and environment*
+
+    The best of four forecasters of our own beats "it rains one day in three"
+    by 11%. The forecast the weather service had already published beats it by
+    53%, and still beats ours from five days out. The same run shows why the
+    forecaster that is right most often has the worst score.
+
+    Data: daily rain and the official chance of rain in Sydney, 2015 to 2017. Runs in about 10 seconds.
+
 -   [![Average miss by years ahead for four forecasters; the regression leads for two years, then matches the rule that copies one cycle back](images/examples/sunspots.png)](../examples/sunspots.ipynb)
 
     **[The sunspot cycle: how far ahead is a forecast worth making?](../examples/sunspots.ipynb)**
@@ -143,8 +156,8 @@ data and we know what the result is.
 
 - **Demand and operations:** bakery demand around holidays, call center
   staffing, bike-share stations, emergency room arrivals.
-- **Energy and environment:** solar farm output, air quality tomorrow, rain
-  tomorrow, daily temperature.
+- **Energy and environment:** solar farm output, air quality tomorrow, daily
+  temperature.
 - **Chaotic but partly predictable:** flu season, El Niño.
 - **Web and product:** signups after a launch, server load for capacity
   planning.
