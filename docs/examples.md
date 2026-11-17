@@ -156,6 +156,20 @@ links to the tutorials for the tools it uses.
 
     Data: daily views of 136 Wikipedia pages, 2015 to 2017. Runs in about 35 seconds.
 
+-   [![Days short by weeks of lead time for three forecasters: the four-week average climbs from 8% to 36%, last year's copy stays between 10% and 15%, and the copy that is one day off stays near 23%](images/examples/site-capacity.png)](../examples/site-capacity.ipynb)
+
+    **[Site capacity: which forecast still works four weeks ahead?](../examples/site-capacity.ipynb)**
+
+    *Web and product*
+
+    Two forecasters of a site's page views are level when they forecast next
+    week. Booked four weeks ahead, which is the job, one leaves the site
+    short on 28% of days and the other on 13%, and spare capacity sized on
+    next week's forecasts gives 24% of days short where the aim was 5%. A
+    generated weekly cycle catches a one-day slip before any of it.
+
+    Data: daily page views of a textbook site, 2018 to 2022. Runs in about 10 seconds.
+
 -   [![The days each model input uses; the smoothed price reaches three days past the day being forecast](images/examples/bitcoin.png)](../examples/bitcoin.ipynb)
 
     **[Bitcoin: finding out you have nothing](../examples/bitcoin.ipynb)**
@@ -254,5 +268,4 @@ data and we know what the result is.
   stations, emergency room arrivals.
 - **Energy and environment:** solar farm output.
 - **Chaotic but partly predictable:** flu season.
-- **Web and product:** server load for capacity planning.
 - **Lessons that cut across domains:** a ready-made model against your own.
