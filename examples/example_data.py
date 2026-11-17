@@ -611,6 +611,39 @@ def _sample_sp500(table):
     return table[["close"]].resample("W-FRI").last()
 
 
+# Daily riders at train stations, with the day's weather
+
+_STATION_LAG = 14  # the source gives each station's riders two weeks late, as inputs for a model
+
+
+def _build_chicago_ridership(source):
+    """Each station's riders put back on their own day, beside that day's weather."""
+    table = pd.read_csv(source, index_col="date", parse_dates=True)
+    table.index = pd.DatetimeIndex(table.index, freq="D")
+    first, last = table.columns.get_loc("Austin"), table.columns.get_loc("California")
+    riders = table.iloc[:, first : last + 1]
+    lagged = riders["Clark_Lake"].to_numpy()[_STATION_LAG:]
+    if not np.allclose(lagged, table["ridership"].to_numpy()[:-_STATION_LAG]):
+        raise ValueError("the station columns are no longer the riders of two weeks before")
+    riders = (riders * 1000).round().astype(int).shift(-_STATION_LAG, freq="D")
+    weather = pd.DataFrame(
+        {
+            "temp": table["temp"].round(1),
+            "rain": table["weather_rain"].round(3),
+            "snow": table["weather_snow"].round(3),
+            "storm": table["weather_storm"].round(3),
+            "wind": table["wind"].round(1),
+        }
+    )
+    both = riders.join(weather, how="inner")
+    both.index = pd.DatetimeIndex(both.index, freq="D", name="date")
+    return both
+
+
+def _sample_chicago_ridership(table):
+    return table.loc["2011-01-01":]
+
+
 # Calls to a bank's call center
 
 
@@ -694,6 +727,12 @@ _DATASETS = {
         "build": _build_bank_calls,
         "write": _write_hourly,
         "sample": _sample_bank_calls,
+    },
+    "chicago-ridership": {
+        "read": _read_daily,
+        "build": _build_chicago_ridership,
+        "write": _write_daily,
+        "sample": _sample_chicago_ridership,
     },
     "city-temperatures": {
         "read": _read_daily,

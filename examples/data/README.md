@@ -93,6 +93,28 @@ weekdays in that span have no rows either (4 and 7 April, 26 May, 4 July,
 - Full version: the calls of every five minutes from 7:00 to 21:05 on the
   same 164 days, 27,716 rows.
 
+## Chicago ridership
+
+`chicago-ridership.csv`: the riders entering 20 stations of Chicago's "L"
+trains on each day from 1 January 2011 to 14 August 2016, 2,053 days, beside
+five columns on the day's weather: the average temperature in degrees
+Fahrenheit (`temp`), the wind speed (`wind`), and three values between 0 and 1
+(`rain`, `snow`, `storm`). The package does not describe the weather columns.
+The book it takes the table from describes weather conditions recorded every
+hour and summed up as the share of a day's reports in which each one was
+seen, and that is how the examples read them. Where several lines have a
+station of the same name, the package does not say which one a column is.
+`load("chicago-ridership", full=True)` goes back to 22 January 2001.
+
+- Source: Chicago, R package modeldata, as a CSV file in Rdatasets,
+  <https://vincentarelbundock.github.io/Rdatasets/doc/modeldata/Chicago.html>
+- License: [MIT (R package modeldata)](https://github.com/cran/modeldata/blob/master/DESCRIPTION), the license
+  of the package the table ships in. The package gives a book as its source;
+  the book's own repository is under the GPL, and neither says where the
+  figures were collected.
+- Credit: Kuhn, M. modeldata: Data Sets Useful for Modeling Examples (R package), dataset Chicago. The package says the data are from Kuhn, M., & Johnson, K. (2020), Feature Engineering and Selection, Chapman and Hall/CRC (https://bookdown.org/max/FES/, https://github.com/topepo/FES), where they are used to model the riders entering the Clark and Lake station of the Chicago "L". Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
+- Changes: The 20 station columns, which the source gives 14 days late as inputs for a model, put back on their own day and written as riders, not thousands of riders; five of the weather columns kept and named temp, rain, snow, storm and wind; the days that have both kept; the remaining weather columns, the sports columns and the separate target column left out.
+
 ## City temperatures
 
 `city-temperatures.csv`: the highest temperature of each day, in degrees

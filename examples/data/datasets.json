@@ -129,6 +129,31 @@
     "credit": "Hyndman, R. J., and others. fpp3: Data for \"Forecasting: Principles and Practice\" (3rd Edition) (R package), dataset bank_calls. The package gives Jonathan Weinberg as the source of the series, which is studied in Weinberg, J., Brown, L. D., & Stroud, J. R. (2007). Bayesian forecasting of an inhomogeneous Poisson process with applications to call center data. Journal of the American Statistical Association, 102(480), 1185-1198. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
     "changes": "The row-number column dropped; times kept as the center's clock time, without the time zone mark the file carries; the columns named time and calls. The sample adds the five-minute counts up to half hours and leaves out the last five minutes of each day, 21:00 to 21:05."
   },
+  "chicago-ridership": {
+    "title": "Daily riders at 20 Chicago train stations with the day's weather, January 2001 to August 2016",
+    "sample": {
+      "file": "chicago-ridership.csv",
+      "sha256": "7b4a9854515fa021b601c58da63d88c26c9e265b45ee886091c89858c4d1ec34",
+      "holds": "All 20 stations and five weather columns for 2,053 days, 1 January 2011 to 14 August 2016"
+    },
+    "full": "5,684 days from 22 January 2001 to 14 August 2016",
+    "source": {
+      "name": "Chicago",
+      "publisher": "R package modeldata, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/modeldata/Chicago.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/modeldata/Chicago.csv",
+      "file": "Chicago.csv",
+      "bytes": 1582825,
+      "sha256": "1a95c62b6fe8268583f0d66a4304640d23d313d50cb211b1ded8ebe621e9b109",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "MIT (R package modeldata)",
+      "url": "https://github.com/cran/modeldata/blob/master/DESCRIPTION"
+    },
+    "credit": "Kuhn, M. modeldata: Data Sets Useful for Modeling Examples (R package), dataset Chicago. The package says the data are from Kuhn, M., & Johnson, K. (2020), Feature Engineering and Selection, Chapman and Hall/CRC (https://bookdown.org/max/FES/, https://github.com/topepo/FES), where they are used to model the riders entering the Clark and Lake station of the Chicago \"L\". Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The 20 station columns, which the source gives 14 days late as inputs for a model, put back on their own day and written as riders, not thousands of riders; five of the weather columns kept and named temp, rain, snow, storm and wind; the days that have both kept; the remaining weather columns, the sports columns and the separate target column left out."
+  },
   "city-temperatures": {
     "title": "Daily highest temperature at Australian weather stations, May 2015 to April 2017",
     "sample": {
