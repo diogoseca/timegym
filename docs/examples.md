@@ -87,6 +87,20 @@ links to the tutorials for the tools it uses.
 
     Data: daily highs in eight Australian cities, 2015 to 2017. Runs in about 25 seconds.
 
+-   [![The regression's average miss at each of 24 monitors against the share of hours the monitor was silent; on the filled table the miss falls to zero as the silence grows, on measured days it does not](images/examples/air-quality.png)](../examples/air-quality.ipynb)
+
+    **[Tomorrow's air in London: the gaps someone filled in for you](../examples/air-quality.ipynb)**
+
+    *Energy and environment*
+
+    On a table with its gaps filled in, every forecast of London's fine
+    particles looks about a fifth better than it is, and the three monitors
+    that reported nothing all winter come out as the easiest to forecast.
+    TimeGym will not cut a case through an empty cell, and the cases it keeps
+    show which scores were earned against readings nobody took.
+
+    Data: hourly fine particles at 24 London monitors, winter 2017 to 2018. Runs in about a minute.
+
 -   [![Average miss by years ahead for four forecasters; the regression leads for two years, then matches the rule that copies one cycle back](images/examples/sunspots.png)](../examples/sunspots.ipynb)
 
     **[The sunspot cycle: how far ahead is a forecast worth making?](../examples/sunspots.ipynb)**
@@ -182,7 +196,7 @@ data and we know what the result is.
 
 - **Demand and operations:** bakery demand around holidays, call center
   staffing, bike-share stations, emergency room arrivals.
-- **Energy and environment:** solar farm output, air quality tomorrow.
+- **Energy and environment:** solar farm output.
 - **Chaotic but partly predictable:** flu season, El Niño.
 - **Web and product:** signups after a launch, server load for capacity
   planning.
