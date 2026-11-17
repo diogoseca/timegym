@@ -259,6 +259,28 @@ since revised and extended it.
 - Credit: Tong, H. (1996). Non-Linear Time Series. Clarendon Press, Oxford, p. 471. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
 - Changes: The row-number column dropped, and the columns named year and sunspots.
 
+## Wikipedia views
+
+`wikipedia-views.csv`: how many times a day each of 136 Wikipedia pages was
+viewed, 803 days from 1 July 2015 to 10 September 2017. Each column is one
+page, under the archive's number for it (`T128`, `T5019` and so on). The
+archive does not carry the names of the pages. The competition the counts were
+collected for counted a page separately by device and for search engine
+robots, so two columns of the archive can be the same page counted in
+different ways, and some columns count robots; the numbering does not say
+which.
+
+- Source: Kaggle Wikipedia Web Traffic Daily Dataset (with Missing Values), Monash Time Series
+  Forecasting Archive, on Zenodo, <https://zenodo.org/records/4656080>
+- License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), the archive's
+  license for its file. The counts themselves are the Wikimedia Foundation's
+  page view statistics, which the Foundation releases under CC0.
+- Credit: Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Kaggle Wikipedia Web Traffic Daily Dataset (with Missing Values) (Version 3) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656080. The archive took the series from the Kaggle competition Web Traffic Time Series Forecasting (Google, 2017); the counts are the Wikimedia Foundation's page view statistics.
+- Changes: Pages taken from the archive's .tsf file, one column per page under the archive's series number; the archive does not carry the names of the pages. Kept: every tenth page among those with a count for every day and a median of at least 100 views a day. No count filled in or changed. The sample keeps every fiftieth of those pages.
+- Full version: 6,766 pages in the same layout, every tenth page among the
+  67,656 that have a count for every day and a median of at least 100 views a
+  day. The source file is a 145 MB download.
+
 ## Check or rebuild a sample
 
 ```bash

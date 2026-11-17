@@ -364,5 +364,31 @@
     },
     "credit": "Tong, H. (1996). Non-Linear Time Series. Clarendon Press, Oxford, p. 471. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
     "changes": "The row-number column dropped, and the columns named year and sunspots."
+  },
+  "wikipedia-views": {
+    "title": "Daily views of Wikipedia pages, July 2015 to September 2017",
+    "sample": {
+      "file": "wikipedia-views.csv",
+      "sha256": "f307b9e773201c6cc3b327e25a5c1ef2ea874a6598aec8ce016539b0aab8d81e",
+      "holds": "136 pages, 803 days of views per day from 1 July 2015 to 10 September 2017; each column is one page, under the archive's number for it"
+    },
+    "full": "6,766 pages in the same layout: every tenth page among the 67,656 that have a count for every day and a median of at least 100 views a day",
+    "source": {
+      "name": "Kaggle Wikipedia Web Traffic Daily Dataset (with Missing Values)",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656080",
+      "doi": "10.5281/zenodo.4656080",
+      "download": "https://zenodo.org/api/records/4656080/files/kaggle_web_traffic_dataset_with_missing_values.zip/content",
+      "file": "kaggle_web_traffic_dataset_with_missing_values.zip",
+      "bytes": 145485324,
+      "sha256": "44e10fc187475f673e2aac837f5f54cf32333fed25222d006f287355ec8699a9",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Kaggle Wikipedia Web Traffic Daily Dataset (with Missing Values) (Version 3) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656080. The archive took the series from the Kaggle competition Web Traffic Time Series Forecasting (Google, 2017); the counts are the Wikimedia Foundation's page view statistics.",
+    "changes": "Pages taken from the archive's .tsf file, one column per page under the archive's series number; the archive does not carry the names of the pages. Kept: every tenth page among those with a count for every day and a median of at least 100 views a day. No count filled in or changed. The sample keeps every fiftieth of those pages."
   }
 }

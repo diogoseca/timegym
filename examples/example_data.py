@@ -33,6 +33,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 DATA = Path(__file__).resolve().parent / "data"
@@ -557,6 +558,38 @@ def _sample_bank_calls(table):
     return calls.groupby(calls.index.floor("30min")).sum().to_frame()
 
 
+# Daily views of Wikipedia pages
+
+
+def _build_wikipedia_views(source):
+    """Daily views of one page in ten, among the pages with a count for every day and a
+    median of at least 100 views a day. The archive numbers the pages and does not name them."""
+    pages, start, eligible = {}, None, 0
+    member = "kaggle_web_traffic_dataset_with_missing_values.tsf"
+    with zipfile.ZipFile(source) as archive, archive.open(member) as lines:
+        for line in io.TextIOWrapper(lines, encoding="utf-8"):
+            if not line.strip() or line[0] in "#@":
+                continue
+            name, first_day, counts = line.strip().split(":", 2)
+            start = start or first_day
+            # The archive writes a day without a count as "?". Every series starts on the same day.
+            if "?" in counts or first_day != start:
+                continue
+            views = np.array(counts.split(","), dtype=float)
+            if np.median(views) < 100:
+                continue
+            if eligible % 10 == 0:
+                pages[name] = views.astype(int)
+            eligible += 1
+    days = pd.date_range(start.split()[0], periods=len(views), freq="D", name="date")
+    return pd.DataFrame(pages, index=days).rename_axis(columns="page")
+
+
+def _sample_wikipedia_views(table):
+    """Every fiftieth page of the full table."""
+    return table.iloc[:, ::50]
+
+
 _DATASETS = {
     "store-sales": {
         "read": _read_store_sales,
@@ -641,6 +674,12 @@ _DATASETS = {
         "build": _build_sunspots,
         "write": _write_sunspots,
         "sample": lambda table: table,
+    },
+    "wikipedia-views": {
+        "read": _read_daily,
+        "build": _build_wikipedia_views,
+        "write": _write_daily,
+        "sample": _sample_wikipedia_views,
     },
 }
 
