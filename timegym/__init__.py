@@ -20,6 +20,7 @@ from .reporting import (
 from .evaluation import ForecastRun, EvaluatedCase
 from .grid import PATTERNS, GridCell, scenario_grid
 from .scorecard import Scorecard
+from .diagnostics import compare_reports
 
 __all__ = [
     "Case",
@@ -44,6 +45,7 @@ __all__ = [
     "GridCell",
     "scenario_grid",
     "cases_from_series",
+    "compare_reports",
 ]
 
 # %% ../source/12_package.ipynb #12_package-05
