@@ -256,7 +256,13 @@ works on the draft. Part 2 takes hours and writes its record at the end, so
 `run_study3_mutants` has `--resume` for a run that a stop of the machine
 interrupted: started again with the same `--output`, it keeps every unit of
 work that the stopped run ended under the same specification and time limit
-and runs the others. After the merge, three commits may each change one value
+and runs the others. Each process runs its numerical libraries on one
+thread. The units of Parts 1 and 2, the parent that computes their statistics
+and the zoo's models load those libraries after the process has started, where
+a limit set with threadpoolctl alone limits nothing;
+`experiments/study3_threads.py` makes them start with one thread, and each of
+these processes reads its thread pools back before it writes its record and
+stops if one of them has more than one thread. After the merge, three commits may each change one value
 of the protocol and nothing else: the one that registers it (date, merge
 commit and status), the one that adds the generated mutant sources and writes
 the digest of their manifest, without which Parts 1 and 2 do not start, and

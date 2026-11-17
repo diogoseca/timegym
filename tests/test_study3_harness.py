@@ -167,6 +167,29 @@ def test_units_do_not_depend_on_the_number_of_workers(tmp_path):
     assert statuses and set(statuses) <= {"PASS", "FAIL"}
 
 
+def test_a_unit_runs_its_libraries_on_one_thread_and_says_so(tmp_path):
+    """The unit's process loads NumPy, SciPy and scikit-learn only after it starts; all of them get one thread."""
+    import sys
+
+    from experiments import study3_threads as threads
+
+    sys.path.insert(0, str(FIXTURES))
+    import study3_toys
+
+    spec = {"output": str(tmp_path / "clean.jsonl"), "source": CLEAN, "module_name": "toy_clean",
+            "learner": {"module": str(FIXTURES / "study3_toys_openmp.py"), "name": "mean", "index": 0, "tag": 400},
+            "settings": SETTINGS, "condition": study3_toys.CONDITIONS[0], "warmup_seed": 100,
+            "stages": [["screen", [100, 101]]], "checks": []}
+    result, = harness.run_units([spec], [60.0])
+    done = result["records"][-1]
+    assert done["kind"] == "done" and result["finished"]
+    pools = {name.split(":")[0] for name in done["threads"]}
+    assert {"blas", "openmp"} <= pools and set(done["threads"].values()) == {1}
+    assert threads.wide_pools([{"prefix": "libgomp", "num_threads": 4}, {"prefix": "libopenblas", "num_threads": 1}]
+                              ) == ["libgomp (4 threads)"]
+    assert threads.wide_pools([]) == []
+
+
 def test_a_stopped_run_is_continued_from_the_units_it_ended(tmp_path):
     import os
     import sys

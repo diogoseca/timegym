@@ -817,8 +817,13 @@ def main(argv=None):
     generic = [source for source in sources if {label["kind"] for label in source["labels"]} == {"cosmic_ray"}]
     fixed = [source for source in sources if source not in generic]
     started = time.perf_counter()
-    from threadpoolctl import threadpool_info, threadpool_limits
+    from threadpoolctl import threadpool_limits
 
+    from .study3_threads import require_one_thread, start_with_one_thread
+
+    # The statistics load NumPy and SciPy after this point, and the units are new processes: both start with one
+    # thread, and the pools are read back before the record is written.
+    start_with_one_thread()
     with threadpool_limits(limits=1):
         if args.part == 1:
             sampled = sample_generic(generic, config["cap"], config["mutant_sampling"])
@@ -833,17 +838,17 @@ def main(argv=None):
             result = run_part2(config, [learner_entry(name) for name in LEARNERS[1:]], fixed, ordered,
                                [learner_entry(name) for name in LEARNERS])
             learner_results = list(result["learners"].values())
-        pools = threadpool_info()
+        pools = require_one_thread()
     seconds = time.perf_counter() - started
     results = {"study_id": protocol["study_id"], "protocol_version": protocol["protocol_version"], "part": part,
                "mutant_manifest_sha256": sha256(mutants), **_strip(result)}
     paths = [Path(__file__)] + [common.ROOT / name for name in protocol["part_1_generated_mutants"]["subject"]
                                 ["frozen_files"]]
     paths += [common.ROOT / f"experiments/{name}.py" for name in ("study3_harness", "study3_stats", "study3_shift",
-                                                                   "study3_common")]
+                                                                   "study3_common", "study3_threads")]
     common.write_record(output, results, sources=tuple(paths), force=args.force,
-                        runtime={"seconds": seconds, "workers": args.workers, "threadpools": pools,
-                                 "resumed": args.resume},
+                        runtime={"seconds": seconds, "workers": args.workers, "thread_limit": 1,
+                                 "threadpools": pools, "resumed": args.resume},
                         extra={"mutant_manifest_sha256": sha256(mutants),
                                "cosmic_ray_version": manifest.get("tool", {}).get("version")})
     rows = {"funnel": [], "decisions": [], "clean": []}
