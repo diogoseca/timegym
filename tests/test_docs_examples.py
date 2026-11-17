@@ -56,6 +56,22 @@ def test_own_scores_example_on_the_scores_page_runs():
     assert set(namespace["scores"]) == {"log_loss", "close"}
 
 
+def test_comparison_examples_on_the_scores_page_print_what_the_page_shows():
+    import contextlib
+    import io
+
+    text = (ROOT / "docs/api/diagnostics.md").read_text(encoding="utf-8")
+    section = text[text.index("## Compare two forecasters"):text.index("### How the test works")]
+    code = re.findall(r"^```python\n(.*?)^```", section, flags=re.M | re.S)
+    shown = re.findall(r"^```text\n(.*?)^```", section, flags=re.M | re.S)
+    namespace = {"__name__": "docs"}
+    printed = io.StringIO()
+    with contextlib.redirect_stdout(printed):
+        for block in code:
+            exec(block, namespace)
+    assert printed.getvalue() == "".join(shown)
+
+
 def test_own_scores_on_the_extend_page_land_in_the_report():
     import matplotlib
 

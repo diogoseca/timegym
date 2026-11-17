@@ -320,6 +320,124 @@ diagnostic, so it has no row.
 - **Threshold or tolerance:** None: any exception
 - **What a FAIL or ERROR usually means:** The model or its target transform raised while fitting or predicting, or `predict` returned something other than a `Forecast`; nothing was scored for that case.
 
+## Compare two forecasters on the same cases
+
+`timegym.compare_reports(candidate, baseline, *, metric, by=None,
+cluster=None, alpha=0.05, higher_is_better=False, seed=0)` says whether a
+candidate forecaster is better or worse than a baseline on the same cases, or
+shows no clear difference. Both reports must come from the same cases, in the
+same order: it pairs them by position and refuses two reports whose case
+manifests differ, naming the first difference. Name the model in the report's
+metadata, not in the case manifest. `metric` is any score in `case.metrics`,
+your own included; lower is better unless `higher_is_better=True`.
+
+```python
+import numpy as np
+import pandas as pd
+from timegym import LastValueForecaster, NaiveForecaster, Pipeline, cases_from_series, compare_reports
+
+rng = np.random.default_rng(0)
+days = pd.date_range("2024-01-01", periods=140, freq="D")
+cases = []
+for store in range(16):
+    weekly = 10 * np.sin(2 * np.pi * np.arange(140) / 7 + store)
+    sales = pd.Series(40 + weekly + rng.normal(0, 3, 140), index=days, name="sales")
+    cases += cases_from_series(sales, origins=[84, 98, 112, 126], horizon=7, name="sales",
+                               manifest={"store": f"store {store}", "region": ["north", "south"][store % 2]})
+
+baseline = Pipeline(LastValueForecaster()).test(cases=cases)
+candidate = Pipeline(NaiveForecaster("seasonal", period=7)).test(cases=cases)
+diff = compare_reports(candidate, baseline, metric="mae", by="region", cluster="store")
+print(diff)
+diff.assert_no_regression()
+```
+
+```text
+mae against the baseline (lower is better; alpha 0.05; cases in one store move together)
+  region north  better               3.52 against 9.15 (-62%) over 32 cases in 8 clusters, p = 0.017
+  region south  better               3.44 against 9.08 (-62%) over 32 cases in 8 clusters, p = 0.017
+```
+
+`diff.table` has one row per candidate and group: `candidate`, `group` (the
+`by` value, or `"all cases"`), `cases` scored in both reports and `clusters`
+among them, `baseline_mean`, `candidate_mean`, `mean_difference` (candidate
+minus baseline), `p_value`, `verdict`, and the cases that are `newly_failing`
+or `newly_passing`. `diff.better`, `diff.worse` and `diff.too_few` hold those
+rows. `assert_no_regression()` raises when a row is worse or too few to tell.
+
+- **Groups.** `by` names a manifest key, such as `"region"`; each value gets a
+  row, and Holm's correction runs across the groups.
+- **Cases that move together.** `cluster` names a manifest key, such as
+  `"store"`, whose cases share their ups and downs, as cases cut from one
+  series do. All cases of a cluster count as one piece of evidence. Leaving it
+  out when cases do move together makes chance differences look real far more
+  often than `alpha`.
+- **Too few to tell.** With `k` clusters (or cases, without `cluster`) that
+  differ, the smallest possible p-value is `2 / 2**k`, so with five or fewer
+  nothing can reach 0.05. Such a row says `"too few to tell"` and fails
+  `assert_no_regression()`, rather than pass a test it could never fail. With
+  several groups, Holm's correction needs more clusters per group: with two
+  regions of six stores each, the example above would show no clear
+  difference even though every store improved.
+- **Crashes.** A case the baseline scored that crashes or fails an output
+  check in the candidate makes its row `"worse"`. A case the candidate scores
+  and the baseline did not is counted in `newly_passing` and left out of the
+  test.
+- **Roundoff.** Two scores of a case that differ by no more than `1e-9`, or
+  `1e-8` times the largest score in the row, count as the same, as in a
+  scorecard's comparison. Two reports with the same scores show no clear
+  difference, with a p-value of 1.
+
+### Many candidates against one baseline
+
+Pass a list of reports, labelled by the model each report's metadata names, or
+a dictionary of named reports. Each candidate's p-value is adjusted for how
+many were tried, so the best of many does not beat the baseline by luck.
+
+```python
+candidates = {
+    "same weekday last week": candidate,
+    "mean so far": Pipeline(NaiveForecaster("mean")).test(cases=cases),
+    "straight line": Pipeline(NaiveForecaster("drift")).test(cases=cases),
+}
+print(compare_reports(candidates, baseline, metric="mae", cluster="store"))
+```
+
+```text
+mae against the baseline (lower is better; alpha 0.05; cases in one store move together)
+  same weekday last week  better               3.48 against 9.11 (-62%) over 64 cases in 16 clusters, p = 0.0001
+  mean so far             better               6.54 against 9.11 (-28%) over 64 cases in 16 clusters, p = 0.0004
+  straight line           no clear difference  9.2 against 9.11 (+0.91%) over 64 cases in 16 clusters, p = 0.074
+```
+
+### How the test works
+
+For each pair of scores, the difference is candidate minus baseline. If the
+two forecasters were alike, each difference, or each cluster's sum of
+differences, would be as likely to be positive as negative. The test flips
+their signs at random 9,999 times, seeded from `seed` and the number of
+clusters (or cases), and the p-value is the share of sign patterns, the observed one
+included, whose mean difference is at least as far from zero as the observed
+one. It is two-sided, so the verdict can go either way. With `cluster`, all
+cases of a cluster flip together ([Canay, Romano and Shaikh
+2017](https://doi.org/10.3982/ECTA13081)). With several candidates, one set
+of sign flips is applied to every candidate and group. Each row's statistic is
+divided by the square root of its sum of squared differences, which no flip
+changes, so a group with larger errors does not dominate. Each row's p-value
+is then the share of sign patterns whose largest statistic, over all rows, is
+at least that row's observed one ([White
+2000](https://doi.org/10.1111/1468-0262.00152); [Romano and Wolf
+2005](https://doi.org/10.1111/j.1468-0262.2005.00615.x)). Rows where too few
+clusters differ are left out of both corrections.
+
+The test assumes that different clusters are independent and that, when the
+two forecasters are alike, a cluster's difference is as likely to be positive
+as negative. It says how these two forecasters did on these cases; whether
+the difference holds on other cases depends on whether these are a fair
+sample of them. A scorecard's comparison with a saved baseline uses the same
+sign flips and Holm's correction, one-sided, because it asks only whether the
+new version is worse.
+
 ## Case-level uncertainty intervals
 
 `timegym.statistics.wilson_interval(values)` accepts a nonempty vector of binary
@@ -362,6 +480,10 @@ The t interval is for continuous score differences, not differences in alarm rat
 ::: timegym.metrics.UndefinedMetricError
 
 ::: timegym.diagnostics.evaluate_forecast
+
+::: timegym.compare_reports
+
+::: timegym.diagnostics.ReportComparison
 
 ::: timegym.diagnostics.covariance_dependence_check
 

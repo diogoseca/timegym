@@ -16,7 +16,7 @@ import pandas as pd
 from scipy import special, stats
 from ._internal import positive_int, _deprecated
 from .contracts import _describe_shift, _index_shift
-from .diagnostics import rank_alarm
+from .diagnostics import _holm, _sign_flip_pvalue
 from .evaluation import ForecastRun
 from .grid import PATTERNS, GridCell, scenario_grid
 from .plotting import _BAND_COLORS, _FORECAST, _HAIRLINE, _INK, _MUTED, _SURFACE
@@ -809,9 +809,6 @@ def _unsettled_line(count, total, instances):
 # newer TimeGym in a format this version cannot read, is refused instead of misread.
 _BASELINE_FORMAT, _BASELINE_VERSION = "timegym-scorecard-baseline", 1
 
-# Sign flips behind each changed cell's p-value.
-_FLIPS = 9_999
-
 # Two avoidable errors of one series agree when they differ by at most this share of the largest
 # avoidable error in the cell, in either version, or by _ABSOLUTE_TOLERANCE, whichever is larger:
 # roundoff from another platform or library version, not a change in the forecasts. This is the
@@ -968,30 +965,6 @@ def _check_same_series(record, card, name):
             + "; ".join(differences)
             + ". Make the card with the baseline's settings, or save a new baseline."
         )
-
-
-def _sign_flip_pvalue(differences, seed):
-    """One-sided sign-flip p-value for a mean difference above zero, from ``rank_alarm``.
-
-    The generator depends only on ``seed`` and the number of differences, so a
-    cell's p-value does not depend on which other cells were scored.
-    """
-    differences = np.asarray(differences, dtype=float)
-    signs = np.random.default_rng([int(seed), len(differences)]).choice(
-        [-1.0, 1.0], size=(_FLIPS, len(differences))
-    )
-    return rank_alarm(differences.mean(), (signs * differences).mean(axis=1)).p_value
-
-
-def _holm(p_values, alpha):
-    """Holm's step-down rejections at ``alpha``, in the order the p-values were given."""
-    order = np.argsort(p_values, kind="stable")
-    rejected = np.zeros(len(p_values), dtype=bool)
-    for step, position in enumerate(order):
-        if p_values[position] > alpha / (len(p_values) - step):
-            break
-        rejected[position] = True
-    return rejected
 
 
 def _compare(card, baseline, alpha):

@@ -998,6 +998,17 @@ def test_holm_counts_only_the_cells_that_changed(tmp_path, last_value_baseline):
     diff.assert_no_regression()
 
 
+def test_comparison_results_stay_as_they_were_before_sharing_the_sign_flips(last_value_baseline):
+    # Recorded before the sign flips and Holm's correction moved to timegym.diagnostics, which
+    # compare_reports shares: the move must not change a single p-value or verdict.
+    diff = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4).compare(
+        last_value_baseline)
+    # Within two flips of 9,999: roundoff on another platform may move a flipped mean past a tie.
+    assert diff.table["p_value"].tolist() == pytest.approx(
+        [0.9999, 0.9999, 0.0001, 0.0001, 0.0002, 0.0056], abs=2e-4)
+    assert diff.table["change"].tolist() == ["changed, no worse"] * 2 + ["changed and worse"] * 4
+
+
 def test_holm_steps_down_and_keeps_the_given_order():
     from timegym.scorecard import _holm
 
