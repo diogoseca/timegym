@@ -230,6 +230,10 @@ shows them with their results and says how to run them.
 | Example | What TimeGym showed |
 |---|---|
 | [Weekly shop sales: from forecast to stock order](https://diogoseca.github.io/timegym/examples/store-sales/) | Why the usual regression loses to a plain average on a gift shop's products, and which simpler forecaster leaves fewer units out of stock |
+| [Spare parts: the best score goes to a forecast of zero](https://diogoseca.github.io/timegym/examples/spare-parts/) | The lowest average error belongs to a forecast of zero; a score in the parts counter's terms names the forecaster that keeps parts on the shelf |
+| [Tomorrow's electricity demand: let the worst days say what is missing](https://diogoseca.github.io/timegym/examples/electricity-demand/) | Which days a day-ahead forecast gets wrong, round by round: the weekday, then public holidays, then weather the data lacks |
+| [River flow: checking the range, not only the forecast](https://diogoseca.github.io/timegym/examples/river-flow/) | A 90% range that holds on average but not month by month, the one argument that repairs it, and how far it fails when the river rises |
+| [The sunspot cycle: how far ahead is a forecast worth making?](https://diogoseca.github.io/timegym/examples/sunspots/) | A regression that leads for two years ahead and adds nothing after |
 | [The forest that cannot follow growth](https://diogoseca.github.io/timegym/examples/passenger-growth/) | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
 | [Bitcoin: finding out you have nothing](https://diogoseca.github.io/timegym/examples/bitcoin/) | A 79% hit rate that came from one input reaching into the future |
 

@@ -100,6 +100,12 @@ nav:
       - Overview: docs/examples.md
       - Demand and operations:
           - "Weekly shop sales: from forecast to stock order": examples/store-sales.ipynb
+          - "Spare parts: the best score goes to a forecast of zero": examples/spare-parts.ipynb
+      - Energy and environment:
+          - "Tomorrow's electricity demand: let the worst days say what is missing": examples/electricity-demand.ipynb
+          - "River flow: checking the range, not only the forecast": examples/river-flow.ipynb
+      - Chaotic but partly predictable:
+          - "The sunspot cycle: how far ahead is a forecast worth making?": examples/sunspots.ipynb
       - Finance:
           - "Bitcoin: finding out you have nothing": examples/bitcoin.ipynb
       - Lessons that cut across domains:

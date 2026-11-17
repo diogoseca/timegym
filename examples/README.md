@@ -8,6 +8,10 @@ documentation, or run them here.
 | Example | The job | What TimeGym showed |
 | --- | --- | --- |
 | [Weekly shop sales: from forecast to stock order](store-sales.ipynb) | Restock 30 products of an online gift shop every four weeks | Why the usual regression loses to a plain average, which simpler forecaster fits, and that neither knows about Christmas |
+| [Spare parts: the best score goes to a forecast of zero](spare-parts.ipynb) | Decide how many of each slow-selling car part to hold for six months | The lowest average error belongs to a forecast of zero; a score in the parts counter's terms and the scorecard name the forecaster that keeps parts on the shelf |
+| [Tomorrow's electricity demand: let the worst days say what is missing](electricity-demand.ipynb) | Forecast tomorrow's demand, half-hour by half-hour | Which days a day-ahead forecast gets wrong, round by round: the weekday, then public holidays, then weather the data lacks |
+| [River flow: checking the range, not only the forecast](river-flow.ipynb) | Give a three-day range for a river's flow | A 90% range that holds on average but not month by month, the one argument that repairs it, and how far it fails when the river rises |
+| [The sunspot cycle: how far ahead is a forecast worth making?](sunspots.ipynb) | Forecast a cycle eleven years ahead | A regression that leads for two years and adds nothing after, and how little room an irregular cycle leaves a cleverer model |
 | [The forest that cannot follow growth](passenger-growth.ipynb) | Forecast next year's airline passengers | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
 | [Bitcoin: finding out you have nothing](bitcoin.ipynb) | Forecast tomorrow's price | A 79% hit rate that came from one input reaching into the future; the honest model ties with yesterday's price |
 
