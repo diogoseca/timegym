@@ -48,4 +48,4 @@ __all__ = [
 
 # %% ../source/12_package.ipynb #12_package-05
 
-__version__ = "1.4.1"
+__version__ = "1.10.1"

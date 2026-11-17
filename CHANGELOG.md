@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.10.1 — 2026-11-17
 
 - Added ways to score your own data. `timegym.cases_from_series(series,
   origins, horizon, *, name="series", manifest=None)` cuts a series, or a
