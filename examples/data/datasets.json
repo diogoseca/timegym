@@ -314,6 +314,32 @@
     "credit": "Hyndman, R. J., and others. fpp3: Data for \"Forecasting: Principles and Practice\" (3rd Edition) (R package), dataset otexts_views. The package describes the series as daily page views on the OTexts website (https://OTexts.com/) as recorded by Google Analytics. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
     "changes": "The row-number column dropped; the columns named date and views."
   },
+  "solar-farm": {
+    "title": "Output of an Australian solar farm by half hour, August 2019 to July 2020",
+    "sample": {
+      "file": "solar-farm.csv",
+      "sha256": "914dc1005d400b19f47428a3fad36aecb51ebb0e85c66140a5c72879946c4002",
+      "holds": "Average output in megawatts in each half hour of 339 days, 16,272 half hours, on the archive's clock from 12:00 on 3 August 2019"
+    },
+    "full": "The output every four seconds, 7,397,222 readings from 1 August 2019 on the archive's clock",
+    "source": {
+      "name": "Solar Power Dataset (4 Seconds Observations)",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656027",
+      "doi": "10.5281/zenodo.4656027",
+      "download": "https://zenodo.org/api/records/4656027/files/solar_4_seconds_dataset.zip/content",
+      "file": "solar_4_seconds_dataset.zip",
+      "bytes": 794502,
+      "sha256": "9aff580f3cce6b8864572117b2b1cbbf410cc46e9ec40a90201c14bd0296f4fd",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Abolghasemi, M., Hyndman, R., & Montero-Manso, P. (2020). Solar Power Dataset (4 Seconds Observations) (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656027. The archive downloaded the readings from the Australian Energy Market Operator (AEMO), https://aemo.com.au/.",
+    "changes": "Converted from the archive's .tsf file. The archive gives one start time and no other timestamps, so each reading is placed four seconds after the one before it; the result is the archive's clock, not the farm's local time. The sample averages the readings over half hours, rounds to one decimal, leaves out the first two and a half days, where readings are missing, and the last part day, and holds one row per day and one column per half hour, with each day starting at 12:00 on the archive's clock; the loader returns one row per half hour."
+  },
   "southern-oscillation": {
     "title": "The Southern Oscillation Index by month, 1900 to 2005",
     "sample": {

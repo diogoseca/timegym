@@ -225,6 +225,36 @@ sample is the whole series.
 - Credit: Hyndman, R. J., and others. fpp3: Data for "Forecasting: Principles and Practice" (3rd Edition) (R package), dataset otexts_views. The package describes the series as daily page views on the OTexts website (https://OTexts.com/) as recorded by Google Analytics. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
 - Changes: The row-number column dropped; the columns named date and views.
 
+## Solar farm
+
+`solar-farm.csv`: the average output of one solar farm in megawatts in each
+half hour of 339 days, 16,272 half hours. The file has one row per day and one
+column per half hour; the loader returns one row per half hour. The readings
+were made every four seconds, and the archive took them from the Australian
+Energy Market Operator. It does not name the farm.
+
+The archive gives the series one start time, 1 August 2019, and no other
+timestamps, so the loader places each reading four seconds after the one
+before. That clock is not the farm's local time. On the second day the series
+jumps from late morning straight into night, so readings are missing there,
+and from then on the farm's daylight falls around midnight on the archive's
+clock. Over the year the daylight also comes about an hour earlier on that
+clock than the seasons explain, which suggests more readings are missing along
+the way. The sample leaves out the first two and a half days and starts each
+day at 12:00 on the archive's clock, which is in the farm's night.
+
+- Source: Solar Power Dataset (4 Seconds Observations), Monash Time Series
+  Forecasting Archive, on Zenodo, <https://zenodo.org/records/4656027>
+- License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), the archive's
+  license for its file. The readings are the Australian Energy Market
+  Operator's. Its Copyright Permissions page is reported to give a general
+  permission to use its material for any purpose with accurate attribution to
+  the operator as author.
+- Credit: Godahewa, R., Bergmeir, C., Webb, G., Abolghasemi, M., Hyndman, R., & Montero-Manso, P. (2020). Solar Power Dataset (4 Seconds Observations) (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656027. The archive downloaded the readings from the Australian Energy Market Operator (AEMO), https://aemo.com.au/.
+- Changes: Converted from the archive's .tsf file. The archive gives one start time and no other timestamps, so each reading is placed four seconds after the one before it; the result is the archive's clock, not the farm's local time. The sample averages the readings over half hours, rounds to one decimal, leaves out the first two and a half days, where readings are missing, and the last part day, and holds one row per day and one column per half hour, with each day starting at 12:00 on the archive's clock; the loader returns one row per half hour.
+- Full version: the output every four seconds, 7,397,222 readings in one
+  column on the archive's clock.
+
 ## Southern Oscillation
 
 `southern-oscillation.csv`: the Southern Oscillation Index for every month

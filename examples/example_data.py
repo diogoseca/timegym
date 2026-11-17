@@ -512,6 +512,58 @@ def _build_site_views(source):
     return pd.DataFrame({"views": table["Pageviews"].to_numpy()}, index=days)
 
 
+# Output of a solar farm
+
+_SOLAR_FARM_START = "2019-08-01 00:00:03"  # the one timestamp the archive gives the series
+
+
+def _read_solar_farm(path):
+    """The sample has one row per day and one column per half hour; the full file has one column
+    of four-second readings in order."""
+    if pd.read_csv(path, nrows=0).columns[0] == "day":
+        days = pd.read_csv(path, index_col="day", parse_dates=True)
+        first = days.index[0] + pd.Timedelta(days.columns[0] + ":00")
+        times = pd.date_range(first, periods=days.size, freq="30min", name="time")
+        return pd.DataFrame({"mw": days.to_numpy().ravel()}, index=times)
+    output = pd.read_csv(path)["mw"].to_numpy()
+    times = pd.date_range(_SOLAR_FARM_START, periods=len(output), freq="4s", name="time")
+    return pd.DataFrame({"mw": output}, index=times)
+
+
+def _build_solar_farm(source):
+    """Output in megawatts every four seconds, on the clock the archive gives the series."""
+    with zipfile.ZipFile(source) as archive, archive.open("solar_4_seconds_dataset.tsf") as lines:
+        for line in io.TextIOWrapper(lines, encoding="utf-8"):
+            if line.startswith("T1:"):
+                _, start, readings = line.strip().split(":", 2)
+                break
+    if pd.to_datetime(start, format="%Y-%m-%d %H-%M-%S") != pd.Timestamp(_SOLAR_FARM_START):
+        raise ValueError(f"the source starts at {start}, not at {_SOLAR_FARM_START}")
+    output = np.array(readings.split(","), dtype=float)
+    # The archive has no other timestamps: reading k is taken to be 4 k seconds after the start.
+    times = pd.date_range(_SOLAR_FARM_START, periods=len(output), freq="4s", name="time")
+    return pd.DataFrame({"mw": output}, index=times)
+
+
+def _write_solar_farm(table, path):
+    if table.index[1] - table.index[0] != pd.Timedelta(minutes=30):
+        table.to_csv(path, index=False, lineterminator="\n")
+        return
+    days = pd.DataFrame(
+        table["mw"].to_numpy().reshape(-1, 48),
+        index=pd.Index(table.index[::48].strftime("%Y-%m-%d"), name="day"),
+        columns=table.index[:48].strftime("%H:%M"),
+    )
+    days.to_csv(path, float_format="%.1f", lineterminator="\n")
+
+
+def _sample_solar_farm(table):
+    """Half-hour averages over whole days. A day starts at 12:00 on the archive's clock, which is
+    in the farm's night, and the first two and a half days are left out: readings are missing there."""
+    half_hours = table["mw"].resample("30min").mean().loc["2019-08-03 12:00":]
+    return half_hours.iloc[: len(half_hours) // 48 * 48].round(1).to_frame()
+
+
 # The Southern Oscillation Index, month by month
 
 
@@ -672,6 +724,12 @@ _DATASETS = {
         "build": _build_site_views,
         "write": _write_daily,
         "sample": lambda table: table,
+    },
+    "solar-farm": {
+        "read": _read_solar_farm,
+        "build": _build_solar_farm,
+        "write": _write_solar_farm,
+        "sample": _sample_solar_farm,
     },
     "southern-oscillation": {
         "read": _read_monthly,
