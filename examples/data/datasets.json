@@ -103,6 +103,32 @@
     "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Car Parts Dataset (with Missing Values) (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656022. The archive took the series from the R package expsmooth.",
     "changes": "Converted from the archive's .tsf file to a table with one row per month and one column per part, under the archive's part labels. The sample keeps every eighth part among the 2,509 that have a figure for every month."
   },
+  "city-temperatures": {
+    "title": "Daily highest temperature at Australian weather stations, May 2015 to April 2017",
+    "sample": {
+      "file": "city-temperatures.csv",
+      "sha256": "6d43077e80248e4c3cd33e53ae8e52212b19b2fc2ac45a82869b2716c221ae92",
+      "holds": "Eight cities, 725 days: Sydney, Melbourne, Adelaide, Canberra, Hobart, Perth, Brisbane and Darwin"
+    },
+    "full": "All 422 stations, under the Bureau of Meteorology's station numbers",
+    "source": {
+      "name": "Temperature Rain Dataset with Missing Values",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/5129073",
+      "doi": "10.5281/zenodo.5129073",
+      "download": "https://zenodo.org/api/records/5129073/files/temperature_rain_dataset_with_missing_values.zip/content",
+      "file": "temperature_rain_dataset_with_missing_values.zip",
+      "bytes": 25747139,
+      "sha256": "36a8c8cce2a99a8372ff8f82450b50dcc1b5eff653820c7a828d56730fe325fb",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY-SA 3.0 AU",
+      "url": "https://creativecommons.org/licenses/by-sa/3.0/au/"
+    },
+    "credit": "Bureau of Meteorology, Australian Government: Historical rainfall and temperature forecast and observations hourly data - weather forecasting verification data (2015-05 to 2016-04), and Rainfall and temperature forecast and observations - verification 2016-05 to 2017-04, both on data.gov.au. Put together as one file by Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2021). Temperature Rain Dataset with Missing Values (Version 1) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.5129073",
+    "changes": "The highest temperature of each day taken from the archive's .tsf file; its other series left out. The sample keeps eight stations and names each column after its city."
+  },
   "electricity-demand": {
     "title": "Half-hourly electricity demand in Victoria, Australia, 2014",
     "sample": {

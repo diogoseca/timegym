@@ -73,6 +73,25 @@ month.
 - Full version: all 2,674 parts. 165 of them have no figures from early 1999 on,
   and those months are empty.
 
+## City temperatures
+
+`city-temperatures.csv`: the highest temperature of each day, in degrees
+Celsius, in eight Australian cities, 725 days from 2 May 2015 to
+25 April 2017. The columns are Sydney (Bureau of Meteorology station 66062),
+Melbourne (86282, the airport), Adelaide (23034, the airport), Canberra
+(70351), Hobart (94029), Perth (9021, the airport), Brisbane (40842, the
+airport) and Darwin (14015, the airport). It comes from the same source file
+as the [rain](#rain) table, where the 24 hours of a row are explained.
+
+- Source: Temperature Rain Dataset with Missing Values, Monash Time Series Forecasting Archive, on Zenodo,
+  <https://zenodo.org/records/5129073>
+- License: [CC BY-SA 3.0 AU](https://creativecommons.org/licenses/by-sa/3.0/au/), for the reason
+  given under [Rain](#rain).
+- Credit: Bureau of Meteorology, Australian Government: Historical rainfall and temperature forecast and observations hourly data - weather forecasting verification data (2015-05 to 2016-04), and Rainfall and temperature forecast and observations - verification 2016-05 to 2017-04, both on data.gov.au. Put together as one file by Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2021). Temperature Rain Dataset with Missing Values (Version 1) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.5129073
+- Changes: The highest temperature of each day taken from the archive's .tsf file; its other series left out. The sample keeps eight stations and names each column after its city.
+- Full version: all 422 stations, under the Bureau's station numbers. Some
+  stations have days without a figure, and those cells are empty.
+
 ## Electricity demand
 
 `electricity-demand.csv`: electricity demand in Victoria, Australia, for every

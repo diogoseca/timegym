@@ -107,6 +107,10 @@ def _source_file(name, given=None):
     source = record(name)["source"]
     path = Path(given) if given else cache_folder() / name / source["file"]
     if not path.exists():
+        # Two datasets can come from one source file: use a copy that is already there.
+        copies = [copy for copy in cache_folder().glob(f"*/{source['file']}") if _sha256(copy) == source["sha256"]]
+        path = copies[0] if copies else path
+    if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         megabytes = source["bytes"] / 1e6
         print(f"Downloading {source['file']} ({megabytes:.1f} MB) from {source['download']}")
@@ -385,6 +389,27 @@ def _sample_rain(table):
     return table[_RAIN_STATION]
 
 
+# Daily highest temperature in eight cities, from the same source as the rain table
+
+_CITY_STATIONS = {
+    "Sydney": "66062", "Melbourne": "86282", "Adelaide": "23034", "Canberra": "70351",
+    "Hobart": "94029", "Perth": "9021", "Brisbane": "40842", "Darwin": "14015",
+}
+
+
+def _build_city_temperatures(source):
+    """The highest temperature of each day at all 422 stations, under the Bureau's station numbers."""
+    series = _archive_series(source, "temperature_rain_dataset_with_missing_values.tsf",
+                             keep=lambda labels: labels["obs_or_fcst"] == "T_MAX")
+    table = pd.DataFrame({station: values for (station, _), values in series.items()})
+    return table.rename_axis(index="date", columns="station")
+
+
+def _sample_city_temperatures(table):
+    """Eight cities, named."""
+    return table[list(_CITY_STATIONS.values())].set_axis(list(_CITY_STATIONS), axis=1)
+
+
 # Half-hourly electricity demand
 
 
@@ -467,6 +492,12 @@ _DATASETS = {
         "build": _build_spare_parts,
         "write": _write_monthly_counts,
         "sample": _sample_spare_parts,
+    },
+    "city-temperatures": {
+        "read": _read_daily,
+        "build": _build_city_temperatures,
+        "write": _write_daily,
+        "sample": _sample_city_temperatures,
     },
     "electricity-demand": {
         "read": _read_electricity,
