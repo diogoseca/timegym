@@ -501,6 +501,19 @@ def _build_sunspots(source):
     return pd.DataFrame({"sunspots": values["value"].to_numpy(float)}, index=years)
 
 
+# The Southern Oscillation Index, month by month
+
+
+def _build_southern_oscillation(source):
+    """The twelve monthly columns of each year, put in one column in date order."""
+    years = pd.read_csv(source)
+    if not (years["Year"].diff().dropna() == 1).all():
+        raise ValueError("the source skips a year, so its months cannot be put on a regular calendar")
+    names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    months = pd.period_range(f"{years['Year'].iloc[0]}-01", periods=12 * len(years), freq="M", name="month")
+    return pd.DataFrame({"soi": years[names].to_numpy(float).ravel()}, index=months)
+
+
 # The S&P 500 share index
 
 
@@ -610,6 +623,12 @@ _DATASETS = {
         "build": _build_river_flow,
         "write": _write_daily,
         "sample": _sample_river_flow,
+    },
+    "southern-oscillation": {
+        "read": _read_monthly,
+        "build": _build_southern_oscillation,
+        "write": _write_airline,
+        "sample": lambda table: table,
     },
     "sp500": {
         "read": _read_sp500,

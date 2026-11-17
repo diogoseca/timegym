@@ -211,6 +211,23 @@ Ontario, in cubic meters per second, 10,957 days from 1 January 1950 to
 - Changes: Converted from the archive's .tsf file to a table with one row per day. The sample keeps 1950 to 1979.
 - Full version: the same series from 1 January 1915, 23,741 days.
 
+## Southern Oscillation
+
+`southern-oscillation.csv`: the Southern Oscillation Index for every month
+from January 1900 to December 2005, 1,272 months. The index compares the air
+pressure at Tahiti with the air pressure at Darwin; months of low values go
+with El Niño and months of high values with La Niña. The sample is the whole
+series.
+
+- Source: bomsoi, R package DAAG, as a CSV file in Rdatasets,
+  <https://vincentarelbundock.github.io/Rdatasets/doc/DAAG/bomsoi.html>
+- License: [GPL-3 (R package DAAG)](https://github.com/cran/DAAG/blob/master/DESCRIPTION), the license
+  of the package the table ships in. The package gives the web pages of the
+  Australian Bureau of Meteorology as the source of its figures; the Bureau's
+  own terms for them are not stated in the package.
+- Credit: Maindonald, J. H., & Braun, W. J. DAAG: Data Analysis and Graphics Data and Functions (R package), dataset bomsoi. The package gives the web pages of the Australian Bureau of Meteorology as the source of the figures. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
+- Changes: The twelve monthly columns of each year put in one column in date order, named soi; the yearly average and the rainfall columns left out.
+
 ## Share index
 
 `sp500.csv`: the level of the S&P 500 share index at the close of the last

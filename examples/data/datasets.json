@@ -288,6 +288,32 @@
     "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Saugeen River Flow (SaugeenDay) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656058. The archive took the series from the R package deseasonalize.",
     "changes": "Converted from the archive's .tsf file to a table with one row per day. The sample keeps 1950 to 1979."
   },
+  "southern-oscillation": {
+    "title": "The Southern Oscillation Index by month, 1900 to 2005",
+    "sample": {
+      "file": "southern-oscillation.csv",
+      "sha256": "cc9895bcfc3a35e0ce340830f9c2defbd743ad7dbff76499bc90c704d6e5fe4c",
+      "holds": "The whole series, 1,272 months from January 1900 to December 2005",
+      "complete": true
+    },
+    "full": "The same 1,272 months",
+    "source": {
+      "name": "bomsoi",
+      "publisher": "R package DAAG, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/DAAG/bomsoi.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/DAAG/bomsoi.csv",
+      "file": "bomsoi.csv",
+      "bytes": 13213,
+      "sha256": "225e6ec833824d1f6ee2b4b7ed2f70fe350e0245f401d60ea36ef7daec4f2590",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-3 (R package DAAG)",
+      "url": "https://github.com/cran/DAAG/blob/master/DESCRIPTION"
+    },
+    "credit": "Maindonald, J. H., & Braun, W. J. DAAG: Data Analysis and Graphics Data and Functions (R package), dataset bomsoi. The package gives the web pages of the Australian Bureau of Meteorology as the source of the figures. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The twelve monthly columns of each year put in one column in date order, named soi; the yearly average and the rainfall columns left out."
+  },
   "sp500": {
     "title": "The S&P 500 share index, 1950 to 2015",
     "sample": {
