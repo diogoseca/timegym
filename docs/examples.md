@@ -128,6 +128,20 @@ links to the tutorials for the tools it uses.
 
     Data: yearly sunspot numbers, 1700 to 1988. Runs in about 15 seconds.
 
+-   [![A grid of gains by the month a forecast is made and the months ahead: the blue area ends in a staircase where the forecast month becomes May](images/examples/el-nino.png)](../examples/el-nino.ipynb)
+
+    **[El Niño: how far ahead depends on the month you ask](../examples/el-nino.ipynb)**
+
+    *Chaotic but partly predictable*
+
+    A backtest says a regression on the Southern Oscillation Index is worth
+    using for seven months ahead. Sorted by the month each forecast was made
+    in, the kept run says something else: nothing gets across April, and a
+    forecast that does not have to is still ahead nine months out. Earlier
+    years and generated series with no seasons show it is not luck.
+
+    Data: the monthly Southern Oscillation Index, 1900 to 2005. Runs in about 20 seconds.
+
 -   [![The days each model input uses; the smoothed price reaches three days past the day being forecast](images/examples/bitcoin.png)](../examples/bitcoin.ipynb)
 
     **[Bitcoin: finding out you have nothing](../examples/bitcoin.ipynb)**
@@ -225,7 +239,7 @@ data and we know what the result is.
 - **Demand and operations:** bakery demand around holidays, bike-share
   stations, emergency room arrivals.
 - **Energy and environment:** solar farm output.
-- **Chaotic but partly predictable:** flu season, El Niño.
+- **Chaotic but partly predictable:** flu season.
 - **Web and product:** signups after a launch, server load for capacity
   planning.
 - **Lessons that cut across domains:** a ready-made model against your own.
