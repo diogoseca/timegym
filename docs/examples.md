@@ -175,6 +175,22 @@ links to the tutorials for the tools it uses.
 
     Data: hourly fine particles at 24 London monitors, winter 2017 to 2018. Runs in about a minute.
 
+-   [![Admissions with flu in 21 states in two winters and the forecasts made four weeks before: both forecasts trail the season by about a month and stay far below each peak](images/examples/flu-season.png)](../examples/flu-season.ipynb)
+
+    **[Flu season: the calendar knows the rhythm, not the peak](../examples/flu-season.ipynb)**
+
+    *Chaotic but partly predictable*
+
+    A forecaster that learns flu's season from earlier winters is well ahead
+    in the one winter that kept to the usual week, and the worst of four in
+    the two that came late. Four weeks before a peak, no forecaster saw more
+    than 62% of it. Generated seasons that repeat show the forecaster is
+    built right, and telling it the week of the peak shows what is missing.
+    A check with nonsense in the weeks hospitals did not have to report
+    caught a forecast that read one.
+
+    Data: weekly hospital admissions with flu in 21 US states, 2022 to 2026. Runs in about 15 seconds.
+
 -   [![Average miss by years ahead for four forecasters; the regression leads for two years, then matches the rule that copies one cycle back](images/examples/sunspots.png)](../examples/sunspots.ipynb)
 
     **[The sunspot cycle: how far ahead is a forecast worth making?](../examples/sunspots.ipynb)**
@@ -321,8 +337,7 @@ everything = load("store-sales", full=True)   # every product, downloaded on fir
 
 ## More on the way
 
-These examples are planned. Each one is added once its notebook has run on real
+One more example is planned. It is added once its notebook has run on real
 data and we know what the result is.
 
-- **Chaotic but partly predictable:** flu season.
 - **Lessons that cut across domains:** a ready-made model against your own.

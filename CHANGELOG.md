@@ -4,29 +4,30 @@
 
 - Added an Examples section to the documentation, placed right after the home
   page: forecasting jobs on real public data, from the first model to a
-  decision, with TimeGym in the loop. The first twenty are weekly shop
+  decision, with TimeGym in the loop. The first twenty-one are weekly shop
   sales turned into stock orders, spare parts where the lowest average error
   goes to a forecast of zero, a Christmas order that five Decembers cannot
   settle and generated shops can, a call center's forecast made again at ten
   o'clock, train station riders forecast with the real weather to see what a
   weather feed could add, daily births forecast with different amounts of
-  history, a day-ahead electricity forecast improved by asking which days
-  went wrong, a range for a solar farm's whole day that half-hour ranges
-  cannot give, a 90% range for a river's flow, rain tomorrow scored against
-  the weather service's own forecast, Sydney's temperature forecast with
-  other cities' help, London's air scored only where it was measured, the
-  sunspot cycle split by years ahead, an El Niño forecast whose reach
-  depends on the month it is made, a jump in a page's traffic where the
+  history, a day-ahead electricity forecast improved by asking which days went
+  wrong, a range for a solar farm's whole day that half-hour ranges cannot
+  give, a 90% range for a river's flow, rain tomorrow scored against the
+  weather service's own forecast, Sydney's temperature forecast with other
+  cities' help, London's air scored only where it was measured, a flu season
+  forecast from the calendar of earlier winters, which works until the peak
+  comes late, the sunspot cycle split by years ahead, an El Niño forecast whose
+  reach depends on the month it is made, a jump in a page's traffic where the
   ordinary backtest picks the wrong forecaster, a site's capacity booked four
-  weeks ahead and tested at that lead time, a Bitcoin backtest whose edge
-  was one input reaching into the future, a range for the S&P 500's next week
-  that holds in crashes, a random forest that cannot follow growing airline
-  traffic, and the winner of a 50-setting backtest that comes tenth the next
-  year. The notebooks are in `examples/`, with a small sample of each dataset
-  committed in `examples/data` beside its source, license and credit, so they
-  run offline. `examples/example_data.py` loads the samples and, with
-  `load(name, full=True)`, downloads and checks the whole dataset. `pip
-  install -e '.[examples]'` from a clone installs what the notebooks need.
+  weeks ahead and tested at that lead time, a Bitcoin backtest whose edge was
+  one input reaching into the future, a range for the S&P 500's next week that
+  holds in crashes, a random forest that cannot follow growing airline traffic,
+  and the winner of a 50-setting backtest that comes tenth the next year. The
+  notebooks are in `examples/`, with a small sample of each dataset committed
+  in `examples/data` beside its source, license and credit, so they run
+  offline. `examples/example_data.py` loads the samples and, with `load(name,
+  full=True)`, downloads and checks the whole dataset. `pip install -e
+  '.[examples]'` from a clone installs what the notebooks need.
 - Added ways to score your own data. `timegym.cases_from_series(series,
   origins, horizon, *, name="series", manifest=None)` cuts a series, or a
   table of series, into cases that end their history at different times: an

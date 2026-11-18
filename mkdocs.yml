@@ -113,6 +113,7 @@ nav:
           - "Tomorrow's temperature: which city should Sydney watch?": examples/daily-temperature.ipynb
           - "Tomorrow's air in London: the gaps someone filled in for you": examples/air-quality.ipynb
       - Chaotic but partly predictable:
+          - "Flu season: the calendar knows the rhythm, not the peak": examples/flu-season.ipynb
           - "The sunspot cycle: how far ahead is a forecast worth making?": examples/sunspots.ipynb
           - "El Niño: how far ahead depends on the month you ask": examples/el-nino.ipynb
       - Web and product:
