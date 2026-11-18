@@ -602,6 +602,29 @@ def _build_us_births(source):
 # The S&P 500 share index
 
 
+# Weekly hospital admissions with flu, by state
+
+
+def _read_flu_admissions(path):
+    table = pd.read_csv(path, index_col="week_ending", parse_dates=True)
+    table.index = pd.DatetimeIndex(table.index, freq="W-SAT", name="week_ending")
+    return table.astype(float)
+
+
+def _write_flu_admissions(table, path):
+    table.astype("Int64").to_csv(path, index_label="week_ending", date_format="%Y-%m-%d", lineterminator="\n")
+
+
+def _build_flu_admissions(source):
+    """Admissions in each week, one column per place, empty where nothing was reported."""
+    table = pd.read_csv(source, usecols=["date", "location_name", "value"], parse_dates=["date"])
+    wide = table.pivot(index="date", columns="location_name", values="value")
+    wide = wide.rename(columns={"US": "United States"})
+    places = ["United States"] + sorted(place for place in wide.columns if place != "United States")
+    weeks = pd.DatetimeIndex(wide.index, freq="W-SAT", name="week_ending")
+    return pd.DataFrame(wide[places].to_numpy(float), index=weeks, columns=places)
+
+
 def _read_sp500(path):
     """Weekly closes in the sample; every column by business day in the full table."""
     table = pd.read_csv(path, index_col="date", parse_dates=True)
@@ -754,6 +777,12 @@ _DATASETS = {
         "read": _read_electricity,
         "build": _build_electricity,
         "write": _write_electricity,
+        "sample": lambda table: table,
+    },
+    "flu-admissions": {
+        "read": _read_flu_admissions,
+        "build": _build_flu_admissions,
+        "write": _write_flu_admissions,
         "sample": lambda table: table,
     },
     "hospital-patients": {

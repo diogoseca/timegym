@@ -148,6 +148,31 @@ time was handled.
 - Credit: Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Electricity Demand (Elecdemand) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656069. The archive took the series from the R package fpp2.
 - Changes: Converted from the archive's .tsf file and rounded to three decimals, which is one megawatt. The file holds one row per day and one column per half-hour; the loader returns one row per half-hour.
 
+## Flu admissions
+
+`flu-admissions.csv`: the patients admitted to hospital with confirmed flu in
+each week, for the United States, the 50 states, the District of Columbia and
+Puerto Rico: 249 weeks, from the week ending 5 February 2022 to the week
+ending 7 November 2026. A week ends on a Saturday. The sample is the whole
+table. A cell is empty where the source gives no count: 36 cells, in three
+states, in the summer of 2024.
+
+Hospitals did not have to report these counts between the spring of 2024 and
+1 November 2024, and many did not. The counts from May to October 2024 are far
+too low and cannot be compared with the rest. The source also revises its
+counts after it first publishes them. The sample is the table as it stood on
+18 November 2026, fixed to one version of the source's repository.
+
+- Source: target-hospital-admissions.csv, FluSight forecast hub of the Centers for Disease Control and Prevention (CDC), on GitHub,
+  <https://github.com/cdcepi/FluSight-forecast-hub/tree/987c9b005dda15938a638c2f66830d951fb9cd01/target-data>
+- License: [MIT (FluSight forecast hub repository)](https://github.com/cdcepi/FluSight-forecast-hub/blob/987c9b005dda15938a638c2f66830d951fb9cd01/LICENSE), the license
+  of the repository the file is in. The repository says the counts come from
+  the National Healthcare Safety Network of the CDC, a federal agency of the
+  United States. We could not open the CDC's own page for the data when the
+  sample was built, so its terms were not read.
+- Credit: CDC FluSight forecast hub (https://github.com/cdcepi/FluSight-forecast-hub), file target-data/target-hospital-admissions.csv at commit 987c9b0. The hub says the counts are "the total number of new hospital admissions of patients with confirmed influenza captured during the reporting week", taken from the Weekly Hospital Respiratory Data of the National Healthcare Safety Network (NHSN) of the CDC.
+- Changes: The table turned from one row per week and place into one row per week with a column per place; the place code and the weekly rate per 100,000 people dropped; the column US renamed United States. No count changed and nothing filled in.
+
 ## Hospital patients
 
 `hospital-patients.csv`: the number of patients per month for 114 medical
