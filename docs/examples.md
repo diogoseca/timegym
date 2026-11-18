@@ -79,6 +79,21 @@ links to the tutorials for the tools it uses.
 
     Data: daily riders at 20 Chicago train stations with the day's weather, 2011 to 2016. Runs in about 20 seconds.
 
+-   [![Two curves of the miss four weeks ahead: learning the week from all the history is 28% worse than from one year, and the miss without a season is nearly double the miss with three years of it](images/examples/daily-births.png)](../examples/daily-births.ipynb)
+
+    **[Daily births: how much history should a forecast learn from?](../examples/daily-births.ipynb)**
+
+    *Demand and operations*
+
+    A forecaster of daily births learns the week and the season from the
+    past. Learned from all the history, the week is 28% worse than from the
+    last year, because the week itself changed. The season wants three
+    years or more. A generated week with a change at a known date shows
+    the same turn where the truth is known. The same runs give the miss
+    from one week ahead to thirteen.
+
+    Data: births in the United States by day, 1969 to 1988. Runs in about 20 seconds.
+
 -   [![Average miss by weekday for three forecasters; copying yesterday is far worse on Mondays and Saturdays](images/examples/electricity-demand.png)](../examples/electricity-demand.ipynb)
 
     **[Tomorrow's electricity demand: let the worst days say what is missing](../examples/electricity-demand.ipynb)**
@@ -309,6 +324,5 @@ everything = load("store-sales", full=True)   # every product, downloaded on fir
 These examples are planned. Each one is added once its notebook has run on real
 data and we know what the result is.
 
-- **Demand and operations:** emergency room arrivals.
 - **Chaotic but partly predictable:** flu season.
 - **Lessons that cut across domains:** a ready-made model against your own.

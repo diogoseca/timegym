@@ -4,12 +4,13 @@
 
 - Added an Examples section to the documentation, placed right after the home
   page: forecasting jobs on real public data, from the first model to a
-  decision, with TimeGym in the loop. The first nineteen are weekly shop
+  decision, with TimeGym in the loop. The first twenty are weekly shop
   sales turned into stock orders, spare parts where the lowest average error
   goes to a forecast of zero, a Christmas order that five Decembers cannot
   settle and generated shops can, a call center's forecast made again at ten
   o'clock, train station riders forecast with the real weather to see what a
-  weather feed could add, a day-ahead electricity forecast improved by asking which days
+  weather feed could add, daily births forecast with different amounts of
+  history, a day-ahead electricity forecast improved by asking which days
   went wrong, a range for a solar farm's whole day that half-hour ranges
   cannot give, a 90% range for a river's flow, rain tomorrow scored against
   the weather service's own forecast, Sydney's temperature forecast with
