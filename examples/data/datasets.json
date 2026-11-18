@@ -468,6 +468,32 @@
     "credit": "Tong, H. (1996). Non-Linear Time Series. Clarendon Press, Oxford, p. 471. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
     "changes": "The row-number column dropped, and the columns named year and sunspots."
   },
+  "us-births": {
+    "title": "Births in the United States by day, 1969 to 1988",
+    "sample": {
+      "file": "us-births.csv",
+      "sha256": "cb3eb974c695aa313d9c97dc63ae6d9297a12420c75ca8204a1a2b56cd4ebe03",
+      "holds": "The whole series, 7,305 days from 1 January 1969 to 31 December 1988",
+      "complete": true
+    },
+    "full": "The same 7,305 days",
+    "source": {
+      "name": "Births",
+      "publisher": "R package mosaicData, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/mosaicData/Births.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/mosaicData/Births.csv",
+      "file": "Births.csv",
+      "bytes": 298958,
+      "sha256": "5c0632a1943c497ab141c391270d6101ad422cbe9c84b7de895cb0a4e22bd6fb",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL (>= 2) (R package mosaicData)",
+      "url": "https://github.com/cran/mosaicData/blob/master/DESCRIPTION"
+    },
+    "credit": "Pruim, R., Kaplan, D., & Horton, N. mosaicData: Project MOSAIC Data Sets (R package), dataset Births. The package gives its source as National Vital Statistics System natality data, as provided by Google BigQuery and exported to csv by Robert Kern. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column and the six calendar columns dropped; the date and the number of births kept."
+  },
   "wikipedia-views": {
     "title": "Daily views of Wikipedia pages, July 2015 to September 2017",
     "sample": {

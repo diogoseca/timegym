@@ -589,6 +589,16 @@ def _build_souvenir_sales(source):
     return pd.DataFrame({"sales": table["Sales"].to_numpy(float)}, index=months)
 
 
+# Daily births in the United States
+
+
+def _build_us_births(source):
+    """One row a day, with the days checked to run without a gap."""
+    table = pd.read_csv(source, usecols=["date", "births"], index_col="date", parse_dates=True)
+    days = pd.DatetimeIndex(table.index, freq="D", name="date")
+    return pd.DataFrame({"births": table["births"].to_numpy(int)}, index=days)
+
+
 # The S&P 500 share index
 
 
@@ -804,6 +814,12 @@ _DATASETS = {
         "read": _read_sunspots,
         "build": _build_sunspots,
         "write": _write_sunspots,
+        "sample": lambda table: table,
+    },
+    "us-births": {
+        "read": _read_daily,
+        "build": _build_us_births,
+        "write": _write_daily,
         "sample": lambda table: table,
     },
     "wikipedia-views": {

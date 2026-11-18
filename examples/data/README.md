@@ -340,6 +340,20 @@ since revised and extended it.
 - Credit: Tong, H. (1996). Non-Linear Time Series. Clarendon Press, Oxford, p. 471. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
 - Changes: The row-number column dropped, and the columns named year and sunspots.
 
+## US births
+
+`us-births.csv`: the number of births in the United States on each day from
+1 January 1969 to 31 December 1988, 7,305 days. The sample is the whole
+series.
+
+- Source: Births, R package mosaicData, as a CSV file in Rdatasets,
+  <https://vincentarelbundock.github.io/Rdatasets/doc/mosaicData/Births.html>
+- License: [GPL (>= 2) (R package mosaicData)](https://github.com/cran/mosaicData/blob/master/DESCRIPTION), the license
+  of the package the table ships in. The package gives the National Vital
+  Statistics System of the United States as the origin of the counts.
+- Credit: Pruim, R., Kaplan, D., & Horton, N. mosaicData: Project MOSAIC Data Sets (R package), dataset Births. The package gives its source as National Vital Statistics System natality data, as provided by Google BigQuery and exported to csv by Robert Kern. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).
+- Changes: The row-number column and the six calendar columns dropped; the date and the number of births kept.
+
 ## Wikipedia views
 
 `wikipedia-views.csv`: how many times a day each of 136 Wikipedia pages was
