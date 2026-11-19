@@ -91,6 +91,7 @@ not_in_nav: |
   /docs/images/README.md
   /examples/README.md
   /examples/data/**
+  /examples/forecasts/**
   /experiments/**
   /paper/**
   /tools/**
@@ -125,6 +126,7 @@ nav:
       - Lessons that cut across domains:
           - The forest that cannot follow growth: examples/passenger-growth.ipynb
           - "You tried 50 models: is the winner real?": examples/best-of-fifty.ipynb
+          - "Ready-made model or your own? Five products decide": examples/ready-made-model.ipynb
   - Tutorials:
       - Overview: docs/tutorials.md
       - Start:

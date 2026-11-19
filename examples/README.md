@@ -24,6 +24,7 @@ documentation, or run them here.
 | [El Niño: how far ahead depends on the month you ask](el-nino.ipynb) | Forecast the Southern Oscillation Index nine months ahead and say which of those months to act on | "Seven months" on average hides two cases: a forecast that has to pass from April into May gains nothing, even one month ahead, and one that does not is still ahead at nine; checked on earlier years and on generated series with no seasons |
 | [The forest that cannot follow growth](passenger-growth.ipynb) | Forecast next year's airline passengers | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
 | [You tried 50 models: is the winner real?](best-of-fifty.ipynb) | Choose a model for next year's patient numbers of 114 medical products | The backtest's winner leads by 0.2%, nine others cannot be told apart from it, a winning score flatters by about 4%, and the next year the winner comes tenth |
+| [Ready-made model or your own? Five products decide](ready-made-model.ipynb) | Decide whether a pretrained model should replace the tuned forecasters for 114 medical products | The model scores 81 on the scorecard against 62 and 65 for ours and is 22% worse on the backtest average; each product's score shows five products carry the gap, generated series reproduce the error and measure when it happens, and three test years tell a guard from a fix that only fixed one year |
 | [A traffic jump: is this the new normal?](traffic-jump.ipynb) | Three days into a jump in a page's views, forecast the next four weeks | The same forecasters on every week and on the alarm days give opposite orders; two scorecard rows name what a jump can do; a forecaster that learns the fade from earlier jumps beats all four |
 | [Site capacity: which forecast still works four weeks ahead?](site-capacity.ipynb) | Book a site's capacity four weeks ahead, with spare capacity on top | A generated weekly cycle catches a one-day slip the real data hides; the same weeks cut at five lead times show two forecasters level for next week and far apart for the job; the kept forecasts size the spare capacity |
 | [Bitcoin: finding out you have nothing](bitcoin.ipynb) | Forecast tomorrow's price | A 79% hit rate that came from one input reaching into the future; the honest model ties with yesterday's price |
@@ -39,8 +40,10 @@ python -m jupyterlab examples
 ```
 
 Every notebook reads a small sample committed in [`data/`](data/README.md), so
-it runs offline, and is saved with its outputs. Installing the wheel alone does
-not install these notebooks.
+it runs offline, and is saved with its outputs. One example also reads
+forecasts that a large pretrained model made in advance, kept in
+[`forecasts/`](forecasts/README.md). Installing the wheel alone does not
+install these notebooks.
 
 ## The data
 

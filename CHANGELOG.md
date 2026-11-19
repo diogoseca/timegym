@@ -4,7 +4,7 @@
 
 - Added an Examples section to the documentation, placed right after the home
   page: forecasting jobs on real public data, from the first model to a
-  decision, with TimeGym in the loop. The first twenty-one are weekly shop
+  decision, with TimeGym in the loop. The first twenty-two are weekly shop
   sales turned into stock orders, spare parts where the lowest average error
   goes to a forecast of zero, a Christmas order that five Decembers cannot
   settle and generated shops can, a call center's forecast made again at ten
@@ -22,12 +22,14 @@
   weeks ahead and tested at that lead time, a Bitcoin backtest whose edge was
   one input reaching into the future, a range for the S&P 500's next week that
   holds in crashes, a random forest that cannot follow growing airline traffic,
-  and the winner of a 50-setting backtest that comes tenth the next year. The
+  the winner of a 50-setting backtest that comes tenth the next year, and a
+  pretrained model whose bad backtest year comes down to five products. The
   notebooks are in `examples/`, with a small sample of each dataset committed
   in `examples/data` beside its source, license and credit, so they run
-  offline. `examples/example_data.py` loads the samples and, with `load(name,
-  full=True)`, downloads and checks the whole dataset. `pip install -e
-  '.[examples]'` from a clone installs what the notebooks need.
+  offline. The pretrained model's forecasts were made once and are saved in
+  `examples/forecasts`. `examples/example_data.py` loads the samples and, with
+  `load(name, full=True)`, downloads and checks the whole dataset. `pip install
+  -e '.[examples]'` from a clone installs what the notebooks need.
 - Added ways to score your own data. `timegym.cases_from_series(series,
   origins, horizon, *, name="series", manifest=None)` cuts a series, or a
   table of series, into cases that end their history at different times: an

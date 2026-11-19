@@ -297,6 +297,21 @@ links to the tutorials for the tools it uses.
 
     Data: monthly patient counts for 114 medical products, 2000 to 2006. Runs in about 40 seconds.
 
+-   [![Year 6 on four products: on three, the ready-made model's forecast goes back to a level the product left two years before; on the fourth it follows a season that a flat forecast cannot](images/examples/ready-made-model.png)](../examples/ready-made-model.ipynb)
+
+    **[Ready-made model or your own? Five products decide](../examples/ready-made-model.ipynb)**
+
+    *Lessons that cut across domains*
+
+    A pretrained model, used as it comes, goes through the same cases, checks
+    and scorecard as three tuned forecasters. It is far ahead on generated
+    patterns and 22% behind on the backtest average. Each product's score
+    shows that five products carry the gap, generated series show when the
+    model brings an old level back, and three test years tell a guard from a
+    fix that only fixed one year.
+
+    Data: monthly patient counts for 114 medical products, 2000 to 2006, and saved forecasts from Chronos-2. Runs in about 20 seconds.
+
 </div>
 
 ## Run an example yourself
@@ -316,6 +331,10 @@ Every example reads a small sample of its data that is committed in the
 repository, so it runs offline. Select the Python kernel of the environment
 you installed into, and use **Restart Kernel and Run All Cells**.
 
+One example also reads forecasts that a large pretrained model made in
+advance. [Saved forecasts](../examples/forecasts/README.md) says what they
+are and how to make them again.
+
 ## The data
 
 Each dataset is public and comes with a license that allows sharing it with
@@ -334,10 +353,3 @@ from example_data import load
 sample = load("store-sales")                  # 30 products, committed in the repository
 everything = load("store-sales", full=True)   # every product, downloaded on first use
 ```
-
-## More on the way
-
-One more example is planned. It is added once its notebook has run on real
-data and we know what the result is.
-
-- **Lessons that cut across domains:** a ready-made model against your own.

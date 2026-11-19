@@ -69,6 +69,12 @@ numbers.
    [examples guide](../examples/README.md). `tests/test_examples.py` keeps the
    three in step with the folder and checks the data records and pictures.
 
+An example whose model is too large to run in the checks runs it once and
+commits the forecasts under `examples/forecasts/`, described in
+[Saved forecasts](../examples/forecasts/README.md). The notebook reads them
+and keeps the code that made them, as
+[the ready-made model example](../examples/ready-made-model.ipynb) does.
+
 ## Check the documentation site
 
 ```bash
