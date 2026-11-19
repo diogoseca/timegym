@@ -1,0 +1,550 @@
+{
+  "store-sales": {
+    "title": "Weekly units sold by a UK online gift shop, December 2009 to November 2011",
+    "sample": {
+      "file": "store-sales.csv",
+      "sha256": "584fd976dd1c45b1bdd2eb4720a50909a09d0ab5bc95cf0a0492fb7a8fbaeee0",
+      "holds": "30 steady-selling products, 104 weeks of units sold per week (weeks start on Monday)"
+    },
+    "full": "Every product in the order log, 4,669 of them, in the same weekly layout",
+    "source": {
+      "name": "Online Retail II",
+      "publisher": "UCI Machine Learning Repository",
+      "page": "https://archive.ics.uci.edu/dataset/502/online+retail+ii",
+      "doi": "10.24432/C5CG6D",
+      "download": "https://archive.ics.uci.edu/static/public/502/online+retail+ii.zip",
+      "file": "online_retail_ii.zip",
+      "bytes": 45622418,
+      "sha256": "572e36277c2390fbfde10664750731e0a86f55e33470d91919085f0408e67bfb",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Chen, D. (2012). Online Retail II [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5CG6D",
+    "changes": "Order lines summed into units per product and week, with cancelled orders subtracted and totals below zero set to zero. Postage, fees and other non-product lines removed. The nine days repeated across the two sheets counted once. Weeks with no orders set to zero; the first and last weeks, which the log cuts short, dropped. Product names put in sentence case."
+  },
+  "bitcoin": {
+    "title": "Daily Bitcoin price in US dollars, July 2010 to July 2021",
+    "sample": {
+      "file": "bitcoin.csv",
+      "sha256": "a082d872274577c0ec7f7d91fbfc5e2a5f94bf8bb7ab7b16942b1c9eb4570f97",
+      "holds": "The daily price, 4,021 days"
+    },
+    "full": "The price and 17 other daily series, such as transactions, hash rate, search interest and tweets",
+    "source": {
+      "name": "Bitcoin Dataset without Missing Values",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/5122101",
+      "doi": "10.5281/zenodo.5122101",
+      "download": "https://zenodo.org/api/records/5122101/files/bitcoin_dataset_without_missing_values.zip/content",
+      "file": "bitcoin_dataset_without_missing_values.zip",
+      "bytes": 220635,
+      "sha256": "0da1727e15b6c332d37500553dcfabd9a096a9af10de95e503baad6ccdb538c4",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2021). Bitcoin Dataset without Missing Values (Version 1) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.5122101. The figures were collected from https://bitinfocharts.com.",
+    "changes": "Converted from the archive's .tsf file to a table with one row per day. The sample keeps the price only. Days the source had no figure for were already filled with the last known value by the archive."
+  },
+  "airline-passengers": {
+    "title": "Monthly international airline passengers in thousands, 1949 to 1960",
+    "sample": {
+      "file": "airline-passengers.csv",
+      "sha256": "d27dd74f3654ab4c688afccf2348870410902f480cea900d872be2ae33184411",
+      "holds": "The whole series, 144 months",
+      "complete": true
+    },
+    "full": "The same 144 months",
+    "source": {
+      "name": "AirPassengers",
+      "publisher": "R datasets package, as a CSV file in Rdatasets",
+      "page": "https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/AirPassengers.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/datasets/AirPassengers.csv",
+      "file": "AirPassengers.csv",
+      "bytes": 3032,
+      "sha256": "bdb98adbd418a6de6842a742e0602f363c3b841c26677e7e61a1e055e9509bd8",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-2 | GPL-3 (R datasets package)",
+      "url": "https://stat.ethz.ch/R-manual/R-devel/library/datasets/DESCRIPTION"
+    },
+    "credit": "Box, G. E. P., Jenkins, G. M., & Reinsel, G. C. (1994). Time Series Analysis: Forecasting and Control (3rd ed.), series G. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The fractional-year column replaced by the month, and the value column named passengers."
+  },
+  "spare-parts": {
+    "title": "Monthly sales of car spare parts, January 1998 to March 2002",
+    "sample": {
+      "file": "spare-parts.csv",
+      "sha256": "85806946f84c7d1fdf3a8d2b3e908e36f837b793a0dc07e9be7d0ce01338c0c6",
+      "holds": "314 parts, 51 months of units sold per month"
+    },
+    "full": "All 2,674 parts; 165 of them have no figures from early 1999 on",
+    "source": {
+      "name": "Car Parts Dataset (with Missing Values)",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656022",
+      "doi": "10.5281/zenodo.4656022",
+      "download": "https://zenodo.org/api/records/4656022/files/car_parts_dataset_with_missing_values.zip/content",
+      "file": "car_parts_dataset_with_missing_values.zip",
+      "bytes": 39656,
+      "sha256": "80557703397c7dca6c007bd28930b0e213e529f428afd02e5af87804fdc38ee1",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Car Parts Dataset (with Missing Values) (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656022. The archive took the series from the R package expsmooth.",
+    "changes": "Converted from the archive's .tsf file to a table with one row per month and one column per part, under the archive's part labels. The sample keeps every eighth part among the 2,509 that have a figure for every month."
+  },
+  "bank-calls": {
+    "title": "Calls to a bank's call center, March to October 2003",
+    "sample": {
+      "file": "bank-calls.csv",
+      "sha256": "da946d6312d53e264236a37b70f65cd96078393dfdb05aac9d330ce8df41f8ac",
+      "holds": "Calls in each half hour from 7:00 to 21:00 on 164 working days, 3 March to 24 October 2003: 4,592 half hours",
+      "regular": false
+    },
+    "full": "Calls in every five minutes from 7:00 to 21:05 on the same 164 days, 27,716 rows",
+    "source": {
+      "name": "bank_calls",
+      "publisher": "R package fpp3, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/fpp3/bank_calls.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/fpp3/bank_calls.csv",
+      "file": "bank_calls.csv",
+      "bytes": 843018,
+      "sha256": "6e430180c3fa8a284e38b8367e9a7d6dae4921ca1b184cbaba7aae9b07a8f9a5",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-3 (R package fpp3)",
+      "url": "https://github.com/robjhyndman/fpp3-package/blob/master/DESCRIPTION"
+    },
+    "credit": "Hyndman, R. J., and others. fpp3: Data for \"Forecasting: Principles and Practice\" (3rd Edition) (R package), dataset bank_calls. The package gives Jonathan Weinberg as the source of the series, which is studied in Weinberg, J., Brown, L. D., & Stroud, J. R. (2007). Bayesian forecasting of an inhomogeneous Poisson process with applications to call center data. Journal of the American Statistical Association, 102(480), 1185-1198. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column dropped; times kept as the center's clock time, without the time zone mark the file carries; the columns named time and calls. The sample adds the five-minute counts up to half hours and leaves out the last five minutes of each day, 21:00 to 21:05."
+  },
+  "chicago-ridership": {
+    "title": "Daily riders at 20 Chicago train stations with the day's weather, January 2001 to August 2016",
+    "sample": {
+      "file": "chicago-ridership.csv",
+      "sha256": "7b4a9854515fa021b601c58da63d88c26c9e265b45ee886091c89858c4d1ec34",
+      "holds": "All 20 stations and five weather columns for 2,053 days, 1 January 2011 to 14 August 2016"
+    },
+    "full": "5,684 days from 22 January 2001 to 14 August 2016",
+    "source": {
+      "name": "Chicago",
+      "publisher": "R package modeldata, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/modeldata/Chicago.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/modeldata/Chicago.csv",
+      "file": "Chicago.csv",
+      "bytes": 1582825,
+      "sha256": "1a95c62b6fe8268583f0d66a4304640d23d313d50cb211b1ded8ebe621e9b109",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "MIT (R package modeldata)",
+      "url": "https://github.com/cran/modeldata/blob/master/DESCRIPTION"
+    },
+    "credit": "Kuhn, M. modeldata: Data Sets Useful for Modeling Examples (R package), dataset Chicago. The package says the data are from Kuhn, M., & Johnson, K. (2020), Feature Engineering and Selection, Chapman and Hall/CRC (https://bookdown.org/max/FES/, https://github.com/topepo/FES), where they are used to model the riders entering the Clark and Lake station of the Chicago \"L\". Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The 20 station columns, which the source gives 14 days late as inputs for a model, put back on their own day and written as riders, not thousands of riders; five of the weather columns kept and named temp, rain, snow, storm and wind; the days that have both kept; the remaining weather columns, the sports columns and the separate target column left out."
+  },
+  "city-temperatures": {
+    "title": "Daily highest temperature at Australian weather stations, May 2015 to April 2017",
+    "sample": {
+      "file": "city-temperatures.csv",
+      "sha256": "6d43077e80248e4c3cd33e53ae8e52212b19b2fc2ac45a82869b2716c221ae92",
+      "holds": "Eight cities, 725 days: Sydney, Melbourne, Adelaide, Canberra, Hobart, Perth, Brisbane and Darwin"
+    },
+    "full": "All 422 stations, under the Bureau of Meteorology's station numbers",
+    "source": {
+      "name": "Temperature Rain Dataset with Missing Values",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/5129073",
+      "doi": "10.5281/zenodo.5129073",
+      "download": "https://zenodo.org/api/records/5129073/files/temperature_rain_dataset_with_missing_values.zip/content",
+      "file": "temperature_rain_dataset_with_missing_values.zip",
+      "bytes": 25747139,
+      "sha256": "36a8c8cce2a99a8372ff8f82450b50dcc1b5eff653820c7a828d56730fe325fb",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY-SA 3.0 AU",
+      "url": "https://creativecommons.org/licenses/by-sa/3.0/au/"
+    },
+    "credit": "Bureau of Meteorology, Australian Government: Historical rainfall and temperature forecast and observations hourly data - weather forecasting verification data (2015-05 to 2016-04), and Rainfall and temperature forecast and observations - verification 2016-05 to 2017-04, both on data.gov.au. Put together as one file by Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2021). Temperature Rain Dataset with Missing Values (Version 1) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.5129073",
+    "changes": "The highest temperature of each day taken from the archive's .tsf file; its other series left out. The sample keeps eight stations and names each column after its city."
+  },
+  "electricity-demand": {
+    "title": "Half-hourly electricity demand in Victoria, Australia, 2014",
+    "sample": {
+      "file": "electricity-demand.csv",
+      "sha256": "800f49e30b0c55ca55826257ec59cf995bd1b98cb7488480eefeab5af00431b6",
+      "holds": "The whole year, 17,520 half-hours of demand in gigawatts",
+      "complete": true
+    },
+    "full": "The same 17,520 half-hours",
+    "source": {
+      "name": "Electricity Demand (Elecdemand) Dataset",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656069",
+      "doi": "10.5281/zenodo.4656069",
+      "download": "https://zenodo.org/api/records/4656069/files/elecdemand_dataset.zip/content",
+      "file": "elecdemand_dataset.zip",
+      "bytes": 89963,
+      "sha256": "1bec32e9bba6ada6eca5db675a981ce62817e60c909f0be007c0b7927cb5491f",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Electricity Demand (Elecdemand) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656069. The archive took the series from the R package fpp2.",
+    "changes": "Converted from the archive's .tsf file and rounded to three decimals, which is one megawatt. The file holds one row per day and one column per half-hour; the loader returns one row per half-hour."
+  },
+  "flu-admissions": {
+    "title": "Hospital admissions with confirmed flu in the United States by week and state, February 2022 to November 2026",
+    "sample": {
+      "file": "flu-admissions.csv",
+      "sha256": "26464897bf13424a222603afa41d22d678c799f0690e8d2f6fc185b7c350af75",
+      "holds": "The whole table: the United States, the 50 states, the District of Columbia and Puerto Rico, 249 weeks from the week ending 5 February 2022 to the week ending 7 November 2026; a cell is empty where the source gives no count",
+      "complete": true,
+      "gaps": true
+    },
+    "full": "The same 53 columns and 249 weeks",
+    "source": {
+      "name": "target-hospital-admissions.csv",
+      "publisher": "FluSight forecast hub of the Centers for Disease Control and Prevention (CDC), on GitHub",
+      "page": "https://github.com/cdcepi/FluSight-forecast-hub/tree/987c9b005dda15938a638c2f66830d951fb9cd01/target-data",
+      "download": "https://raw.githubusercontent.com/cdcepi/FluSight-forecast-hub/987c9b005dda15938a638c2f66830d951fb9cd01/target-data/target-hospital-admissions.csv",
+      "file": "target-hospital-admissions.csv",
+      "bytes": 618732,
+      "sha256": "0c4ebc1669f777f9d7d8cea94a54ba02060d3653ada806d092fc2522221ec90f",
+      "retrieved": "2026-11-18"
+    },
+    "license": {
+      "name": "MIT (FluSight forecast hub repository)",
+      "url": "https://github.com/cdcepi/FluSight-forecast-hub/blob/987c9b005dda15938a638c2f66830d951fb9cd01/LICENSE"
+    },
+    "credit": "CDC FluSight forecast hub (https://github.com/cdcepi/FluSight-forecast-hub), file target-data/target-hospital-admissions.csv at commit 987c9b0. The hub says the counts are \"the total number of new hospital admissions of patients with confirmed influenza captured during the reporting week\", taken from the Weekly Hospital Respiratory Data of the National Healthcare Safety Network (NHSN) of the CDC.",
+    "changes": "The table turned from one row per week and place into one row per week with a column per place; the place code and the weekly rate per 100,000 people dropped; the column US renamed United States. No count changed and nothing filled in."
+  },
+  "hospital-patients": {
+    "title": "Monthly patient counts for medical products, January 2000 to December 2006",
+    "sample": {
+      "file": "hospital-patients.csv",
+      "sha256": "a4b61192f6c972770201219366506100523a7307ca3e2631847e491f3af84eb6",
+      "holds": "114 products, 84 months of patients per month"
+    },
+    "full": "All 767 products",
+    "source": {
+      "name": "Hospital Dataset",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656014",
+      "doi": "10.5281/zenodo.4656014",
+      "download": "https://zenodo.org/api/records/4656014/files/hospital_dataset.zip/content",
+      "file": "hospital_dataset.zip",
+      "bytes": 78110,
+      "sha256": "8fd4085efb4517508e30fc69247eee9b74b300765bc6e94482c5d250efba66e5",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Hospital Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656014. The archive took the series from the R package expsmooth.",
+    "changes": "Converted from the archive's .tsf file to a table with one row per month and one column per product, under the archive's labels. The sample keeps every second product among the 227 with at least 100 patients a month on average."
+  },
+  "london-air": {
+    "title": "Hourly fine particles (PM2.5) at 24 air quality monitors in London, January 2017 to March 2018",
+    "sample": {
+      "file": "london-air.csv",
+      "sha256": "908a0d8665692ffbc5b99fe595e152f01408d982990501cfc26334a3fcd00d92",
+      "holds": "24 monitors, 3,624 hours from 1 November 2017 to 31 March 2018; a cell is empty where a monitor reported nothing",
+      "gaps": true
+    },
+    "full": "The same 24 monitors for all 15 months, 10,920 hours",
+    "source": {
+      "name": "KDD Cup Dataset (with Missing Values)",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656719",
+      "doi": "10.5281/zenodo.4656719",
+      "download": "https://zenodo.org/api/records/4656719/files/kdd_cup_2018_dataset_with_missing_values.zip/content",
+      "file": "kdd_cup_2018_dataset_with_missing_values.zip",
+      "bytes": 2456948,
+      "sha256": "3d0d2dbec3621b20c7a8ae6e6f00a63bfaebb962dca34d9f60f0ddbbde03e9bd",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). KDD Cup Dataset (with Missing Values) (Version 4) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656719. The archive took the series from the data of the KDD Cup 2018 forecasting competition; the London readings in it were made by the London Air Quality Network.",
+    "changes": "The fine-particle (PM2.5) series of the 24 London monitors taken from the archive's .tsf file, one column per monitor under the network's site code; the Beijing series and the other measurements left out. Nothing filled in. The sample keeps the last five months."
+  },
+  "rain": {
+    "title": "Daily rain, temperature and the official chance of rain at Australian weather stations, May 2015 to April 2017",
+    "sample": {
+      "file": "rain.csv",
+      "sha256": "03bee1458bc1b1a417c50bb68a19e5e06d26bb198752efef746abdc0fe16b2ea",
+      "gaps": true,
+      "holds": "Sydney (Observatory Hill), station 66062: 725 days of rain, highest and lowest temperature, and the Bureau of Meteorology's chance of rain for each day as forecast 0 to 5 days before"
+    },
+    "full": "The same nine columns for all 422 stations, with the station number above each column",
+    "source": {
+      "name": "Temperature Rain Dataset with Missing Values",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/5129073",
+      "doi": "10.5281/zenodo.5129073",
+      "download": "https://zenodo.org/api/records/5129073/files/temperature_rain_dataset_with_missing_values.zip/content",
+      "file": "temperature_rain_dataset_with_missing_values.zip",
+      "bytes": 25747139,
+      "sha256": "36a8c8cce2a99a8372ff8f82450b50dcc1b5eff653820c7a828d56730fe325fb",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY-SA 3.0 AU",
+      "url": "https://creativecommons.org/licenses/by-sa/3.0/au/"
+    },
+    "credit": "Bureau of Meteorology, Australian Government: Historical rainfall and temperature forecast and observations hourly data - weather forecasting verification data (2015-05 to 2016-04), and Rainfall and temperature forecast and observations - verification 2016-05 to 2017-04, both on data.gov.au. Put together as one file by Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2021). Temperature Rain Dataset with Missing Values (Version 1) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.5129073",
+    "changes": "Rain, highest and lowest temperature and the chance of rain taken from the archive's .tsf file; its other series left out. Each forecast moved from the day it was issued to the day it is for. Columns renamed. Days without a figure left empty. The sample keeps one station."
+  },
+  "river-flow": {
+    "title": "Daily flow of the Saugeen River at Walkerton, Ontario, 1915 to 1979",
+    "sample": {
+      "file": "river-flow.csv",
+      "sha256": "cbad0c4b59a9892cec8ef874938c1a8b3ce62b06a35406bd17517304b1ddb860",
+      "holds": "The daily mean flow in cubic meters per second for 1950 to 1979, 10,957 days"
+    },
+    "full": "The same series from 1 January 1915, 23,741 days",
+    "source": {
+      "name": "Saugeen River Flow (SaugeenDay) Dataset",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656058",
+      "doi": "10.5281/zenodo.4656058",
+      "download": "https://zenodo.org/api/records/4656058/files/saugeenday_dataset.zip/content",
+      "file": "saugeenday_dataset.zip",
+      "bytes": 28721,
+      "sha256": "061cb56ee6829d5686e5e08f1a61f4c0af682e32c37824e79926fc11148747df",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Saugeen River Flow (SaugeenDay) Dataset (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656058. The archive took the series from the R package deseasonalize.",
+    "changes": "Converted from the archive's .tsf file to a table with one row per day. The sample keeps 1950 to 1979."
+  },
+  "site-views": {
+    "title": "Daily page views of the OTexts textbook site, January 2018 to April 2022",
+    "sample": {
+      "file": "site-views.csv",
+      "sha256": "d5ea8821e896e032fc3d9e719a7804fdf34fe10b93ccd9beb932ecbc9910e8b2",
+      "holds": "The whole series, 1,561 days from 1 January 2018 to 10 April 2022",
+      "complete": true
+    },
+    "full": "The same 1,561 days",
+    "source": {
+      "name": "otexts_views",
+      "publisher": "R package fpp3, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/fpp3/otexts_views.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/fpp3/otexts_views.csv",
+      "file": "otexts_views.csv",
+      "bytes": 33052,
+      "sha256": "d791a068687d6cc1fc6e1d7464e69c3f6c6f9dba89454f8ee29a8b072dfa82a2",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-3 (R package fpp3)",
+      "url": "https://github.com/robjhyndman/fpp3-package/blob/master/DESCRIPTION"
+    },
+    "credit": "Hyndman, R. J., and others. fpp3: Data for \"Forecasting: Principles and Practice\" (3rd Edition) (R package), dataset otexts_views. The package describes the series as daily page views on the OTexts website (https://OTexts.com/) as recorded by Google Analytics. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column dropped; the columns named date and views."
+  },
+  "solar-farm": {
+    "title": "Output of an Australian solar farm by half hour, August 2019 to July 2020",
+    "sample": {
+      "file": "solar-farm.csv",
+      "sha256": "914dc1005d400b19f47428a3fad36aecb51ebb0e85c66140a5c72879946c4002",
+      "holds": "Average output in megawatts in each half hour of 339 days, 16,272 half hours, on the archive's clock from 12:00 on 3 August 2019"
+    },
+    "full": "The output every four seconds, 7,397,222 readings from 1 August 2019 on the archive's clock",
+    "source": {
+      "name": "Solar Power Dataset (4 Seconds Observations)",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656027",
+      "doi": "10.5281/zenodo.4656027",
+      "download": "https://zenodo.org/api/records/4656027/files/solar_4_seconds_dataset.zip/content",
+      "file": "solar_4_seconds_dataset.zip",
+      "bytes": 794502,
+      "sha256": "9aff580f3cce6b8864572117b2b1cbbf410cc46e9ec40a90201c14bd0296f4fd",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Abolghasemi, M., Hyndman, R., & Montero-Manso, P. (2020). Solar Power Dataset (4 Seconds Observations) (Version 2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656027. The archive downloaded the readings from the Australian Energy Market Operator (AEMO), https://aemo.com.au/.",
+    "changes": "Converted from the archive's .tsf file. The archive gives one start time and no other timestamps, so each reading is placed four seconds after the one before it; the result is the archive's clock, not the farm's local time. The sample averages the readings over half hours, rounds to one decimal, leaves out the first two and a half days, where readings are missing, and the last part day, and holds one row per day and one column per half hour, with each day starting at 12:00 on the archive's clock; the loader returns one row per half hour."
+  },
+  "southern-oscillation": {
+    "title": "The Southern Oscillation Index by month, 1900 to 2005",
+    "sample": {
+      "file": "southern-oscillation.csv",
+      "sha256": "cc9895bcfc3a35e0ce340830f9c2defbd743ad7dbff76499bc90c704d6e5fe4c",
+      "holds": "The whole series, 1,272 months from January 1900 to December 2005",
+      "complete": true
+    },
+    "full": "The same 1,272 months",
+    "source": {
+      "name": "bomsoi",
+      "publisher": "R package DAAG, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/DAAG/bomsoi.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/DAAG/bomsoi.csv",
+      "file": "bomsoi.csv",
+      "bytes": 13213,
+      "sha256": "225e6ec833824d1f6ee2b4b7ed2f70fe350e0245f401d60ea36ef7daec4f2590",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-3 (R package DAAG)",
+      "url": "https://github.com/cran/DAAG/blob/master/DESCRIPTION"
+    },
+    "credit": "Maindonald, J. H., & Braun, W. J. DAAG: Data Analysis and Graphics Data and Functions (R package), dataset bomsoi. The package gives the web pages of the Australian Bureau of Meteorology as the source of the figures. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The twelve monthly columns of each year put in one column in date order, named soi; the yearly average and the rainfall columns left out."
+  },
+  "souvenir-sales": {
+    "title": "Monthly sales of a souvenir shop in Queensland, January 1987 to December 1993",
+    "sample": {
+      "file": "souvenir-sales.csv",
+      "sha256": "b389d3dfdbf4ca1803c767fdce073ebb822290ad8fdd069010e097dd55243a48",
+      "holds": "The whole series, 84 months from January 1987 to December 1993",
+      "complete": true
+    },
+    "full": "The same 84 months",
+    "source": {
+      "name": "souvenirs",
+      "publisher": "R package fpp3, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/fpp3/souvenirs.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/fpp3/souvenirs.csv",
+      "file": "souvenirs.csv",
+      "bytes": 1721,
+      "sha256": "b9ab74363aee0e3d7a2008dff96447a8587df4c8001795af5537dd228fc3ad07",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-3 (R package fpp3)",
+      "url": "https://github.com/robjhyndman/fpp3-package/blob/master/DESCRIPTION"
+    },
+    "credit": "Hyndman, R. J., and others. fpp3: Data for \"Forecasting: Principles and Practice\" (3rd Edition) (R package), dataset souvenirs. The package describes the series as monthly sales for a souvenir shop on the wharf at a beach resort town in Queensland, Australia, and gives Makridakis, Wheelwright and Hyndman (1998), Forecasting: Methods and Applications, exercise 5.8, as its source. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column dropped; the columns named month and sales, with the month written as year and month number."
+  },
+  "sp500": {
+    "title": "The S&P 500 share index, 1950 to 2015",
+    "sample": {
+      "file": "sp500.csv",
+      "sha256": "4b8b57a10d5e2f32350f21160f2f44075732c44877afa5be203aadb79a1a614e",
+      "holds": "The closing level on the last trading day of each week, 3,444 weeks ending on Fridays from 6 January 1950 to 1 January 2016"
+    },
+    "full": "Open, high, low, close and volume for each of the 16,607 trading days, on a calendar of business days with empty rows where the market was closed",
+    "source": {
+      "name": "sp500",
+      "publisher": "R package gt, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/gt/sp500.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/gt/sp500.csv",
+      "file": "sp500.csv",
+      "bytes": 994600,
+      "sha256": "5acfcefea0055687a7ab03e32c552d7a32cc75c3517498304cea4c187a5ca373",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "MIT (R package gt)",
+      "url": "https://github.com/rstudio/gt/blob/master/LICENSE.md"
+    },
+    "credit": "Iannone, R., Cheng, J., Schloerke, B., and others. gt: Easily Create Presentation-Ready Display Tables (R package, Posit Software, PBC), dataset sp500. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets). The index is calculated by S&P Dow Jones Indices.",
+    "changes": "Rows put in date order; the row-number column and the adjusted close, which equals the close on every day, dropped. The sample keeps the close of the last trading day of each week."
+  },
+  "sunspots": {
+    "title": "Yearly sunspot numbers, 1700 to 1988",
+    "sample": {
+      "file": "sunspots.csv",
+      "sha256": "0ba7d3b720401fc02bf700dad2304e2c6876b3f88de07985cb56487b99d0a42c",
+      "holds": "The whole series, 289 years",
+      "complete": true
+    },
+    "full": "The same 289 years",
+    "source": {
+      "name": "sunspot.year",
+      "publisher": "R datasets package, as a CSV file in Rdatasets",
+      "page": "https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/sunspot.year.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/datasets/sunspot.year.csv",
+      "file": "sunspot.year.csv",
+      "bytes": 3792,
+      "sha256": "f6d6b62da79feac7408cd876efff2bf9c9853fd6b76b59ed3717a51d997764f9",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL-2 | GPL-3 (R datasets package)",
+      "url": "https://stat.ethz.ch/R-manual/R-devel/library/datasets/DESCRIPTION"
+    },
+    "credit": "Tong, H. (1996). Non-Linear Time Series. Clarendon Press, Oxford, p. 471. Distributed with R's datasets package and by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column dropped, and the columns named year and sunspots."
+  },
+  "us-births": {
+    "title": "Births in the United States by day, 1969 to 1988",
+    "sample": {
+      "file": "us-births.csv",
+      "sha256": "cb3eb974c695aa313d9c97dc63ae6d9297a12420c75ca8204a1a2b56cd4ebe03",
+      "holds": "The whole series, 7,305 days from 1 January 1969 to 31 December 1988",
+      "complete": true
+    },
+    "full": "The same 7,305 days",
+    "source": {
+      "name": "Births",
+      "publisher": "R package mosaicData, as a CSV file in Rdatasets",
+      "page": "https://vincentarelbundock.github.io/Rdatasets/doc/mosaicData/Births.html",
+      "download": "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/1dcc2bf5f955cc1224a3e1307256e1fe86b68dae/csv/mosaicData/Births.csv",
+      "file": "Births.csv",
+      "bytes": 298958,
+      "sha256": "5c0632a1943c497ab141c391270d6101ad422cbe9c84b7de895cb0a4e22bd6fb",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "GPL (>= 2) (R package mosaicData)",
+      "url": "https://github.com/cran/mosaicData/blob/master/DESCRIPTION"
+    },
+    "credit": "Pruim, R., Kaplan, D., & Horton, N. mosaicData: Project MOSAIC Data Sets (R package), dataset Births. The package gives its source as National Vital Statistics System natality data, as provided by Google BigQuery and exported to csv by Robert Kern. Distributed by Rdatasets (https://github.com/vincentarelbundock/Rdatasets).",
+    "changes": "The row-number column and the six calendar columns dropped; the date and the number of births kept."
+  },
+  "wikipedia-views": {
+    "title": "Daily views of Wikipedia pages, July 2015 to September 2017",
+    "sample": {
+      "file": "wikipedia-views.csv",
+      "sha256": "f307b9e773201c6cc3b327e25a5c1ef2ea874a6598aec8ce016539b0aab8d81e",
+      "holds": "136 pages, 803 days of views per day from 1 July 2015 to 10 September 2017; each column is one page, under the archive's number for it"
+    },
+    "full": "6,766 pages in the same layout: every tenth page among the 67,656 that have a count for every day and a median of at least 100 views a day",
+    "source": {
+      "name": "Kaggle Wikipedia Web Traffic Daily Dataset (with Missing Values)",
+      "publisher": "Monash Time Series Forecasting Archive, on Zenodo",
+      "page": "https://zenodo.org/records/4656080",
+      "doi": "10.5281/zenodo.4656080",
+      "download": "https://zenodo.org/api/records/4656080/files/kaggle_web_traffic_dataset_with_missing_values.zip/content",
+      "file": "kaggle_web_traffic_dataset_with_missing_values.zip",
+      "bytes": 145485324,
+      "sha256": "44e10fc187475f673e2aac837f5f54cf32333fed25222d006f287355ec8699a9",
+      "retrieved": "2026-11-17"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "credit": "Godahewa, R., Bergmeir, C., Webb, G., Hyndman, R., & Montero-Manso, P. (2020). Kaggle Wikipedia Web Traffic Daily Dataset (with Missing Values) (Version 3) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.4656080. The archive took the series from the Kaggle competition Web Traffic Time Series Forecasting (Google, 2017); the counts are the Wikimedia Foundation's page view statistics.",
+    "changes": "Pages taken from the archive's .tsf file, one column per page under the archive's series number; the archive does not carry the names of the pages. Kept: every tenth page among those with a count for every day and a median of at least 100 views a day. No count filled in or changed. The sample keeps every fiftieth of those pages."
+  }
+}

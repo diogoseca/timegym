@@ -18,6 +18,7 @@ where it fails.
 
 **[Documentation](https://diogoseca.github.io/timegym/)** ·
 [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) ·
+[Examples](https://diogoseca.github.io/timegym/docs/examples/) ·
 [Tutorials](https://diogoseca.github.io/timegym/docs/tutorials/) ·
 [API](https://diogoseca.github.io/timegym/docs/reference/) ·
 [Changelog](CHANGELOG.md)
@@ -219,6 +220,37 @@ Each check returns one of five verdicts (`PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPP
 ## Scenarios
 
 The scorecard's rows are ten kinds of series, from pure noise to random walks with drift, each drawn at low noise (standard deviation 0.5) and high noise (2.0). For each one TimeGym knows what a forecast *can* get right and what nobody can predict; the scorecard prints both, and [Scorecards and the scenario grid](docs/api/scorecard.md#the-grid) lists all ten. The [scenario guide](docs/stress-cases.md) explains each kind in plain terms, why mean reversion and the random walk are the same equation, and the composed and financial ones beyond the scorecard: price jumps, volatility clusters (GARCH) and hidden regime switches, alone or across several correlated series.
+
+## Examples
+
+Forecasting jobs on real public data, from the first model to a decision, with
+TimeGym in the loop. The [examples page](https://diogoseca.github.io/timegym/docs/examples/)
+shows them with their results and says how to run them.
+
+| Example | What TimeGym showed |
+|---|---|
+| [Weekly shop sales: from forecast to stock order](https://diogoseca.github.io/timegym/examples/store-sales/) | Why the usual regression loses to a plain average on a gift shop's products, and which simpler forecaster leaves fewer units out of stock |
+| [Spare parts: the best score goes to a forecast of zero](https://diogoseca.github.io/timegym/examples/spare-parts/) | The lowest average error belongs to a forecast of zero; a score in the parts counter's terms names the forecaster that keeps parts on the shelf |
+| [The Christmas order: five Decembers cannot pick the forecaster](https://diogoseca.github.io/timegym/examples/christmas-order/) | A shop with five Decembers to test on: one argument fixes a forecast that came in at half, two forecasters tie, and generated shops with a known answer show what each choice costs |
+| [Call center staffing: forecast again at ten o'clock](https://diogoseca.github.io/timegym/examples/call-center/) | What a newer forecast is worth to a staffing plan: yesterday's surprise 15%, the calls taken by 10:00 another 12%, and trusting the morning in full makes it worse |
+| [Train station riders: what is the weather worth, at best?](https://diogoseca.github.io/timegym/examples/station-riders/) | Is a weather feed worth building? Told the real weather, a ridership forecast gains under 2% on weekdays and 8% on weekends, and nothing at some stations |
+| [Daily births: how much history should a forecast learn from?](https://diogoseca.github.io/timegym/examples/daily-births/) | Each part of a forecast has its own best look-back: all the history makes the week 28% worse, one year makes the season 12% worse, and a generated series with a known change shows why |
+| [Tomorrow's electricity demand: let the worst days say what is missing](https://diogoseca.github.io/timegym/examples/electricity-demand/) | Which days a day-ahead forecast gets wrong, round by round: the weekday, then public holidays, then weather the data lacks |
+| [Solar farm output: a range for every half hour is not a range for the day](https://diogoseca.github.io/timegym/examples/solar-farm/) | Two forecasts with the same range for every half hour: one range for the day's energy holds on 84% of days, the other on 33%, and only a score for the whole day sees the difference |
+| [River flow: checking the range, not only the forecast](https://diogoseca.github.io/timegym/examples/river-flow/) | A 90% range that holds on average but not month by month, the one argument that repairs it, and how far it fails when the river rises |
+| [Will it rain tomorrow? Score the forecast you already have](https://diogoseca.github.io/timegym/examples/rain/) | A yes/no forecast scored as a probability: our best forecaster gains 11% on the long-run share, the weather service's published forecast 53% |
+| [Tomorrow's temperature: which city should Sydney watch?](https://diogoseca.github.io/timegym/examples/daily-temperature/) | Forecasting several series together: Melbourne's record cuts the miss on Sydney's high by 14%, and Darwin's makes it worse |
+| [Tomorrow's air in London: the gaps someone filled in for you](https://diogoseca.github.io/timegym/examples/air-quality/) | Scores earned against filled-in readings: a table with no gaps makes every forecast look a fifth better than it is, and the silent monitors look easiest |
+| [Flu season: the calendar knows the rhythm, not the peak](https://diogoseca.github.io/timegym/examples/flu-season/) | A forecaster that learns the season from earlier winters: ahead when the peak keeps its week, the worst of four when it comes late, and far below every peak four weeks before |
+| [The sunspot cycle: how far ahead is a forecast worth making?](https://diogoseca.github.io/timegym/examples/sunspots/) | A regression that leads for two years ahead and adds nothing after |
+| [El Niño: how far ahead depends on the month you ask](https://diogoseca.github.io/timegym/examples/el-nino/) | A backtest's "seven months ahead" split by the month each forecast was made: nothing gets across April, and the rest is still ahead at nine months |
+| [The forest that cannot follow growth](https://diogoseca.github.io/timegym/examples/passenger-growth/) | A random forest that passes its backtest cannot forecast a trend, and the textbook fix makes it worse elsewhere |
+| [You tried 50 models: is the winner real?](https://diogoseca.github.io/timegym/examples/best-of-fifty/) | The winner of a 50-setting backtest leads by 0.2%; nine others cannot be told apart from it, and the next year it comes tenth |
+| [Ready-made model or your own? Five products decide](https://diogoseca.github.io/timegym/examples/ready-made-model/) | A pretrained model far ahead on the scorecard and 22% behind on the backtest average: five products carry the gap, and generated series with a known answer show when the error happens |
+| [A traffic jump: is this the new normal?](https://diogoseca.github.io/timegym/examples/traffic-jump/) | The forecaster that is as good as any on ordinary days is the worst three days into a jump, and the usual backtest cannot show it |
+| [Site capacity: which forecast still works four weeks ahead?](https://diogoseca.github.io/timegym/examples/site-capacity/) | Two forecasters that are level for next week are far apart four weeks ahead, where capacity is booked, and a one-day slip shows up on a generated weekly cycle before any real data |
+| [Bitcoin: finding out you have nothing](https://diogoseca.github.io/timegym/examples/bitcoin/) | A 79% hit rate that came from one input reaching into the future |
+| [The S&P 500 next week: the direction and the size are different questions](https://diogoseca.github.io/timegym/examples/sp500/) | The direction cannot be forecast and the size can: a range that follows recent weeks holds in crashes, checked year by year |
 
 ## Tutorials
 

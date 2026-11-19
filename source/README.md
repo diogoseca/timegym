@@ -52,10 +52,12 @@ Save notebook edits, then follow [Contributing](../docs/contributing.md) and the
 python tools/check_notebooks.py
 python tools/check_notebooks.py --group source
 python tools/check_notebooks.py --group tutorials
+python tools/check_notebooks.py --group examples
 python tools/check_notebooks.py --write --html-dir /tmp/timegym-notebooks
 ```
 
-The checker runs the source notebooks and the tutorials in fresh kernels with
+The checker runs the source notebooks, the tutorials and the
+[examples](../examples/README.md) in fresh kernels with
 the invoking Python interpreter. It clears old outputs before execution, rejects
 uncaught errors and skipped code. `--write` saves the
 executed outputs; the HTML option makes plot and narrative review convenient. A

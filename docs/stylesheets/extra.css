@@ -19,3 +19,10 @@
   white-space: nowrap;
   word-break: normal;
 }
+
+/* Example gallery: the card pictures share one shape, whatever the plot's own. */
+.md-typeset .example-gallery img {
+  aspect-ratio: 5 / 2;
+  width: 100%;
+  object-fit: contain;
+}
