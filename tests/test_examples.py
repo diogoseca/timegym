@@ -123,3 +123,15 @@ def test_loader_returns_date_indexes_with_a_regular_step_unless_recorded():
         else:
             assert table.index.freq is None, f"{name}: recorded as having no regular step, but it has one"
         assert "License" in example_data.about(name)
+
+
+def test_saved_forecasts_are_documented_small_and_read_by_an_example():
+    folder = EXAMPLES / "forecasts"
+    page = (folder / "README.md").read_text(encoding="utf-8")
+    sources = "\n".join(cell.source for path in NOTEBOOKS for cell in nbformat.read(path, as_version=4).cells)
+    saved = sorted(path for path in folder.iterdir() if path.name != "README.md")
+    assert saved, "examples/forecasts holds no saved forecasts"
+    for path in saved:
+        assert f"`{path.name}`" in page, f"examples/forecasts/README.md does not describe {path.name}"
+        assert f'"{path.name}"' in sources, f"no example reads {path.name}"
+        assert path.stat().st_size <= SAMPLE_LIMIT, f"{path.name} is too large to commit"
