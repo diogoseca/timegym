@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from . import metrics
 from .contracts import SimulationReference
-from .reporting import CaseResult, DiagnosticResult, TestReport, _case_checks
+from .reporting import CHECKS, CaseResult, DiagnosticResult, TestReport, _case_checks
 from .provenance import diagnostic_settings
 
 __all__ = [
@@ -297,27 +297,24 @@ _METRIC_NAMES = (
 )
 
 
-def _score_inputs(name, function):
-    """The inputs a score asks for, split into those it needs and those it may take."""
+def _score_inputs(name, function, what="score", inputs=_SCORE_INPUTS):
+    """The inputs a score (or a check) asks for, split into those it needs and those it may take."""
     try:
         parameters = inspect.signature(function).parameters.values()
     except (TypeError, ValueError) as exc:
-        raise TypeError(f"score {name!r} has no signature TimeGym can read") from exc
+        raise TypeError(f"{what} {name!r} has no signature TimeGym can read") from exc
     needs, may_take = [], []
     for parameter in parameters:
         if parameter.kind in (parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD):
             continue
-        if (
-            parameter.name in _SCORE_INPUTS
-            and parameter.kind != parameter.POSITIONAL_ONLY
-        ):
+        if parameter.name in inputs and parameter.kind != parameter.POSITIONAL_ONLY:
             (needs if parameter.default is parameter.empty else may_take).append(
                 parameter.name
             )
         elif parameter.default is parameter.empty:
             raise TypeError(
-                f"score {name!r} needs {parameter.name!r}, which TimeGym cannot give; "
-                f"a score can ask for {', '.join(_SCORE_INPUTS)}"
+                f"{what} {name!r} needs {parameter.name!r}, which TimeGym cannot give; "
+                f"a {what} can ask for {', '.join(inputs)}"
             )
     return tuple(needs), tuple(may_take)
 
@@ -435,6 +432,171 @@ def _rebuild_scores(records):
     return rebuilt, not_recomputed
 
 
+# %% ../source/09_scores_and_diagnostics.ipynb #own-checks
+_CHECK_INPUTS = _SCORE_INPUTS + ("target_names",)
+
+
+def _check_title(name, function):
+    """A check's title: the first line of its docstring without a final full stop, else its name."""
+    doc = getattr(
+        function.func if isinstance(function, partial) else function, "__doc__", None
+    )
+    lines = inspect.cleandoc(doc).splitlines() if isinstance(doc, str) else []
+    title = next((line.strip() for line in lines if line.strip()), "")
+    if title.endswith(".") and not title.endswith(".."):
+        title = title[:-1]
+    return title or name
+
+
+def _check_requests(checks):
+    """Turn ``checks=`` into ``(name, function, title, needs, may_take)`` tuples, refusing what cannot work."""
+    if checks is None:
+        return ()
+    if isinstance(checks, dict):
+        entries = list(checks.items())
+    elif isinstance(checks, (str, bytes)) or callable(checks):
+        raise TypeError(
+            "checks must be a list or a dictionary, such as checks=[within(0, None)]"
+        )
+    else:
+        entries = [(None, entry) for entry in checks]
+    requests, names = [], set()
+    for name, function in entries:
+        if not callable(function):
+            raise TypeError(
+                f"a check must be a function, such as within(0, None); got {function!r}"
+            )
+        if name is None:
+            name = getattr(function, "__name__", None)
+            if not isinstance(name, str) or name == "<lambda>":
+                raise ValueError(
+                    "this check has no name of its own; name it with a dictionary, "
+                    "such as checks={'my_check': ...}"
+                )
+        if not isinstance(name, str) or not name:
+            raise ValueError("a check's name must be a nonempty string")
+        if name in CHECKS:
+            raise ValueError(
+                f"{name!r} is the name of a built-in output check; give yours another name"
+            )
+        if name in names:
+            raise ValueError(
+                f"the check name {name!r} is asked for twice; name each one with a dictionary, "
+                f"such as checks={{'{name}_2': ...}}"
+            )
+        names.add(name)
+        requests.append(
+            (
+                name,
+                function,
+                _check_title(name, function),
+                *_score_inputs(name, function, "check", _CHECK_INPUTS),
+            )
+        )
+    return tuple(requests)
+
+
+def _check_record(name, function, title):
+    """Describe one requested check for the report, and say whether replay can run it again."""
+    bounds = getattr(function, "_within_bounds", None)  # set by timegym.checks.within
+    if isinstance(bounds, dict):
+        return {
+            "name": name,
+            "title": title,
+            "function": "timegym.checks.within",
+            "settings": dict(bounds),
+            "replayable": True,
+        }
+    base = function.func if isinstance(function, partial) else function
+    qualname = getattr(base, "__qualname__", None) or type(base).__qualname__
+    where = f"{getattr(base, '__module__', None) or ''}.{qualname}".lstrip(".")
+    return {
+        "name": name,
+        "title": title,
+        "function": where,
+        "settings": None,
+        "replayable": False,
+    }
+
+
+def _describe_checks(checks):
+    """Check ``checks=`` and describe each requested check as a report records it in its metadata.
+
+    Raises before anything runs when a name is missing, built in or repeated,
+    or when a function needs an argument TimeGym cannot give. Each record has
+    the check's ``name``, ``title``, ``function``, ``settings`` and
+    ``replayable``, True for ``timegym.checks.within``, so replay can run it
+    again; your own functions cannot be rebuilt from a report.
+    """
+    return [
+        _check_record(name, function, title)
+        for name, function, title, *_ in _check_requests(checks)
+    ]
+
+
+def _rebuild_checks(records):
+    """From a report's check records, rebuild the checks replay can run again and name the rest."""
+    from timegym.checks import within
+
+    if not isinstance(records, list) or not all(
+        isinstance(record, dict) and isinstance(record.get("name"), str)
+        for record in records
+    ):
+        raise ValueError("Report check requests are malformed")
+    rebuilt, not_rerun = {}, []
+    for record in records:
+        settings = record.get("settings")
+        if (
+            record.get("replayable") is True
+            and record.get("function") == "timegym.checks.within"
+            and isinstance(settings, dict)
+            and set(settings) == {"lower", "upper"}
+        ):
+            rebuilt[record["name"]] = within(**settings)
+        else:
+            not_rerun.append(record["name"])
+    return rebuilt, not_rerun
+
+
+def _run_check(name, function, title, given):
+    """Run one requested check on a forecast's outputs and return its finding."""
+    evidence = {"title": title}
+    try:
+        outcome = function(**given)
+    except Exception as exc:
+        return DiagnosticResult(
+            "check_" + name,
+            "ERROR",
+            "correctness",
+            f"The check raised {type(exc).__name__}: {exc}",
+            {**evidence, **exception_evidence(exc)},
+        )
+    if isinstance(outcome, (bool, np.bool_)):
+        if outcome:
+            return DiagnosticResult(
+                "check_" + name, "PASS", "correctness", title, evidence
+            )
+        return DiagnosticResult(
+            "check_" + name,
+            "FAIL",
+            "correctness",
+            f"{title}: the check returned False.",
+            evidence,
+        )
+    if isinstance(outcome, str) and outcome.strip():
+        return DiagnosticResult(
+            "check_" + name, "FAIL", "correctness", outcome.strip(), evidence
+        )
+    got = "None" if outcome is None else type(outcome).__name__
+    return DiagnosticResult(
+        "check_" + name,
+        "ERROR",
+        "correctness",
+        f"A check must return True, or a message saying what is wrong; got {got}.",
+        evidence,
+    )
+
+
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-38
 def evaluate_forecast(
     case,
@@ -445,6 +607,7 @@ def evaluate_forecast(
     n_calibration=99,
     alpha=0.05,
     scores=None,
+    checks=None,
 ):
     """Validate a forecast and record scores without inventing pass thresholds.
 
@@ -464,8 +627,19 @@ def evaluate_forecast(
     input the forecast lacks is UNSUPPORTED, ``UndefinedMetricError`` makes
     it INCONCLUSIVE and any other exception an ERROR, each as
     ``metric_<name>``.
+
+    ``checks`` adds output checks of your own: a list of functions, such as
+    ``timegym.checks.within(0, None)``, or a dictionary from name to
+    function. A check asks for the same inputs as a score, plus
+    ``target_names``, and returns True or a message saying what is wrong. Its
+    finding is ``check_<name>``: PASS, FAIL with the message, ERROR when it
+    raises or returns anything else, or UNSUPPORTED when the forecast lacks
+    an input it needs. The finding's evidence keeps the check's title, the
+    first line of its docstring. Checks run only on a forecast that passed
+    the built-in checks.
     """
     requests = _score_requests(scores)
+    check_requests = _check_requests(checks)
     dependence_seed = nonnegative_int(dependence_seed, "dependence_seed")
     settings = diagnostic_settings(
         check_dependence=check_dependence, n_calibration=n_calibration, alpha=alpha
@@ -739,7 +913,20 @@ def evaluate_forecast(
         "quantiles": forecast.quantiles,
         "levels": None if forecast.quantiles is None else forecast.levels,
         "samples": forecast.samples,
+        "target_names": tuple(case.task.target_names),
     }
+
+    def given(needs, may_take):
+        return {
+            key: (
+                available[key]
+                if key == "target_names"
+                else np.asarray(available[key], dtype=float)
+            )
+            for key in (*needs, *may_take)
+            if available[key] is not None
+        }
+
     for name, function, needs, may_take in requests:
         missing = [need for need in needs if available[need] is None]
         if missing:
@@ -753,12 +940,24 @@ def evaluate_forecast(
                 )
             )
             continue
-        given = {
-            key: np.asarray(available[key], dtype=float)
-            for key in (*needs, *may_take)
-            if available[key] is not None
-        }
-        score(name, function, requested=True, **given)
+        score(name, function, requested=True, **given(needs, may_take))
+
+    for name, function, title, needs, may_take in check_requests:
+        missing = [need for need in needs if available[need] is None]
+        if missing:
+            result.diagnostics.append(
+                DiagnosticResult(
+                    "check_" + name,
+                    "UNSUPPORTED",
+                    "correctness",
+                    f"The check needs {missing[0]}, which this forecast does not have.",
+                    {"title": title, "needs": list(needs)},
+                )
+            )
+            continue
+        result.diagnostics.append(
+            _run_check(name, function, title, given(needs, may_take))
+        )
 
     if check_dependence:
         try:

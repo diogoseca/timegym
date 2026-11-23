@@ -19,7 +19,9 @@ from .scenarios import Scenario, MANIFEST_SCHEMA_VERSION, default_scenarios
 from .diagnostics import (
     evaluate_forecast,
     exception_evidence,
+    _describe_checks,
     _describe_scores,
+    _rebuild_checks,
     _rebuild_scores,
 )
 from .reporting import CaseResult, DiagnosticResult, TestReport
@@ -167,7 +169,14 @@ def _ready_made(cases):
 
 
 def _evaluate_case(
-    case, make_forecast, label, seed, dependence_seed, settings, scores=None
+    case,
+    make_forecast,
+    label,
+    seed,
+    dependence_seed,
+    settings,
+    scores=None,
+    checks=None,
 ):
     """Forecast one case with ``make_forecast(case)``, then check and score the forecast.
 
@@ -187,6 +196,7 @@ def _evaluate_case(
             n_calibration=settings["n_calibration"],
             alpha=settings["alpha"],
             scores=scores,
+            checks=checks,
         )
     except Exception as exc:
         result = CaseResult(
@@ -207,7 +217,7 @@ def _evaluate_case(
     return forecast, result
 
 
-def _evaluate_ready_made(cases, make_forecast, settings, scores=None):
+def _evaluate_ready_made(cases, make_forecast, settings, scores=None, checks=None):
     """Evaluate ready-made cases in order; cases with the same label share a row of the plots."""
     cases, identities = _ready_made(cases)
     rows, results = {}, []
@@ -224,6 +234,7 @@ def _evaluate_ready_made(cases, make_forecast, settings, scores=None):
             dependence_seed,
             settings,
             scores,
+            checks,
         )
         results.append(
             EvaluatedCase(
@@ -399,6 +410,7 @@ class Pipeline:
         instances=None,
         cases=None,
         scores=None,
+        checks=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
@@ -426,6 +438,13 @@ class Pipeline:
         ``timegym.metrics`` such as ``"brier"``, your own functions, or a
         dictionary from name to function. ``run.metadata["scores"]`` lists
         them, and says which replay can compute again.
+
+        ``checks`` adds output checks of your own to every case, as in
+        ``evaluate_forecast``: functions such as ``timegym.checks.within(0,
+        None)``, or a dictionary from name to function. They appear in
+        ``report.checks`` and ``assert_passed`` like the built-in checks.
+        ``run.metadata["checks"]`` lists them with their titles, and says which
+        replay can run again.
         """
         if self.steps:
             SklearnForecaster(self.steps, self.window_length)
@@ -449,6 +468,8 @@ class Pipeline:
             metadata["scores"] = _describe_scores(
                 scores
             )  # refuses a bad request before anything runs
+        if checks is not None:
+            metadata["checks"] = _describe_checks(checks)
         if cases is not None:
             if (
                 scenarios is not None
@@ -467,6 +488,7 @@ class Pipeline:
                 ),
                 settings,
                 scores,
+                checks,
             )
             return ForecastRun(cases=results, metadata=metadata)
         seeds, seeding = _instance_seeds(seeds, seed, instances, 3)
@@ -487,6 +509,7 @@ class Pipeline:
                     int(case_seed) + dependence_seed_offset,
                     settings,
                     scores,
+                    checks,
                 )
                 results.append(
                     EvaluatedCase(
@@ -508,6 +531,7 @@ class Pipeline:
         instances=None,
         cases=None,
         scores=None,
+        checks=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
@@ -516,8 +540,8 @@ class Pipeline:
         """Evaluate each scenario on each instance and return a TestReport.
 
         Seeds work as in ``run``: instance ``i`` uses ``seed + i``. ``cases``
-        takes ready-made cases instead, and ``scores`` records more scores,
-        as in ``run``.
+        takes ready-made cases instead, ``scores`` records more scores, and
+        ``checks`` adds output checks of your own, as in ``run``.
         """
         return self.run(
             scenarios,
@@ -526,6 +550,7 @@ class Pipeline:
             instances=instances,
             cases=cases,
             scores=scores,
+            checks=checks,
             check_dependence=check_dependence,
             n_calibration=n_calibration,
             alpha=alpha,
@@ -684,6 +709,9 @@ def _replay_case(report: TestReport, case_index=0):
     Scores asked for by name from ``timegym.metrics`` are computed again; your
     own functions cannot be rebuilt from a report, so they are left out of the
     comparison and listed in ``metadata['replay']['not_recomputed']``.
+    Checks made with ``timegym.checks.within`` run again; your own check
+    functions are left out the same way and listed in
+    ``metadata['replay']['checks_not_rerun']``.
     Replaying in a different environment is allowed and reported.
     """
     payload = report.to_dict()
@@ -738,11 +766,18 @@ def _replay_case(report: TestReport, case_index=0):
     scores, not_recomputed = (
         (None, []) if requested is None else _rebuild_scores(requested)
     )
+    # The same for checks: within() runs again, your own functions are left out.
+    requested_checks = saved_metadata.get("checks")
+    checks, not_rerun = (
+        (None, []) if requested_checks is None else _rebuild_checks(requested_checks)
+    )
     regenerated = pipeline.test(
-        [scenario], seeds=[manifest["seed"]], scores=scores, **settings
+        [scenario], seeds=[manifest["seed"]], scores=scores, checks=checks, **settings
     )
     actual = regenerated.cases[0].to_dict()
-    left_out = {"metric_" + name for name in not_recomputed}
+    left_out = {"metric_" + name for name in not_recomputed} | {
+        "check_" + name for name in not_rerun
+    }
     original_metrics = {
         key: value
         for key, value in original.get("metrics", {}).items()
@@ -769,6 +804,8 @@ def _replay_case(report: TestReport, case_index=0):
     comparison = regenerated.metadata["replay"]
     if requested is not None:
         comparison["not_recomputed"] = not_recomputed
+    if requested_checks is not None:
+        comparison["checks_not_rerun"] = not_rerun
     comparison["reproduced"] = all(
         comparison[key]
         for key in ("metrics_match", "diagnostics_match", "manifest_match")

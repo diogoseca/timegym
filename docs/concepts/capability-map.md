@@ -21,7 +21,7 @@ every case of every family.
 
 | Column | Oracle type | Diagnostics | When it runs |
 | --- | --- | --- | --- |
-| Forecast contract | Partial oracle | `forecast_contract`, `contract_<code>` | On every case, before scoring |
+| Forecast contract | Partial oracle | `forecast_contract`, `contract_<code>`, `check_<name>` | On every case, before scoring; checks asked for with `checks=` on every case that meets the contract |
 | Reference score | Simplified data with known results | `point_accuracy`, `quantile_accuracy`, `sample_scores`, `metric_<name>`, `interval_coverage` | On every case that meets its contract; descriptive, never `PASS` or `FAIL` |
 | Declared relation | Known properties | `shift_equivariance` | When called with `check_shift_equivariance`, for a model that declares the property |
 | Statistical check | Statistical metamorphic test | `reference_covariance` | With `check_dependence=True`, or called with `covariance_dependence_check` |
