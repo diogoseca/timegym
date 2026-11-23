@@ -40,7 +40,7 @@ hooks:
 plugins:
   - search
   - mkdocs-jupyter:
-      include: ["tutorials/[0-9][0-9]_*.ipynb"]
+      include: ["tutorials/[0-9][0-9]_*.ipynb", "examples/*.ipynb"]
       # Skip Markdown pages: with pandoc installed, reading each one as a notebook takes
       # time that doubles with every ::: line, minutes on the API pages.
       ignore: ["*.md"]
@@ -89,12 +89,44 @@ not_in_nav: |
   /tutorials/README.md
   /source/**
   /docs/images/README.md
-  /examples/**
+  /examples/README.md
+  /examples/data/**
+  /examples/forecasts/**
   /experiments/**
   /paper/**
   /tools/**
 nav:
   - Home: README.md
+  - Examples:
+      - Overview: docs/examples.md
+      - Demand and operations:
+          - "Weekly shop sales: from forecast to stock order": examples/store-sales.ipynb
+          - "Spare parts: the best score goes to a forecast of zero": examples/spare-parts.ipynb
+          - "The Christmas order: five Decembers cannot pick the forecaster": examples/christmas-order.ipynb
+          - "Call center staffing: forecast again at ten o'clock": examples/call-center.ipynb
+          - "Train station riders: what is the weather worth, at best?": examples/station-riders.ipynb
+          - "Daily births: how much history should a forecast learn from?": examples/daily-births.ipynb
+      - Energy and environment:
+          - "Tomorrow's electricity demand: let the worst days say what is missing": examples/electricity-demand.ipynb
+          - "Solar farm output: a range for every half hour is not a range for the day": examples/solar-farm.ipynb
+          - "River flow: checking the range, not only the forecast": examples/river-flow.ipynb
+          - "Will it rain tomorrow? Score the forecast you already have": examples/rain.ipynb
+          - "Tomorrow's temperature: which city should Sydney watch?": examples/daily-temperature.ipynb
+          - "Tomorrow's air in London: the gaps someone filled in for you": examples/air-quality.ipynb
+      - Chaotic but partly predictable:
+          - "Flu season: the calendar knows the rhythm, not the peak": examples/flu-season.ipynb
+          - "The sunspot cycle: how far ahead is a forecast worth making?": examples/sunspots.ipynb
+          - "El Niño: how far ahead depends on the month you ask": examples/el-nino.ipynb
+      - Web and product:
+          - "A traffic jump: is this the new normal?": examples/traffic-jump.ipynb
+          - "Site capacity: which forecast still works four weeks ahead?": examples/site-capacity.ipynb
+      - Finance:
+          - "Bitcoin: finding out you have nothing": examples/bitcoin.ipynb
+          - "The S&P 500 next week: the direction and the size are different questions": examples/sp500.ipynb
+      - Lessons that cut across domains:
+          - The forest that cannot follow growth: examples/passenger-growth.ipynb
+          - "You tried 50 models: is the winner real?": examples/best-of-fifty.ipynb
+          - "Ready-made model or your own? Five products decide": examples/ready-made-model.ipynb
   - Tutorials:
       - Overview: docs/tutorials.md
       - Start:

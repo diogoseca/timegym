@@ -6,10 +6,12 @@ owning notebook, preserve cell IDs and `metadata.timegym.role`, save it, then
 run `.venv/bin/python tools/export_notebooks.py` and its `--check` mode. Never
 edit generated modules by hand. Read `tools/README.md` and `source/README.md`
 before changing library code. The 15 source notebooks in `source/` are the
-library; the 12 notebooks in `tutorials/` only use it, the way a user would. Paper result fragments and `paper/timegym.tex`
+library; the 12 notebooks in `tutorials/` only use it, the way a user would, and so do
+the example notebooks in `examples/`, which work on real public data: small samples in
+`examples/data`, each with its source and license in `examples/data/datasets.json`. Paper result fragments and `paper/timegym.tex`
 are generated too; edit their inputs and run their builders.
 
-Create the environment with `python3 -m venv .venv` and `.venv/bin/pip install -e '.[dev]'`; use `.venv/bin/python` for every command. Add `.[notebooks]` to execute notebooks, `.[docs]` for documentation, and `.[release]` for distribution checks.
+Create the environment with `python3 -m venv .venv` and `.venv/bin/pip install -e '.[dev]'`; use `.venv/bin/python` for every command. Add `.[notebooks]` to execute notebooks, `.[examples]` to build an example's full dataset, `.[docs]` for documentation, and `.[release]` for distribution checks.
 
 ## Version policy
 
@@ -40,7 +42,8 @@ push tags, never force-push. Before handoff run, with the venv interpreter,
 `paper/build_standalone.py --check`,
 `tools/sync_citation.py --check`, and `tools/check_notebooks.py` on every
 notebook you touched, with `--write` when outputs change, because the docs
-site renders saved outputs. When the manuscript changes, also compile
+site renders saved outputs. After executing an example, run
+`tools/example_figures.py` to refresh its picture on the examples page. When the manuscript changes, also compile
 `paper/timegym.tex` with latexmk as `paper/README.md` describes. Recount
 every stated count (source notebooks, generated modules, active notebooks,
 tests) when it changes. Commit messages

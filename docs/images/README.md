@@ -32,3 +32,18 @@ plotting change with
 ```bash
 python tools/readme_figures.py
 ```
+
+## Example gallery pictures
+
+The files in `examples/` are the pictures on the cards of the
+[examples page](../examples.md). Each is one plot of the example notebook with
+the same name, the cell named in that notebook's
+`metadata.timegym.gallery_figure`, copied out by
+[`tools/example_figures.py`](../../tools/example_figures.py):
+
+```bash
+python tools/example_figures.py
+```
+
+Run it after executing an example; `--check` reports a picture that no longer
+matches its notebook.
