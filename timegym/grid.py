@@ -7,7 +7,7 @@ from typing import Callable
 import numpy as np
 from scipy.optimize import minimize
 from ._internal import positive_int
-from .scenarios import Scenario
+from .scenarios import Case, Scenario
 
 __all__ = [
     "NOISE_LOW",
@@ -41,6 +41,11 @@ class Pattern:
     with every numeric parameter unknown, a plain model with ``fit(context)``
     and ``predict(future_index)``. Its score on the row is the row's attainable
     score; a pattern without one (``None``) has none.
+
+    You can make your own Pattern and pass it to ``scenario_grid`` or
+    ``Pipeline.scorecard`` beside the keys of ``PATTERNS``: a kind of series
+    you can simulate, with its own answer key. ``scenario_grid`` says what its
+    ``build`` must return.
     """
 
     key: str
@@ -528,13 +533,18 @@ class _LocalLevel:
 # %% ../source/13_scorecard.ipynb #grid-cells
 @dataclass(frozen=True)
 class GridCell:
-    """One pattern at one noise level: its labels and its Scenario."""
+    """One pattern at one noise level: its labels and its Scenario.
+
+    ``definition`` is the Pattern the row comes from: one of ``PATTERNS``, or
+    your own.
+    """
 
     pattern: str
     title: str
     noise: str
     noise_sd: float
     scenario: Scenario = field(repr=False)
+    definition: Pattern | None = field(default=None, repr=False, compare=False)
 
 
 def noise_levels(levels=2):
@@ -572,19 +582,124 @@ def noise_levels(levels=2):
     return [(name, float(sd)) for name, sd in zip(names, sds)]
 
 
+def _grid_patterns(patterns):
+    """``patterns=`` as Pattern objects: keys of ``PATTERNS`` become theirs, and your own are checked."""
+    entries = list(PATTERNS.values()) if patterns is None else list(patterns)
+    found = []
+    for entry in entries:
+        if isinstance(entry, str) and entry in PATTERNS:
+            found.append(PATTERNS[entry])
+        elif isinstance(entry, Pattern):
+            if not isinstance(entry.key, str) or not entry.key:
+                raise ValueError(
+                    f"a pattern's key must be a nonempty string; got {entry.key!r}"
+                )
+            if entry.key in PATTERNS and PATTERNS[entry.key] is not entry:
+                raise ValueError(
+                    f"the key {entry.key!r} belongs to a built-in pattern; give yours another key"
+                )
+            texts = {
+                "title": entry.title,
+                "aka": entry.aka,
+                "predictable": entry.predictable,
+                "unpredictable": entry.unpredictable,
+            }
+            wrong = [name for name, text in texts.items() if not isinstance(text, str)]
+            if wrong or not entry.title:
+                raise ValueError(
+                    f"pattern {entry.key!r} needs a nonempty title, and aka, predictable and "
+                    f"unpredictable as text; check {', '.join(wrong) or 'title'}"
+                )
+            if not callable(entry.build):
+                raise TypeError(
+                    f"pattern {entry.key!r} needs build(noise, context_length, horizon)"
+                )
+            if entry.fitted is not None and not callable(entry.fitted):
+                raise TypeError(
+                    f"pattern {entry.key!r}: fitted must be a function that returns a fresh model, or None"
+                )
+            found.append(entry)
+        else:
+            raise ValueError(
+                f"patterns must be keys from {tuple(PATTERNS)} or Pattern objects of your own; "
+                f"got {entry!r}"
+            )
+    keys = [pattern.key for pattern in found]
+    if not keys or len(set(keys)) != len(keys):
+        raise ValueError(f"patterns must be distinct; got {keys}")
+    return found
+
+
+def _checked_scenario(pattern, noise_sd, context_length, horizon):
+    """Build a pattern's scenario; for your own pattern, check that the scorecard can use it and say what is missing."""
+    scenario = pattern.build(noise_sd, context_length, horizon)
+    if PATTERNS.get(pattern.key) is pattern:
+        return scenario
+    where = f"pattern {pattern.key!r}"
+    missing = (
+        [] if callable(getattr(scenario, "generate", None)) else ["generate(seed)"]
+    )
+    missing += [
+        name
+        for name in ("kind", "context_length", "horizon")
+        if not hasattr(scenario, name)
+    ]
+    if missing:
+        raise TypeError(
+            f"{where}: build returned a {type(scenario).__name__} without {', '.join(missing)}; it must "
+            "return an object with generate(seed), kind, context_length and horizon, as Scenario has"
+        )
+    if not isinstance(scenario.kind, str) or not scenario.kind:
+        raise ValueError(
+            f"{where}: its scenario's kind must be a nonempty string; got {scenario.kind!r}"
+        )
+    if (scenario.context_length, scenario.horizon) != (context_length, horizon):
+        raise ValueError(
+            f"{where}: build was asked for {context_length} steps of history and {horizon} ahead, "
+            f"but its scenario has {scenario.context_length} and {scenario.horizon}"
+        )
+    case = scenario.generate(seed=0)
+    if not isinstance(case, Case):
+        raise TypeError(
+            f"{where}: generate(seed) must return a Case; got a {type(case).__name__}"
+        )
+    reference = case.reference
+    if (
+        reference is None
+        or getattr(reference, "mean", None) is None
+        or getattr(reference, "variance", None) is None
+    ):
+        raise ValueError(
+            f"{where}: its cases have no answer key. A scorecard needs each case's reference to hold "
+            "the true mean and variance of what happens, such as a Reference or SimulationReference"
+        )
+    shape = case.observed.shape
+    if np.shape(reference.mean) != shape or np.shape(reference.variance) != shape:
+        raise ValueError(
+            f"{where}: the answer key's mean and variance must each have the shape of what "
+            f"happens, {shape}; got {np.shape(reference.mean)} and {np.shape(reference.variance)}"
+        )
+    return scenario
+
+
 def scenario_grid(patterns=None, noise_levels=2, *, context_length=120, horizon=24):
     """Return one GridCell per pattern and noise level, rows first.
 
     ``patterns`` lists keys of ``PATTERNS`` (all ten by default, in their
-    order). ``noise_levels`` is as in ``noise_levels()``: two by default, low
-    and high. Scenarios carry no seed of their own; the run supplies it.
+    order) and ``Pattern`` objects of your own. ``noise_levels`` is as in
+    ``noise_levels()``: two by default, low and high. Scenarios carry no seed
+    of their own; the run supplies it.
+
+    Your own pattern needs a key that no built-in pattern has, a title, and
+    ``build(noise, context_length, horizon)`` returning an object with
+    ``generate(seed)``, ``kind``, ``context_length`` and ``horizon``, as
+    ``Scenario`` has. Each case it generates needs an answer key: a reference
+    holding the true mean and variance of what happens. The grid checks this
+    on one case per cell before anything runs and says what is missing.
+    ``noise`` is the noise level's standard deviation; a pattern may use it
+    or ignore it.
     """
-    keys = list(PATTERNS) if patterns is None else list(patterns)
-    unknown = [key for key in keys if key not in PATTERNS]
-    if unknown or not keys or len(set(keys)) != len(keys):
-        raise ValueError(
-            f"patterns must be distinct keys from {tuple(PATTERNS)}; got {keys}"
-        )
+    found = _grid_patterns(patterns)
     context_length = positive_int(context_length, "context_length")
     horizon = positive_int(horizon, "horizon")
     if context_length < 8:
@@ -592,13 +707,14 @@ def scenario_grid(patterns=None, noise_levels=2, *, context_length=120, horizon=
     levels = _noise_levels(noise_levels)
     return [
         GridCell(
-            key,
-            PATTERNS[key].title,
+            pattern.key,
+            pattern.title,
             name,
             sd,
-            PATTERNS[key].build(sd, context_length, horizon),
+            _checked_scenario(pattern, sd, context_length, horizon),
+            pattern,
         )
-        for key in keys
+        for pattern in found
         for name, sd in levels
     ]
 

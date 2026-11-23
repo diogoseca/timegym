@@ -129,6 +129,28 @@ def test_own_checks_on_the_extend_page_fail_and_pass_as_the_comment_says():
     assert all("samples:" in message for message in messages)  # sample paths dip below 0 mm, as the comment says
 
 
+def test_own_kind_of_series_on_the_scorecard_page_scores_as_the_table_says():
+    from timegym import NaiveForecaster, Pipeline
+
+    text = (ROOT / "docs/api/scorecard.md").read_text(encoding="utf-8")
+    section = text[text.index("## Your own kind of series"):text.index("## Mistakes and checks")]
+    (block,) = re.findall(r"^```python\n(.*?)^```", section, flags=re.M | re.S)
+    namespace = {"__name__": "docs"}
+    exec(block, namespace)
+    forecasters = {
+        "Share at this point of the cycle": namespace["card"],
+        "Share of rainy steps so far": Pipeline(NaiveForecaster("mean")).scorecard(patterns=[namespace["rain"]]),
+        "Last cycle repeated": Pipeline(NaiveForecaster("seasonal", period=12)).scorecard(patterns=[namespace["rain"]]),
+    }
+    for label, card in forecasters.items():
+        (row,) = [line for line in section.splitlines() if line.startswith(f"| {label}")]
+        cells = [cell.strip() for cell in row.strip("|").split("|")][1:]
+        printed = [line for line in card.to_markdown().splitlines() if line.startswith("| Rain or no rain |")][0]
+        assert [cell.strip() for cell in printed.strip("|").split("|")][1:3] == cells
+    rain = namespace["card"].table[namespace["card"].table["pattern"] == "rain"]
+    assert (rain["attainable"].round() == 91).all()  # "The attainable score is 91 in both columns"
+
+
 def test_irregular_readings_recipe_never_looks_ahead():
     namespace = {}
     (block,) = python_blocks("docs/api/data-preparation.md")

@@ -19,9 +19,9 @@ Underscore-prefixed names and modules, including `_internal` and
 | `Pipeline`, `NaiveForecaster`, `LastValueForecaster`, `GaussianAR1Forecaster` | `timegym` | Public | [Pipeline and reports](api/pipeline.md); [Models and reductions](api/models.md) |
 | `ForecastRun`, `EvaluatedCase`, `TestReport`, `DiagnosticResult`, `CaseResult` | `timegym` | Public | [Pipeline and reports](api/pipeline.md) |
 | `compare_reports` | `timegym` | Public | [Scores and diagnostics](api/diagnostics.md#compare-two-forecasters-on-the-same-cases) |
-| `Scorecard`, `PATTERNS`, `GridCell`, `scenario_grid` | `timegym` | Public | [Scorecards and the scenario grid](api/scorecard.md) |
+| `Scorecard`, `PATTERNS`, `Pattern`, `GridCell`, `scenario_grid` | `timegym` | Public | [Scorecards and the scenario grid](api/scorecard.md) |
 | `verdict`, `VERDICTS`, `ScorecardComparison` | `timegym.scorecard` | Public | [Scorecards and the scenario grid](api/scorecard.md) |
-| `Pattern`, `noise_levels`, `NOISE_LOW`, `NOISE_HIGH` | `timegym.grid` | Public | [Scorecards and the scenario grid](api/scorecard.md) |
+| `noise_levels`, `NOISE_LOW`, `NOISE_HIGH` | `timegym.grid` | Public | [Scorecards and the scenario grid](api/scorecard.md) |
 | `DiagnosticStatus`, `DiagnosticCategory`, `__version__` | `timegym` | Public | [Pipeline and reports](api/pipeline.md); [Diagnostics catalogue](api/diagnostics.md#diagnostics-catalogue) |
 | `DEFAULT_LEVELS` | `timegym.contracts` | Public | [Scenarios and references](api/scenarios.md) |
 | `mse`, `mae`, `rmse`, `mase`, `rmsse`, `mean_reference_mse`, `pinball`, `interval_score`, `weighted_interval_score`, `crps`, `energy_score`, `variogram_score`, `brier`, `log_loss`, `UndefinedMetricError` | `timegym.metrics` | Public | [Scores and diagnostics](api/diagnostics.md) |

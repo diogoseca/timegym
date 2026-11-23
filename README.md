@@ -148,6 +148,9 @@ no clear difference, by group if you ask
 Checks of your own join the built-in ones with `checks=`, such as
 `within(0, None)` for rainfall or sales, which can't go below zero
 ([Your own output checks](https://diogoseca.github.io/timegym/docs/api/diagnostics/#your-own-output-checks)).
+A kind of series you can simulate, with its answer key, becomes a scorecard
+row of your own: pass a `Pattern` in `patterns=` beside the built-in keys
+([Your own kind of series](https://diogoseca.github.io/timegym/docs/api/scorecard/#your-own-kind-of-series)).
 
 The [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) shows the rest: the
 scorecard as a DataFrame (`card.table`), how many draws to use and what `seed=None` does, and

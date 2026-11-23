@@ -2,8 +2,8 @@
 
 One call that tells you what a forecaster can and cannot do:
 `Pipeline.scorecard()` and `Scorecard` from `timegym`, the grid itself
-(`PATTERNS`, `GridCell`, `scenario_grid`) from `timegym`, and the lower-level
-`verdict`, `VERDICTS`, `ScorecardComparison`, `Pattern`, `noise_levels`,
+(`PATTERNS`, `Pattern`, `GridCell`, `scenario_grid`) from `timegym`, and the
+lower-level `verdict`, `VERDICTS`, `ScorecardComparison`, `noise_levels`,
 `NOISE_LOW` and `NOISE_HIGH` from `timegym.scorecard` and `timegym.grid`.
 
 ```python
@@ -49,9 +49,12 @@ the AR and random-walk rows it is measurement noise on top of the hidden
 process, so the answer key comes from an exact Kalman filter.
 
 `scenario_grid(patterns=None, noise_levels=2, *, context_length=120,
-horizon=24)` returns one `GridCell(pattern, title, noise, noise_sd, scenario)`
-per pattern and noise level, rows first. Each `scenario` is an ordinary
-`Scenario` that can also be passed to `Pipeline.run` or `Pipeline.test`.
+horizon=24)` returns one `GridCell(pattern, title, noise, noise_sd, scenario,
+definition)` per pattern and noise level, rows first. Each `scenario` is an
+ordinary `Scenario` that can also be passed to `Pipeline.run` or
+`Pipeline.test`, and `definition` is the `Pattern` the row comes from.
+`patterns` takes keys of `PATTERNS` and Patterns of your own
+([Your own kind of series](#your-own-kind-of-series)).
 
 ## The score
 
@@ -217,6 +220,99 @@ card = pipeline.scorecard(noise_levels=3, attainable=True)
 `attainable=True` simulates each missing value once and keeps it for the
 session. Each autoregressive or random-walk cell takes about 3 to 5 seconds,
 the others well under a second; nothing is simulated without it.
+
+## Your own kind of series
+
+The answer key is what makes a scorecard possible, and you can bring your own:
+a kind of series you can simulate, such as a rainfall-runoff model, an outbreak
+model or a queue. Wrap it in a `Pattern` and pass it in `patterns=` beside the
+keys of `PATTERNS`. Here is a yes/no row: rain (1) or no rain (0) at each step,
+with a chance of rain that rises and falls over a 12-step cycle.
+
+```python
+import numpy as np
+import pandas as pd
+from timegym import Case, ForecastTask, Pattern, Pipeline, Reference
+
+
+class RainScenario:
+    """Rain (1) or no rain (0) at each step; the chance of rain follows a 12-step cycle."""
+
+    kind = "rain"
+
+    def __init__(self, swing, context_length, horizon):
+        self.swing, self.context_length, self.horizon = swing, context_length, horizon
+
+    def generate(self, seed):
+        steps = np.arange(self.context_length + self.horizon)
+        chance = 0.5 + self.swing * np.sin(2 * np.pi * steps / 12)
+        rain = (np.random.default_rng(seed).random(len(steps)) < chance).astype(float)
+        series = pd.DataFrame({"rain": rain}, index=pd.RangeIndex(len(steps)))
+        future = series.index[self.context_length:]
+        p = chance[self.context_length:]
+        answer_key = Reference(mean=p[:, None], variance=(p * (1 - p))[:, None],
+                               covariance=np.diag(p * (1 - p)), index=future, target_names=("rain",))
+        task = ForecastTask(series.iloc[:self.context_length], future)
+        return Case(task, series.iloc[self.context_length:], answer_key, {"kind": "rain", "seed": seed})
+
+
+class ShareAtThisPointOfTheCycle:
+    """The share of rainy steps so far at the same point of the 12-step cycle."""
+
+    def fit(self, context):
+        values = context.to_numpy()[:, 0]
+        self.length_ = len(values)
+        self.share_ = np.array([values[phase::12].mean() for phase in range(12)])
+        return self
+
+    def predict(self, future_index):
+        return self.share_[np.arange(self.length_, self.length_ + len(future_index)) % 12]
+
+
+rain = Pattern(
+    "rain", "Rain or no rain", "a yes/no outcome with a chance of rain that follows a cycle",
+    predictable="The chance of rain at each point of the cycle.",
+    unpredictable="Whether it actually rains.",
+    build=lambda noise, context_length, horizon: RainScenario(0.45 / (1 + noise) ** 0.5, context_length, horizon),
+    fitted=ShareAtThisPointOfTheCycle,
+)
+card = Pipeline(ShareAtThisPointOfTheCycle()).scorecard(patterns=["seasonal", rain], attainable=True)
+```
+
+`build(noise, context_length, horizon)` returns an object with
+`generate(seed)`, `kind`, `context_length` and `horizon`, as `Scenario` has,
+and every case it generates needs an answer key: a reference holding the true
+mean and variance of what happens. Before anything runs, the grid builds each
+cell, draws one case and says what is missing. `noise` is the column's standard
+deviation; a pattern may use it or ignore it. The rain row uses it to narrow how
+far the chance swings: at low noise (sd 0.5) the chance of rain goes from 13% to
+87% over the cycle, at high noise (sd 2) from 24% to 76%.
+
+For a yes/no outcome the answer key's mean is the chance of rain `p` and its
+variance `p(1 − p)`, so the score needs no change: the unavoidable error is the
+expected Brier score of a forecaster that knows `p`, and the score is the share of the
+expected Brier score that no forecaster could avoid. On the rain row, with the
+default ten series:
+
+| Forecaster | Low noise | High noise |
+| --- | --- | --- |
+| Share at this point of the cycle (the row's `fitted`) | 91 Nails it? | 93 Nails it |
+| Share of rainy steps so far, `NaiveForecaster("mean")` | 73 Good | 86 Good |
+| Last cycle repeated, `NaiveForecaster("seasonal", period=12)` | 51 Struggles | 53 Struggles |
+
+The attainable score is 91 in both columns: the share at each point of the
+cycle, learned from ten cycles of history. The question mark means ten series
+do not settle that verdict. Ignoring the cycle costs little at high noise, where
+the chance moves less, and repeating the last cycle is worse than ignoring it,
+because it copies each step's outcome along with the cycle; the card lists that
+as a mistake ("Exaggerates the cycle").
+
+With `fitted` and `attainable=True`, a pattern of your own gets an attainable
+score simulated as for the built-in rows; otherwise it is NaN, since only the
+default grid's values are stored. The table, `save_baseline` and `compare` know
+the row by its key, so keep the key, and the pattern, the same between two cards
+you compare. A key of a built-in pattern is refused, unless you pass that
+built-in Pattern itself, such as `PATTERNS["trend"]`.
 
 ## Mistakes and checks
 
@@ -416,6 +512,6 @@ Matplotlib figure; `compact=True` draws only the colored scores.
 
 ::: timegym.scorecard.ScorecardComparison
 
-::: timegym.grid.Pattern
+::: timegym.Pattern
 
 ::: timegym.grid.noise_levels

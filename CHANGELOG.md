@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- Added your own kinds of series to the scorecard. `Pattern` is now exported
+  from `timegym`, and `Pipeline.scorecard(patterns=...)` and `scenario_grid`
+  take your own `Pattern` objects beside the keys of `PATTERNS`: a title, the
+  sentences saying what is predictable and what is not, and `build(noise,
+  context_length, horizon)`, which returns an object that generates cases with
+  an answer key. Before anything runs, the grid builds each cell, draws one
+  case and says what is missing: a method, an answer key, a length that
+  differs from the one asked for, or a key that belongs to a built-in
+  pattern. With `fitted=` and `attainable=True`, the row's attainable score
+  is simulated as for the built-in rows; otherwise it is NaN. The table,
+  `save_baseline` and `compare` know the row by its key. `GridCell` has a new
+  field `definition`, the `Pattern` the row comes from. Built-in rows are
+  unchanged.
+- Added a section on your own kinds of series to the scorecard page, with a
+  yes/no row (rain or no rain, with a chance that follows a cycle) where the
+  score becomes the share of the expected Brier score that no forecaster could
+  avoid, a row on the Extend TimeGym page, and a section to the scorecard
+  notebook.
+
 ## 1.12.1 — 2026-11-23
 
 - Added an Examples section to the documentation, placed right after the home

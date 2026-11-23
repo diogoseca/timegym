@@ -225,21 +225,37 @@ def _simulated_attainable(key, noise_sd, context_length, horizon):
     return _attainable_score(pattern, pattern.build(noise_sd, context_length, horizon))
 
 
-def _attainable(key, noise_sd, context_length, horizon, simulate=False):
-    """What the pattern's own model family, fitted to each history, scores on this row.
+def _attainable(cell, simulate=False):
+    """What the pattern's own model family, fitted to each history, scores on this cell's row.
 
     A stored value for the default grid; off it, NaN unless ``simulate`` is true. NaN for a pattern
-    without a fitted family.
+    without a fitted family. Your own pattern has no stored value: with ``simulate`` its score is
+    simulated on every call, since nothing says two patterns of yours with one key are the same.
     """
-    if PATTERNS[key].fitted is None:
+    pattern = _pattern_of(cell)
+    key, noise_sd = cell.pattern, cell.noise_sd
+    context_length, horizon = cell.scenario.context_length, cell.scenario.horizon
+    if pattern.fitted is None:
         return np.nan
-    if (context_length, horizon) == (120, 24) and noise_sd in _ATTAINABLE.get(key, {}):
+    built_in = PATTERNS.get(key) is pattern
+    if (
+        built_in
+        and (context_length, horizon) == (120, 24)
+        and noise_sd in _ATTAINABLE.get(key, {})
+    ):
         return _ATTAINABLE[key][noise_sd]
     if not simulate:
         return np.nan
+    if not built_in:
+        return _attainable_score(pattern, cell.scenario)
     return _simulated_attainable(
         key, float(noise_sd), int(context_length), int(horizon)
     )
+
+
+def _pattern_of(cell):
+    """The Pattern behind a cell: your own, or one of ``PATTERNS`` for a cell made without one."""
+    return cell.definition if cell.definition is not None else PATTERNS[cell.pattern]
 
 
 # %% ../source/13_scorecard.ipynb #scorecard-mistakes
@@ -496,13 +512,7 @@ def _scorecard(
                 "score_high": high,
                 "verdict": verdict(score),
                 "settled": _settled(low, high),
-                "attainable": _attainable(
-                    cell.pattern,
-                    cell.noise_sd,
-                    cell.scenario.context_length,
-                    cell.scenario.horizon,
-                    simulate=attainable,
-                ),
+                "attainable": _attainable(cell, simulate=attainable),
                 "mistakes": "; ".join(mistakes),
                 "unavoidable_mse": best,
                 "avoidable_mse": avoidable,
@@ -591,7 +601,8 @@ class Scorecard:
     history lengths and horizons get NaN unless the card was made with
     ``attainable=True``, which simulates them once per session: about 3 to 5
     seconds for each autoregressive or random-walk cell, well under a second
-    for the others.
+    for the others. A pattern of your own gets one only with
+    ``Pattern.fitted`` and ``attainable=True``.
 
     ``save_baseline(path)`` writes each series' avoidable error to a small
     JSON file, and ``compare(baseline)`` compares a later card on the same
@@ -617,6 +628,10 @@ class Scorecard:
         """The structured report of every case, for JSON or ``assert_passed``."""
         return self.run.report
 
+    def _titles(self):
+        """Each row's title by pattern key, as the table holds them: your own patterns' too."""
+        return dict(zip(self.table["pattern"], self.table["title"]))
+
     def _by_pattern(self):
         return self.table.groupby("pattern", sort=False)["score"]
 
@@ -624,20 +639,20 @@ class Scorecard:
     def good_at(self):
         """Patterns scoring at least 70 at every noise level."""
         lowest = self._by_pattern().min()
-        return [PATTERNS[key].title for key, value in lowest.items() if value >= 70]
+        return [self._titles()[key] for key, value in lowest.items() if value >= 70]
 
     @property
     def fails_at(self):
         """Patterns scoring below 40 at some noise level."""
         lowest = self._by_pattern().min()
-        return [PATTERNS[key].title for key, value in lowest.items() if value < 40]
+        return [self._titles()[key] for key, value in lowest.items() if value < 40]
 
     @property
     def noise_sensitive(self):
         """Patterns whose score drops by 25 points or more from low to high noise."""
         scores = self._by_pattern()
         return [
-            PATTERNS[key].title
+            self._titles()[key]
             for key, values in scores
             if len(values) > 1 and values.iloc[0] - values.iloc[-1] >= 25
         ]
@@ -684,7 +699,7 @@ class Scorecard:
             ]
             mistakes = " · ".join(_mistake_notes(rows)) or "none found"
             lines.append(
-                f"| {PATTERNS[key].title} | " + " | ".join(cells) + f" | {mistakes} |"
+                f"| {self._titles()[key]} | " + " | ".join(cells) + f" | {mistakes} |"
             )
         lines += [
             "",
@@ -1347,6 +1362,7 @@ def _plot_scorecard(card, *, compact=False):
 
     table = card.table
     keys = list(dict.fromkeys(table["pattern"]))
+    patterns = {cell.pattern: _pattern_of(cell) for cell in card.cells}
     levels = list(dict.fromkeys(table["noise"]))
     sds = list(dict.fromkeys(table["noise_sd"]))
     first = {}
@@ -1491,7 +1507,7 @@ def _plot_scorecard(card, *, compact=False):
             ax.set_axis_off()
             ax.text(0, 0, header, fontsize=9.5, weight="bold", va="bottom", color=_INK)
         for row_number, key in enumerate(keys, start=1):
-            pattern = PATTERNS[key]
+            pattern = patterns[key]
             ax = figure.add_subplot(grid[row_number, 0])
             ax.set_axis_off()
             if compact:
