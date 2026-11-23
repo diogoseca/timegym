@@ -5,7 +5,8 @@ happened (`mse`, `mae`, `mase`) and from the answer key (`mean_reference_mse`);
 lower is better. Every report records these; more scores, such as `brier` and
 `log_loss` for yes/no outcomes, or functions of your own, are recorded when you
 ask for them with `scores=`. Output checks of your own, such as a range the
-values must stay in, are added with `checks=`. A diagnostic is one check's result: a verdict (`PASS`, `FAIL`,
+values must stay in, are added with `checks=`. For forecasts of a yes/no outcome,
+`calibration` says whether a forecast of 70% came true about 70% of the time. A diagnostic is one check's result: a verdict (`PASS`, `FAIL`,
 `INCONCLUSIVE`, `UNSUPPORTED` or `ERROR`), a message, and the numbers it rests
 on, called its evidence. Accuracy diagnostics are always `INCONCLUSIVE`,
 because TimeGym sets no pass mark for accuracy; that threshold is yours.
@@ -98,6 +99,10 @@ which a report shows as `INCONCLUSIVE` with the reason. Pass `eps` (between 0
 and 0.5, such as `1e-6`) to clip every forecast to [eps, 1 − eps] first; nothing
 is clipped unless you ask, and the size of `eps` sets how much a confident
 mistake costs.
+
+Whether a forecaster's chances are honest, so that its forecasts of 70% come
+true about 70% of the time, is a question for many forecasts at once:
+[`calibration`](#are-the-chances-honest).
 
 ### Your own scores
 
@@ -519,6 +524,112 @@ sample of them. A scorecard's comparison with a saved baseline uses the same
 sign flips and Holm's correction, one-sided, because it asks only whether the
 new version is worse.
 
+## Are the chances honest?
+
+When a forecast of a yes/no outcome says 70%, it should happen about 70% of
+the time. `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
+level=0.95, seed=0)` checks that on a run of such forecasts, and
+`calibration(observed, predicted, ...)` on arrays of outcomes (0 or 1) and
+chances. It returns a `Calibration`:
+
+- `table`: one row per bin of equal width, from `low` to `high`, with the
+  number of `forecasts` in it, their `mean_forecast` and the share that
+  `happened`. A calibrated forecaster's last two columns agree.
+- `slope`, from a logistic regression of what happened on the log-odds of the
+  forecast ([Cox 1958](https://doi.org/10.1093/biomet/45.3-4.562)): 1 is
+  calibrated; below 1 the forecasts swing further from the average than what
+  happened supports (too confident), above 1 not far enough (too timid).
+  `slope_interval` is its bootstrap interval at `level`.
+- `intercept`, from the same regression with the slope held at 1: 0 is right
+  on average, below 0 the forecasts are too high, above 0 too low
+  ([Van Calster et al. 2019](https://doi.org/10.1186/s12916-019-1466-7)).
+- `plot()`: the table as a reliability diagram
+  ([Murphy and Winkler 1977](https://doi.org/10.2307/2346866)), with the
+  number of forecasts in each bin below it.
+
+Here twenty weather stations record rain (1) or none (0), with a chance that
+rises and falls over a 12-step cycle, and five cases are cut from each. The
+forecaster gives the share of rainy steps so far at the same point of the
+cycle, after adding one rainy and one dry step to each count:
+
+```python
+import numpy as np
+import pandas as pd
+from timegym import Pipeline, cases_from_series
+from timegym.diagnostics import calibration
+
+rng = np.random.default_rng(5)
+chance = 0.5 + 0.37 * np.sin(2 * np.pi * np.arange(240) / 12)  # rises and falls over 12 steps
+cases = []
+for station in range(20):
+    rain = pd.Series((rng.random(240) < chance).astype(float), name="rain")
+    cases += cases_from_series(rain, origins=[120, 144, 168, 192, 216], horizon=24, name="rain",
+                               manifest={"station": station})
+
+
+class ShareAtThisPointOfTheCycle:
+    """The share of rainy steps so far at this point of the cycle, after adding one rainy and one dry step."""
+
+    def fit(self, context):
+        values = context.to_numpy()[:, 0]
+        self.length_ = len(values)
+        self.share_ = np.array([(values[phase::12].sum() + 1) / (len(values[phase::12]) + 2)
+                                for phase in range(12)])
+        return self
+
+    def predict(self, future_index):
+        return self.share_[np.arange(self.length_, self.length_ + len(future_index)) % 12]
+
+
+cal = calibration(Pipeline(ShareAtThisPointOfTheCycle()).run(cases=cases), cluster="station")
+print(cal)
+```
+
+```text
+Calibration of 2,400 forecasts from 100 cases in 20 clusters by station
+  slope 0.92 (95% interval 0.86 to 1.01): 1 is calibrated, below 1 too confident, above 1 too timid
+  intercept +0.00: 0 is right on average, below 0 too high, above 0 too low
+  forecast      mean  happened  forecasts
+  0.00 to 0.10  0.07      0.20         60
+  0.10 to 0.20  0.15      0.16        260
+  0.20 to 0.30  0.25      0.25        274
+  0.30 to 0.40  0.34      0.32        272
+  0.40 to 0.50  0.43      0.41        182
+  0.50 to 0.60  0.53      0.53        370
+  0.60 to 0.70  0.65      0.68        294
+  0.70 to 0.80  0.74      0.75        314
+  0.80 to 0.90  0.83      0.79        288
+  0.90 to 1.00  0.93      0.93         86
+```
+
+The slope is 0.92 and its interval reaches 1.01, so this forecaster is close
+to calibrated, perhaps a little too sure of itself. The five cases of a
+station share its history, so `cluster="station"` resamples them together.
+
+**Which forecasts it reads.** From a run, the point forecast is the chance, or
+the mean of the sample paths when there is no point forecast. Cases that
+crashed, failed a built-in check, or have neither are left out and counted in
+`skipped`. Each case is resampled whole for the interval, since its steps
+share one history; `cluster=` names a manifest key whose cases are resampled
+together. With arrays, each value is resampled on its own, or `cluster` gives
+one label per value.
+
+**Forecasts of exactly 0 or 1.** Their log-odds are infinite, so the slope and
+the intercept read them as 0.000001 and 0.999999, and `certain` counts them. A
+sure forecast that turns out wrong then pulls the slope far toward 0. Without
+the added steps, the forecaster above says 0 or 1 exactly 130 times and its
+slope drops to 0.46. That is the right direction, since a sure forecast that
+fails was too sure, but the size of the drop depends on how 0 and 1 are read:
+read the table beside the slope.
+
+**When there is no number.** With every outcome the same there is no slope or
+intercept; with every forecast the same, no slope; when the forecasts separate
+the outcomes perfectly, the slope has no finite value. `note` says which, and
+the value is NaN. A slope near 0 next to forecasts that stay near the average
+means they carry no information, not that they are too sure: the share of rainy
+steps so far, `NaiveForecaster("mean")`, forecasts between 40% and 60% on these
+cases and has a slope of −0.14.
+
 ## Case-level uncertainty intervals
 
 `timegym.statistics.wilson_interval(values)` accepts a nonempty vector of binary
@@ -565,6 +676,12 @@ The t interval is for continuous score differences, not differences in alarm rat
 ::: timegym.compare_reports
 
 ::: timegym.diagnostics.ReportComparison
+
+::: timegym.diagnostics.calibration
+
+::: timegym.diagnostics.Calibration
+
+::: timegym.plotting.plot_calibration
 
 ::: timegym.diagnostics.covariance_dependence_check
 

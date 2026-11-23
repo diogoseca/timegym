@@ -8,7 +8,7 @@ import pandas as pd
 from . import metrics
 from .scenarios import scenario_label
 
-__all__ = ["plot_forecasts", "plot_errors"]
+__all__ = ["plot_forecasts", "plot_errors", "plot_calibration"]
 
 # %% ../source/11_plotting.ipynb #11_plotting-05
 
@@ -628,3 +628,88 @@ def plot_errors(
                 _annotate(ax, messages)
         axes[-1, 0].set_xlabel(f"{label}, one score per case")
         return fig
+
+
+# %% ../source/11_plotting.ipynb #plotting-calibration
+def plot_calibration(calibration, *, figsize=None):
+    """Draw a reliability diagram: how often yes/no forecasts came true against what they said.
+
+    ``calibration`` is a ``timegym.diagnostics.Calibration``. The top panel
+    puts each bin's mean forecast against the share that happened, with the
+    diagonal a calibrated forecaster follows; the bottom panel counts the
+    forecasts in each bin. The title gives the slope and its interval.
+    """
+    table = getattr(calibration, "table", None)
+    if not isinstance(table, pd.DataFrame) or not {
+        "low",
+        "high",
+        "forecasts",
+        "mean_forecast",
+        "happened",
+    } <= set(table):
+        raise TypeError(
+            "plot_calibration takes the result of timegym.diagnostics.calibration; "
+            f"got {type(calibration).__name__}"
+        )
+    used = table[table["forecasts"] > 0]
+    plt = _pyplot()
+    with plt.rc_context(_STYLE):
+        fig, (top, bottom) = plt.subplots(
+            2,
+            1,
+            figsize=figsize or (6.4, 6.4),
+            sharex=True,
+            layout="constrained",
+            gridspec_kw={"height_ratios": [3, 1]},
+        )
+        top.plot(
+            [0, 1],
+            [0, 1],
+            color=_INK,
+            linewidth=0.9,
+            linestyle=(0, (4, 3)),
+            label="Calibrated",
+        )
+        top.plot(
+            used["mean_forecast"],
+            used["happened"],
+            color=_FORECAST,
+            linewidth=1.2,
+            marker="o",
+            markersize=5,
+            label="Forecasts, by bin",
+        )
+        top.set_xlim(0, 1)
+        top.set_ylim(0, 1)
+        top.set_ylabel("Share that happened")
+        top.grid(True, axis="x")
+        top.legend(loc="upper left")
+        slope, (low, high) = calibration.slope, calibration.slope_interval
+        if np.isfinite(slope):
+            summary = f"slope {slope:.2f}"
+            if np.isfinite(low):
+                summary += f" ({100 * calibration.level:g}%: {low:.2f} to {high:.2f})"
+        else:
+            summary = "no slope"
+        summary += f" · {calibration.forecasts:,} forecasts"
+        top.set_title("How often it happened, by forecast", loc="left")
+        top.set_title(
+            summary, loc="right", fontsize=8, fontweight="normal", color=_MUTED
+        )
+        widths = table["high"] - table["low"]
+        bottom.bar(
+            table["low"],
+            table["forecasts"],
+            width=widths,
+            align="edge",
+            color=_FORECAST,
+            alpha=0.45,
+            edgecolor=_SURFACE,
+            linewidth=1,
+        )
+        bottom.set_ylabel("Forecasts")
+        bottom.set_xlabel("Forecast chance")
+        ticks = np.linspace(0, 1, 5)
+        bottom.set_xticks(ticks, [f"{100 * tick:.0f}%" for tick in ticks])
+        top.set_yticks(ticks, [f"{100 * tick:.0f}%" for tick in ticks])
+    return fig

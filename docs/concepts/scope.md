@@ -48,6 +48,9 @@ To compare two forecasters on the same cases, pass both reports to
 It says whether the difference is larger than chance would explain, by group
 if you ask, and counts cases cut from one series as one piece of evidence when
 you name that series with `cluster=`.
+For forecasts of a yes/no outcome,
+[`calibration`](../api/diagnostics.md#are-the-chances-honest) says whether a
+forecast of 70% came true about 70% of the time.
 
 ## The model never sees the future
 
