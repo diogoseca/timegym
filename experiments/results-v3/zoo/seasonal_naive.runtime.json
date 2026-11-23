@@ -1,0 +1,26 @@
+{
+  "seconds": 5.252035421000073,
+  "thread_limit": 1,
+  "threadpools": [
+    {
+      "architecture": "SkylakeX",
+      "filepath": "/home/user/p3-work/venvs/study-lock/lib/python3.13/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+      "internal_api": "openblas",
+      "num_threads": 1,
+      "prefix": "libscipy_openblas",
+      "threading_layer": "pthreads",
+      "user_api": "blas",
+      "version": "0.3.34.106.0"
+    },
+    {
+      "architecture": "SkylakeX",
+      "filepath": "/home/user/p3-work/venvs/study-lock/lib/python3.13/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+      "internal_api": "openblas",
+      "num_threads": 1,
+      "prefix": "libscipy_openblas",
+      "threading_layer": "pthreads",
+      "user_api": "blas",
+      "version": "0.3.31.dev"
+    }
+  ]
+}

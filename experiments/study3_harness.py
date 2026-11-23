@@ -14,9 +14,19 @@ Everything a unit computes depends only on its specification: the source text, t
 SeedStream), the condition, the seeds and the settings. The training seed stream of a case is
 SeedStream([learner_training tag, learner index, case seed]); the forecast and the calibrated shift check share it
 (draws 1 and 2-41), and the scalar and per-target shift checks each get a fresh copy of it, so that their refits do
-not move the calibrated check's draws. Numerical libraries run on one thread (threadpoolctl). A unit never reads
+not move the calibrated check's draws. Numerical libraries run on one thread: the child loads them after it
+starts, so it first makes them start with one thread (experiments/study3_threads.py), limits them with
+threadpoolctl once the source and the learner are loaded, and before its last line reads every loaded thread pool
+back; a pool with more than one thread stops the run, and the last line lists the pools. A unit never reads
 the state of another unit, so results do not depend on the number of workers. Wall times are written in the
 "seconds" fields only, which the runner keeps out of numerical records.
+
+Beside a unit's JSON lines the parent writes how the unit ended (<output>.outcome.json: finished, stopped at its
+limit, crashed, its wall time and limit, a digest of its specification and limit, and a digest of its JSON lines).
+A run that was stopped (a machine that shut down) can then be continued: with resume=True, run_unit returns the
+stored result of a unit that ended under the same specification and limit, and whose JSON lines are unchanged,
+instead of running it again. A unit that crashed is always run again, because a machine that shuts down also ends
+a unit's process without a time-out.
 
 Spec keys: output (JSON lines path), source, module_name, learner {module, name, index, tag}, condition (a
 Scenario definition with an id), warmup_seed, stages [[stage name, [seeds]], ...], checks (a subset of CHECKS),
@@ -27,17 +37,21 @@ mode ("cases", "classification_public" or "classification_calibrated") and, opti
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+import hashlib
 import importlib
 import importlib.util
 import json
 import math
 import multiprocessing
+import os
 from pathlib import Path
 import sys
 import time
 import traceback
 import types
 import warnings
+
+from .study3_threads import require_one_thread, start_with_one_thread
 
 CHECKS = ("scores", "scalar_shift", "target_shift", "second_implementation", "calibrated_shift")
 MODES = ("cases", "classification_public", "classification_calibrated")
@@ -220,6 +234,8 @@ class _Unit:
 def unit_main(spec: dict) -> None:
     """The child process: run one unit and write its JSON lines to spec['output']."""
     started = time.perf_counter()
+    # No numerical library is loaded yet, so a threadpoolctl limit set here alone would limit nothing.
+    start_with_one_thread()
     with open(spec["output"], "w", encoding="utf-8") as handle:
         def emit(record):
             handle.write(json.dumps(record, sort_keys=True) + "\n")
@@ -238,6 +254,7 @@ def unit_main(spec: dict) -> None:
                 emit({"kind": "load", "ok": False, "reason": "import", "error": _error(exc)})
                 return
             unit = _Unit(spec, module)
+            threadpool_limits(limits=1)  # the source, the learner and their libraries are loaded now
             emit({"kind": "load", "ok": True, "reason": None, "error": None,
                   "seconds": time.perf_counter() - started})
             caught.clear()
@@ -251,7 +268,10 @@ def unit_main(spec: dict) -> None:
                     record["warnings"] = _warning_counts(caught)
                     caught.clear()
                     emit(record)
-            emit({"kind": "done", "seconds": time.perf_counter() - started})
+            pools = require_one_thread()
+            emit({"kind": "done", "seconds": time.perf_counter() - started,
+                  "threads": {f"{pool['user_api']}:{pool['prefix']}:{index}": pool["num_threads"]
+                              for index, pool in enumerate(pools)}})
 
 
 def _warning_counts(caught) -> dict:
@@ -280,12 +300,51 @@ def read_records(path: Path) -> list[dict]:
     return records
 
 
-def run_unit(spec: dict, time_limit: float) -> dict:
-    """Run one unit in a fresh spawned process; stop it at ``time_limit`` seconds."""
+OUTCOME_KEYS = ("timed_out", "finished", "crashed", "exitcode", "seconds", "time_limit")
+
+
+def outcome_path(spec: dict) -> Path:
+    return Path(spec["output"] + ".outcome.json")
+
+
+def _file_digest(path) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def spec_digest(spec: dict, time_limit: float | None) -> str:
+    """Digest of everything a unit's result depends on: its specification and its time limit."""
+    return hashlib.sha256(json.dumps([spec, time_limit], sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def stored_result(spec: dict, time_limit: float | None) -> dict | None:
+    """The result of a unit that an earlier run ended under the same specification and limit, else None."""
+    path = outcome_path(spec)
+    if not path.is_file() or not Path(spec["output"]).is_file():
+        return None
+    try:
+        outcome = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    if outcome.get("spec_sha256") != spec_digest(spec, time_limit) or outcome.get("crashed", True):
+        return None
+    if outcome.get("records_sha256") != _file_digest(spec["output"]):
+        return None
+    return {"records": read_records(spec["output"]), **{key: outcome[key] for key in OUTCOME_KEYS}}
+
+
+def run_unit(spec: dict, time_limit: float | None, resume: bool = False) -> dict:
+    """Run one unit in a fresh spawned process; stop it at ``time_limit`` seconds.
+
+    With ``resume``, a unit that an earlier run ended under the same specification and limit is not run again.
+    """
     named = set(spec.get("checks", ())).union(*spec.get("stage_checks", {}).values())
     if spec.get("mode", "cases") not in MODES or named - set(CHECKS):
         raise ValueError("Unknown mode or check in a unit specification")
+    stored = stored_result(spec, time_limit) if resume else None
+    if stored is not None:
+        return stored
     Path(spec["output"]).parent.mkdir(parents=True, exist_ok=True)
+    outcome_path(spec).unlink(missing_ok=True)
     Path(spec["output"]).write_text("")
     process = multiprocessing.get_context("spawn").Process(target=_child, args=(spec,), daemon=True)
     started = time.perf_counter()
@@ -308,15 +367,22 @@ def run_unit(spec: dict, time_limit: float) -> dict:
     # A process that ended without finishing and without a time-out (a source that exits the interpreter or
     # crashes it) is reported as crashed, with the cases it finished.
     crashed = not (timed_out or finished or load_failed)
-    return {"records": records, "timed_out": timed_out, "finished": finished, "crashed": crashed,
-            "exitcode": process.exitcode, "seconds": seconds, "time_limit": time_limit}
+    result = {"records": records, "timed_out": timed_out, "finished": finished, "crashed": crashed,
+              "exitcode": process.exitcode, "seconds": seconds, "time_limit": time_limit}
+    partial = Path(spec["output"] + ".outcome.partial")
+    partial.write_text(json.dumps({"spec_sha256": spec_digest(spec, time_limit),
+                                   "records_sha256": _file_digest(spec["output"]),
+                                   **{key: result[key] for key in OUTCOME_KEYS}}, sort_keys=True) + "\n",
+                       encoding="utf-8")
+    os.replace(partial, outcome_path(spec))
+    return result
 
 
-def run_units(specs: list[dict], time_limits: list[float], workers: int = 1) -> list[dict]:
+def run_units(specs: list[dict], time_limits: list[float], workers: int = 1, resume: bool = False) -> list[dict]:
     """Run units in parallel worker processes and return their results in the order of ``specs``."""
     if len(specs) != len(time_limits):
         raise ValueError("One time limit per unit")
     if workers < 1:
         raise ValueError("workers must be positive")
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        return list(pool.map(run_unit, specs, time_limits))
+        return list(pool.map(lambda spec, limit: run_unit(spec, limit, resume), specs, time_limits))

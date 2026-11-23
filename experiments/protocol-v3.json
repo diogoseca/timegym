@@ -1,11 +1,11 @@
 {
   "protocol_version": "3.0",
   "study_id": "study-3-generated-mutants-learners-suites-margin-predictability-zoo",
-  "status": "draft",
+  "status": "registered",
   "registration": {
     "rule": "This protocol is registered when it is merged into main. No Study 3 outcome may exist at that moment: no mutant, and no Study 2 fault on a new learner, has been executed against any check or alarm; the margin simulation has not been run; neither predictability estimator has been run on a scorecard cell; no scorecard of a Part 6 model has been made, other than scorecards of the two built-in baselines at other seeds (the published ones, and those of the last-value forecaster made when the scorecard's interval was measured). Every computation made before registration is listed under pilots_before_registration.",
-    "registered_on": "",
-    "merge_commit": "",
+    "registered_on": "2026-11-17",
+    "merge_commit": "951aadc19de7fddc9292daf3b0973b8dd1cadeee",
     "after_merge": "Three later commits may change this file, each one value only. The first, right after the merge, writes registered_on and merge_commit and sets status to 'registered'. The second adds the generated mutant sources and their manifest and writes the manifest's SHA-256 into part_1_generated_mutants.sources.manifest.sha256. The third writes the Chronos revision into part_6_zoo.models. Nothing else in this file changes after the merge.",
     "start_conditions": [
       "status is 'registered' and registration.merge_commit and registration.registered_on are filled in.",
@@ -335,7 +335,7 @@
       },
       "manifest": {
         "path": "experiments/results-v3/mutants/manifest.json",
-        "sha256": "",
+        "sha256": "8d07b11389002ef2c9350fd3043194f9c462e6a1ea4c9d2c57d6ee41b18f8730",
         "rule": "Written by experiments/study3_generate.py with one file per distinct source (sources/<SHA-256>.py): the tool version and its environment, the operator list, the subject's digest, and per source its labels (kind, operator, family, occurrence or site, enclosing definition) and SHA-256. Sources that are identical after ast.unparse(ast.parse(source)) are one source with several labels. The commit that adds these files writes the manifest's SHA-256 into sha256; Parts 1 and 2 refuse to start without it, refuse a source file whose digest differs from the manifest, and refuse a manifest not made from the frozen subject."
       },
       "catalogue": {
