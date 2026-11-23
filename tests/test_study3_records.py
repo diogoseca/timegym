@@ -328,6 +328,29 @@ def test_a_zoo_model_matches_its_manifest_and_ran_on_one_thread(model):
     assert all(int(row["instances"]) == 30 for row in rows)
 
 
+def test_the_pretrained_model_ran_at_the_registered_revision_on_one_thread():
+    folder = RESULTS / "zoo"
+    manifest = load(folder / "chronos_small.manifest.json")
+    entry = next(row for row in load(common.PROTOCOL)["part_6_zoo"]["models"] if row["id"] == "chronos_small")
+    assert manifest["model_id"] == "chronos_small"
+    assert manifest["baseline_sha256"] == sha256(folder / "chronos_small.json")
+    assert manifest["table_sha256"] == sha256(folder / "chronos_small.table.csv")
+    # This run came after the commit that wrote the revision, so it read the protocol as it stands.
+    assert manifest["protocol_sha256"] == sha256(common.PROTOCOL) != protocol_digest_at_the_runs()
+    assert manifest["scorecard"] == {"seed": 14_000_000, "instances": 30, "other_arguments": "defaults"}
+    pretrained = manifest["pretrained_environment"]
+    assert pretrained["model_id"] == "amazon/chronos-t5-small"
+    assert pretrained["resolved_commit"] == entry["revision"] and len(entry["revision"]) == 40
+    assert pretrained["torch_threads"] == 1 and one_thread(load(folder / "chronos_small.runtime.json"))
+    assert pretrained["file_sha256"] and all(len(digest) == 64 for digest in pretrained["file_sha256"].values())
+    pins = lock("experiments/zoo/requirements-chronos.txt")
+    assert pins == {"chronos-forecasting": manifest["versions"]["chronos-forecasting"]}
+    assert f"chronos-forecasting=={pins['chronos-forecasting']}" in pretrained["pip_freeze"]
+    rows = table(folder / "chronos_small.table.csv")
+    assert len(rows) == 20 and all(row["failed_checks"] in ("", "0", "[]") for row in rows)
+    assert all(int(row["instances"]) == 30 for row in rows)
+
+
 def test_zoo_scores_stated_in_the_readme():
     def scores(model, column="score"):
         return {(row["pattern"], row["noise_sd"]): round(float(row[column]))
@@ -339,3 +362,13 @@ def test_zoo_scores_stated_in_the_readme():
     assert scores("hgb_lags")["level_shift", "0.5"] == 93 and marks["level_shift", "0.5"] == 97
     assert scores("theta")["level_shift", "0.5"] == 22
     assert scores("mlp_lags")["random_walk", "0.5"] == 4 and marks["random_walk", "0.5"] == 100
+    chronos = scores("chronos_small")
+    resembling = [chronos[pattern, sd] for pattern in ("noise", "level", "trend", "seasonal", "trend_seasonal")
+                  for sd in ("0.5", "2.0")]
+    others = [chronos[pattern, sd] for pattern in ("level_shift", "mean_reverting", "random_walk", "random_walk_drift")
+              for sd in ("0.5", "2.0")]
+    assert (min(resembling), max(resembling)) == (23, 99) and (min(others), max(others)) == (59, 97)
+    assert (chronos["cycles", "0.5"], chronos["cycles", "2.0"]) == (73, 78)
+    assert min(chronos, key=chronos.get) == ("trend", "0.5")
+    assert (chronos["mean_reverting", "0.5"], chronos["mean_reverting", "2.0"]) == (92, 97)
+    assert (marks["mean_reverting", "0.5"], marks["mean_reverting", "2.0"]) == (93, 96)
