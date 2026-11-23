@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.12.1 — 2026-11-23
 
 - Added an Examples section to the documentation, placed right after the home
   page: forecasting jobs on real public data, from the first model to a
