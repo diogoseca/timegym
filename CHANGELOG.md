@@ -5,16 +5,27 @@
 - Added your own kinds of series to the scorecard. `Pattern` is now exported
   from `timegym`, and `Pipeline.scorecard(patterns=...)` and `scenario_grid`
   take your own `Pattern` objects beside the keys of `PATTERNS`: a title, the
-  sentences saying what is predictable and what is not, and `build(noise,
-  context_length, horizon)`, which returns an object that generates cases with
-  an answer key. Before anything runs, the grid builds each cell, draws one
-  case and says what is missing: a method, an answer key, a length that
-  differs from the one asked for, or a key that belongs to a built-in
-  pattern. With `fitted=` and `attainable=True`, the row's attainable score
-  is simulated as for the built-in rows; otherwise it is NaN. The table,
-  `save_baseline` and `compare` know the row by its key. `GridCell` has a new
-  field `definition`, the `Pattern` the row comes from. Built-in rows are
-  unchanged.
+  sentences saying what is predictable and what is not, and
+  `simulate(rng, history, horizon, noise)`, a function that draws one series
+  and returns its `values` with the true `mean` and `variance` of each step to
+  forecast (and optionally a `covariance`). TimeGym cuts the history from the
+  future and builds the case and its answer key. A kind of series that needs
+  more can give `build(noise, context_length, horizon)` instead, returning an
+  object that generates whole cases. Before anything runs, the grid draws one
+  case per cell and says what is missing or has the wrong shape, or that a key
+  belongs to a built-in pattern. With `attainable_by=` and `attainable=True`,
+  the row's attainable score is simulated as for the built-in rows; otherwise
+  it is NaN. The table, `save_baseline` and `compare` know the row by its key.
+  `GridCell` has a new field `definition`, the `Pattern` the row comes from.
+  Built-in rows are unchanged.
+- Renamed `Pattern.fitted` to `Pattern.attainable_by`, which takes the row's
+  own model itself (copied fresh for each series) as well as a class or
+  function that returns one. The built-in rows hold their models, so
+  `Pipeline(PATTERNS["trend"].attainable_by)` scores one. `fitted=` and
+  `Pattern.fitted()` still work and warn that the name changed.
+- Added `NaiveForecaster("seasonal_mean", period=...)`: each step forecast with
+  the mean of all past values at the same point of the cycle, which for yes/no
+  values is the share that happened there.
 - Added a section on your own kinds of series to the scorecard page, with a
   yes/no row (rain or no rain, with a chance that follows a cycle) where the
   score becomes the share of the expected Brier score that no forecaster could

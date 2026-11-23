@@ -593,7 +593,7 @@ class Pipeline:
         ``attainable=True``, which simulates the missing values once per
         session: about 3 to 5 seconds for each autoregressive or random-walk
         cell and well under a second for the others. A pattern of your own
-        has no stored values: with ``Pattern.fitted`` and ``attainable=True``
+        has no stored values: with ``Pattern.attainable_by`` and ``attainable=True``
         its attainable score is simulated in the same way, otherwise it is NaN.
         """
         from timegym.scorecard import _scorecard

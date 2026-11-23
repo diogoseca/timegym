@@ -21,8 +21,8 @@ card.save("scorecard.png") # or .svg / .pdf
 `title`, an `aka` (the textbook name), and two sentences: `predictable`, what a
 forecaster that knew the process could get right, and `unpredictable`, what no
 forecaster can get right by design. `build(noise, context_length, horizon)`
-returns the row's `Scenario`, and `fitted()` an estimator of the generator's own
-model family (see [What a fitted model could score](#what-a-fitted-model-could-score)).
+returns the row's `Scenario`, and `attainable_by` holds a model of the
+generator's own family (see [What a fitted model could score](#what-a-fitted-model-could-score)).
 
 | Key | Title | What can be predicted | What cannot, by design |
 | --- | --- | --- | --- |
@@ -194,19 +194,21 @@ table.assign(lost_on_top=table["attainable"] - table["score"])[
     ["title", "noise", "score", "attainable", "lost_on_top"]]
 ```
 
-Each `Pattern` carries the estimator as `fitted`, a factory with no arguments.
-The estimator is an ordinary model with `fit(context)` and `predict(future_index)`,
+Each `Pattern` carries the model as `attainable_by`, copied fresh for each
+series. It is an ordinary model with `fit(context)` and `predict(future_index)`,
 so it can be scored like any other:
 
 ```python
 from timegym import PATTERNS, Pipeline
 
-Pipeline(PATTERNS["trend"].fitted()).scorecard(["trend"])
+Pipeline(PATTERNS["trend"].attainable_by).scorecard(["trend"])
 ```
 
 The four maximum-likelihood fits run a Kalman filter with the scale and the
-mean (or the drift) solved for in closed form. A `Pattern` without `fitted`
-(`None`) has no attainable score (NaN). On the image the attainable score is a
+mean (or the drift) solved for in closed form. A `Pattern` without
+`attainable_by` (`None`) has no attainable score (NaN). `fitted`, its old name,
+still works with a warning: `Pattern(fitted=...)` as an argument, and
+`Pattern.fitted()` returning a fresh model. On the image the attainable score is a
 small triangle above each score's line.
 
 The 20 values of the default grid are stored; `tools/attainable_table.py`
@@ -225,94 +227,98 @@ the others well under a second; nothing is simulated without it.
 
 The answer key is what makes a scorecard possible, and you can bring your own:
 a kind of series you can simulate, such as a rainfall-runoff model, an outbreak
-model or a queue. Wrap it in a `Pattern` and pass it in `patterns=` beside the
-keys of `PATTERNS`. Here is a yes/no row: rain (1) or no rain (0) at each step,
-with a chance of rain that rises and falls over a 12-step cycle.
+model or a queue. Write a function that draws one series and says what a
+forecaster that knows the process would forecast, wrap it in a `Pattern`, and
+pass it in `patterns=` beside the keys of `PATTERNS`. Here is a yes/no row:
+rain (1) or no rain (0) at each step, with a chance of rain that rises and
+falls over a 12-step cycle.
 
 ```python
 import numpy as np
-import pandas as pd
-from timegym import Case, ForecastTask, Pattern, Pipeline, Reference
+from timegym import NaiveForecaster, Pattern, Pipeline
 
 
-class RainScenario:
+def simulate_rain(rng, history, horizon, noise):
     """Rain (1) or no rain (0) at each step; the chance of rain follows a 12-step cycle."""
-
-    kind = "rain"
-
-    def __init__(self, swing, context_length, horizon):
-        self.swing, self.context_length, self.horizon = swing, context_length, horizon
-
-    def generate(self, seed):
-        steps = np.arange(self.context_length + self.horizon)
-        chance = 0.5 + self.swing * np.sin(2 * np.pi * steps / 12)
-        rain = (np.random.default_rng(seed).random(len(steps)) < chance).astype(float)
-        series = pd.DataFrame({"rain": rain}, index=pd.RangeIndex(len(steps)))
-        future = series.index[self.context_length:]
-        p = chance[self.context_length:]
-        answer_key = Reference(mean=p[:, None], variance=(p * (1 - p))[:, None],
-                               covariance=np.diag(p * (1 - p)), index=future, target_names=("rain",))
-        task = ForecastTask(series.iloc[:self.context_length], future)
-        return Case(task, series.iloc[self.context_length:], answer_key, {"kind": "rain", "seed": seed})
-
-
-class ShareAtThisPointOfTheCycle:
-    """The share of rainy steps so far at the same point of the 12-step cycle."""
-
-    def fit(self, context):
-        values = context.to_numpy()[:, 0]
-        self.length_ = len(values)
-        self.share_ = np.array([values[phase::12].mean() for phase in range(12)])
-        return self
-
-    def predict(self, future_index):
-        return self.share_[np.arange(self.length_, self.length_ + len(future_index)) % 12]
+    steps = np.arange(history + horizon)
+    swing = 0.45 / (1 + noise)  # 0.30 at low noise (sd 0.5), 0.15 at high (sd 2)
+    chance = 0.5 + swing * np.sin(2 * np.pi * steps / 12)
+    rained = rng.random(len(steps)) < chance
+    ahead = chance[history:]  # the chance at each step to forecast
+    return dict(values=rained, mean=ahead, variance=ahead * (1 - ahead))
 
 
 rain = Pattern(
-    "rain", "Rain or no rain", "a yes/no outcome with a chance of rain that follows a cycle",
+    key="rain",
+    title="Rain or no rain",
+    aka="a yes/no outcome with a chance of rain that follows a cycle",
     predictable="The chance of rain at each point of the cycle.",
     unpredictable="Whether it actually rains.",
-    build=lambda noise, context_length, horizon: RainScenario(0.45 / (1 + noise) ** 0.5, context_length, horizon),
-    fitted=ShareAtThisPointOfTheCycle,
+    simulate=simulate_rain,
+    attainable_by=NaiveForecaster("seasonal_mean", period=12),
 )
-card = Pipeline(ShareAtThisPointOfTheCycle()).scorecard(patterns=["seasonal", rain], attainable=True)
+
+model = NaiveForecaster("seasonal_mean", period=12)
+card = Pipeline(model).scorecard(
+    patterns=["seasonal", rain],  # a built-in row beside yours
+    attainable=True,  # also score each row's own model, fitted to each history
+)
 ```
 
-`build(noise, context_length, horizon)` returns an object with
-`generate(seed)`, `kind`, `context_length` and `horizon`, as `Scenario` has,
-and every case it generates needs an answer key: a reference holding the true
-mean and variance of what happens. Before anything runs, the grid builds each
-cell, draws one case and says what is missing. `noise` is the column's standard
-deviation; a pattern may use it or ignore it. The rain row uses it to narrow how
-far the chance swings: at low noise (sd 0.5) the chance of rain goes from 13% to
-87% over the cycle, at high noise (sd 2) from 24% to 76%.
+For each series the scorecard calls `simulate(rng, history, horizon, noise)`:
+`rng` is a NumPy random generator seeded by the card, `history` and `horizon`
+are the lengths the card asks for (120 and 24 by default), and `noise` is the
+column's standard deviation. It is called by position, so the names are
+yours. The function returns a dict:
+
+- `values`: every step, history and horizon together. For a yes/no outcome,
+  True and False or 1 and 0. For several series, one column each.
+- `mean` and `variance`: the true mean and variance of each step to forecast,
+  given the history. This is the answer key.
+- `covariance` (optional): for steps to forecast that move together. Only the
+  dependence check reads it; without it the steps count as independent.
+
+TimeGym cuts the history from the future and builds the case and its answer
+key. Before anything runs, the grid draws one series per cell and says what is
+missing or has the wrong length. A kind of series that needs more, such as
+dates or inputs known in advance, can give `build(noise, context_length,
+horizon)` instead, returning an object with `generate(seed)`, `kind`,
+`context_length` and `horizon`, as `Scenario` has, whose cases carry an answer
+key. A Pattern takes `simulate` or `build`, not both.
+
+`noise` is there to use or ignore. The rain row turns higher noise into a
+weaker cycle: at low noise (sd 0.5) the chance of rain goes from 20% to 80%
+over the cycle, at high noise (sd 2) from 35% to 65%.
 
 For a yes/no outcome the answer key's mean is the chance of rain `p` and its
 variance `p(1 − p)`, so the score needs no change: the unavoidable error is the
-expected Brier score of a forecaster that knows `p`, and the score is the share of the
-expected Brier score that no forecaster could avoid. On the rain row, with the
-default ten series:
+expected Brier score of a forecaster that knows `p`, and the score is the share
+of the expected Brier score that no forecaster could avoid. On the rain row,
+with the default ten series:
 
 | Forecaster | Low noise | High noise |
 | --- | --- | --- |
-| Share at this point of the cycle (the row's `fitted`) | 91 Nails it? | 93 Nails it |
-| Share of rainy steps so far, `NaiveForecaster("mean")` | 73 Good | 86 Good |
-| Last cycle repeated, `NaiveForecaster("seasonal", period=12)` | 51 Struggles | 53 Struggles |
+| Seasonal mean, the row's own model, `NaiveForecaster("seasonal_mean", period=12)` | 92 Nails it | 92 Nails it |
+| Historical mean, `NaiveForecaster("mean")` | 82 Good | 95 Nails it |
+| Last cycle repeated, `NaiveForecaster("seasonal", period=12)` | 52 Struggles | 53 Struggles |
 
-The attainable score is 91 in both columns: the share at each point of the
-cycle, learned from ten cycles of history. The question mark means ten series
-do not settle that verdict. Ignoring the cycle costs little at high noise, where
-the chance moves less, and repeating the last cycle is worse than ignoring it,
-because it copies each step's outcome along with the cycle; the card lists that
-as a mistake ("Exaggerates the cycle").
+The attainable score is 91 in both columns: the seasonal mean, the share of
+rainy steps at each point of the cycle, learned from ten cycles of history. The
+historical mean ignores the cycle, which costs about ten points at low noise but wins
+at high noise: there the chance moves only 15 points either side of 50%, and
+twelve shares learned from ten steps each are noisier than one share learned
+from 120. Repeating the last cycle is worse than either, because it copies each
+step's outcome along with the cycle; the card lists that as a mistake ("Cycle
+out of step" at low noise, "Too wiggly" at high).
 
-With `fitted` and `attainable=True`, a pattern of your own gets an attainable
-score simulated as for the built-in rows; otherwise it is NaN, since only the
-default grid's values are stored. The table, `save_baseline` and `compare` know
-the row by its key, so keep the key, and the pattern, the same between two cards
-you compare. A key of a built-in pattern is refused, unless you pass that
-built-in Pattern itself, such as `PATTERNS["trend"]`.
+`attainable_by` takes the row's own model, copied fresh for each series, or a
+class or function that returns one. With it and `attainable=True`, a pattern of
+your own gets an attainable score simulated as for the built-in rows; otherwise
+it is NaN, since only the default grid's values are stored. The table,
+`save_baseline` and `compare` know the row by its key, so keep the key, and the
+pattern, the same between two cards you compare. A key of a built-in pattern is
+refused, unless you pass that built-in Pattern itself, such as
+`PATTERNS["trend"]`.
 
 ## Mistakes and checks
 

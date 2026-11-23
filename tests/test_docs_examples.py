@@ -138,8 +138,8 @@ def test_own_kind_of_series_on_the_scorecard_page_scores_as_the_table_says():
     namespace = {"__name__": "docs"}
     exec(block, namespace)
     forecasters = {
-        "Share at this point of the cycle": namespace["card"],
-        "Share of rainy steps so far": Pipeline(NaiveForecaster("mean")).scorecard(patterns=[namespace["rain"]]),
+        "Seasonal mean": namespace["card"],
+        "Historical mean": Pipeline(NaiveForecaster("mean")).scorecard(patterns=[namespace["rain"]]),
         "Last cycle repeated": Pipeline(NaiveForecaster("seasonal", period=12)).scorecard(patterns=[namespace["rain"]]),
     }
     for label, card in forecasters.items():
@@ -149,6 +149,10 @@ def test_own_kind_of_series_on_the_scorecard_page_scores_as_the_table_says():
         assert [cell.strip() for cell in printed.strip("|").split("|")][1:3] == cells
     rain = namespace["card"].table[namespace["card"].table["pattern"] == "rain"]
     assert (rain["attainable"].round() == 91).all()  # "The attainable score is 91 in both columns"
+    assert namespace["simulate_rain"].__doc__  # the function the page explains
+    for noise, low, high in [(0.5, 0.20, 0.80), (2.0, 0.35, 0.65)]:  # "from 20% to 80% ... from 35% to 65%"
+        parts = namespace["simulate_rain"](np.random.default_rng(0), 120, 24, noise)
+        assert np.isclose(parts["mean"].min(), low) and np.isclose(parts["mean"].max(), high)
 
 
 def test_irregular_readings_recipe_never_looks_ahead():

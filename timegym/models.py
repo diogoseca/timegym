@@ -106,14 +106,14 @@ def _require_regular_future(context_index, future_index):
 
 # %% ../source/06_forecasting_models.ipynb #06_forecasting_model-09
 class NaiveForecaster(_ConfiguredForecaster):
-    """Last value, historical mean, seasonal persistence or endpoint drift.
+    """Last value, historical mean, seasonal persistence, seasonal mean or endpoint drift.
 
     A single observation permits any increasing future index after context;
     its spacing cannot be verified. Longer contexts require a regular grid.
     """
 
     def __init__(self, strategy="last", period=1):
-        strategies = ("last", "mean", "seasonal", "drift")
+        strategies = ("last", "mean", "seasonal", "seasonal_mean", "drift")
         if strategy not in strategies:
             raise ValueError(
                 f"Unknown naive strategy {strategy!r}; choose from {strategies}"
@@ -130,7 +130,7 @@ class NaiveForecaster(_ConfiguredForecaster):
         self.context_ = context.copy(deep=True)
         minimum = (
             self.period
-            if self.strategy == "seasonal"
+            if self.strategy in ("seasonal", "seasonal_mean")
             else (2 if self.strategy == "drift" else 1)
         )
         if len(context) < minimum:
@@ -146,6 +146,13 @@ class NaiveForecaster(_ConfiguredForecaster):
             point = np.tile(y.mean(axis=0), (h, 1))
         elif self.strategy == "seasonal":
             point = y[-self.period :][np.arange(h) % self.period]
+        elif self.strategy == "seasonal_mean":
+            # The mean of every past value at the same point of the cycle as each future step.
+            position = np.arange(len(y)) % self.period
+            means = np.stack(
+                [y[position == p].mean(axis=0) for p in range(self.period)]
+            )
+            point = means[(len(y) + np.arange(h)) % self.period]
         elif self.strategy == "drift":
             point = y[-1] + np.arange(1, h + 1)[:, None] * (y[-1] - y[0]) / (len(y) - 1)
         else:

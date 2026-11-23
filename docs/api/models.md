@@ -7,7 +7,9 @@ from `timegym.models`.
 `NaiveForecaster(strategy="last", period=1)` returns explicit point forecasts.
 `last` repeats the final observation and `mean` repeats the context mean; both
 need at least one observation. `seasonal` repeats the final `period` observations
-and requires at least that many rows. `drift` extrapolates the slope from the
+and requires at least that many rows. `seasonal_mean` forecasts each step with the
+mean of all past values at the same point of the cycle (for yes/no values, the
+share that happened there) and also needs `period` rows. `drift` extrapolates the slope from the
 first to the last observation and needs at least two rows. `period` is a positive
 integer. With two or more context rows, built-in step models require a regular
 index and immediately following consecutive future labels. With one row, the

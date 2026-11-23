@@ -2,7 +2,7 @@
 
 For each of the 20 cells of the default scorecard grid (ten patterns at noise sd 0.5 and
 2.0, 120 steps of history, 24 ahead), fits the pattern's own model family
-(``Pattern.fitted``) to 200 fresh series and scores it as a cell is scored. Without
+(``Pattern.attainable_by``) to 200 fresh series and scores it as a cell is scored. Without
 arguments it prints every value with the seconds it took, then the table as the dict
 literal that source/13_scorecard.ipynb stores in ``_ATTAINABLE``.
 

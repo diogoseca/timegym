@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 import math
+import warnings
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Callable
 import numpy as np
+import pandas as pd
 from scipy.optimize import minimize
 from ._internal import positive_int
+from .contracts import ForecastTask, Reference
+from .models import fresh_model
 from .scenarios import Case, Scenario
 
 __all__ = [
@@ -28,24 +33,35 @@ __all__ = [
 NOISE_LOW, NOISE_HIGH = 0.5, 2.0
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class Pattern:
     """One row of the scorecard: a kind of series, in plain words.
 
     ``predictable`` says what a perfect forecaster could get right;
-    ``unpredictable`` what no forecaster can, by design. ``build(noise,
-    context_length, horizon)`` returns the Scenario for one noise level: the
-    noise is the standard deviation of the random error on each observation.
+    ``unpredictable`` what no forecaster can, by design.
 
-    ``fitted()`` returns a fresh estimator of the generator's own model family
-    with every numeric parameter unknown, a plain model with ``fit(context)``
-    and ``predict(future_index)``. Its score on the row is the row's attainable
-    score; a pattern without one (``None``) has none.
+    The row's series come from one of two functions. ``simulate(rng, history,
+    horizon, noise)`` draws one series and returns a dict: ``values`` for all
+    ``history + horizon`` steps (one column per series when there are several),
+    and the ``mean`` and ``variance`` of each step to forecast, given the
+    history. An optional ``covariance`` is for future steps that move together;
+    without it they count as independent. ``rng`` is a NumPy random generator
+    seeded by the scorecard and ``noise`` the column's standard deviation, which
+    a pattern may use or ignore. TimeGym builds the case and its answer key from
+    these. ``build(noise, context_length, horizon)`` instead returns a whole
+    Scenario for one noise level, as the built-in rows do: the noise is the
+    standard deviation of the random error on each observation.
+
+    ``attainable_by`` is a model of the generator's own family with every
+    numeric parameter unknown, with ``fit(context)`` and ``predict(future_index)``:
+    a model object, copied fresh for each series, or a class or function that
+    returns a fresh one. Its score on the row is the row's attainable score; a
+    pattern without one (``None``) has none. ``fitted`` is its old name and still
+    works, with a warning.
 
     You can make your own Pattern and pass it to ``scenario_grid`` or
-    ``Pipeline.scorecard`` beside the keys of ``PATTERNS``: a kind of series
-    you can simulate, with its own answer key. ``scenario_grid`` says what its
-    ``build`` must return.
+    ``Pipeline.scorecard`` beside the keys of ``PATTERNS``: a kind of series you
+    can simulate, with its own answer key.
     """
 
     key: str
@@ -53,8 +69,152 @@ class Pattern:
     aka: str
     predictable: str
     unpredictable: str
-    build: Callable[[float, int, int], Scenario] = field(repr=False, compare=False)
-    fitted: Callable[[], object] | None = field(default=None, repr=False, compare=False)
+    build: Callable[[float, int, int], Scenario] | None = field(
+        default=None, repr=False, compare=False
+    )
+    attainable_by: object = field(default=None, repr=False, compare=False)
+    simulate: Callable | None = field(default=None, repr=False, compare=False)
+
+    def __init__(
+        self,
+        key,
+        title,
+        aka,
+        predictable,
+        unpredictable,
+        build=None,
+        attainable_by=None,
+        *,
+        simulate=None,
+        fitted=None,
+    ):
+        if fitted is not None:
+            warnings.warn(
+                "Pattern(fitted=...) is now Pattern(attainable_by=...), which also takes the model itself; "
+                "fitted will be removed in a later release",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if attainable_by is not None:
+                raise TypeError("give attainable_by, or its old name fitted, not both")
+            attainable_by = fitted
+        for name, value in (
+            ("key", key),
+            ("title", title),
+            ("aka", aka),
+            ("predictable", predictable),
+            ("unpredictable", unpredictable),
+            ("build", build),
+            ("attainable_by", attainable_by),
+            ("simulate", simulate),
+        ):
+            object.__setattr__(self, name, value)
+
+    @property
+    def fitted(self):
+        """The old name of ``attainable_by``: a function that returns a fresh model, or None."""
+        warnings.warn(
+            "Pattern.fitted is now Pattern.attainable_by; fitted will be removed in a later release",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if self.attainable_by is None:
+            return None
+        return lambda: _fresh_attainable(self.attainable_by)
+
+
+def _fresh_attainable(model):
+    """A fresh model from ``attainable_by``: a copy of a model object, or a new one from a class or function."""
+    if isinstance(model, type) or not hasattr(model, "fit"):
+        return model()
+    return fresh_model(model)
+
+
+class _Simulated:
+    """What a pattern's ``simulate`` becomes for the grid: generate(seed) draws one series and builds its case."""
+
+    def __init__(self, pattern, noise, context_length, horizon):
+        self.pattern, self.noise = pattern, float(noise)
+        self.kind, self.context_length, self.horizon = (
+            pattern.key,
+            context_length,
+            horizon,
+        )
+
+    def generate(self, seed):
+        """Call ``simulate`` with a generator seeded by ``seed``; cut history from future; build the answer key."""
+        where = f"pattern {self.kind!r}: simulate"
+        history, horizon = self.context_length, self.horizon
+        parts = self.pattern.simulate(
+            np.random.default_rng(seed), history, horizon, self.noise
+        )
+        if not isinstance(parts, Mapping):
+            raise TypeError(
+                f"{where} must return a dict with values, mean and variance; got a {type(parts).__name__}"
+            )
+        missing = [name for name in ("values", "mean", "variance") if name not in parts]
+        unknown = sorted(
+            str(name)
+            for name in set(parts) - {"values", "mean", "variance", "covariance"}
+        )
+        if missing or unknown:
+            problems = ([f"no {', '.join(missing)}"] if missing else []) + (
+                [f"unknown {', '.join(unknown)}"] if unknown else []
+            )
+            raise ValueError(
+                f"{where} must return values, mean and variance (and optionally covariance); "
+                f"got {'; '.join(problems)}"
+            )
+        values = np.asarray(parts["values"], dtype=float)
+        if values.ndim == 1:
+            values = values[:, None]
+        if values.ndim != 2 or len(values) != history + horizon or values.shape[1] == 0:
+            raise ValueError(
+                f"{where}: values must have {history + horizon} steps ({history} of history and {horizon} "
+                f"to forecast), one column per series; got shape {np.shape(parts['values'])}"
+            )
+        shape = (horizon, values.shape[1])
+        moments = {}
+        for name in ("mean", "variance"):
+            array = np.asarray(parts[name], dtype=float)
+            if array.ndim == 1 and shape[1] == 1:
+                array = array[:, None]
+            if array.shape != shape:
+                raise ValueError(
+                    f"{where}: {name} must have one value per step to forecast"
+                    f"{' and series' if shape[1] > 1 else ''}, shape {shape}; got {np.shape(parts[name])}"
+                )
+            moments[name] = array
+        covariance = parts.get("covariance")
+        covariance = (
+            np.diag(moments["variance"].ravel())
+            if covariance is None
+            else np.asarray(covariance, dtype=float)
+        )
+        names = ("y",) if shape[1] == 1 else tuple(f"y{i}" for i in range(shape[1]))
+        future = pd.RangeIndex(history, history + horizon)
+        try:
+            answer_key = Reference(
+                mean=moments["mean"],
+                variance=moments["variance"],
+                covariance=covariance,
+                index=future.copy(),
+                target_names=names,
+            )
+        except ValueError as error:
+            raise ValueError(f"{where}: {error}") from None
+        context = pd.DataFrame(
+            values[:history], index=pd.RangeIndex(history), columns=names
+        )
+        observed = pd.DataFrame(values[history:], index=future, columns=names)
+        manifest = {
+            "kind": self.kind,
+            "seed": seed,
+            "context_length": history,
+            "horizon": horizon,
+            "noise": self.noise,
+        }
+        return Case(ForecastTask(context, future), observed, answer_key, manifest)
 
 
 def _cycle_coefficients(period=16.0, damping=0.95):
@@ -64,125 +224,6 @@ def _cycle_coefficients(period=16.0, damping=0.95):
 
 _PHI1, _PHI2 = _cycle_coefficients()
 _SEASON = 12.0  # steps in one seasonal cycle
-
-PATTERNS = {
-    pattern.key: pattern
-    for pattern in (
-        Pattern(
-            "noise",
-            "Pure noise",
-            "white noise around zero",
-            "Only the average, zero: the best forecast is a flat line at zero.",
-            "Every individual value. Any pattern a model finds here is invented.",
-            lambda s, n, h: Scenario("white_noise", n, h, {"mean": 0.0, "sigma": s}),
-            lambda: _SampleMean(),
-        ),
-        Pattern(
-            "level",
-            "Noise around a fixed level",
-            "white noise with a constant mean of 10",
-            "The level, estimated from the whole history.",
-            "Each wiggle around the level.",
-            lambda s, n, h: Scenario("white_noise", n, h, {"mean": 10.0, "sigma": s}),
-            lambda: _SampleMean(),
-        ),
-        Pattern(
-            "trend",
-            "Straight-line trend",
-            "linear trend + white noise, slope 0.1 per step",
-            "The line, extended any number of steps ahead.",
-            "The noise around the line.",
-            lambda s, n, h: Scenario("trend", n, h, {"slope": 0.1, "sigma": s}),
-            lambda: _LeastSquaresLine(),
-        ),
-        Pattern(
-            "seasonal",
-            "Repeating seasonal cycle",
-            "fixed seasonality + white noise, period 12",
-            "The repeating shape, any number of steps ahead.",
-            "The noise around the cycle.",
-            lambda s, n, h: Scenario(
-                "seasonal", n, h, {"amplitude": 3.0, "period": _SEASON, "sigma": s}
-            ),
-            lambda: _Sinusoid(_SEASON),
-        ),
-        Pattern(
-            "trend_seasonal",
-            "Trend + seasonal cycle",
-            "linear trend + seasonality + white noise",
-            "Both the line and the repeating shape.",
-            "The noise around them.",
-            lambda s, n, h: Scenario(
-                "composite",
-                n,
-                h,
-                {"slope": 0.1, "amplitude": 3.0, "period": _SEASON, "sigma": s},
-            ),
-            lambda: _Sinusoid(_SEASON, trend=True),
-        ),
-        Pattern(
-            "level_shift",
-            "Sudden level shift",
-            "a one-off break: the last quarter of the history jumped by 6",
-            "The new level, from the history since the jump.",
-            "The noise. Older history sits at the old level and misleads.",
-            lambda s, n, h: Scenario(
-                "composite",
-                n,
-                h,
-                {
-                    "sigma": s,
-                    "change_point": n - max(1, n // 4),
-                    "changes": {"intercept": 6.0},
-                },
-            ),
-            lambda: _MeanAfterBreak(),
-        ),
-        Pattern(
-            "mean_reverting",
-            "Mean reversion (AR(1)): shocks fade",
-            "stationary autoregressive process, each gap from the average keeps 0.8 of itself per step",
-            "The pull back to the average: a gap halves in about three steps.",
-            "New shocks. After about ten steps only the average is left; "
-            "measurement noise hides where the series is now.",
-            lambda s, n, h: Scenario(
-                "ar1", n, h, {"phi": 0.8, "sigma": 1.0, "noise": s}
-            ),
-            lambda: _AR1PlusNoise(),
-        ),
-        Pattern(
-            "cycles",
-            "Irregular cycles (AR(2))",
-            "autoregressive process with two lags whose shocks ring with a period of about 16 steps",
-            "The rest of the current swing, fading over the next cycles.",
-            "When the next swings come and how big they are; noise hides the current phase.",
-            lambda s, n, h: Scenario(
-                "ar2", n, h, {"phi1": _PHI1, "phi2": _PHI2, "sigma": 0.5, "noise": s}
-            ),
-            lambda: _AR2PlusNoise(),
-        ),
-        Pattern(
-            "random_walk",
-            "Random walk: shocks never fade",
-            "AR(1) with weight 1 (a unit root)",
-            "Where it is now: the best forecast is flat at the current level, smoothed when noisy.",
-            "The direction of the next move. Uncertainty grows without limit with the horizon.",
-            lambda s, n, h: Scenario("random_walk", n, h, {"sigma": 0.5, "noise": s}),
-            lambda: _LocalLevel(),
-        ),
-        Pattern(
-            "random_walk_drift",
-            "Random walk with drift",
-            "a unit root plus a steady push of 0.1 per step",
-            "The current level plus the steady drift.",
-            "The wandering around the drift line, which grows with the horizon.",
-            lambda s, n, h: Scenario(
-                "random_walk", n, h, {"drift": 0.1, "sigma": 0.5, "noise": s}
-            ),
-            lambda: _LocalLevel(drift=True),
-        ),
-    )
-}
 
 
 # %% ../source/13_scorecard.ipynb #grid-fitted
@@ -530,6 +571,127 @@ class _LocalLevel:
         )
 
 
+# %% ../source/13_scorecard.ipynb #grid-pattern-rows
+PATTERNS = {
+    pattern.key: pattern
+    for pattern in (
+        Pattern(
+            "noise",
+            "Pure noise",
+            "white noise around zero",
+            "Only the average, zero: the best forecast is a flat line at zero.",
+            "Every individual value. Any pattern a model finds here is invented.",
+            lambda s, n, h: Scenario("white_noise", n, h, {"mean": 0.0, "sigma": s}),
+            _SampleMean(),
+        ),
+        Pattern(
+            "level",
+            "Noise around a fixed level",
+            "white noise with a constant mean of 10",
+            "The level, estimated from the whole history.",
+            "Each wiggle around the level.",
+            lambda s, n, h: Scenario("white_noise", n, h, {"mean": 10.0, "sigma": s}),
+            _SampleMean(),
+        ),
+        Pattern(
+            "trend",
+            "Straight-line trend",
+            "linear trend + white noise, slope 0.1 per step",
+            "The line, extended any number of steps ahead.",
+            "The noise around the line.",
+            lambda s, n, h: Scenario("trend", n, h, {"slope": 0.1, "sigma": s}),
+            _LeastSquaresLine(),
+        ),
+        Pattern(
+            "seasonal",
+            "Repeating seasonal cycle",
+            "fixed seasonality + white noise, period 12",
+            "The repeating shape, any number of steps ahead.",
+            "The noise around the cycle.",
+            lambda s, n, h: Scenario(
+                "seasonal", n, h, {"amplitude": 3.0, "period": _SEASON, "sigma": s}
+            ),
+            _Sinusoid(_SEASON),
+        ),
+        Pattern(
+            "trend_seasonal",
+            "Trend + seasonal cycle",
+            "linear trend + seasonality + white noise",
+            "Both the line and the repeating shape.",
+            "The noise around them.",
+            lambda s, n, h: Scenario(
+                "composite",
+                n,
+                h,
+                {"slope": 0.1, "amplitude": 3.0, "period": _SEASON, "sigma": s},
+            ),
+            _Sinusoid(_SEASON, trend=True),
+        ),
+        Pattern(
+            "level_shift",
+            "Sudden level shift",
+            "a one-off break: the last quarter of the history jumped by 6",
+            "The new level, from the history since the jump.",
+            "The noise. Older history sits at the old level and misleads.",
+            lambda s, n, h: Scenario(
+                "composite",
+                n,
+                h,
+                {
+                    "sigma": s,
+                    "change_point": n - max(1, n // 4),
+                    "changes": {"intercept": 6.0},
+                },
+            ),
+            _MeanAfterBreak(),
+        ),
+        Pattern(
+            "mean_reverting",
+            "Mean reversion (AR(1)): shocks fade",
+            "stationary autoregressive process, each gap from the average keeps 0.8 of itself per step",
+            "The pull back to the average: a gap halves in about three steps.",
+            "New shocks. After about ten steps only the average is left; "
+            "measurement noise hides where the series is now.",
+            lambda s, n, h: Scenario(
+                "ar1", n, h, {"phi": 0.8, "sigma": 1.0, "noise": s}
+            ),
+            _AR1PlusNoise(),
+        ),
+        Pattern(
+            "cycles",
+            "Irregular cycles (AR(2))",
+            "autoregressive process with two lags whose shocks ring with a period of about 16 steps",
+            "The rest of the current swing, fading over the next cycles.",
+            "When the next swings come and how big they are; noise hides the current phase.",
+            lambda s, n, h: Scenario(
+                "ar2", n, h, {"phi1": _PHI1, "phi2": _PHI2, "sigma": 0.5, "noise": s}
+            ),
+            _AR2PlusNoise(),
+        ),
+        Pattern(
+            "random_walk",
+            "Random walk: shocks never fade",
+            "AR(1) with weight 1 (a unit root)",
+            "Where it is now: the best forecast is flat at the current level, smoothed when noisy.",
+            "The direction of the next move. Uncertainty grows without limit with the horizon.",
+            lambda s, n, h: Scenario("random_walk", n, h, {"sigma": 0.5, "noise": s}),
+            _LocalLevel(),
+        ),
+        Pattern(
+            "random_walk_drift",
+            "Random walk with drift",
+            "a unit root plus a steady push of 0.1 per step",
+            "The current level plus the steady drift.",
+            "The wandering around the drift line, which grows with the horizon.",
+            lambda s, n, h: Scenario(
+                "random_walk", n, h, {"drift": 0.1, "sigma": 0.5, "noise": s}
+            ),
+            _LocalLevel(drift=True),
+        ),
+    )
+}
+
+
 # %% ../source/13_scorecard.ipynb #grid-cells
 @dataclass(frozen=True)
 class GridCell:
@@ -610,13 +772,32 @@ def _grid_patterns(patterns):
                     f"pattern {entry.key!r} needs a nonempty title, and aka, predictable and "
                     f"unpredictable as text; check {', '.join(wrong) or 'title'}"
                 )
-            if not callable(entry.build):
+            makers = [
+                name
+                for name in ("simulate", "build")
+                if getattr(entry, name) is not None
+            ]
+            if len(makers) != 1:
                 raise TypeError(
-                    f"pattern {entry.key!r} needs build(noise, context_length, horizon)"
+                    f"pattern {entry.key!r} needs simulate(rng, history, horizon, noise) or "
+                    f"build(noise, context_length, horizon), one of the two; got {' and '.join(makers) or 'neither'}"
                 )
-            if entry.fitted is not None and not callable(entry.fitted):
+            if not callable(getattr(entry, makers[0])):
                 raise TypeError(
-                    f"pattern {entry.key!r}: fitted must be a function that returns a fresh model, or None"
+                    f"pattern {entry.key!r}: {makers[0]} must be a function"
+                )
+            model = entry.attainable_by
+            if not (
+                model is None
+                or callable(model)
+                or (
+                    callable(getattr(model, "fit", None))
+                    and callable(getattr(model, "predict", None))
+                )
+            ):
+                raise TypeError(
+                    f"pattern {entry.key!r}: attainable_by must be a model with fit and predict, a class or "
+                    f"function that returns one, or None; got a {type(model).__name__}"
                 )
             found.append(entry)
         else:
@@ -632,7 +813,10 @@ def _grid_patterns(patterns):
 
 def _checked_scenario(pattern, noise_sd, context_length, horizon):
     """Build a pattern's scenario; for your own pattern, check that the scorecard can use it and say what is missing."""
-    scenario = pattern.build(noise_sd, context_length, horizon)
+    if pattern.simulate is not None:
+        scenario = _Simulated(pattern, noise_sd, context_length, horizon)
+    else:
+        scenario = pattern.build(noise_sd, context_length, horizon)
     if PATTERNS.get(pattern.key) is pattern:
         return scenario
     where = f"pattern {pattern.key!r}"
@@ -691,11 +875,13 @@ def scenario_grid(patterns=None, noise_levels=2, *, context_length=120, horizon=
     of their own; the run supplies it.
 
     Your own pattern needs a key that no built-in pattern has, a title, and
-    ``build(noise, context_length, horizon)`` returning an object with
-    ``generate(seed)``, ``kind``, ``context_length`` and ``horizon``, as
-    ``Scenario`` has. Each case it generates needs an answer key: a reference
-    holding the true mean and variance of what happens. The grid checks this
-    on one case per cell before anything runs and says what is missing.
+    one of two functions. ``simulate(rng, history, horizon, noise)`` returns
+    one series and the true mean and variance of each step to forecast, as
+    ``Pattern`` says. ``build(noise, context_length, horizon)`` returns an
+    object with ``generate(seed)``, ``kind``, ``context_length`` and
+    ``horizon``, as ``Scenario`` has, whose cases carry an answer key: a
+    reference holding the true mean and variance of what happens. The grid
+    draws one case per cell before anything runs and says what is missing.
     ``noise`` is the noise level's standard deviation; a pattern may use it
     or ignore it.
     """
