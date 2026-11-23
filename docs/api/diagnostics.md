@@ -4,7 +4,8 @@
 happened (`mse`, `mae`, `mase`) and from the answer key (`mean_reference_mse`);
 lower is better. Every report records these; more scores, such as `brier` and
 `log_loss` for yes/no outcomes, or functions of your own, are recorded when you
-ask for them with `scores=`. A diagnostic is one check's result: a verdict (`PASS`, `FAIL`,
+ask for them with `scores=`. Output checks of your own, such as a range the
+values must stay in, are added with `checks=`. A diagnostic is one check's result: a verdict (`PASS`, `FAIL`,
 `INCONCLUSIVE`, `UNSUPPORTED` or `ERROR`), a message, and the numbers it rests
 on, called its evidence. Accuracy diagnostics are always `INCONCLUSIVE`,
 because TimeGym sets no pass mark for accuracy; that threshold is yours.
@@ -145,6 +146,78 @@ is an `ERROR` whose message names the exception. Each appears as
 comparison, listing them in `metadata["replay"]["not_recomputed"]`. Nothing is
 recorded unless you ask, so reports saved earlier replay exactly as before.
 
+## Your own output checks
+
+The output checks every forecast goes through (dates, series, shape, finite
+values, quantile order) know nothing about your data: a rainfall forecast of
+−3 mm or a chance of rain of 1.2 passes them. `evaluate_forecast`,
+`Pipeline.test`, `Pipeline.run` and `ForecastRun.from_forecasts` take
+`checks=`, a list of functions or a dictionary from name to function, and add
+each one to `report.checks` and `assert_passed` beside the built-in checks.
+
+`timegym.checks.within(lower=None, upper=None)` makes the most common one, a
+range:
+
+```python
+from timegym.checks import within
+
+report = pipeline.test(cases=cases, checks=[within(0, 1)])
+report.checks            # now also "Values between 0 and 1"
+report.assert_passed()   # raises when a value falls outside 0 to 1
+```
+
+It reads the point forecast, the quantiles and the samples, whichever the
+forecast has. A value equal to a bound passes, and `None` leaves a side open:
+`within(0, None)` for rainfall or sales. A dictionary from series name to
+bound gives each series its own range, and a series it leaves out is open on
+that side:
+
+```python
+within(lower={"rain_mm": 0, "humidity": 0}, upper={"humidity": 100})
+```
+
+A failed range check names each output and series out of range, how many
+values and the most extreme one, such as `quantiles: 7 values below 0 (lowest
+-3.088)`. A dictionary that names a series the forecast doesn't have is an
+`ERROR`, so a typo can't switch the check off. Its name in a report is
+`within`; to use two, name them with a dictionary.
+
+A check of your own is a function that asks for its inputs by argument name,
+as a score does (`observed`, `predicted`, `quantiles`, `levels`, `samples`,
+`context`), and may also ask for `target_names`, the names of the series in
+order. It returns `True` when the forecast passes, or a message saying what is
+wrong. Its title, shown in `report.checks` and in the error of
+`assert_passed`, is the first line of its docstring without a final full stop,
+or its name when it has no docstring:
+
+```python
+import numpy as np
+
+
+def totals_add_up(predicted, target_names):
+    """Store totals add up."""
+    north, south, total = (predicted[:, target_names.index(name)] for name in ("north", "south", "total"))
+    gap = float(np.max(np.abs(north + south - total)))
+    return gap <= 1e-6 or f"the total is off by up to {gap:.3g}"
+
+
+report = pipeline.test(cases=cases, checks=[within(0, None), totals_add_up])
+```
+
+A check runs only on a forecast that passed the built-in checks. Its finding
+is `check_<name>`: `PASS`; `FAIL` with the message, or when the function
+returns `False`; `ERROR` when it raises or returns anything else, such as
+`None`; or `UNSUPPORTED` when it needs an output the forecast lacks, and then
+it isn't counted for that case. A request is refused before anything runs when
+a function has no name of its own (give a `lambda` one with a dictionary),
+takes the name of a built-in check such as `runs`, is asked for twice, or needs
+an argument TimeGym cannot give. Each finding keeps the check's title in its
+evidence, so a saved report lists and counts the checks without your code. The
+report's metadata lists what was asked for under `"checks"`, as for scores.
+Replay runs `within` checks again and leaves your own functions out of the
+comparison, listing them in `metadata["replay"]["checks_not_rerun"]`. Without
+`checks=`, reports are exactly as before.
+
 ## Statistical and metamorphic diagnostics
 
 `timegym.diagnostics.covariance_dependence_check(reference, samples, *, seed=0,
@@ -218,6 +291,7 @@ time. A row without a threshold is descriptive and returns `INCONCLUSIVE`.
 | `quantile_accuracy` | `capability` | `INCONCLUSIVE`, `UNSUPPORTED` | None (descriptive) | Simplified data with known results |
 | `sample_scores` | `capability` | `INCONCLUSIVE`, `UNSUPPORTED` | None (descriptive) | Simplified data with known results |
 | `metric_<name>` | `capability` | `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR` | None (descriptive) | Simplified data with known results |
+| `check_<name>` | `correctness` | `PASS`, `FAIL`, `UNSUPPORTED`, `ERROR` | Set by the check, such as the bounds of `within` | Partial oracle |
 | `interval_coverage` | `uncertainty` | `INCONCLUSIVE`, `UNSUPPORTED` | None (descriptive) | Simplified data with known results |
 | `reference_covariance` | `distribution` | `PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR` | `alpha`, default 0.05 | Statistical metamorphic test |
 | `shift_equivariance` | `metamorphic` | `PASS`, `FAIL`, `UNSUPPORTED`, `ERROR` | `atol` and `rtol` | Known properties |
@@ -291,6 +365,13 @@ diagnostic, so it has no row.
 - **Evidence keys:** `INCONCLUSIVE`: `reason` (`undefined_metric`). `ERROR`: exception evidence. `UNSUPPORTED`: `needs`, the inputs the requested score needs
 - **Threshold or tolerance:** None: descriptive
 - **What a FAIL or ERROR usually means:** `ERROR`: the calculation raised or returned a nonfinite value, such as an overflowing interval width, or a requested score raised, such as `brier` on outcomes that are not 0 or 1; the score is missing from `metrics`. `INCONCLUSIVE`: the score is undefined for valid data, such as `mase` on a constant target, `variogram_score` with one coordinate or `log_loss` on a confident mistake without `eps`. `UNSUPPORTED`: a requested score needs an output the forecast lacks, such as samples.
+
+### `check_<name>`
+
+- **Emitted by:** `evaluate_forecast`, for each check asked for with `checks=`; `<name>` is its name, such as `within`
+- **Evidence keys:** `title`, the check's title. `UNSUPPORTED`: also `needs`, the inputs the check needs. `ERROR`: also exception evidence when the check raised
+- **Threshold or tolerance:** Set by the check, such as the bounds of `within`
+- **What a FAIL or ERROR usually means:** `FAIL`: the forecast breaks your rule, such as a value outside the range of `within`; the message says where. `ERROR`: the check raised or returned something other than True or a message, or `within` names a series the forecast doesn't have. `UNSUPPORTED`: the check needs an output the forecast lacks.
 
 ### `interval_coverage`
 
@@ -492,6 +573,8 @@ The t interval is for continuous score differences, not differences in alarm rat
 ::: timegym.diagnostics.RankAlarm
 
 ::: timegym.checks.check_shift_equivariance
+
+::: timegym.checks.within
 
 ::: timegym.statistics.wilson_interval
 

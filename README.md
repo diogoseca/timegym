@@ -144,6 +144,9 @@ On your own data, which has no answer key, `timegym.compare_reports` pairs two
 reports case by case and says whether the candidate is better, worse, or shows
 no clear difference, by group if you ask
 ([Scores and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/#compare-two-forecasters-on-the-same-cases)).
+Checks of your own join the built-in ones with `checks=`, such as
+`within(0, None)` for rainfall or sales, which can't go below zero
+([Your own output checks](https://diogoseca.github.io/timegym/docs/api/diagnostics/#your-own-output-checks)).
 
 The [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) shows the rest: the
 scorecard as a DataFrame (`card.table`), how many draws to use and what `seed=None` does, and

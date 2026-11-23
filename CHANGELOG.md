@@ -88,6 +88,25 @@
   compares two forecasters of store sales by region and measures how often
   cases that move together, and the best of many variants, give a false
   verdict.
+- Added `checks=` to `evaluate_forecast`, `Pipeline.test`, `Pipeline.run` and
+  `ForecastRun.from_forecasts`, for output checks of your own, and
+  `timegym.checks.within(lower=None, upper=None)`, a ready-made range check:
+  `within(0, None)` for rainfall or sales, `within(0, 1)` for a chance. It
+  reads the point forecast, the quantiles and the samples; `None` leaves a
+  side open, and a dictionary from series name to bound gives each series its
+  own range. Your own check is a function that asks for its inputs by
+  argument name, as a score does, plus `target_names`, and returns `True` or a
+  message saying what is wrong; its title is the first line of its docstring.
+  A failed check is a `FAIL` named `check_<name>`, is counted in
+  `report.checks` after the built-in checks and makes `assert_passed` raise.
+  Each finding keeps the check's title, so a saved report loads without your
+  code; the run records the checks under `metadata["checks"]`. Replay runs
+  `within` again and lists your own functions under `"checks_not_rerun"`.
+  Without `checks=`, reports are unchanged.
+- Added a section on your own output checks to the scores page and the Extend
+  TimeGym page, a catalogue entry for `check_<name>`, a sentence in the README,
+  and a section to the scores notebook that checks forecasts of store sales
+  for values below zero and for totals that don't add up.
 
 - Added a confidence interval to every scorecard score. `card.table` has new
   columns `score_low` and `score_high`, and `settled`, True when both ends fall

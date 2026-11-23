@@ -86,6 +86,49 @@ def test_own_scores_on_the_extend_page_land_in_the_report():
     assert scored.metadata["scores"][0]["name"] == "brier"
 
 
+def test_own_checks_examples_on_the_scores_page_run():
+    import pandas as pd
+    from timegym import LastValueForecaster, NaiveForecaster, Pipeline, cases_from_series
+
+    text = (ROOT / "docs/api/diagnostics.md").read_text(encoding="utf-8")
+    section = text[text.index("## Your own output checks"):text.index("## Statistical and metamorphic")]
+    blocks = re.findall(r"^```python\n(.*?)^```", section, flags=re.M | re.S)
+    days = pd.date_range("2024-01-01", periods=120, freq="D")
+    rng = np.random.default_rng(0)
+    rain = pd.Series((rng.random(120) < 0.3).astype(float), index=days, name="rain")
+    namespace = {"pipeline": Pipeline(NaiveForecaster("mean")),
+                 "cases": cases_from_series(rain, origins=[60, 80, 100], horizon=7, name="rain")}
+    exec(blocks[0], namespace)  # a chance of rain stays between 0 and 1
+    assert namespace["report"].checks[-1] == {"check": "within", "title": "Values between 0 and 1",
+                                              "passed": 3, "failed": 0}
+    exec(blocks[1], namespace)
+    north, south = rng.poisson(3, 120), rng.poisson(2, 120)
+    sales = pd.DataFrame({"north": north, "south": south, "total": north + south}, index=days).astype(float)
+    namespace.update(pipeline=Pipeline(LastValueForecaster()),
+                     cases=cases_from_series(sales, origins=[60, 80, 100], horizon=7, name="coats"))
+    exec(blocks[2], namespace)
+    assert namespace["report"].checks[-2:] == [
+        {"check": "within", "title": "Values at least 0", "passed": 3, "failed": 0},
+        {"check": "totals_add_up", "title": "Store totals add up", "passed": 3, "failed": 0},
+    ]
+    assert len(blocks) == 3
+
+
+def test_own_checks_on_the_extend_page_fail_and_pass_as_the_comment_says():
+    import matplotlib
+
+    matplotlib.use("Agg")
+    namespace = {"__name__": "docs"}
+    for block in python_blocks("docs/concepts/extend.md"):
+        exec(block, namespace)
+    within_row, record_row = namespace["checked"].checks[-2:]
+    assert within_row == {"check": "within", "title": "Values at least 0", "passed": 0, "failed": 3}
+    assert record_row == {"check": "below_record", "title": "Point forecast no wetter than the wettest day so far",
+                          "passed": 3, "failed": 0}
+    messages = [d.message for case in namespace["checked"].cases for d in case.diagnostics if d.name == "check_within"]
+    assert all("samples:" in message for message in messages)  # sample paths dip below 0 mm, as the comment says
+
+
 def test_irregular_readings_recipe_never_looks_ahead():
     namespace = {}
     (block,) = python_blocks("docs/api/data-preparation.md")

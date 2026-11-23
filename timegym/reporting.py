@@ -258,7 +258,40 @@ def _case_checks(case):
         d.status in ("PASS", "FAIL") for d in by_name.get("reference_covariance", [])
     ):
         outcome["dependence"] = "dependence" not in failed
+    outcome.update((name, passed) for name, (passed, _) in _own_checks(case).items())
     return outcome
+
+
+def _own_checks(case):
+    """Return ``{name: (passed, title)}`` for the checks asked for with ``checks=`` that ran on one case.
+
+    Their findings are named ``check_<name>`` and keep the check's title in
+    their evidence, so a saved report reads without the check's function.
+    """
+    found = {}
+    for diagnostic in case.diagnostics:
+        name = (
+            diagnostic.name[len("check_") :]
+            if diagnostic.name.startswith("check_")
+            else ""
+        )
+        if (
+            not name
+            or name in CHECKS
+            or diagnostic.status not in ("PASS", "FAIL", "ERROR")
+        ):
+            continue
+        title = (
+            diagnostic.evidence.get("title")
+            if isinstance(diagnostic.evidence, dict)
+            else None
+        )
+        passed = found[name][0] if name in found else True
+        found[name] = (
+            passed and not diagnostic.failed,
+            title if isinstance(title, str) and title else name,
+        )
+    return found
 
 
 # %% ../source/10_reports_and_replay.ipynb #10_reports_and_repla-15
@@ -423,15 +456,18 @@ class TestReport:
         """Count, per plain-language output check, the cases that passed and failed.
 
         Returns one dictionary per check that ran on at least one case, in the
-        order of ``CHECKS``: ``{"check", "title", "passed", "failed"}``.
-        Scores are not checks: they have no pass mark.
+        order of ``CHECKS`` and then the checks asked for with ``checks=``:
+        ``{"check", "title", "passed", "failed"}``. Scores are not checks:
+        they have no pass mark.
         """
-        counts = {key: [0, 0] for key in CHECKS}
+        counts, titles = {key: [0, 0] for key in CHECKS}, dict(CHECKS)
         for case in self.cases:
+            for name, (_, title) in _own_checks(case).items():
+                titles.setdefault(name, title)
             for key, passed in _case_checks(case).items():
-                counts[key][0 if passed else 1] += 1
+                counts.setdefault(key, [0, 0])[0 if passed else 1] += 1
         return [
-            {"check": key, "title": CHECKS[key], "passed": passed, "failed": failed}
+            {"check": key, "title": titles[key], "passed": passed, "failed": failed}
             for key, (passed, failed) in counts.items()
             if passed + failed
         ]

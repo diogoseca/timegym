@@ -13,6 +13,7 @@ script.
 | Data | `cases_from_series(series, origins, horizon)` or `Case(...)`, then `pipeline.test(cases=...)` | [Tasks and forecasts](../api/tasks-and-forecasts.md#your-own-data) |
 | Forecasts made elsewhere | `ForecastRun.from_forecasts(cases, forecasts)` | [Pipeline and reports](../api/pipeline.md) |
 | Score | a function whose argument names say what it needs, passed with `scores=` | [Scores and diagnostics](../api/diagnostics.md#your-own-scores) |
+| Output check | `within(lower, upper)`, or a function that returns True or a message, passed with `checks=` | [Scores and diagnostics](../api/diagnostics.md#your-own-output-checks) |
 | Answer key from a curve you know | `Reference.from_function(curve, dates, covariance=...)` | [Scenarios and references](../api/scenarios.md) |
 | Kind of series, with its answer key | an object with `kind` and `generate(seed)` that returns a `Case` | this page |
 
@@ -146,6 +147,35 @@ Settings go through a dictionary that names each score, as for `log_loss`
 above. Replay computes again the scores from `timegym.metrics`; your own
 functions cannot be rebuilt from a saved report, so replay leaves them out and
 says so.
+
+## Your own output checks
+
+The built-in output checks know nothing about your data: rainfall below 0 mm
+passes them. Add checks of your own with `checks=`. `within(lower, upper)`
+checks that every value stays in a range, and `None` leaves a side open. Any
+function works too: it asks for its inputs by argument name, as a score does,
+plus `target_names`, and returns `True` or a message saying what is wrong. Its
+title is the first line of its docstring.
+
+```python
+from timegym import GaussianAR1Forecaster
+from timegym.checks import within
+
+
+def below_record(predicted, context):
+    """Point forecast no wetter than the wettest day so far."""
+    record = context.max()
+    return bool(np.all(predicted <= record)) or f"forecasts {predicted.max():.1f} mm, above the record {record:.1f} mm"
+
+
+checked = Pipeline(GaussianAR1Forecaster()).test(cases=cases, checks=[within(0, None), below_record])
+checked.checks[-2:]  # some sample paths dip below 0 mm, so within fails; the point forecast stays below the record
+```
+
+A failed check makes `assert_passed` raise, like the built-in ones, and a saved
+report keeps each check's title, so it loads without your code. Replay runs
+`within` again; your own functions cannot be rebuilt from a saved report, so
+replay leaves them out and says so.
 
 ## An answer key from a curve you know
 

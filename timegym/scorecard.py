@@ -20,7 +20,7 @@ from .diagnostics import _holm, _sign_flip_pvalue
 from .evaluation import ForecastRun
 from .grid import PATTERNS, GridCell, scenario_grid
 from .plotting import _BAND_COLORS, _FORECAST, _HAIRLINE, _INK, _MUTED, _SURFACE
-from .reporting import CHECKS, TestReport, _case_checks
+from .reporting import CHECKS, TestReport, _case_checks, _own_checks
 
 __all__ = ["VERDICTS", "verdict", "Scorecard", "ScorecardComparison", "scorecard"]
 
@@ -359,7 +359,7 @@ def _check_problems(entries):
         for key, passed in _case_checks(entry.result).items():
             if passed:
                 continue
-            text = CHECKS[key]
+            text = CHECKS[key] if key in CHECKS else _own_checks(entry.result)[key][1]
             if key == "runs":
                 text = "Crashes"
             elif key == "dates" and entry.forecast is not None:

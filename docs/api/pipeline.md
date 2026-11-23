@@ -137,7 +137,9 @@ are copied so later edits to the input dictionary cannot change the loaded repor
 `report.checks` counts, per output check in plain words, the cases that passed
 and failed: one `{"check", "title", "passed", "failed"}` dictionary per check
 that ran (`runs`, `dates`, `series`, `shape`, `finite`, `quantiles`,
-`dependence`). Scores are not checks: they have no pass mark.
+`dependence`), then one per check asked for with `checks=`, such as
+`within(0, None)` ([your own output checks](diagnostics.md#your-own-output-checks)).
+Scores are not checks: they have no pass mark.
 `report.assert_passed()` raises for detected FAIL/ERROR outcomes. Its message
 names each failed check first, for example `Forecasts the requested dates:
 failed in 4 of 4 cases`, then lists the underlying diagnostics. Callers must

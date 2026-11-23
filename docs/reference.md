@@ -3,7 +3,7 @@
 The top-level package keeps the main workflow small. Scores, checks, preprocessing
 and other helpers are public through their modules; for example,
 `from timegym.metrics import mase` and
-`from timegym.checks import check_shift_equivariance`.
+`from timegym.checks import within`.
 “Public” means supported in this release; consult the changelog when upgrading.
 Deprecated names still work in 1.x, warn with what to use instead and leave in
 TimeGym 2.0; the changelog lists them and they are not listed here.
@@ -26,6 +26,7 @@ Underscore-prefixed names and modules, including `_internal` and
 | `DEFAULT_LEVELS` | `timegym.contracts` | Public | [Scenarios and references](api/scenarios.md) |
 | `mse`, `mae`, `rmse`, `mase`, `rmsse`, `mean_reference_mse`, `pinball`, `interval_score`, `weighted_interval_score`, `crps`, `energy_score`, `variogram_score`, `brier`, `log_loss`, `UndefinedMetricError` | `timegym.metrics` | Public | [Scores and diagnostics](api/diagnostics.md) |
 | `evaluate_forecast`, `ReportComparison`, `covariance_dependence_check`, `rank_alarm`, `RankAlarm` | `timegym.diagnostics` | Public | [Scores and diagnostics](api/diagnostics.md) |
+| `within` | `timegym.checks` | Public | [Scores and diagnostics](api/diagnostics.md#your-own-output-checks) |
 | `check_shift_equivariance` | `timegym.checks` | Public; opt-in model property | [Scores and diagnostics](api/diagnostics.md) |
 | `SklearnForecaster` | `timegym.models` | Public; sklearn loaded when needed | [Models and reductions](api/models.md) |
 | `REDUCTIONS` | `timegym.models` | Public | [Models and reductions](api/models.md) |
