@@ -790,7 +790,7 @@
         "id": "chronos_small",
         "implementation": "chronos-forecasting 2.3.2, ChronosPipeline.from_pretrained('amazon/chronos-t5-small', revision=<the revision field of this entry, see pretrained_revision>, device_map='cpu', torch_dtype=float32); 100 sample paths per forecast (the package default is 20), so that the Monte Carlo error of the sample mean adds about 1% to the squared error instead of 5%; the forecast carries the samples and point = their mean.",
         "reference": "Ansari et al., arXiv 2403.07815",
-        "revision": null
+        "revision": "a971ba21945c4f1796b17a91fe69214b5f4ad472"
       },
       {
         "id": "context_parroting",
