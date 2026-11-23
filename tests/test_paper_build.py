@@ -17,7 +17,8 @@ def paper_tree(tmp_path):
     tmp_path.mkdir()
     source = ROOT / "paper"
     for name in ("main.tex", "references.bib", "build_standalone.py",
-                 "generated-results.tex", "generated-supplement.tex", "generated-macros.tex"):
+                 "generated-results.tex", "generated-supplement.tex", "generated-study3.tex",
+                 "generated-macros.tex"):
         (tmp_path / name).write_bytes((source / name).read_bytes())
     (tmp_path / "figures").mkdir()
     for scene in (source / "figures").glob("*.tikz"):
@@ -41,7 +42,8 @@ def test_standalone_cli_detects_drift_without_writing(paper_tree):
 
 
 @pytest.mark.parametrize("name", ["generated-results.tex", "generated-supplement.tex",
-                                  "generated-macros.tex", "figures/paper-scorecard.tikz",
+                                  "generated-study3.tex", "generated-macros.tex",
+                                  "figures/paper-scorecard.tikz",
                                   "references.bib"])
 def test_standalone_tracks_each_input(paper_tree, name):
     original = build(paper_dir=paper_tree)
@@ -57,6 +59,25 @@ def test_standalone_tracks_each_input(paper_tree, name):
     assert r"\input{" not in changed
     assert r"\bibliography{" not in changed
     assert changed.count(r"\begin{thebibliography}") == 1
+
+
+def test_the_abstract_is_plain_text_within_the_arxiv_limit(paper_tree):
+    from paper.plain_abstract import ARXIV_LIMIT, plain_abstract
+
+    text = plain_abstract(ROOT / "paper")
+    assert 1_000 < len(text) <= ARXIV_LIMIT == 1920
+    assert "\\" not in text and "of 44 that silently change a forecast" in text
+    macros = paper_tree / "generated-macros.tex"
+    macros.write_text(macros.read_text().replace(r"\newcommand{\ThirdSilent}", r"\newcommand{\ThirdOther}"))
+    with pytest.raises(ValueError, match="ThirdSilent"):
+        plain_abstract(paper_tree)
+    manuscript = paper_tree / "main.tex"
+    manuscript.write_text(manuscript.read_text().replace(r"\ThirdSilent{}", r"\emph{44}" + " word" * 400))
+    with pytest.raises(ValueError, match="markup"):
+        plain_abstract(paper_tree)
+    manuscript.write_text(manuscript.read_text().replace(r"\emph{44}", "44"))
+    with pytest.raises(ValueError, match="arXiv allows"):
+        plain_abstract(paper_tree)
 
 
 def test_bibliography_preserves_names_and_article_metadata():

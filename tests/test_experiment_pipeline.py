@@ -12,6 +12,7 @@ from experiments.render_results import capability_summary, render_tex as pilot_t
 from experiments.render_addendum import check_addendum_conclusions, load_addendum, validate_addendum
 from experiments.render_followup import check_followup_conclusions, load_followup, validate_followup
 from experiments.run_followup import answer_key_counts, answer_key_totals
+from experiments import render_study3
 from experiments.render_supplement import render_macros, render_tex as supplement_tex
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -121,8 +122,10 @@ def test_frozen_fragments_and_macros_are_reproducible():
     assert 'Reduced spread & ---' not in text and 'reduced-spread suites have none and are omitted' in text
     assert 'clean-minus-faulty mean MSE was +0.5132 [+0.2122, +0.8141]' in text
     addendum, _ = load_addendum()
-    macros = render_macros(supplement, manifest, records('results')[1], followup, addendum)
+    study3 = render_study3.summarize(render_study3.load_study3())
+    macros = render_macros(supplement, manifest, records('results')[1], followup, addendum, study3)
     assert macros == (ROOT / 'paper/generated-macros.tex').read_text()
+    assert macros.startswith(render_macros(supplement, manifest, records('results')[1], followup, addendum))
     for macro, value in [('RepairDeltaMean', '0.513'), ('RepairDeltaLow', '0.212'), ('RepairDeltaHigh', '0.814'),
                          ('RepairImproved', '21'), ('CasesPerCondition', '64'), ('CasesPerRow', '384'),
                          ('StudySklearnFits', '8,448'), ('StudyCalibrationEnsembles', '152,832'),

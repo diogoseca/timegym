@@ -9,10 +9,11 @@ python3 -m venv .venv
 .venv/bin/python -m pip install --no-build-isolation --no-deps -e .
 ```
 
-Render the frozen records without running either study:
+Render the frozen records without running any study:
 
 ```bash
 .venv/bin/python -m experiments.render_results
+.venv/bin/python -m experiments.render_study3
 .venv/bin/python -m experiments.render_supplement
 .venv/bin/python paper/render_figures.py
 .venv/bin/python paper/build_standalone.py
@@ -72,7 +73,7 @@ Outputs:
 
 There are no timestamps or runtime values in numerical results. A
 platform-dependent tolerance may be needed on other BLAS/NumPy versions.
-The CI `research-smoke` job reruns both studies and renders the paper's tables
+The CI `research-smoke` job reruns Studies 1 and 2 and renders the paper's tables
 from the fresh output, so it fails when a conclusion the paper states does not
 hold there; it does not compare hashes. See [the validation record](../paper/validation.md).
 Local comparisons fail on a mismatch
@@ -368,7 +369,8 @@ baselines, at seeds outside this protocol.
 ### The run and its records
 
 The study was run on 17 November 2026 on Linux (x86-64, four cores) with
-Python 3.13 and the study lock, from the protocol as registered. Each part's
+Python 3.13 and the study lock, from the protocol as registered; the Chronos
+scorecard followed on 23 November 2026. Each part's
 record is a folder of `experiments/results-v3/`:
 
 | Folder | Files |
@@ -385,6 +387,14 @@ the frozen inputs and the source files, and the library versions) and
 `runtime.json` (wall time and thread pools). `tests/test_study3_records.py`
 checks each record against its manifest, the protocol and the lock file, and
 reads back every count stated below.
+
+`experiments/render_study3.py` brings the records into the manuscript without
+running anything again. It validates every record, checks each statement the
+manuscript makes from them (`check_study3_conclusions`) and writes
+`paper/generated-study3.tex`, the Study 3 part of the Results section. It also
+supplies the numbers that the hand-written text quotes to `render_supplement`,
+which accepts `--study3-dir`. `tests/test_render_study3.py` compares both with
+the committed files.
 
 What the parts show:
 
@@ -499,14 +509,19 @@ What the parts show:
    entropy is highest on the pure-noise and fixed-level rows, and its rank
    correlation with the scale-free floor is 0.72 (0.26 with the floor
    itself).
-6. **Scorecards of models people use.** The eight local models are scored; the
-   Chronos scorecard needs a machine that can reach its weights. No check
+6. **Scorecards of models people use.** All nine models are scored. No check
    failed for any model. Each scorecard shows where its model stops, beside
    the row's attainable mark. At low noise, ETS scores 35 on irregular cycles
    (mark 93), gradient boosting on lags scores 5 on a straight-line trend
    (mark 95) and 93 on a sudden level shift (mark 97), Theta scores 22 on
    that level shift, and the perceptron on lags scores 4 on a random walk
-   (mark 100). No ranking of the models is claimed.
+   (mark 100). Chronos scores 23 to 99 on the five kinds of series that the
+   protocol declared as resembling its synthetic pretraining data, 73 and 78
+   on irregular cycles, which resemble it in part, and 59 to 97 on the four
+   kinds that data do not contain. Its lowest score, 23, is on the low-noise
+   straight-line trend (mark 95); on mean reversion it scores 92 and 97
+   (marks 93 and 96). The declared resemblance does not order its scores. No
+   ranking of the models is claimed.
 
 What differs from the plan:
 
@@ -536,6 +551,24 @@ What differs from the plan:
   tallied them afterwards from the unit records into `warnings.csv`. The unit
   records are not kept in the repository, and the manifests do not list this
   table.
-- **Commit named by the zoo records.** The zoo manifests name commit 6c729e8:
-  the registered commit plus the registration record, the mutant sources and
-  the two runner changes above. The package (`timegym/`) is the same in both.
+- **Commit named by the zoo records.** The manifests of the eight local
+  models name commit 6c729e8: the registered commit plus the registration
+  record, the mutant sources and the two runner changes above. The package
+  (`timegym/`) is the same in both.
+- **The pretrained model.** The Chronos scorecard was run on 23 November
+  2026, six days after the others, on another Linux machine (x86-64, Python
+  3.13.18), as the protocol allows. Its revision was written into the
+  protocol by a commit that changes only that value (4c2e29d), pushed before
+  the run; the manifest names that commit and shows the same model hash.
+  Three things differ from the plan.
+  The protocol names a CPU-only torch build; the index that serves it could
+  not be reached, so torch 2.15.0 was installed from PyPI, whose Linux build
+  includes CUDA libraries. The run used the CPU and one thread, and the
+  manifest records the build configuration and the installed packages. The
+  wrapper that calls the model had never been executed, because the weights
+  could not be reached when it was written; before the run it was called once
+  on a hand-made sine series, with a torch seed that the protocol does not
+  use, to see that it returns a forecast and samples of the right shape. And
+  the Chronos manifest carries the digest of the protocol with the revision
+  written, where the earlier records carry the digest from before that
+  commit; `experiments/render_study3.py` and the tests check both.

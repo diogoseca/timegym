@@ -198,11 +198,13 @@ def render_tex(results, manifest, followup=None):
     return "\n\n".join(lines) + "\n"
 
 
-def render_macros(results, manifest, pilot_manifest, followup=None, addendum=None):
+def render_macros(results, manifest, pilot_manifest, followup=None, addendum=None, study3=None):
     """Caption and prose macros.
 
-    ``followup`` adds those of the exploratory follow-up (protocol 2.1) and
-    ``addendum`` those of the second exploratory record (protocol 2.2).
+    ``followup`` adds those of the exploratory follow-up (protocol 2.1),
+    ``addendum`` those of the second exploratory record (protocol 2.2) and
+    ``study3`` (the summary of ``experiments.render_study3.summarize``) those of
+    Study 3 (protocol 3.0).
     """
     selected = next(row for row in results["model"]["loss_summaries"]
                     if row["condition"] == "random_walk_drifts" and row["fault"] == "stale_recursive_state")
@@ -242,12 +244,18 @@ def render_macros(results, manifest, pilot_manifest, followup=None, addendum=Non
         values[name + "Low"], values[name + "High"] = (f"{100 * bound:.0f}" for bound in stat["ci95"])
     text = "% Generated from frozen supplement records; do not edit.\n" + "".join(
         f"\\newcommand{{\\{name}}}{{{value}}}\n" for name, value in values.items())
-    if followup is None:
-        return text
-    text += followup_text(results, records, clean, followup)
-    if addendum is None:
-        return text
-    return text + addendum_text(results, addendum)
+    if followup is not None:
+        text += followup_text(results, records, clean, followup)
+    if addendum is not None:
+        text += addendum_text(results, addendum)
+    if study3 is not None:
+        from .render_study3 import check_study3_conclusions, macros_text
+        check_study3_conclusions(study3)
+        require_conclusion(all(found == [manifest["versions"][name]]
+                               for name, found in study3["records"]["versions"].items()),
+                           "Study 3 ran with the NumPy, pandas, SciPy and scikit-learn versions of Study 2")
+        text += macros_text(study3)
+    return text
 
 
 def followup_text(results, records, clean, followup):
@@ -292,6 +300,8 @@ def main():
                         help="exploratory follow-up record (default experiments/results-v2-followup)")
     parser.add_argument("--addendum-dir", type=Path, default=None,
                         help="second exploratory record (default experiments/results-v2-addendum)")
+    parser.add_argument("--study3-dir", type=Path, default=None,
+                        help="Study 3 records (default experiments/results-v3)")
     parser.add_argument("--pilot-manifest", type=Path, default=ROOT / "experiments/results/manifest.json",
                         help="Study 1 manifest whose software versions must match (default the recorded one)")
     args = parser.parse_args()
@@ -307,8 +317,10 @@ def main():
     fragment = args.paper_dir / "generated-supplement.tex"
     fragment.write_text(render_tex(results, manifest, followup))
     pilot_manifest = json.loads(args.pilot_manifest.read_text())
+    from .render_study3 import RESULTS, load_study3, summarize
+    study3 = summarize(load_study3(args.study3_dir if args.study3_dir else RESULTS))
     (args.paper_dir / "generated-macros.tex").write_text(render_macros(results, manifest, pilot_manifest, followup,
-                                                                             addendum))
+                                                                             addendum, study3))
     print(json.dumps({"tables": str(fragment), "macros": str(args.paper_dir / "generated-macros.tex")}))
 
 
