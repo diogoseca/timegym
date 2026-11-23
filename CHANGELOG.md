@@ -63,6 +63,31 @@
 - Added the new scores and `scores=` to the scores page and the Extend TimeGym
   page, and a section to the scores notebook that scores two forecasts of rain
   or no rain with the Brier score and the log loss.
+- Added `timegym.compare_reports(candidate, baseline, *, metric, by=None,
+  cluster=None, alpha=0.05, higher_is_better=False, seed=0)`, to say whether
+  a forecaster is better or worse than another on the same cases, or shows no
+  clear difference. It pairs the two reports case by case, refuses reports
+  whose case manifests differ, and returns a `ReportComparison` with `table`,
+  `better`, `worse`, `too_few`, `assert_no_regression()` and a printed
+  summary. `by` names a manifest key and gives one row per group, with Holm's
+  correction across groups. `cluster` names a manifest key whose cases move
+  together, such as the store a case was cut from; those cases count as one
+  piece of evidence. A row where too few cases or clusters differ for any
+  difference to reach `alpha` says "too few to tell" and fails
+  `assert_no_regression()`. A case the baseline scored that crashes or fails
+  an output check in the candidate makes its row worse. `candidate` may be a
+  list or a dictionary of reports: each candidate's p-value is then adjusted
+  for every candidate and group tried, so the best of many does not beat the
+  baseline by luck. The test is a two-sided paired sign-flip test.
+- Changed where the sign flips and Holm's correction behind
+  `Scorecard.compare` live: `timegym.diagnostics`, shared with
+  `compare_reports`. `Scorecard.compare` keeps its one-sided question, and its
+  results are unchanged.
+- Added a section on comparing two forecasters to the scores page, a sentence
+  pointing to it on the scope page, and a section to the scores notebook that
+  compares two forecasters of store sales by region and measures how often
+  cases that move together, and the best of many variants, give a false
+  verdict.
 
 - Added a confidence interval to every scorecard score. `card.table` has new
   columns `score_low` and `score_high`, and `settled`, True when both ends fall

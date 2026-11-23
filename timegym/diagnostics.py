@@ -8,9 +8,10 @@ import numbers
 from dataclasses import dataclass
 from functools import partial
 import numpy as np
+import pandas as pd
 from . import metrics
 from .contracts import SimulationReference
-from .reporting import CaseResult, DiagnosticResult
+from .reporting import CaseResult, DiagnosticResult, TestReport, _case_checks
 from .provenance import diagnostic_settings
 
 __all__ = [
@@ -19,6 +20,8 @@ __all__ = [
     "rank_alarm",
     "covariance_dependence_check",
     "evaluate_forecast",
+    "compare_reports",
+    "ReportComparison",
 ]
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-32
@@ -779,3 +782,504 @@ def evaluate_forecast(
                 )
             )
     return result
+
+
+# %% ../source/09_scores_and_diagnostics.ipynb #sign-flips
+# Sign flips behind every paired comparison: a scorecard with its baseline, and two reports.
+_FLIPS = 9_999
+
+
+def _sign_flip_pvalue(differences, seed):
+    """One-sided sign-flip p-value for a mean difference above zero, from ``rank_alarm``.
+
+    The generator depends only on ``seed`` and the number of differences, so a
+    cell's p-value does not depend on which other cells were scored.
+    """
+    differences = np.asarray(differences, dtype=float)
+    signs = np.random.default_rng([int(seed), len(differences)]).choice(
+        [-1.0, 1.0], size=(_FLIPS, len(differences))
+    )
+    return rank_alarm(differences.mean(), (signs * differences).mean(axis=1)).p_value
+
+
+def _holm(p_values, alpha):
+    """Holm's step-down rejections at ``alpha``, in the order the p-values were given."""
+    order = np.argsort(p_values, kind="stable")
+    rejected = np.zeros(len(p_values), dtype=bool)
+    for step, position in enumerate(order):
+        if p_values[position] > alpha / (len(p_values) - step):
+            break
+        rejected[position] = True
+    return rejected
+
+
+def _holm_adjusted(p_values):
+    """Holm's step-down adjusted p-values, in the order given; Holm rejects those at most ``alpha``."""
+    p_values = np.asarray(p_values, dtype=float)
+    adjusted = np.empty(len(p_values))
+    running = 0.0
+    for step, position in enumerate(np.argsort(p_values, kind="stable")):
+        running = max(running, min(1.0, (len(p_values) - step) * p_values[position]))
+        adjusted[position] = running
+    return adjusted
+
+
+def _flip_blocks(units, seed):
+    """The observed signs (all +1), then ``_FLIPS`` random sign patterns over ``units``, in blocks.
+
+    Blocks keep memory small for many units. The patterns depend only on
+    ``seed`` and the number of units.
+    """
+    rng = np.random.default_rng([int(seed), int(units)])
+    size = max(1, 2_000_000 // max(units, 1))
+    yield np.ones((1, units))
+    left = _FLIPS
+    while left:
+        rows = min(size, left)
+        yield rng.choice([-1.0, 1.0], size=(rows, units))
+        left -= rows
+
+
+def _paired_flip_test(sums, seed):
+    """Two-sided sign-flip p-values for paired comparisons that share their units.
+
+    ``sums`` has one row per unit (a case, or a cluster of cases that move
+    together) and one column per comparison: the unit's summed differences,
+    zero where the unit is not part of that comparison. One sign pattern flips
+    each unit in every comparison at once. Each column is divided by the
+    square root of its sum of squares, which no flip changes, so comparisons on
+    different scales count alike. Returns two arrays with one p-value per
+    column: the share of sign patterns, the observed one included, whose
+    statistic is at least the observed one, and the share whose largest
+    statistic over all columns is.
+    """
+    sums = np.asarray(sums, dtype=float)
+    scale = np.sqrt(np.sum(sums**2, axis=0))
+    normalized = sums / np.where(scale > 0, scale, 1.0)
+    observed = np.abs(normalized.sum(axis=0))
+    # The observed pattern and its mirror image tie with the observed value; roundoff must not split them.
+    limit = observed - 1e-9
+    single = np.zeros(sums.shape[1])
+    largest = np.zeros(sums.shape[1])
+    patterns = 0
+    for signs in _flip_blocks(sums.shape[0], seed):
+        statistics = np.abs(signs @ normalized)
+        single += np.sum(statistics >= limit, axis=0)
+        largest += np.sum(statistics.max(axis=1)[:, None] >= limit, axis=0)
+        patterns += len(signs)
+    return single / patterns, largest / patterns
+
+
+def _units_needed(alpha):
+    """The fewest differing units with which a two-sided sign-flip p-value can reach ``alpha``.
+
+    With ``k`` units there are 2**k sign patterns, and the observed one ties
+    with its mirror image, so the smallest p-value is 2 / 2**k.
+    """
+    units = 1
+    while 2.0 ** (1 - units) > alpha:
+        units += 1
+    return units
+
+
+# %% ../source/09_scores_and_diagnostics.ipynb #compare-reports
+_VERDICTS = ("better", "worse", "no clear difference", "too few to tell")
+
+# Two scores of one case agree when they differ by at most this share of the largest score in the
+# row, or by the absolute amount, whichever is larger: roundoff, not a change in the forecasts.
+# Scorecard.compare uses the same numbers.
+_RELATIVE_TOLERANCE, _ABSOLUTE_TOLERANCE = 1e-8, 1e-9
+
+
+def _as_report(value, what):
+    """A TestReport, or the report of a run; anything else is refused naming ``what``."""
+    report = value if isinstance(value, TestReport) else getattr(value, "report", None)
+    if not isinstance(report, TestReport):
+        raise TypeError(
+            f"{what} must be a TestReport, such as pipeline.test(...) or run.report; "
+            f"got {type(value).__name__}"
+        )
+    return report
+
+
+def _candidate_reports(candidate):
+    """``[(label, report)]`` from one report, a list of reports or a dictionary of named reports."""
+    if isinstance(candidate, dict):
+        if not candidate:
+            raise ValueError("candidate must hold at least one report")
+        pairs = []
+        for name, value in candidate.items():
+            if not isinstance(name, str) or not name:
+                raise ValueError("each candidate's name must be a nonempty string")
+            pairs.append((name, _as_report(value, f"candidate {name!r}")))
+        return pairs
+    if isinstance(candidate, (list, tuple)):
+        if not candidate:
+            raise ValueError("candidate must hold at least one report")
+        reports = [
+            _as_report(value, f"candidate[{index}]")
+            for index, value in enumerate(candidate)
+        ]
+        models = [report.metadata.get("model") for report in reports]
+        if all(isinstance(model, str) and model for model in models) and len(
+            set(models)
+        ) == len(models):
+            return list(zip(models, reports))
+        return [
+            (f"candidate {index}", report) for index, report in enumerate(reports, 1)
+        ]
+    report = _as_report(candidate, "candidate")
+    model = report.metadata.get("model")
+    return [(model if isinstance(model, str) and model else "candidate", report)]
+
+
+def _same_cases(label, report, baseline):
+    """Refuse two reports that do not cover the same cases in the same order, naming the first difference."""
+    if len(report.cases) != len(baseline.cases):
+        raise ValueError(
+            f"{label} has {len(report.cases)} cases and the baseline {len(baseline.cases)}; "
+            "compare reports made on the same cases, in the same order"
+        )
+    for index, (case, base) in enumerate(zip(report.cases, baseline.cases)):
+        if case.manifest == base.manifest:
+            continue
+        keys = sorted(set(case.manifest) | set(base.manifest), key=str)
+        key = next(k for k in keys if case.manifest.get(k) != base.manifest.get(k))
+        raise ValueError(
+            f"case {index} differs between {label} and the baseline: manifest key {key!r} is "
+            f"{case.manifest.get(key)!r} in {label} and {base.manifest.get(key)!r} in the baseline. "
+            "Compare reports made on the same cases, in the same order; name the model in "
+            "the report's metadata, not in the case manifest"
+        )
+
+
+def _manifest_values(report, key, argument):
+    """Each case's value of manifest ``key``, which must be one plain value in every case."""
+    if key is None:
+        return None
+    if not isinstance(key, str) or not key:
+        raise TypeError(
+            f"{argument} must be the name of a manifest key, such as {argument}='store'"
+        )
+    values = []
+    for index, case in enumerate(report.cases):
+        if key not in case.manifest:
+            raise ValueError(
+                f"case {index} has no manifest key {key!r}, which {argument}={key!r} needs; "
+                f"its keys are {', '.join(map(repr, case.manifest)) or 'none'}"
+            )
+        value = case.manifest[key]
+        if not (value is None or isinstance(value, (str, bool, int, float))):
+            raise ValueError(
+                f"{argument}={key!r} needs one plain value per case, such as a name or a number; "
+                f"case {index} has {type(value).__name__} {value!r}"
+            )
+        values.append(value)
+    return values
+
+
+def _case_state(case, metric):
+    """``"scored"``, ``"failed"`` (it crashed or failed an output check) or ``"unscored"`` (no such score)."""
+    if not all(_case_checks(case).values()):
+        return "failed"
+    return "scored" if metric in case.metrics else "unscored"
+
+
+def compare_reports(
+    candidate,
+    baseline,
+    *,
+    metric,
+    by=None,
+    cluster=None,
+    alpha=0.05,
+    higher_is_better=False,
+    seed=0,
+):
+    """Compare forecasters on the same cases, one score at a time; returns a ReportComparison.
+
+    ``candidate`` and ``baseline`` are reports made on the same cases, in the
+    same order: ``pipeline.test(...)`` results, or runs, whose case manifests
+    agree. ``candidate`` may also be a list of reports, labelled by the model
+    each report's metadata names, or a dictionary of named reports.
+    ``metric`` is a score in ``case.metrics``, your own included; lower is
+    better unless ``higher_is_better=True``.
+
+    Each row says whether the candidate is ``"better"``, ``"worse"`` or shows
+    ``"no clear difference"``, from a two-sided paired sign-flip test on the
+    mean difference over the cases both reports scored. ``by`` names a
+    manifest key and gives one row per value, such as ``by="region"``.
+    ``cluster`` names a manifest key whose cases move together, such as
+    ``cluster="store"`` for cases cut from one store's series: their signs flip
+    together, so they count as one piece of evidence. A row is ``"too few to
+    tell"`` when too few cases, or clusters, differ for any difference to
+    reach ``alpha``: six at the default 0.05.
+
+    A case the baseline scored that crashes or fails an output check in the
+    candidate makes its row worse. With several groups, p-values are adjusted
+    with Holm's correction; with several candidates, each candidate's p-value
+    counts how often the most extreme of all candidates and groups, under the
+    same sign flips, is at least as extreme, so the best of many does not beat
+    the baseline by luck. ``seed`` fixes the random sign flips.
+    """
+    if isinstance(alpha, bool) or not isinstance(alpha, numbers.Real):
+        raise ValueError("alpha must be a number in (0, 1)")
+    alpha = float(alpha)
+    if not (math.isfinite(alpha) and 0 < alpha < 1):
+        raise ValueError("alpha must be a number in (0, 1)")
+    if not isinstance(higher_is_better, (bool, np.bool_)):
+        raise TypeError("higher_is_better must be True or False")
+    seed = nonnegative_int(seed, "seed")
+    if not isinstance(metric, str) or not metric:
+        raise TypeError("metric must be the name of a score, such as metric='mae'")
+    base = _as_report(baseline, "baseline")
+    candidates = _candidate_reports(candidate)
+    labels = [label for label, _ in candidates]
+    if len(set(labels)) != len(labels):
+        raise ValueError(
+            "each candidate needs its own name; pass a dictionary of named reports"
+        )
+    for label, report in candidates:
+        _same_cases(label, report, base)
+    if not base.cases:
+        raise ValueError("the reports have no cases to compare")
+    reports = [base] + [report for _, report in candidates]
+    if not any(metric in case.metrics for report in reports for case in report.cases):
+        found = sorted(
+            {
+                name
+                for report in reports
+                for case in report.cases
+                for name in case.metrics
+            }
+        )
+        raise ValueError(
+            f"no case has a score {metric!r}; the reports have {', '.join(found) or 'no scores'}"
+        )
+    groups = _manifest_values(base, by, "by")
+    clusters = _manifest_values(base, cluster, "cluster")
+    group_order = ["all cases"] if groups is None else list(dict.fromkeys(groups))
+    units = list(range(len(base.cases))) if clusters is None else clusters
+    unit_index = {value: number for number, value in enumerate(dict.fromkeys(units))}
+    base_state = [_case_state(case, metric) for case in base.cases]
+    needed = _units_needed(alpha)
+    rows, columns = [], []
+    for label, report in candidates:
+        state = [_case_state(case, metric) for case in report.cases]
+        for group in group_order:
+            members = [
+                index
+                for index in range(len(base.cases))
+                if groups is None or groups[index] == group
+            ]
+            paired = [i for i in members if base_state[i] == state[i] == "scored"]
+            before = np.array(
+                [base.cases[i].metrics[metric] for i in paired], dtype=float
+            )
+            after = np.array(
+                [report.cases[i].metrics[metric] for i in paired], dtype=float
+            )
+            differences = after - before
+            scale = float(np.max(np.abs(np.concatenate([before, after])), initial=0.0))
+            moved = np.where(
+                np.abs(differences)
+                > max(_ABSOLUTE_TOLERANCE, _RELATIVE_TOLERANCE * scale),
+                differences,
+                0.0,
+            )
+            sums = np.zeros(len(unit_index))
+            np.add.at(
+                sums, np.array([unit_index[units[i]] for i in paired], dtype=int), moved
+            )
+            rows.append(
+                {
+                    "candidate": label,
+                    "group": group,
+                    "cases": len(paired),
+                    "clusters": len({units[i] for i in paired}),
+                    "baseline_mean": float(before.mean()) if paired else np.nan,
+                    "candidate_mean": float(after.mean()) if paired else np.nan,
+                    "mean_difference": float(differences.mean()) if paired else np.nan,
+                    "p_value": np.nan,
+                    "verdict": "too few to tell",
+                    "newly_failing": sum(
+                        base_state[i] == "scored" and state[i] == "failed"
+                        for i in members
+                    ),
+                    "newly_passing": sum(
+                        base_state[i] == "failed" and state[i] == "scored"
+                        for i in members
+                    ),
+                    "differing": int(np.count_nonzero(sums)),
+                }
+            )
+            columns.append(sums)
+    tested = [number for number, row in enumerate(rows) if row["differing"] >= needed]
+    if tested:
+        single, largest = _paired_flip_test(
+            np.column_stack([columns[i] for i in tested]), seed
+        )
+        adjusted = _holm_adjusted(single) if len(candidates) == 1 else largest
+        for number, p_value in zip(tested, adjusted):
+            row = rows[number]
+            row["p_value"] = float(p_value)
+            total = float(columns[number].sum())
+            gain = total if higher_is_better else -total
+            row["verdict"] = (
+                ("better" if gain > 0 else "worse")
+                if p_value <= alpha
+                else "no clear difference"
+            )
+    for row in rows:
+        if row["cases"] and row["differing"] == 0:
+            row["p_value"], row["verdict"] = (
+                1.0,
+                "no clear difference",
+            )  # the same scores
+        if row["newly_failing"]:
+            row["verdict"] = "worse"
+    table = pd.DataFrame(rows).drop(columns="differing")
+    return ReportComparison(
+        table=table,
+        metric=metric,
+        higher_is_better=bool(higher_is_better),
+        by=by,
+        cluster=cluster,
+        alpha=alpha,
+        seed=seed,
+        units_needed=needed,
+    )
+
+
+@dataclass(repr=False)
+class ReportComparison:
+    """Candidates compared with a baseline on the same cases, one row per candidate and group.
+
+    ``table`` has the ``candidate``'s label, the ``group`` (the ``by`` value,
+    or ``"all cases"``), the number of ``cases`` both reports scored and of
+    ``clusters`` among them, the ``baseline_mean`` and ``candidate_mean`` of
+    the score over those cases and their ``mean_difference`` (candidate minus
+    baseline), the ``p_value`` adjusted for every group and candidate tried,
+    the ``verdict`` (``"better"``, ``"worse"``, ``"no clear difference"`` or
+    ``"too few to tell"``), and the cases that ``newly_failing`` crash or fail
+    an output check in the candidate after the baseline scored them, and that
+    are ``newly_passing``. ``better`` and ``worse`` hold those rows, and
+    ``assert_no_regression()`` raises when a row is worse or too few to tell.
+
+    The statistics: a two-sided paired sign-flip test on the mean difference,
+    with 9,999 random sign patterns and the observed one; with ``cluster``,
+    one sign per cluster. It assumes that, when two forecasters are alike,
+    each case's difference, or each cluster's, is as likely to be positive
+    as negative, and that different clusters are independent. Holm's
+    correction runs across the groups of one candidate. With several
+    candidates every row's statistic is divided by its spread and compared
+    with the largest of all rows under the same flips, which keeps the chance
+    of any false verdict near ``alpha`` however alike the candidates are.
+    Rows where too few cases or clusters differ are left out of the
+    correction, and rows with the same scores in both reports get a p-value
+    of 1.
+    """
+
+    table: pd.DataFrame
+    metric: str
+    higher_is_better: bool
+    by: str | None
+    cluster: str | None
+    alpha: float
+    seed: int
+    units_needed: int
+
+    @property
+    def better(self):
+        """The rows where the candidate is better."""
+        return self.table[self.table["verdict"] == "better"]
+
+    @property
+    def worse(self):
+        """The rows where the candidate is worse."""
+        return self.table[self.table["verdict"] == "worse"]
+
+    @property
+    def too_few(self):
+        """The rows where too few cases or clusters differ for any difference to reach ``alpha``."""
+        return self.table[self.table["verdict"] == "too few to tell"]
+
+    def assert_no_regression(self):
+        """Raise ``AssertionError`` naming each row that is worse or too few to tell, with its numbers."""
+        lines = []
+        if not self.worse.empty:
+            lines.append(
+                f"{self.metric} is worse than the baseline in "
+                f"{len(self.worse)} of {len(self.table)} rows (alpha {self.alpha:g}):"
+            )
+            lines += [
+                f"  {self._label(row)}: {self._numbers(row)}"
+                for _, row in self.worse.iterrows()
+            ]
+        if not self.too_few.empty:
+            pieces = "clusters" if self.cluster else "cases"
+            lines.append(
+                f"Too few {pieces} differ to tell in {len(self.too_few)} of {len(self.table)} rows: "
+                f"at least {self.units_needed} must differ for a difference to reach alpha "
+                f"{self.alpha:g}, so these rows could never fail. Compare on more {pieces}."
+            )
+            lines += [
+                f"  {self._label(row)}: {self._numbers(row)}"
+                for _, row in self.too_few.iterrows()
+            ]
+        if lines:
+            raise AssertionError("\n".join(lines))
+
+    def _label(self, row):
+        """``north`` or ``small, north``: the candidate when there are several, then the group."""
+        parts = []
+        if self.table["candidate"].nunique() > 1:
+            parts.append(str(row["candidate"]))
+        if self.by is not None:
+            parts.append(f"{self.by} {row['group']}")
+        return ", ".join(parts) or str(row["candidate"])
+
+    def _numbers(self, row):
+        """``0.512 against 0.530 (-3.4%) over 120 cases in 12 clusters, p = 0.02``."""
+        if not row["cases"]:
+            text = "no case scored in both"
+        else:
+            before, after = row["baseline_mean"], row["candidate_mean"]
+            text = f"{after:.3g} against {before:.3g}"
+            if before != 0 and after != before:
+                change = 100 * (after - before) / abs(before)
+                text += (
+                    f" ({change:+.0f}%)" if abs(change) >= 10 else f" ({change:+.2g}%)"
+                )
+            text += f" over {row['cases']} {'case' if row['cases'] == 1 else 'cases'}"
+            if self.cluster is not None:
+                text += f" in {row['clusters']} {'cluster' if row['clusters'] == 1 else 'clusters'}"
+        if np.isfinite(row["p_value"]):
+            text += f", p = {row['p_value']:.2g}"
+        failing = int(row["newly_failing"])
+        if failing:
+            text += f", {failing} {'case' if failing == 1 else 'cases'} now {'crashes or fails' if failing == 1 else 'crash or fail'} an output check"
+        if row["newly_passing"]:
+            text += f", {int(row['newly_passing'])} now scored"
+        return text
+
+    def __str__(self):
+        direction = "higher" if self.higher_is_better else "lower"
+        how = f"; cases in one {self.cluster} move together" if self.cluster else ""
+        lines = [
+            f"{self.metric} against the baseline ({direction} is better; alpha {self.alpha:g}{how})"
+        ]
+        labels = [self._label(row) for _, row in self.table.iterrows()]
+        width = max(map(len, labels), default=0)
+        for label, (_, row) in zip(labels, self.table.iterrows()):
+            lines.append(
+                f"  {label:<{width}}  {row['verdict']:<19}  {self._numbers(row)}"
+            )
+        return "\n".join(lines)
+
+    def __repr__(self):
+        counts = self.table["verdict"].value_counts()
+        found = "; ".join(
+            f"{verdict}: {int(counts.get(verdict, 0))}" for verdict in _VERDICTS
+        )
+        return f"ReportComparison({self.metric!r}; {found})"
