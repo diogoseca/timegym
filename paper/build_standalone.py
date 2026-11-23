@@ -148,10 +148,11 @@ def build(*, paper_dir: Path = PAPER_DIR) -> str:
                         manuscript, flags=re.M)
     for name, marker in (("generated-macros.tex", "MACROS"),
                          ("generated-results.tex", "RESULTS"),
-                         ("generated-supplement.tex", "SUPPLEMENT")):
+                         ("generated-supplement.tex", "SUPPLEMENT"),
+                         ("generated-study3.tex", "STUDY3")):
         results_path = paper_dir / name
         if not results_path.is_file():
-            raise ValueError(f"Missing paper/{name}. Run and render both studies before building the manuscript.")
+            raise ValueError(f"Missing paper/{name}. Run and render the studies before building the manuscript.")
         start = f"% BEGIN GENERATED {marker}"
         end = f"% END GENERATED {marker}"
         if standalone.count(start) != 1 or standalone.count(end) != 1:

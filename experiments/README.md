@@ -9,10 +9,11 @@ python3 -m venv .venv
 .venv/bin/python -m pip install --no-build-isolation --no-deps -e .
 ```
 
-Render the frozen records without running either study:
+Render the frozen records without running any study:
 
 ```bash
 .venv/bin/python -m experiments.render_results
+.venv/bin/python -m experiments.render_study3
 .venv/bin/python -m experiments.render_supplement
 .venv/bin/python paper/render_figures.py
 .venv/bin/python paper/build_standalone.py
@@ -72,7 +73,7 @@ Outputs:
 
 There are no timestamps or runtime values in numerical results. A
 platform-dependent tolerance may be needed on other BLAS/NumPy versions.
-The CI `research-smoke` job reruns both studies and renders the paper's tables
+The CI `research-smoke` job reruns Studies 1 and 2 and renders the paper's tables
 from the fresh output, so it fails when a conclusion the paper states does not
 hold there; it does not compare hashes. See [the validation record](../paper/validation.md).
 Local comparisons fail on a mismatch
@@ -387,6 +388,14 @@ the frozen inputs and the source files, and the library versions) and
 checks each record against its manifest, the protocol and the lock file, and
 reads back every count stated below.
 
+`experiments/render_study3.py` brings the records into the manuscript without
+running anything again. It validates every record, checks each statement the
+manuscript makes from them (`check_study3_conclusions`) and writes
+`paper/generated-study3.tex`, the Study 3 part of the Results section. It also
+supplies the numbers that the hand-written text quotes to `render_supplement`,
+which accepts `--study3-dir`. `tests/test_render_study3.py` compares both with
+the committed files.
+
 What the parts show:
 
 1. **Generated mutants (Ridge).** Cosmic Ray generated 119 mutants of the
@@ -562,4 +571,4 @@ What differs from the plan:
   use, to see that it returns a forecast and samples of the right shape. And
   the Chronos manifest carries the digest of the protocol with the revision
   written, where the earlier records carry the digest from before that
-  commit; the tests check both.
+  commit; `experiments/render_study3.py` and the tests check both.

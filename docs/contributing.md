@@ -81,8 +81,8 @@ shape validation. New statistical diagnostics must declare their null, unit of
 replication, calibration method and multiplicity policy. Keep false alarms and
 negative results in the study artifacts.
 
-The two studies are specified in `experiments/protocol.json` and
-`experiments/protocol-v2.json`. Change protocol
+The three studies are specified in `experiments/protocol.json`,
+`experiments/protocol-v2.json` and `experiments/protocol-v3.json`. Change protocol
 and artifact versions deliberately when an experiment changes; do not tune
 thresholds or choose seeds after seeing evaluation results. Regenerate tables and
 figures from results, then run `python paper/build_standalone.py`.

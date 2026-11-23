@@ -79,6 +79,52 @@
 \newcommand{\PairedFlagged}{21}
 \newcommand{\PairedPairs}{24}
 \newcommand{\PairedFlips}{9,999}
+% Study 3 (protocol 3.0, experiments/results-v3), registered before its runs; do not edit.
+\newcommand{\ThirdSubjectLines}{82}
+\newcommand{\ThirdMutantSources}{136}
+\newcommand{\ThirdPython}{3.13.18}
+\newcommand{\ThirdGenerated}{119}
+\newcommand{\ThirdCrashing}{55}
+\newcommand{\ThirdEquivalent}{20}
+\newcommand{\ThirdSilent}{44}
+\newcommand{\ThirdCatalogueSilent}{15}
+\newcommand{\ThirdOutputCaught}{3}
+\newcommand{\ThirdShiftCaught}{22}
+\newcommand{\ThirdSecondCaught}{44}
+\newcommand{\ThirdLossCaught}{37}
+\newcommand{\ThirdKeyCaught}{40}
+\newcommand{\ThirdPairedCaught}{43}
+\newcommand{\ThirdCatalogueShiftCaught}{2}
+\newcommand{\ThirdCatalogueSeriesShiftCaught}{4}
+\newcommand{\ThirdLoopMutants}{11}
+\newcommand{\ThirdScalingMutants}{21}
+\newcommand{\ThirdScalingShiftCaught}{11}
+\newcommand{\ThirdLagMutants}{12}
+\newcommand{\ThirdLearnerMutants}{12}
+\newcommand{\ThirdBoostingShiftCaught}{6}
+\newcommand{\ThirdCalibratedCleanPercent}{4.8}
+\newcommand{\ThirdCalibratedMutantPercent}{4.8}
+\newcommand{\ThirdWindowPairedCaught}{6}
+\newcommand{\ThirdWindowCataloguePairedCaught}{9}
+\newcommand{\ThirdOtherPairedCaught}{11}
+\newcommand{\ThirdOtherCataloguePairedCaught}{12}
+\newcommand{\ThirdSuites}{93}
+\newcommand{\ThirdCleanRawSuites}{17}
+\newcommand{\ThirdCleanFisherSuites}{5}
+\newcommand{\ThirdSpreadFisherSuites}{93}
+\newcommand{\ThirdSpreadHolmSuites}{68}
+\newcommand{\ThirdSpreadHolmLowest}{14}
+\newcommand{\ThirdSpreadHolmHighest}{45}
+\newcommand{\ThirdMarginCells}{32}
+\newcommand{\ThirdWithinAbove}{16}
+\newcommand{\ThirdWithinHighest}{111}
+\newcommand{\ThirdRepetitions}{381}
+\newcommand{\ThirdFailAbove}{1}
+\newcommand{\ThirdSpectralLowest}{0.86}
+\newcommand{\ThirdSpectralHighest}{0.98}
+\newcommand{\ThirdSpectralTrend}{24}
+\newcommand{\ThirdEntropyRho}{0.72}
+\newcommand{\ThirdModels}{9}
 
 % END GENERATED MACROS
 
@@ -95,28 +141,30 @@ wrong target, or produced by the wrong algorithm. Its error alone cannot
 tell a software bug from a pattern the model cannot learn or from noise
 nobody could predict. TimeGym is a gym for forecasting pipelines: a Python
 package that tests them on synthetic series whose generating rules are
-known. Because the rules are known, every test case comes with an answer
-key, the best forecast anyone could make from the history, so a
-pipeline's error splits into what it missed and what was unpredictable. A
-scorecard turns that split into a score from 0 to 100 on ten kinds of
-series at low and high noise. TimeGym also checks that forecasts carry the
-requested dates, targets and shape, and that they move correctly when the
-history is shifted. Two controlled studies test these checks. The first
-confirms that each check catches the corruption it is built for. In the
-second, four bugs placed inside a fitted lag-Ridge pipeline all produced
-well-formed forecasts. Which shift check sees which bug follows from the
-equivariance the bug preserves. For the two subtle bugs, an alarm on
-realized error stayed at its false-alarm rate except on a seasonal series;
-the same alarm on the distance from the answer key, an exploratory
-addition, caught about four times as many cases; a second, separately
-written implementation caught all four bugs. Fixing one of these bugs
-made forecasts worse on a random walk with drift, so a correct
-implementation and an accurate forecast are
-different goals. Shuffling sample paths left every per-step distribution,
-and so the CRPS, unchanged while breaking the joint paths; joint scores
-and a covariance check detected it. The studies use selected bugs on
-Gaussian scenarios; they do not measure how often such checks catch the
-bugs found in practice.
+known. Every test case therefore comes with an answer key, the best
+forecast anyone could make from the history, so a pipeline's error splits
+into what it missed and what was unpredictable. A scorecard turns that
+split into a score from 0 to 100 on ten kinds of series at low and high
+noise. TimeGym also checks that forecasts carry the requested dates,
+targets and shape, and that they move correctly when the history is
+shifted. Three studies test these checks. Four bugs placed by
+hand in a lag-Ridge pipeline all produced well-formed forecasts, and
+fixing one made forecasts worse on a random walk with drift: a correct
+implementation and an accurate forecast are different goals. Shuffling
+sample paths broke the joint paths but left the CRPS unchanged; joint
+scores and a covariance check detected it. In a study registered before
+it ran, a mutation tool placed the bugs: of \ThirdSilent{} that silently
+change a forecast, a second, separately written implementation caught
+\ThirdSecondCaught{}, a paired comparison with the bug-free pipeline
+\ThirdPairedCaught{}, an alarm on the distance from the answer key
+\ThirdKeyCaught{}, the same alarm on realized error \ThirdLossCaught{},
+each shift check \ThirdShiftCaught{}, and the output checks
+\ThirdOutputCaught{}. With other learners the comparisons
+still apply; shift checks only where the learner follows a shift exactly.
+Two new designs failed and are reported: a shift check that allows for
+random training seeds, and a verdict that a joint spread is close enough.
+The studies use Gaussian scenarios and one author's pipelines; they do not
+say how often such checks catch bugs found in practice.
 \end{abstract}
 
 \paragraph{Keywords.} Time series forecasting; software testing; test oracles;
@@ -1396,10 +1444,10 @@ verdicts, the numbers behind them, and replay information. The
 scorecard's ten kinds of series are built from five Gaussian families, an
 AR(2) for irregular cycles, measurement noise on the autoregressive and
 random-walk rows, and two composite rows (a trend with a cycle, and a
-sudden level shift). Both studies use the five families only. Composed,
+sudden level shift). The fault studies use the five families only. Composed,
 financial and joint scenarios extend the catalog
 (Appendix~\ref{app:extended}).
-\item Two controlled studies test the checks themselves
+\item Three controlled studies test the checks themselves
 (Sections~\ref{sec:protocol} and~\ref{sec:results}). Bugs that keep the
 output well formed passed every output check, and which shift check sees
 which bug follows from the equivariance the bug preserves. Only the
@@ -1410,7 +1458,12 @@ bugs as the same alarm on realized error, with about as many false alarms.
 Fixing one bug made forecasts worse on a random walk with drift.
 Shuffling sample paths left the CRPS unchanged while joint scores got
 worse. Holm's correction removed most suite-level false alarms but about
-halved detection of shrunken spread.
+halved detection of shrunken spread. Study 3, registered before it ran,
+repeats the comparison on mutants generated by a tool and on three other
+learners, confirms the answer-key alarm and a global test for suites that
+the earlier studies had only explored, measures two published
+predictability estimates against the exact answer, and reports two
+designs that failed their own test.
 \end{itemize}
 
 TimeGym sits between three lines of work: synthetic benchmarks that map
@@ -1773,7 +1826,8 @@ The statistic $T$ is a plug-in Frobenius distance, scaled by the norm of
 the reference covariance and calibrated by Monte Carlo. For Gaussian data, a U-statistic test built on an unbiased
 estimate of the squared Frobenius distance to a fixed target is minimax
 rate optimal when the dimension grows at most in proportion to the sample
-size~\cite{cai2013optimal}.
+size~\cite{cai2013optimal}. Study 3 tests a decision built on that
+unbiased estimate (Section~\ref{sec:third-study}).
 
 \subsection{Scores and a dependence counterexample}
 
@@ -1913,18 +1967,23 @@ permutations do not create the same population dependence defect.
 \section{Controlled evaluation protocol}
 \label{sec:protocol}
 
-\subsection{Two studies and their questions}
+\subsection{Three studies and their questions}
 
-Two controlled studies evaluate the checks themselves. Study 1 corrupts
+Three controlled studies evaluate the checks themselves. Study 1 corrupts
 exact answer-key forecasts, permutes ensemble
 coordinates, runs unmodified baselines, and repairs one preprocessing
 fault. Study 2 inserts internal regressions into a fitted pipeline and
-evaluates covariance checks under multiplicity. Every fault in both
-studies was chosen by hand to exercise an implemented check. Each study's parameters,
+evaluates covariance checks under multiplicity. Every fault in those two
+studies was chosen by hand to exercise an implemented check. Study 3
+lets a mutation tool choose the faults, replaces Ridge with three other
+learners, and puts to a declared test four points that the first two
+studies explored or left open. Each study's parameters,
 seeds, transformations, and tolerances are fixed in its own protocol
 before its evaluation run; the exploratory follow-up to Study 2
 (protocols 2.1 and 2.2) was chosen afterwards and is labelled wherever it
-is used.
+is used. Study 3's protocol also states the outcome it expects wherever
+one could be predicted, and was merged into the repository before any of
+its runs.
 The studies ask:
 \begin{description}
 \item[RQ1 (Study 1).] Does the score separate patterns a model cannot
@@ -1941,6 +2000,21 @@ pass the output checks, and does restoring the intended algorithm
 lower forecast loss?
 \item[RQ5 (Study 2).] How do raw and Holm-adjusted covariance decisions
 trade suite-level false alarms against power?
+\item[RQ6 (Study 3).] Which checks catch mutants that a tool generates
+in a lag-regression pipeline, and do they compare as the hand-placed
+bugs did?
+\item[RQ7 (Study 3).] Do the checks carry over to learners other than
+Ridge, once each learner's response to a shift is classified on its clean
+pipeline?
+\item[RQ8 (Study 3).] Declared in advance, does a global test answer
+whether a suite contains any failure, and Holm's procedure which condition
+failed?
+\item[RQ9 (Study 3).] Can a joint-spread decision with a margin declare a
+spread close enough, at a known error rate?
+\item[RQ10 (Study 3).] How close do two published model-free
+predictability estimates come to the exact unavoidable error?
+\item[RQ11 (Study 3).] What scorecards do commonly used forecasting
+models get?
 \end{description}
 
 The unit of replication is an independently generated scenario-seed
@@ -1963,7 +2037,8 @@ The 64 cases per condition were not chosen from a target precision, as
 is recommended~\cite{morris2019using,koehler2009assessment}. They give a
 95\% interval of about $\pm$10 points at a rate of 22\% and $\pm$12 points
 near 50\%: enough to separate 63 of 64 from 30 of 64, not to rank checks
-that differ by a few cases.
+that differ by a few cases. Study 3 chose its sizes from a target
+precision (Section~\ref{sec:third-study}).
 
 \subsection{Study 1: output corruptions and dependence permutation}
 
@@ -2118,6 +2193,129 @@ Section~\ref{sec:implementation-study}, a one-sided sign-flip test with
 \PairedFlips{} flips of whether the faulty branch is further from the answer key
 than the clean one on the same series, with Holm's correction across the
 pairs.
+
+\subsection{Study 3: generated mutants, other learners, and four further questions}
+\label{sec:third-study}
+
+Study 3 was registered before it ran. Its protocol (3.0) fixes the
+pipeline under test, the sources of mutants, the checks, the decision
+rules, the seeds and, where an outcome could be predicted, the
+expectation. After it was merged, three commits each wrote one recorded
+value into it: the registration, the fingerprint of the generated
+mutants, and the revision of the pretrained model. Sizes follow from a
+target precision: 93 evaluation cases per condition and 93 suites give
+every Wilson 95\% interval a half-width of at most 10 points, and 381
+repetitions give at most 5. Every rank check uses 239 calibration values,
+so that $p$-values are multiples of $1/240$ and Holm's four thresholds are
+attained exactly.
+
+\paragraph{Mutants (RQ6).}
+Mutation analysis makes many small changes to a correct program and
+counts the changed copies, the mutants, that a test
+notices~\cite{jia2011analysis}. The program here, the subject, is a
+lag-regression pipeline written for the study on the model of Study 2's
+clean branch: six lags of two series and a seasonal lag of 12,
+standardized inputs and targets, Ridge with penalty 1, recursive
+forecasting and the inverse transform, in \ThirdSubjectLines{} lines
+without argument validation, so that a mutant acts on the forecasting
+computation. It was committed and fingerprinted, with a separately written
+second implementation, before any mutant existed. Mutants come from three
+sources, reported separately: every mutant that Cosmic Ray
+8.9.0~\cite{cosmicray2026} generates with its standard operators; a
+catalogue of 16 time-series mutants written for the study (a lag window
+off by one or including the target, reversed lag order, a recursion state
+that is not updated, a horizon index off by one, swapped columns, a scaler
+reused across contexts, an inverse transform skipped or applied twice, a
+seasonal period off by one, and training rows dropped from the wrong end);
+and the four Study 2 bugs rewritten on this subject. All sources were
+generated, and their fingerprints committed, before any was executed. A
+mutant that returns no forecast on any of 24 fixed inputs is not runnable;
+one whose forecasts agree with the clean pipeline's on all 24, within the
+tolerances of Study 2, is counted as equivalent; the others are evaluated.
+
+Each evaluated mutant runs in the six conditions of Study 2, with 93
+evaluation cases and 239 clean calibration cases per condition, under
+seven checks: the five of Study 2; the alarm on the distance from the
+answer key, exploratory in Study 2 and declared here; and a paired check,
+a one-sided sign-flip test with 9,999 flips of whether the mutant is
+further from the answer key than the clean pipeline on the same series. A
+deterministic check catches a mutant in a condition when it alarms on at
+least one case, a rule that the run validates by verifying that the check
+never alarms on the clean pipeline there. A calibrated alarm catches a
+mutant when an exact test of its alarm count rejects after Holm's
+adjustment across the mutants of its source in that condition. That test
+is beta-binomial, not binomial: given the calibration sample actually
+drawn, a clean pipeline's alarm probability is not 5\% but
+$\mathrm{Beta}(12,228)$ distributed, and the binomial tail would
+understate the chance of ten alarms in 93 clean cases by half (0.018
+against 0.039). Because the sources differ in size, so do their Holm
+families; the sources are compared on what was caught of each, not pooled.
+
+\paragraph{Learners beyond Ridge (RQ7).}
+Three learners replace Ridge in the subject, which then runs without its
+scaling step: histogram gradient boosting on raw lags, a perceptron with
+one hidden layer of 32 units on lags standardized within each window, and
+the same perceptron on raw lags. Both perceptrons draw a new training seed
+at every fit. A shift check is meaningful only for a learner that follows
+a shift, so each learner is first classified on its clean pipeline, on 96
+cases: \emph{exact} if the public shift check passes on every case;
+\emph{in distribution} if a calibrated shift check fails no more often
+than its level allows; \emph{not applicable} otherwise. The calibrated
+check, written for this study, refits the learner 39 times on the
+unshifted history and once on the history plus 10. It fails when at most
+one of the 39 refits lies as far from the first fit as the shifted
+forecast, moved back by 10, does: a rank test at level 0.05, valid on
+every case if shifting the history changes the forecast only as a new
+training seed would. Each learner then receives the four Study 2 bugs, the
+16 catalogue mutants and \ThirdLearnerMutants{} generated mutants taken in
+a seeded order, under the checks that apply to its class. No second
+implementation exists for these learners.
+
+\paragraph{Suites and a margin (RQ8, RQ9).}
+The covariance suites of the previous subsection are repeated on 93 new
+suites with $B=239$ and the two questions declared in advance: Fisher's
+combination~\cite{fisher1932statistical} for whether a suite contains any
+failure, Holm's procedure for which condition failed. The check of
+Section~\ref{sec:joint-spread} can only reject. A decision that could also
+declare a spread close enough needs an estimate with an interval. The
+decision tested here takes an unbiased estimate $T$ of the squared
+relative distance
+$D^2=\|\Sigma_X-\Sigma_F\|_F^2/\|\Sigma_F\|_F^2$~\cite{cai2013optimal,chen2010tests},
+a leave-one-out (jackknife) standard error
+$\mathrm{se}$~\cite{efron1981jackknife,arvesen1969jackknifing}, and the
+two one-sided tests of equivalence testing~\cite{schuirmann1987comparison}:
+FAIL when $T-1.645\,\mathrm{se}$ exceeds the squared margin,
+WITHIN\_TOLERANCE when $T+1.645\,\mathrm{se}$ lies below it, and
+INCONCLUSIVE otherwise. A simulation with 381 repetitions per cell
+measures the three verdict rates in the four covariance conditions, for
+margins of 0.25 and 0.4375 (the exact distance of Study 2's spread
+multiplier 0.75), 64 and 256 paths, and true distances from zero to 1.5
+times the margin, with the spread too narrow or too wide. Before the run
+the protocol expected each one-sided verdict in at most about 5\% of
+repetitions at a distance equal to the margin.
+
+\paragraph{Predictability estimates and model scorecards (RQ10, RQ11).}
+On 200 series of each of the scorecard's 20 cells, two model-free
+estimates are compared with the exact unavoidable error of the answer
+key: the spectral bound of Feng et al.~\cite{feng2026beyond}, computed as
+their paper defines it from the last 24 observations and the 24 realized
+future values, and weighted permutation entropy~\cite{garland2014model}
+of the 120 observations with word length 3, a measure used for intrinsic
+predictability~\cite{pennekamp2019intrinsic}. The protocol expected the
+bound to be close to the exact value on the stationary rows and off where
+the predictable part is deterministic. Finally, nine models are scored on
+the default grid with 30 series per cell: the last value and the seasonal
+naive forecast; ETS, automatic ARIMA and Theta from
+StatsForecast~\cite{statsforecast2026}; the subject with gradient boosting
+and with the window-standardized perceptron; the pretrained Chronos model
+(small, at a pinned revision)~\cite{ansari2024chronos}; and context
+parroting~\cite{zhang2026context}, a baseline without training that copies
+what followed the most similar earlier stretch of the history.
+Hyperparameters are fixed for every row. Beside each score stands the
+row's attainable mark: the score of the row's own model family fitted to
+each history, which is what a correctly specified model reaches when it
+has to estimate its parameters from 120 observations. No ranking of the
+models is claimed.
 
 \section{Results}
 \label{sec:results}
@@ -2536,6 +2734,275 @@ Coordinate-wise sorted sample arrays were identical before and after every parti
 
 % END GENERATED SUPPLEMENT
 
+% BEGIN GENERATED STUDY3
+% Generated by experiments/render_study3.py from experiments/results-v3; do not edit by hand.
+
+\subsection{Study 3: generated mutants}
+\label{sec:results-mutants}
+
+Cosmic Ray generated 119 mutants of the 82-line subject. 55 raise an exception on every input, so no check is needed to see them. Of the 64 that run, 20 return the clean forecast on all 24 screening inputs and are counted as equivalent; 44 change a forecast. Of the 16 catalogue mutants one is equivalent, a target scaler reused across contexts (the Ridge fit is linear in its targets, so the inverse transform undoes it), and none of the four Study 2 bugs is. The equivalent sources were also run on every evaluation case, and none differed from the clean pipeline there; 6 and 48 screening inputs give the same equivalent mutants as 24.
+
+Table~\ref{tab:mutants} counts, for each check, the mutants caught in at least one of the six conditions and, in parentheses, the pairs of a mutant and a condition in which it was caught.
+
+\begin{table}[htbp]\centering\small
+
+\caption{Study 3, Ridge pipeline: mutants that change a forecast and are caught by each check in at least one of six conditions; in parentheses, the mutant--condition pairs caught. A deterministic check catches a mutant in a condition when it alarms on any of the 93 evaluation cases, a calibrated check when its Holm-adjusted test rejects (Section~\ref{sec:third-study}). The counts describe these sets of mutants, not a population of real faults.}
+
+\label{tab:mutants}
+
+\begin{tabular}{@{}lrrr@{}}\toprule
+
+Check & Cosmic Ray & Catalogue & Study 2 bugs \\
+
+ & (44 mutants, 264 pairs) & (15, 90) & (4, 24) \\ \midrule
+
+Output checks & 3 (14) & 0 (0) & 0 (0) \\
+
+Common shift check & 22 (132) & 2 (12) & 1 (6) \\
+
+Per-series shift check & 22 (131) & 4 (24) & 2 (12) \\
+
+Second implementation & 44 (256) & 15 (90) & 4 (24) \\
+
+Calibrated loss alarm & 37 (186) & 13 (39) & 4 (16) \\
+
+Answer-key alarm & 40 (210) & 14 (55) & 4 (20) \\
+
+Paired check with the clean pipeline & 43 (215) & 15 (63) & 4 (22) \\
+
+\bottomrule\end{tabular}\end{table}
+
+The second implementation flagged every mutant in every condition in which the mutant returned a forecast. The 8 pairs it did not flag belong to 2 generated mutants that raise an exception on every case of four conditions, where the output checks report them. The paired check missed one generated mutant, which returns no valid forecast on any case and so leaves nothing to pair; the output checks caught it. The answer-key alarm caught at least as many mutants as the loss alarm in every set: 40 against 37 generated mutants (210 against 186 pairs), 14 against 13 catalogue mutants (55 against 39), and the Study 2 bugs in 20 against 16 pairs.
+
+Each shift check caught 22 of the 44 generated mutants. Grouped by the function they change, a breakdown made after the results were known, the shift checks caught all 11 mutants of the forecasting loop, 11 of the 21 mutants of the two functions that apply and invert the scaling, and none of the 12 mutants of the lag construction and of the scaler fit. The catalogue agrees: the common shift check caught only its two inverse-transform mutants, the per-series check those and the two column swaps, and the other 11 (lag window, lag order, recursion state, horizon index, seasonal period, dropped training rows and a reused feature scaler) passed both.
+
+No deterministic check alarmed on the clean pipeline, on 332 cases in each condition (239 calibration and 93 evaluation cases). At the 5\% level the loss alarm fired on 29/558 [3.6, 7.4]\% of the clean evaluation cases and the answer-key alarm on 33/558 [4.2, 8.2]\%.
+
+\subsection{Study 3: learners beyond Ridge}
+\label{sec:results-learners}
+
+Table~\ref{tab:shift-classes} classifies each learner on its clean pipeline, on 16 cases in each of the six conditions. Every learner received the class that the protocol expected.
+
+\begin{table}[htbp]\centering\small
+
+\caption{Study 3: how each learner's clean pipeline responds to a shift of 10 in its history. The public shift check asks for the same forecast plus 10; the calibrated check asks only that the shifted forecast look like one more refit with a new training seed. A learner is exact when the public check passes on every case, in distribution when the calibrated check fails no more often than its 5\% level allows, and not applicable otherwise.}
+
+\label{tab:shift-classes}
+
+\begin{tabular}{@{}lrrl@{}}\toprule
+
+Learner & Public: PASS & Calibrated: FAIL & Class \\ \midrule
+
+Ridge with global scaling (control) & 96/96 & --- & exact \\
+
+Histogram gradient boosting & 96/96 & --- & exact \\
+
+Perceptron, window-standardized lags & 0/96 & 4/96 & in distribution \\
+
+Perceptron, raw lags & 0/96 & 51/96 & not applicable \\
+
+\bottomrule\end{tabular}\end{table}
+
+The three learners run the subject without its scaling step, so a mutant of a scaling function changes nothing. Of the first 84 Cosmic Ray mutants in the seeded order, 24 raise an exception on every input and 48 are equivalent, 34 of them in the three scaling functions; the 12 that remain are the same for the three learners. Of the 16 catalogue mutants 4 are equivalent, and one of the four Study 2 bugs, as the protocol expected. Table~\ref{tab:learners} counts the mutants caught.
+
+\begin{table}[htbp]\centering\small
+
+\caption{Study 3: mutants caught in at least one condition with each learner, as Cosmic Ray / catalogue / Study 2 bugs (of 12 / 12 / 3). A dash marks a check that does not apply to the learner's shift class (Table~\ref{tab:shift-classes}); no second implementation exists for these learners.}
+
+\label{tab:learners}
+
+\begin{tabular}{@{}lccc@{}}\toprule
+
+Check & Boosting & Perceptron, standardized & Perceptron, raw \\ \midrule
+
+Output checks & 3 / 0 / 0 & 3 / 0 / 0 & 3 / 0 / 0 \\
+
+Common shift check & 6 / 0 / 0 & --- & --- \\
+
+Per-series shift check & 6 / 2 / 1 & --- & --- \\
+
+Calibrated shift check & --- & 0 / 0 / 0 & --- \\
+
+Calibrated loss alarm & 8 / 11 / 3 & 5 / 8 / 3 & 8 / 6 / 3 \\
+
+Answer-key alarm & 9 / 12 / 3 & 5 / 7 / 3 & 8 / 7 / 3 \\
+
+Paired check with the clean pipeline & 11 / 12 / 3 & 6 / 9 / 3 & 11 / 12 / 3 \\
+
+\bottomrule\end{tabular}\end{table}
+
+The calibrated shift check kept its level and caught no mutant. On the clean window-standardized pipeline it returned FAIL on 27/558 [3.3, 6.9]\% of the evaluation cases. On the 25 evaluated mutants it returned FAIL on 608 of 12,648 cases (4.8\%); 5 of the 136 pairs of a mutant and a condition have an unadjusted $p$-value of at most 0.05, no more than its level gives by chance, and none is left after Holm's correction. With this learner the paired check also caught fewer mutants than with the other two: 6 generated and 9 catalogue mutants, against 11 and 12 with each of the others. Every fit of this learner stopped at its limit of 500 iterations (22,878 convergence warnings on the 558 clean evaluation cases, 41 fits a case); the perceptron on raw lags did so on 888 of its 1,992 clean calibration and evaluation cases, and gradient boosting raised no warning. With gradient boosting the exact shift checks behaved as with Ridge: no alarm on its 1,992 clean cases, 6 of the 12 generated mutants caught, and at most 2 catalogue mutants.
+
+No deterministic check alarmed on a clean pipeline (332 cases for each learner and condition). At the 5\% level the loss alarm fired on 30, 28 and 29 of the 558 clean evaluation cases of gradient boosting, the window-standardized perceptron and the raw-lag perceptron, and the answer-key alarm on 17, 32 and 22.
+
+\subsection{Study 3: two questions about a suite}
+\label{sec:results-suites}
+
+Table~\ref{tab:suite-questions} repeats the covariance suites of Study 2 on 93 new suites with 239 calibration draws. Of the clean suites, 17 contain at least one unadjusted rejection, 2 a Holm rejection, and Fisher's combination flags 5, a rate whose interval holds the nominal 5\%. Under the partial shuffle all three flag every suite; on the condition with independent targets, where the shuffle changes nothing, the unadjusted check rejected in 4 suites and Holm in 3. Under the reduced spread Fisher's combination flags all 93 suites, while Holm rejects at least one condition in 68 and a given condition in 14 to 45.
+
+\begin{table}[htbp]\centering\small
+
+\caption{Study 3: suites of four covariance checks flagged, of 93, with Wilson 95\% intervals (percent). Raw counts a suite with any unadjusted rejection, Holm one with any rejection after Holm's adjustment, and Fisher one whose combined test rejects. Every flag on the control is a false alarm; the other two rows measure detection.}
+
+\label{tab:suite-questions}
+
+\begin{tabular}{@{}lrrr@{}}\toprule
+
+Variant & Raw & Holm & Fisher \\ \midrule
+
+Exact-reference control & 17/93 [11.7, 27.3] & 2/93 [0.6, 7.5] & 5/93 [2.3, 12.0] \\
+
+Partial dependence shuffle & 93/93 [96.0, 100.0] & 93/93 [96.0, 100.0] & 93/93 [96.0, 100.0] \\
+
+Reduced spread & 93/93 [96.0, 100.0] & 68/93 [63.3, 81.1] & 93/93 [96.0, 100.0] \\
+
+\bottomrule\end{tabular}\end{table}
+
+\subsection{Study 3: a joint-spread decision with a margin}
+\label{sec:results-margin}
+
+Table~\ref{tab:margin} gives how often each one-sided verdict was returned when the true distance lay exactly on the margin, where each was designed to occur in at most about 5\% of repetitions. FAIL meets the design: between 0 and 29 of 381 repetitions over the 32 cells, with a 95\% interval above 5\% in 1 of them. WITHIN\_TOLERANCE does not: between 5 and 111 of 381, with the interval above 5\% in 16 of the 32 cells, 11 of them with a spread that is too wide and 13 in the two conditions with dependence over time. With the distance 10\% beyond the margin it was still returned in up to 95 of 381 repetitions. The expectation that the protocol wrote down for this verdict was therefore wrong.
+
+\begin{table}[htbp]\centering\footnotesize
+
+\caption{Study 3: verdicts of the margin decision when the true distance equals the margin, as FAIL / WITHIN\_TOLERANCE counts of 381 repetitions; the remainder is INCONCLUSIVE. Either verdict is an error here, designed to occur in at most about 5\% of repetitions (19 of 381).}
+
+\label{tab:margin}
+
+\begin{tabular}{@{}llrrrr@{}}\toprule
+
+ & & \multicolumn{2}{c}{Margin 0.25} & \multicolumn{2}{c}{Margin 0.4375} \\
+
+Condition & Spread & 64 paths & 256 paths & 64 paths & 256 paths \\ \midrule
+
+White noise: independent targets & narrower & 20 / 5 & 13 / 15 & 20 / 14 & 17 / 13 \\
+
+ & wider & 1 / 20 & 3 / 26 & 0 / 21 & 6 / 32 \\
+
+\addlinespace
+
+White noise: correlated targets & narrower & 12 / 9 & 13 / 18 & 20 / 8 & 24 / 20 \\
+
+ & wider & 1 / 26 & 4 / 32 & 1 / 28 & 12 / 23 \\
+
+\addlinespace
+
+Negative AR(1) & narrower & 11 / 30 & 13 / 30 & 25 / 20 & 16 / 18 \\
+
+ & wider & 0 / 53 & 0 / 52 & 1 / 62 & 5 / 47 \\
+
+\addlinespace
+
+Correlated random walk with drift & narrower & 10 / 43 & 17 / 43 & 29 / 31 & 20 / 12 \\
+
+ & wider & 0 / 104 & 2 / 78 & 1 / 111 & 4 / 58 \\
+
+\bottomrule\end{tabular}\end{table}
+
+The estimator itself shows no bias: over the 240 cells its mean differs from the squared distance by at most 2.7 of its standard errors, and by more than two in 7. A reading made after the run locates the problem in the interval. The jackknife standard error has the right size on average (its mean is 1.05 times the standard deviation of the estimator in the median cell), but with a spread that is too wide it moves with the estimate (correlation between 0.85 and 0.98 in the 16 such cells of Table~\ref{tab:margin}), so a low estimate arrives with a short interval and falls below the margin. At a distance of zero, where it is the correct verdict, WITHIN\_TOLERANCE was returned in 670 of 1,524 repetitions at 64 paths and 1,482 at 256 with the margin 0.25, and in 1,443 and 1,524 with the margin 0.4375.
+
+\subsection{Study 3: predictability estimates against the exact floor}
+\label{sec:results-predictability}
+
+Table~\ref{tab:predictability} divides the spectral bound by the exact unavoidable error on 200 series of each scorecard cell. On the eight stationary rows (pure noise, a fixed level, mean reversion and irregular cycles) the median ratio lies between 0.86 and 0.98, as the protocol expected. On the four rows with a trend it is far above 1 (24.00 and 24.28 at low noise, 2.35 and 2.47 at high noise), as expected. Two expectations were wrong: on the seasonal rows (1.12 and 1.03) and on the level-shift rows (0.83 and 0.83) the bound is close to the exact value, where the protocol expected it to be off. Those ratios use the realized future segment, as the bound is defined; computed from the history alone, the level-shift ratio is 81.1 at low noise. The random-walk rows have no stationary spectrum, so the bound is not defined there in theory; its values are reported as computed. Weighted permutation entropy is highest on the pure-noise and fixed-level rows. Across the 20 rows its rank correlation with the exact floor is 0.26, and 0.72 once the floor is divided by the variance of the history, which removes the scale that the entropy ignores.
+
+\begin{table}[htbp]\centering\small
+
+\caption{Study 3: the spectral bound divided by the exact unavoidable error (median and 5th to 95th percentile over 200 series; 1 is exact), and the median weighted permutation entropy (0 to 1), at low and high noise. The two random-walk rows have no stationary spectrum.}
+
+\label{tab:predictability}
+
+\begin{tabular}{@{}lrrrr@{}}\toprule
+
+ & \multicolumn{2}{c}{Spectral bound / exact floor} & \multicolumn{2}{c}{Entropy} \\
+
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+
+Kind of series & Low noise & High noise & Low & High \\ \midrule
+
+Pure noise & 0.86 [0.52, 1.47] & 0.86 [0.52, 1.47] & 0.99 & 0.99 \\
+
+Noise around a fixed level & 0.86 [0.52, 1.47] & 0.86 [0.52, 1.47] & 0.99 & 0.99 \\
+
+Straight-line trend & 24.00 [19.88, 29.77] & 2.35 [1.20, 4.02] & 0.95 & 0.99 \\
+
+Repeating seasonal cycle & 1.12 [0.65, 1.79] & 1.03 [0.60, 1.67] & 0.63 & 0.97 \\
+
+Trend plus seasonal cycle & 24.28 [20.00, 28.10] & 2.47 [1.42, 3.60] & 0.63 & 0.97 \\
+
+Sudden level shift & 0.83 [0.50, 1.34] & 0.83 [0.50, 1.34] & 0.87 & 0.99 \\
+
+Mean reversion (AR(1)) & 0.98 [0.32, 3.64] & 0.94 [0.43, 1.90] & 0.94 & 0.99 \\
+
+Irregular cycles (AR(2)) & 0.98 [0.21, 2.89] & 0.92 [0.39, 2.35] & 0.64 & 0.97 \\
+
+Random walk & 0.85 [0.15, 3.88] & 0.83 [0.33, 2.38] & 0.97 & 0.99 \\
+
+Random walk with drift & 2.46 [0.20, 8.86] & 1.52 [0.38, 4.68] & 0.95 & 0.99 \\
+
+\bottomrule\end{tabular}\end{table}
+
+\subsection{Study 3: scorecards of nine models}
+\label{sec:results-zoo}
+
+Table~\ref{tab:zoo} gives the scorecard of each model beside the row's attainable mark. No check failed for any model. The scores show where each model stops; they rank no model, because the rows are mechanisms chosen for their known answers and not a sample of real series. At low noise, ETS scores 35 on irregular cycles (mark 93); gradient boosting on lags scores 5 on a straight-line trend (mark 95), which a tree cannot extrapolate, and 93 on a sudden level shift (mark 97), where Theta scores 22; the perceptron on lags scores 4 on a random walk (mark 100).
+
+Chronos is the one pretrained model. Before its run the protocol declared how each kind of series relates to the synthetic part of its pretraining data, which is drawn from Gaussian processes with constant, white-noise, linear, RBF, rational-quadratic and periodic kernels~\cite{ansari2024chronos}: five kinds resemble it (pure noise, a fixed level, a straight-line trend, a seasonal cycle and a trend with a seasonal cycle), irregular cycles resemble it in part, and four are not in its kernel bank (a level shift, mean reversion and the two random walks). Chronos scores 23 to 99 on the five kinds that resemble that data, 73 and 78 on irregular cycles, and 59 to 97 on the four that it does not contain. Its lowest score, 23, is on the low-noise straight-line trend (mark 95), and it scores 92 and 97 on mean reversion (marks 93 and 96). The declared resemblance does not order its scores; what the model saw in its real pretraining data cannot be stated.
+
+\begin{table}[htbp]\centering\footnotesize\setlength{\tabcolsep}{3.4pt}
+
+\caption{Study 3: scores out of 100 of nine models on the default scorecard grid (30 series a cell) at low and high noise, beside the attainable mark. Last is the last value, Seas.\ the seasonal naive forecast (period 12), Boost.\ and Perc.\ gradient boosting and a perceptron on lags, Chronos the pretrained small model, Parrot context parroting. The interval of every score is in the study's records. No ranking is claimed.}
+
+\label{tab:zoo}
+
+\begin{tabular}{@{}p{0.24\linewidth}lrrrrrrrrrr@{}}\toprule
+
+Kind of series & Noise & Mark & Last & Seas. & ETS & ARIMA & Theta & Boost. & Perc. & Chronos & Parrot \\ \midrule
+
+Pure noise & low & 99 & 48 & 47 & 99 & 99 & 95 & 79 & 37 & 99 & 47 \\
+
+ & high & 99 & 48 & 47 & 99 & 99 & 95 & 79 & 54 & 99 & 47 \\
+
+Noise around a fixed level & low & 99 & 48 & 47 & 99 & 99 & 96 & 79 & 66 & 97 & 47 \\
+
+ & high & 99 & 48 & 47 & 99 & 99 & 96 & 79 & 23 & 95 & 47 \\
+
+Straight-line trend & low & 95 & 8 & 6 & 96 & 92 & 76 & 5 & 21 & 23 & 6 \\
+
+ & high & 95 & 31 & 33 & 94 & 96 & 87 & 44 & 57 & 48 & 29 \\
+
+Repeating seasonal cycle & low & 98 & 3 & 47 & 90 & 84 & 87 & 65 & 47 & 73 & 49 \\
+
+ & high & 98 & 22 & 47 & 90 & 78 & 87 & 71 & 47 & 78 & 42 \\
+
+Trend plus seasonal cycle & low & 94 & 2 & 6 & 86 & 81 & 87 & 4 & 45 & 35 & 5 \\
+
+ & high & 94 & 25 & 36 & 86 & 72 & 86 & 35 & 50 & 63 & 26 \\
+
+Sudden level shift & low & 97 & 49 & 49 & 70 & 69 & 22 & 93 & 6 & 85 & 47 \\
+
+ & high & 97 & 49 & 49 & 90 & 86 & 69 & 85 & 44 & 83 & 47 \\
+
+Mean reversion (AR(1)) & low & 93 & 62 & 51 & 65 & 91 & 63 & 70 & 52 & 92 & 50 \\
+
+ & high & 96 & 53 & 51 & 84 & 92 & 81 & 73 & 62 & 97 & 51 \\
+
+Irregular cycles (AR(2)) & low & 93 & 35 & 30 & 35 & 94 & 35 & 55 & 51 & 73 & 54 \\
+
+ & high & 93 & 43 & 37 & 45 & 88 & 45 & 66 & 54 & 78 & 50 \\
+
+Random walk & low & 100 & 97 & 75 & 97 & 92 & 90 & 88 & 4 & 89 & 58 \\
+
+ & high & 99 & 70 & 64 & 91 & 88 & 91 & 79 & 40 & 87 & 56 \\
+
+Random walk with drift & low & 87 & 60 & 44 & 73 & 83 & 85 & 43 & 27 & 59 & 41 \\
+
+ & high & 90 & 57 & 50 & 78 & 85 & 87 & 58 & 62 & 67 & 42 \\
+
+\bottomrule\end{tabular}\end{table}
+
+% END GENERATED STUDY3
+
 \section{Related work and positioning}
 \label{sec:related}
 
@@ -2632,7 +3099,7 @@ application, reported eight previously unknown issues, and evaluated
 mutation detection in a reference LSTM~\cite{dwarakanath2019metamorphic}.
 This is the direct methodological predecessor of the shift checks, and it
 includes evidence on actual application defects that our studies of
-hand-picked faults do not provide. TimeGym adds answer keys and separate
+placed faults do not provide. TimeGym adds answer keys and separate
 checks for marginal and joint forecasts to that testing workflow; it does
 not introduce forecasting metamorphic testing, and it implements far
 fewer relations.
@@ -2704,8 +3171,9 @@ real series.}
 Table~\ref{tab:positioning} compares the works by use and capability, and
 the comparison runs in both directions. FinStressTS covers more financial
 mechanisms than TimeGym's catalog and benchmarks models on them, which
-neither study here does; Dwarakanath et al. generate their mutants with a
-tool where ours are hand-picked; and the sktime suite covers far more of
+no study here does; Dwarakanath et al. report previously unknown issues in
+an application, where every fault here was placed by hand or by a tool;
+and the sktime suite covers far more of
 an estimator's interface, including refitting, updating, and persistence,
 than TimeGym's six output checks.
 
@@ -2734,8 +3202,9 @@ A naive forecast, as in MASE and skill
 scores~\cite{hyndman2006another,murphy1988skill}, removes the scale of a
 series. An estimated floor, such as a spectral bound~\cite{feng2026beyond}
 or permutation entropy~\cite{pennekamp2019intrinsic}, removes
-unpredictability as far as the series reveals it, and predictability
-itself has been measured as a ratio of expected
+unpredictability as far as the series reveals it
+(Section~\ref{sec:results-predictability} measures both against the exact
+value), and predictability itself has been measured as a ratio of expected
 losses~\cite{diebold2001measuring}. An exact optimum removes it entirely,
 and has been reported for one model class at a time: the Kalman filter on
 linear-Gaussian systems~\cite{akram2026transformers} and SynTSBench's
@@ -2831,9 +3300,103 @@ correction, because one would depend on the number of tests executed, and
 so accepted a 5\% false-positive rate for each
 test~\cite{herbold2023differential}.
 
+Study 3 put the selection of faults in a tool's hands (RQ6,
+Table~\ref{tab:mutants}). The order of the checks that Study 2 found on
+four hand-placed bugs holds on the \ThirdSilent{} generated mutants: the
+output checks caught \ThirdOutputCaught{}, each shift check
+\ThirdShiftCaught{}, the loss alarm \ThirdLossCaught{}, the answer-key
+alarm \ThirdKeyCaught{}, the paired check \ThirdPairedCaught{} and the
+second implementation all \ThirdSecondCaught{}. The answer-key alarm,
+exploratory in Study 2, was declared in advance here and again caught
+more than the loss alarm. Generic mutants were easier for the shift
+checks than time-series mutants: half of the generated ones were caught
+against \ThirdCatalogueShiftCaught{} and
+\ThirdCatalogueSeriesShiftCaught{} of the \ThirdCatalogueSilent{}
+catalogue mutants. The reason is the one given in
+Section~\ref{sec:implementation-study}. A tool mutates arithmetic
+wherever it stands, including the forecasting loop and the scaling, where
+a wrong operator can break the response to a shift: the shift checks
+caught all \ThirdLoopMutants{} generated mutants of the loop,
+\ThirdScalingShiftCaught{} of the \ThirdScalingMutants{} in the scaling
+and none of the \ThirdLagMutants{} in the lag construction and the scaler
+fit. The catalogue's bugs sit mostly in the lags, which a pipeline that
+refits its scalers builds the same way on the shifted history. A shift
+check is therefore a test of where the forecast is assembled and scaled,
+not of which lags the model sees. Only \ThirdSilent{} of the
+\ThirdGenerated{} generated mutants are silent bugs: \ThirdCrashing{}
+raised an exception on every input and \ThirdEquivalent{} changed nothing,
+which is why every count here is of the silent ones.
+
+For RQ7 the comparisons carried over to other learners and the shift
+checks carried over only to a learner that follows a shift exactly
+(Tables~\ref{tab:shift-classes} and~\ref{tab:learners}). Histogram
+gradient boosting does, and its shift checks behaved as with Ridge. For
+the two perceptrons the public shift check fails on a bug-free pipeline:
+the window-standardized one follows a shift only up to the randomness of
+its training seed, and the raw-lag one does not follow it at all. The
+calibrated check built for the first case kept its level
+(\ThirdCalibratedCleanPercent{}\% of clean cases) and had no power: it
+failed on \ThirdCalibratedMutantPercent{}\% of the mutants' cases too,
+and caught none of the \ThirdBoostingShiftCaught{} generated mutants that
+the exact shift checks caught with gradient boosting. As designed it is
+not worth adding to the package. The same learner weakened the
+paired check, which caught \ThirdWindowPairedCaught{} and
+\ThirdWindowCataloguePairedCaught{} of \ThirdLearnerMutants{} generated
+and catalogue mutants against \ThirdOtherPairedCaught{} and
+\ThirdOtherCataloguePairedCaught{} with either other learner. Every fit
+of that perceptron stopped at its iteration limit. A plausible reading,
+which the study did not test, is that its forecasts vary so much from one
+training run to the next that a bug has to do more damage to stand out.
+In deep learning a mutant is likewise called killed only against the
+variation between training runs~\cite{jahangirova2020empirical}.
+
+For RQ8, the exploratory finding of protocol 2.2 held on new suites with
+the methods declared first (Table~\ref{tab:suite-questions}). Fisher's
+combination flagged \ThirdCleanFisherSuites{} of \ThirdSuites{} clean
+suites and all \ThirdSpreadFisherSuites{} with a reduced spread, where
+Holm's procedure flagged \ThirdSpreadHolmSuites{} and named a given
+condition in \ThirdSpreadHolmLowest{} to \ThirdSpreadHolmHighest{}.
+Counting any unadjusted rejection flagged \ThirdCleanRawSuites{} clean
+suites. A suite therefore needs one global test for ``did anything
+fail?'' and Holm's procedure for ``which one?''.
+
+RQ9 has a negative answer (Table~\ref{tab:margin}). At a distance equal
+to the margin the verdict WITHIN\_TOLERANCE was returned too often in
+\ThirdWithinAbove{} of \ThirdMarginCells{} cells, in up to
+\ThirdWithinHighest{} of \ThirdRepetitions{} repetitions, against the
+protocol's expectation. The decision rejects a spread at close to its
+stated level (FAIL was too frequent in \ThirdFailAbove{} of the
+\ThirdMarginCells{} cells), but it cannot certify one at 64 or 256 paths,
+and it is not added to the package. The joint-spread check of
+Section~\ref{sec:joint-spread} still answers only whether a difference
+was detected.
+
+For RQ10, the spectral bound is a good estimate where its assumptions
+hold and a poor one where they do not
+(Table~\ref{tab:predictability}): its median is \ThirdSpectralLowest{} to
+\ThirdSpectralHighest{} times the exact unavoidable error on the
+stationary rows and about \ThirdSpectralTrend{} times on a low-noise
+trend, where the mean of the future differs from the mean of the history
+and the bound counts that difference as unpredictable. The protocol was
+wrong about the seasonal and level-shift rows, where the bound is close.
+The entropy orders the rows by predictability once scale is removed (rank
+correlation \ThirdEntropyRho{}). Both estimates need only the series
+itself, which is their use on real data; an answer key shows where to
+trust them.
+
+RQ11 is descriptive (Table~\ref{tab:zoo}). The scorecards of
+\ThirdModels{} models locate each model's limit beside what a correctly
+specified model attains, and no check failed for any of them. The table
+ranks nothing: the rows are mechanisms, and a model that scores low on a
+random walk may serve well where no series is one. For the pretrained
+model, the resemblance between each row and its synthetic pretraining
+data, declared before the run, does not order the scores: its lowest is on
+the straight-line trend, a kind of series that data contain
+(Section~\ref{sec:results-zoo}).
+
 \subsection{Limitations}
 
-The fault-study corpus is Gaussian and hand-picked.
+The fault-study corpus is Gaussian, and in Studies 1 and 2 hand-picked.
 The software catalog also includes composed, financial, and multivariate
 mechanisms; no fault study covers them, and Appendix~\ref{app:extended}
 states their own limits. Known DGP parameters and declared change
@@ -2844,17 +3407,26 @@ permutations is an exact algebraic property; the power of a particular
 joint check remains an empirical question.
 
 \paragraph{Fault selection.}
-All faults were chosen by the developer to illustrate the implemented
-checks, which favors detectability, and all repairs were specified in
-advance. Detection rates therefore describe this corpus, not the
-frequency or detectability of naturally occurring faults.
+In Studies 1 and 2 all faults were chosen by the developer to illustrate
+the implemented checks, which favors detectability, and all repairs were
+specified in advance. Detection rates therefore describe this corpus, not
+the frequency or detectability of naturally occurring faults. Study 3
+removes the choice of faults but not the choice of program: its mutants
+are generated by a tool with standard operators, from one pipeline of
+\ThirdSubjectLines{} lines that the author wrote for the study, and its
+catalogue of time-series mutants was written by the same author after
+Study 2 and reviewed by no one else.
 Mutation analysis rests on the coupling of simple seeded faults to real
 ones~\cite{jia2011analysis}. Generated mutants have been found similar
 in detectability to real faults, whereas hand-seeded faults, seeded to
 resemble real ones, were harder to detect~\cite{andrews2005mutation}; in a
 corpus of 357 real faults, 73\% were coupled to common mutants and 17\% to
-none~\cite{just2014mutants}. Our faults were instead picked to exercise
-particular checks, a selection that favors detection by those checks.
+none~\cite{just2014mutants}. The faults of Studies 1 and 2 were instead
+picked to exercise particular checks, a selection that favors detection by
+those checks. Study 3 shows both kinds side by side
+(Table~\ref{tab:mutants}): the generated mutants were easier for the shift
+checks than the catalogue's time-series mutants, and the two alarms caught
+them in a larger share of the conditions.
 Neither kind of corpus says how often the checks catch faults found in
 practice. In deep learning, mutation operators have instead been
 derived from a taxonomy of real
@@ -2865,8 +3437,8 @@ statistical role here. No comparable taxonomy of forecasting-pipeline
 faults informs the present selection: the nearest bug studies are of
 deep-learning frameworks~\cite{tambon2024silent,chen2023toward}, and we
 found none for a forecasting library.
-Study 2 moves beyond output corruption but does not supply an independent
-corpus of naturally occurring defects. The second implementation verifies
+Studies 2 and 3 move beyond output corruption but do not supply an
+independent corpus of naturally occurring defects. The second implementation verifies
 one intended algorithm; it cannot establish that the algorithm is
 appropriate for every forecasting task. The second implementation was written by the same author, who knew the
 faults. Study 2 placed its bugs in the pipeline only, so it measures
@@ -2884,7 +3456,10 @@ columns per lag), in the units of the targets in the solve (standardized
 in the pipeline, original in the second implementation) and in the
 solver (scikit-learn's \code{Ridge} against a NumPy solve of the normal
 equations). Writing one is
-practical for a short regression, rarely for a neural network. These studies assess detection and
+practical for a short regression, rarely for a neural network; Study 3
+has none for its three other learners, and classified those learners on
+clean pipelines only, which does not establish their response to a shift
+on other data. These studies assess detection and
 repair rechecks, not automatic source-code localization or repair
 discovery.
 
@@ -2901,7 +3476,16 @@ all~\cite{brilliant1989consistent}. Holm adjustment
 protects only the declared four-check family. Other reported comparisons
 are descriptive, and fresh evaluation seeds do not undo adaptive choice
 of scenarios, mutations, or diagnostics, a known route to overoptimistic
-results in simulation studies~\cite{pawel2024pitfalls}.
+results in simulation studies~\cite{pawel2024pitfalls}. Study 3 limits
+that route by registration, and its results mark what was not planned: the
+grouping of mutants by function and the reading of the margin decision's
+interval were made after the run. Its Holm families hold the mutants of
+one source, check and condition, so a count of mutants caught in at least
+one condition carries no family-wise guarantee across conditions. The
+margin simulation covers proportional changes of the spread only, the
+spectral bound is applied to segments of 24 values, shorter than those of
+its paper, and the scorecards of Study 3 describe nine fixed
+configurations, one of them pretrained on data that resemble some rows.
 
 \subsection{Toward a broader evaluation}
 \label{sec:broader}
@@ -2946,7 +3530,12 @@ shows that split for ten kinds of series; output checks and shift checks
 tell different kinds of failure apart. Study 2 shows that
 well-formed outputs and passed shift checks can coexist with algorithmic
 regressions, and that restoring an algorithm need not improve its forecast
-loss. The probabilistic experiments make the corresponding distinction between
+loss. Study 3 repeats the comparison on mutants that a tool generated and
+on other learners: what catches silent bugs is a comparison, with a second
+implementation, with the last trusted version, or with the answer key,
+while output checks and shift checks each see a known and narrow class.
+It also reports what did not work: a shift check for randomly seeded
+learners and a verdict that a joint spread is close enough. The probabilistic experiments make the corresponding distinction between
 marginal quality and joint dependence, including a null-preserving
 negative control and explicit multiplicity handling. Together these
 results support a practical discipline: state the property, reproduce the
@@ -2957,9 +3546,9 @@ original failure and clean controls.
 
 The implementation and executable studies accompany this manuscript in the
 \href{https://github.com/diogoseca/timegym}{TimeGym repository}; its README
-gives installation, test, and experiment commands. The tutorials, which start from a scorecard quick start, are teaching examples distinct from the two studies.
+gives installation, test, and experiment commands. The tutorials, which start from a scorecard quick start, are teaching examples distinct from the three studies.
 
-Both studies ran with Python \StudyPython, NumPy \StudyNumPy, pandas
+Studies 1 and 2 ran with Python \StudyPython, NumPy \StudyNumPy, pandas
 \StudyPandas, and SciPy \StudySciPy; Study 2 also used scikit-learn
 \StudySklearn. The retained Study 2 design requires \StudySklearnFits{}
 scikit-learn fits,
@@ -2981,7 +3570,19 @@ the fitted AR(1) coefficients quoted in the text. A second exploratory
 record (protocol 2.2), chosen on the same date after the follow-up was
 known, is saved under \code{experiments/results-v2-addendum/}; it reads
 only stored Study 2 values and supplies the suite-level tests and the
-paired answer-key check. Following the
+paired answer-key check. Study 3's protocol
+(\code{experiments/protocol-v3.json}) was merged before its runs, and its
+records are saved under \code{experiments/results-v3/}: the
+\ThirdMutantSources{} mutant sources, committed before any was executed,
+one folder for each of five parts, and four files for each scored model.
+It ran on Linux with Python \ThirdPython{} and the same versions of those
+libraries, on one numerical thread per process; the three models from StatsForecast and
+the pretrained model ran in their own environments, which the records
+list. \code{experiments/README.md} states what differed from the plan,
+including a fault in the thread settings that was found and fixed during
+the runs, with reruns that reproduced every affected result exactly, and
+the PyTorch build with which the pretrained model ran.
+Following the
 reporting recommendations for forecasting research, the records give a
 well-defined data-generating process with its seeds, described methods and
 parameterization, software versions, and defined
@@ -2994,7 +3595,7 @@ in the experiment manifests. The digests identify the stored records: a rerun el
 
 % The standalone builder renders references.bib into a BibTeX-free inline list.
 % BEGIN GENERATED BIBLIOGRAPHY
-\begin{thebibliography}{112}
+\begin{thebibliography}{121}
 \bibitem{akram2026transformers}
 Usman Akram and Haris Vikalo.
 \href{https://arxiv.org/abs/2410.16546v3}{Transformers as Implicit State Estimators: In-Context Learning in Dynamical Systems}.
@@ -3021,10 +3622,21 @@ J. H. Andrews, L. C. Briand and Y. Labiche.
 \href{https://doi.org/10.1145/1062455.1062530}{Is mutation an appropriate tool for testing experiments?}.
 \emph{Proceedings of the 27th International Conference on Software Engineering (ICSE 2005)}, pp. 402--411, 2005.
 
+\bibitem{ansari2024chronos}
+Abdul Fatir Ansari, Lorenzo Stella, Caner Turkmen, Xiyuan Zhang, Pedro Mercado, Huibin Shen, Oleksandr Shchur, Syama Sundar Rangapuram, Sebastian Pineda Arango, Shubham Kapoor, Jasper Zschiegner, Danielle C. Maddix, Hao Wang, Michael W. Mahoney, Kari Torkkola, Andrew Gordon Wilson, Michael Bohlke-Schneider and Yuyang Wang.
+\href{https://arxiv.org/abs/2403.07815}{Chronos: Learning the Language of Time Series}.
+arXiv:2403.07815, 2024.
+Preprint.
+
 \bibitem{arcuri2011practical}
 Andrea Arcuri and Lionel Briand.
 \href{https://doi.org/10.1145/1985793.1985795}{A practical guide for using statistical tests to assess randomized algorithms in software engineering}.
 \emph{Proceedings of the 33rd International Conference on Software Engineering (ICSE 2011)}, pp. 1--10, 2011.
+
+\bibitem{arvesen1969jackknifing}
+James N. Arvesen.
+\href{https://doi.org/10.1214/aoms/1177697287}{Jackknifing {U}-Statistics}.
+\emph{The Annals of Mathematical Statistics}, 40(6), pp. 2076--2100, 1969.
 
 \bibitem{barr2015oracle}
 Earl T. Barr, Mark Harman, Phil McMinn, Muzammil Shahbaz and Shin Yoo.
@@ -3081,6 +3693,11 @@ Preprint.
 Junjie Chen, Yihua Liang, Qingchao Shen, Jiajun Jiang and Shuochuan Li.
 \href{https://doi.org/10.1145/3587155}{Toward Understanding Deep Learning Framework Bugs}.
 \emph{ACM Transactions on Software Engineering and Methodology}, 32(6), pp. 1--31, 2023.
+
+\bibitem{chen2010tests}
+Song Xi Chen, Li-Xin Zhang and Ping-Shou Zhong.
+\href{https://doi.org/10.1198/jasa.2010.tm09560}{Tests for High-Dimensional Covariance Matrices}.
+\emph{Journal of the American Statistical Association}, 105(490), pp. 810--819, 2010.
 
 \bibitem{chen2018metamorphic}
 Tsong Yueh Chen, Fei-Ching Kuo, Huai Liu, Pak-Lok Poon, Dave Towey, T. H. Tse and Zhi Quan Zhou.
@@ -3152,6 +3769,11 @@ D.E. Eckhardt and L.D. Lee.
 \href{https://doi.org/10.1109/TSE.1985.231895}{A Theoretical Basis for the Analysis of Multiversion Software Subject to Coincident Errors}.
 \emph{IEEE Transactions on Software Engineering}, SE-11(12), pp. 1511--1517, 1985.
 
+\bibitem{efron1981jackknife}
+B. Efron and C. Stein.
+\href{https://doi.org/10.1214/aos/1176345462}{The Jackknife Estimate of Variance}.
+\emph{The Annals of Statistics}, 9(3), pp. 586--596, 1981.
+
 \bibitem{engle1982autoregressive}
 Robert F. Engle.
 \href{https://doi.org/10.2307/1912773}{Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of {United Kingdom} Inflation}.
@@ -3177,6 +3799,11 @@ Wayne A. Fuller and David P. Hasza.
 Jo{\~a}o Gama, Indr{\.e} {\v{Z}}liobait{\.e}, Albert Bifet, Mykola Pechenizkiy and Abdelhamid Bouchachia.
 \href{https://doi.org/10.1145/2523813}{A survey on concept drift adaptation}.
 \emph{ACM Computing Surveys}, 46(4), Article 44, 37 pages, 2014.
+
+\bibitem{garland2014model}
+Joshua Garland, Ryan James and Elizabeth Bradley.
+\href{https://doi.org/10.1103/PhysRevE.90.052910}{Model-free quantification of time-series predictability}.
+\emph{Physical Review E}, 90(5), Article 052910, 2014.
 
 \bibitem{gentzel2019case}
 Amanda Gentzel, Dan Garant and David Jensen.
@@ -3416,6 +4043,12 @@ Mahdi Nejadgholi and Jinqiu Yang.
 \href{https://doi.org/10.1109/ASE.2019.00078}{A Study of Oracle Approximations in Testing Deep Learning Libraries}.
 \emph{2019 34th IEEE/ACM International Conference on Automated Software Engineering (ASE)}, pp. 785--796, 2019.
 
+\bibitem{statsforecast2026}
+{Nixtla}.
+\href{https://github.com/Nixtla/statsforecast/}{{StatsForecast}: time series forecasting suite using statistical models, version 2.1.1}.
+2026.
+Software.
+
 \bibitem{pawel2024pitfalls}
 Samuel Pawel, Lucas Kook and Kelly Reeve.
 \href{https://doi.org/10.1002/bimj.202200091}{Pitfalls and potentials in simulation studies: Questionable research practices in comparative simulation studies allow for spurious claims of superiority of any method}.
@@ -3468,6 +4101,11 @@ Michael Scheuerer and Thomas M. Hamill.
 \href{https://doi.org/10.1175/MWR-D-14-00269.1}{Variogram-Based Proper Scoring Rules for Probabilistic Forecasts of Multivariate Quantities}.
 \emph{Monthly Weather Review}, 143(4), pp. 1321--1334, 2015.
 
+\bibitem{schuirmann1987comparison}
+Donald J. Schuirmann.
+\href{https://doi.org/10.1007/BF01068419}{A comparison of the Two One-Sided Tests Procedure and the Power Approach for assessing the equivalence of average bioavailability}.
+\emph{Journal of Pharmacokinetics and Biopharmaceutics}, 15(6), pp. 657--680, 1987.
+
 \bibitem{seca2021review}
 Diogo Seca.
 \href{https://arxiv.org/abs/2105.01407v1}{A Review on Oracle Issues in Machine Learning}.
@@ -3487,6 +4125,12 @@ Sergio Segura, Gordon Fraser, Ana B. Sanchez and Antonio Ruiz-Cortes.
 R. J. Simes.
 \href{https://doi.org/10.1093/biomet/73.3.751}{An improved {Bonferroni} procedure for multiple tests of significance}.
 \emph{Biometrika}, 73(3), pp. 751--754, 1986.
+
+\bibitem{cosmicray2026}
+{Sixty North AS}.
+\href{https://github.com/sixty-north/cosmic-ray}{Cosmic {Ray}: mutation testing for {Python}, version 8.9.0}.
+2026.
+Software.
 
 \bibitem{sktimeConformance}
 {sktime developers}.
@@ -3568,6 +4212,12 @@ Jie M. Zhang, Mark Harman, Lei Ma and Yang Liu.
 \href{https://doi.org/10.1109/TSE.2019.2962027}{Machine Learning Testing: Survey, Landscapes and Horizons}.
 \emph{IEEE Transactions on Software Engineering}, 48(1), pp. 1--36, 2022.
 
+\bibitem{zhang2026context}
+Yuanzhao Zhang and William Gilpin.
+\href{https://arxiv.org/abs/2505.11349v3}{Context parroting: A simple but tough-to-beat baseline for foundation models in scientific machine learning}.
+arXiv:2505.11349v3, 2026.
+Preprint.
+
 \end{thebibliography}
 % END GENERATED BIBLIOGRAPHY
 
@@ -3577,7 +4227,7 @@ Jie M. Zhang, Mark Harman, Lei Ma and Yang Liu.
 \label{app:extended}
 
 Beyond the five core families and the AR(2), the software catalog has
-four further scenario kinds, which neither study uses. The
+four further scenario kinds, which no fault study uses. The
 \code{composite} scenario adds a deterministic trend and seasonal cycle to
 fresh Gaussian noise or an accumulated-shock process, optionally with
 compound-Poisson jumps, and can change its parameters at a declared index,
