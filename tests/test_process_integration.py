@@ -25,7 +25,7 @@ PROCESS_CASES = [
 def test_public_pipeline_report_round_trip_and_replay_each_new_family(kind, parameters):
     scenario = Scenario(kind, context_length=24, horizon=3, parameters=parameters)
     pipeline = Pipeline()
-    run = pipeline.run([scenario], seeds=[3, 5])
+    run = pipeline.run([scenario], seeds=[3, 5], keep_data=True)
     assert len(run.cases) == 2
     for entry in run.cases:
         assert entry.result.scenario == entry.case.manifest["kind"] == kind
@@ -57,7 +57,7 @@ def jump_regimes():
 
 
 def test_composed_regime_jump_report_preserves_approximation_and_quantile_settings():
-    run = Pipeline().run([jump_regimes()], seeds=[3])
+    run = Pipeline().run([jump_regimes()], seeds=[3], keep_data=True)
     generated = run.cases[0].case
     metadata = generated.manifest["conditioning"]
     assert metadata["sampler_kind"] == "approximate_conditional"
@@ -154,7 +154,7 @@ def test_plot_legend_distinguishes_approximate_filtered_mean_from_exact_referenc
     run = Pipeline().run([
         jump_regimes(),
         Scenario("merton_jump_diffusion", context_length=24, horizon=3),
-    ], seeds=[3])
+    ], seeds=[3], keep_data=True)
     figure = run.plot_forecasts()
     try:
         approximate_labels = figure.axes[0].get_legend_handles_labels()[1]

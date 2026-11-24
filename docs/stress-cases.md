@@ -52,7 +52,7 @@ errors across draws does not.
 
 ## The scorecard's ten rows
 
-`Pipeline.scorecard()` draws ten kinds of series from these scenarios, each at low and high noise; on the autoregressive and random-walk rows the noise is measurement noise on top of the hidden process. [Scorecards and the scenario grid](api/scorecard.md) lists each row.
+`Pipeline.run()` with no arguments draws ten kinds of series from these scenarios, each at low and high noise; on the autoregressive and random-walk rows the noise is measurement noise on top of the hidden process. [Scorecards and the scenario grid](api/scorecard.md) lists each row.
 
 ## Composed and financial scenarios
 

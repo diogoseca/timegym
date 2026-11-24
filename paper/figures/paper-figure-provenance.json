@@ -7466,8 +7466,8 @@
     ],
     "inputs_sha256": {
       "paper/figure_common.py": "1e269c4b57bed134ebf33a57f7855e8e52a81b41569980c478059b547bd0209e",
-      "paper/figure_scorecard.py": "087bb59512a73278011f2a39afae95476e4baf1063183edacfab1cd6a7f87887",
-      "paper/render_figures.py": "24a5fad5e51d407b6378eff51737b4accd22c933c6795d7cb94fe76a3fbbecd8",
+      "paper/figure_scorecard.py": "4acd396a9a298ff754645bb5c724d4aaf1e12ba10ef6ed145c9b8ac941d0c198",
+      "paper/render_figures.py": "2b9c2e642d4cd5aae313e7a507d929f576c4802ea37c840d4bed2f8e82e44449",
       "paper/vector_canvas.py": "a7ab2b0ab30f8f95f2025bee3c6653c73bc533c182f3525ee64312574dd5e325"
     },
     "instances": 10,
@@ -7484,11 +7484,11 @@
     "purpose": "Illustration of the package scorecard for the quick start's Ridge pipeline; not a study result",
     "run_metadata": {
       "dependencies": {
-        "numpy": "2.5.4",
-        "pandas": "3.1.0",
+        "numpy": "2.5.5",
+        "pandas": "3.1.1",
         "scikit-learn": "1.9.1",
         "scipy": "1.18.1",
-        "timegym": "1.3.0"
+        "timegym": "1.13.1"
       },
       "diagnostic_settings": {
         "alpha": 0.05,
@@ -7498,8 +7498,6 @@
       },
       "instances": 10,
       "model": "SklearnForecaster",
-      "numpy": "2.5.4",
-      "pandas": "3.1.0",
       "pipeline_config": {
         "model": {
           "kind": "sklearn_steps",
@@ -7542,16 +7540,16 @@
       "seed": 0,
       "source": {
         "algorithm": "sha256",
-        "digest": "ad011ecfa87a33807944e0ce76a43d75c870f232252341cc5274b3a90c27dfc9",
+        "digest": "f3de1091d6bc81330bf9d8990d55c5df24f984d9ec97342adc198c36c13767fe",
         "file_count": 25,
         "scope": "timegym/**/*.py relative paths and contents"
       },
       "target_transform": null,
-      "timegym_version": "1.3.0",
+      "timegym_version": "1.13.1",
       "window_length": 24
     },
     "scale_disclosure": "Each panel has its own vertical limits; panels have no value axis, as in the package plot",
-    "scorecard_call": "pipeline.scorecard() with package defaults",
+    "scorecard_call": "pipeline.run(keep_data=True).scorecard with package defaults",
     "seed": 0,
     "specification_source": "paper/figure_scorecard.py",
     "visible_context": 96

@@ -122,7 +122,7 @@ def test_bad_inputs_are_refused():
 def test_run_and_test_take_your_own_cases():
     rain = daily_rain()
     cases = cases_from_series(rain, [60, 80, 100], 7, name="rain")
-    run = Pipeline(LastValueForecaster()).run(cases=cases)
+    run = Pipeline(LastValueForecaster()).run(cases=cases, keep_data=True)
     assert [(entry.scenario_index, entry.seed_index) for entry in run.cases] == [(0, 0), (0, 1), (0, 2)]
     assert all(entry.result.scenario == "rain" and entry.result.seed is None for entry in run.cases)
     for entry in run.cases:
@@ -147,7 +147,7 @@ def test_each_case_gets_a_fresh_model():
 
     cases = cases_from_series(daily_rain(), [30, 60], 3)
     model = Counting()
-    run = Pipeline(model).run(cases=cases)
+    run = Pipeline(model).run(cases=cases, keep_data=True)
     assert [float(entry.forecast.point[0, 0]) for entry in run.cases] == [30.0, 60.0]
     assert not hasattr(model, "fitted_on")
 
@@ -176,15 +176,15 @@ def test_cases_cannot_be_mixed_with_drawn_scenarios():
     cases = cases_from_series(daily_rain(), [60], 7)
     pipeline = Pipeline(LastValueForecaster())
     with pytest.raises(ValueError, match="not both"):
-        pipeline.run([Scenario("ar1")], cases=cases)
+        pipeline.run([Scenario("ar1")], cases=cases, keep_data=True)
     with pytest.raises(ValueError, match="not both"):
         pipeline.test(cases=cases, seeds=[1])
     with pytest.raises(TypeError, match="not one Case"):
-        pipeline.run(cases=cases[0])
+        pipeline.run(cases=cases[0], keep_data=True)
     with pytest.raises(TypeError, match=r"cases\[1\]"):
-        pipeline.run(cases=[cases[0], "case"])
+        pipeline.run(cases=[cases[0], "case"], keep_data=True)
     with pytest.raises(ValueError, match="at least one case"):
-        pipeline.run(cases=[])
+        pipeline.run(cases=[], keep_data=True)
 
 
 def test_a_model_that_crashes_on_one_case_does_not_stop_the_run():
@@ -207,7 +207,7 @@ def test_forecasts_made_earlier_are_scored_like_a_run():
     cases = cases_from_series(daily_rain(), [60, 80, 100], 7, name="rain")
     forecasts = [repeat_last(case) for case in cases]
     recorded = ForecastRun.from_forecasts(cases, forecasts, metadata={"model": "repeat last", "commit": "abc"})
-    fitted = Pipeline(LastValueForecaster()).run(cases=cases)
+    fitted = Pipeline(LastValueForecaster()).run(cases=cases, keep_data=True)
     assert [e.result.metrics for e in recorded.cases] == [e.result.metrics for e in fitted.cases]
     assert recorded.metadata["model"] == "repeat last" and recorded.metadata["commit"] == "abc"
     assert "pipeline_config" not in recorded.metadata

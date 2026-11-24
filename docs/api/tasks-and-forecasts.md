@@ -76,7 +76,7 @@ from timegym import LastValueForecaster, Pipeline, cases_from_series
 days = pd.date_range("2024-01-01", periods=120, freq="D")
 rain = pd.Series(np.random.default_rng(0).gamma(2.0, 2.0, 120), index=days, name="rain_mm")
 cases = cases_from_series(rain, origins=[60, 80, 100], horizon=7, name="rain")
-report = Pipeline(LastValueForecaster()).test(cases=cases)
+result = Pipeline(LastValueForecaster()).run(cases=cases)
 ```
 
 Each case's manifest records `kind` (`name`), `seed` (`None`), `origin` (the

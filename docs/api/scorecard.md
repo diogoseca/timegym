@@ -1,7 +1,7 @@
 # Scorecards and the scenario grid
 
 One call that tells you what a forecaster can and cannot do:
-`Pipeline.scorecard()` and `Scorecard` from `timegym`, the grid itself
+`Pipeline.run()` and its `result.scorecard`, a `Scorecard` from `timegym`, the grid itself
 (`PATTERNS`, `Pattern`, `GridCell`, `scenario_grid`) from `timegym`, and the
 lower-level `verdict`, `VERDICTS`, `ScorecardComparison`, `noise_levels`,
 `NOISE_LOW` and `NOISE_HIGH` from `timegym.scorecard` and `timegym.grid`.
@@ -9,8 +9,10 @@ lower-level `verdict`, `VERDICTS`, `ScorecardComparison`, `noise_levels`,
 ```python
 from timegym import LastValueForecaster, Pipeline
 
-card = Pipeline(LastValueForecaster()).scorecard()
+result = Pipeline(LastValueForecaster()).run()
+card = result.scorecard
 card                       # in a notebook: the image
+card.plot()                # the same image, as a Matplotlib figure
 print(card)                # Markdown summary and table
 card.save("scorecard.png") # or .svg / .pdf
 ```
@@ -92,14 +94,14 @@ card.unsettled        # the rows whose interval crosses 90, 70 or 40
 
 The printed card adds a question mark to a verdict that is not settled
 (`56 Struggles?`) and ends with a line such as `12 of 20 verdicts are not
-settled at 10 instances. Run scorecard(instances=30) to narrow them.` On the
+settled at 10 instances. Run pipeline.run(instances=30) to narrow them.` On the
 image, a short line beside each score draws its interval on a 0 to 100 scale,
 ticked at 40, 70 and 90; a verdict that is not settled gets a question mark
 and a paler badge.
 
 A higher confidence level gives a wider, more cautious interval. Pass
 `interval_level` for another level, for example
-`pipeline.scorecard(interval_level=0.99)`. The card keeps it as `card.interval_level`, and the printed
+`pipeline.run(interval_level=0.99).scorecard`. The card keeps it as `card.interval_level`, and the printed
 card and the image name it. It is a number between 0 and 1, so `95` raises
 `ValueError`.
 
@@ -201,7 +203,7 @@ so it can be scored like any other:
 ```python
 from timegym import PATTERNS, Pipeline
 
-Pipeline(PATTERNS["trend"].attainable_by).scorecard(["trend"])
+Pipeline(PATTERNS["trend"].attainable_by).run(["trend"]).scorecard
 ```
 
 The four maximum-likelihood fits run a Kalman filter with the scale and the
@@ -216,7 +218,7 @@ recomputes them. Any other noise level, history length or horizon gets NaN and
 no triangle, unless you ask for it:
 
 ```python
-card = pipeline.scorecard(noise_levels=3, attainable=True)
+card = pipeline.run(noise_levels=3, attainable=True).scorecard
 ```
 
 `attainable=True` simulates each missing value once and keeps it for the
@@ -259,10 +261,10 @@ rain = Pattern(
 )
 
 model = NaiveForecaster("seasonal_mean", period=12)
-card = Pipeline(model).scorecard(
-    patterns=["seasonal", rain],  # a built-in row beside yours
+card = Pipeline(model).run(
+    ["seasonal", rain],  # a built-in row beside yours
     attainable=True,  # also score each row's own model, fitted to each history
-)
+).scorecard
 ```
 
 For each series the scorecard calls `simulate(rng, history, horizon, noise)`:
@@ -369,10 +371,10 @@ possible forecast?
 
 ```python
 # once, on the version you trust
-Pipeline(model).scorecard(instances=30).save_baseline("scorecard-baseline.json")
+Pipeline(model).run(instances=30).scorecard.save_baseline("scorecard-baseline.json")
 
 # in the test suite, on every change
-card = Pipeline(model).scorecard(instances=30)
+card = Pipeline(model).run(instances=30).scorecard
 diff = card.compare("scorecard-baseline.json")   # same seed, so the same series
 print(diff)
 diff.assert_no_regression()

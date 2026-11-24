@@ -602,7 +602,7 @@ def test_one_instance_has_no_interval_and_no_settled_verdict():
     assert card.table[["score_low", "score_high"]].isna().all().all()
     assert not card.table["settled"].any() and len(card.unsettled) == 2
     assert str(card).endswith("2 of 2 verdicts are not settled at 1 instance. "
-                              "Run scorecard(instances=30) to narrow them.")
+                              "Run pipeline.run(instances=30) to narrow them.")
 
 
 def test_the_printed_card_marks_unsettled_verdicts_and_says_how_many(last_value_card):
@@ -613,10 +613,10 @@ def test_the_printed_card_marks_unsettled_verdicts_and_says_how_many(last_value_
     assert f"{row['score']:.0f} {row['verdict']}?" in text
     assert "A question mark means the verdict is not settled: the score's 95% interval reaches into another band." in text
     assert text.splitlines()[-2:] == ["", f"{len(last_value_card.unsettled)} of {len(table)} verdicts are not "
-                                          "settled at 10 instances. Run scorecard(instances=30) to narrow them."]
+                                          "settled at 10 instances. Run pipeline.run(instances=30) to narrow them."]
     assert _unsettled_line(1, 20, 10) == ("1 of 20 verdicts is not settled at 10 instances. "
-                                          "Run scorecard(instances=30) to narrow it.")
-    assert _unsettled_line(2, 4, 40).endswith("at 40 instances. Run scorecard(instances=120) to narrow them.")
+                                          "Run pipeline.run(instances=30) to narrow it.")
+    assert _unsettled_line(2, 4, 40).endswith("at 40 instances. Run pipeline.run(instances=120) to narrow them.")
     assert _unsettled_line(0, 20, 10) == ""
 
 
@@ -699,8 +699,8 @@ def test_scoring_an_ordinary_card_raises_no_warning():
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        card = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "seasonal", "random_walk"],
-                                                     instances=5, interval_level=0.99)
+        card = Pipeline(NaiveForecaster()).run(["noise", "trend", "seasonal", "random_walk"],
+                                               instances=5, interval_level=0.99).scorecard
         str(card)
         plt.close(card.plot())
         for pairs, valid in [([(0.0, 0.0)] * 3, [False] * 3), ([(1.0, 0.0)] * 3, [True] * 3),

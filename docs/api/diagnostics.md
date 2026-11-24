@@ -156,9 +156,9 @@ recorded unless you ask, so reports saved earlier replay exactly as before.
 The output checks every forecast goes through (dates, series, shape, finite
 values, quantile order) know nothing about your data: a rainfall forecast of
 −3 mm or a chance of rain of 1.2 passes them. `evaluate_forecast`,
-`Pipeline.test`, `Pipeline.run` and `ForecastRun.from_forecasts` take
+`Pipeline.run` and `ForecastRun.from_forecasts` take
 `checks=`, a list of functions or a dictionary from name to function, and add
-each one to `report.checks` and `assert_passed` beside the built-in checks.
+each one to `result.checks` and `assert_passed` beside the built-in checks.
 
 `timegym.checks.within(lower=None, upper=None)` makes the most common one, a
 range:
@@ -166,9 +166,9 @@ range:
 ```python
 from timegym.checks import within
 
-report = pipeline.test(cases=cases, checks=[within(0, 1)])
-report.checks            # now also "Values between 0 and 1"
-report.assert_passed()   # raises when a value falls outside 0 to 1
+result = pipeline.run(cases=cases, checks=[within(0, 1)])
+result.checks            # now also "Values between 0 and 1"
+result.assert_passed()   # raises when a value falls outside 0 to 1
 ```
 
 It reads the point forecast, the quantiles and the samples, whichever the
@@ -206,7 +206,7 @@ def totals_add_up(predicted, target_names):
     return gap <= 1e-6 or f"the total is off by up to {gap:.3g}"
 
 
-report = pipeline.test(cases=cases, checks=[within(0, None), totals_add_up])
+result = pipeline.run(cases=cases, checks=[within(0, None), totals_add_up])
 ```
 
 A check runs only on a forecast that passed the built-in checks. Its finding
@@ -431,8 +431,8 @@ for store in range(16):
     cases += cases_from_series(sales, origins=[84, 98, 112, 126], horizon=7, name="sales",
                                manifest={"store": f"store {store}", "region": ["north", "south"][store % 2]})
 
-baseline = Pipeline(LastValueForecaster()).test(cases=cases)
-candidate = Pipeline(NaiveForecaster("seasonal", period=7)).test(cases=cases)
+baseline = Pipeline(LastValueForecaster()).run(cases=cases)
+candidate = Pipeline(NaiveForecaster("seasonal", period=7)).run(cases=cases)
 diff = compare_reports(candidate, baseline, metric="mae", by="region", cluster="store")
 print(diff)
 diff.assert_no_regression()
@@ -483,8 +483,8 @@ many were tried, so the best of many does not beat the baseline by luck.
 ```python
 candidates = {
     "same weekday last week": candidate,
-    "mean so far": Pipeline(NaiveForecaster("mean")).test(cases=cases),
-    "straight line": Pipeline(NaiveForecaster("drift")).test(cases=cases),
+    "mean so far": Pipeline(NaiveForecaster("mean")).run(cases=cases),
+    "straight line": Pipeline(NaiveForecaster("drift")).run(cases=cases),
 }
 print(compare_reports(candidates, baseline, metric="mae", cluster="store"))
 ```
@@ -528,7 +528,8 @@ new version is worse.
 
 When a forecast of a yes/no outcome says 70%, it should happen about 70% of
 the time. `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
-level=0.95, seed=0)` checks that on a run of such forecasts, and
+level=0.95, seed=0)` checks that on a run of such forecasts (made with `keep_data=True`, since it
+reads every forecast and what happened), and
 `calibration(observed, predicted, ...)` on arrays of outcomes (0 or 1) and
 chances. It returns a `Calibration`:
 
@@ -581,7 +582,7 @@ class ShareAtThisPointOfTheCycle:
         return self.share_[np.arange(self.length_, self.length_ + len(future_index)) % 12]
 
 
-cal = calibration(Pipeline(ShareAtThisPointOfTheCycle()).run(cases=cases), cluster="station")
+cal = calibration(Pipeline(ShareAtThisPointOfTheCycle()).run(cases=cases, keep_data=True), cluster="station")
 print(cal)
 ```
 

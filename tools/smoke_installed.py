@@ -84,7 +84,7 @@ def main():
     guard = covariance_dependence_check(approximate.reference,
                                        approximate.reference.sample(64, seed=91))
     assert guard.status == "UNSUPPORTED" and "p_value" not in guard.evidence
-    card = Pipeline(LastValueForecaster()).scorecard(["random_walk", "seasonal"], instances=2)
+    card = Pipeline(LastValueForecaster()).run(["random_walk", "seasonal"], instances=2).scorecard
     assert isinstance(card, Scorecard) and len(card.table) == 4
     assert str(card).startswith("## LastValueForecaster: ")
     assert "Random walk" in str(card) and all(row["failed"] == 0 for row in card.checks)

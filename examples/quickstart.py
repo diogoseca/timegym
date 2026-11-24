@@ -2,10 +2,10 @@
 from timegym import LastValueForecaster, Pipeline, Scenario
 
 pipeline = Pipeline(LastValueForecaster())
-report = pipeline.test(
+result = pipeline.run(
     scenarios=[Scenario("random_walk", context_length=120, horizon=12)],
     seeds=[0, 1, 2],
 )
-report.assert_passed()
-print(report.summary)
-print(report.cases[0].metrics)
+result.assert_passed()
+print(result.report.summary)
+print(result.cases[0].result.metrics)

@@ -34,8 +34,7 @@ seen, unless your cases are a fair sample of them.
 
 To use it, cut your series into cases with
 [`cases_from_series`](../api/tasks-and-forecasts.md#your-own-data), or build
-`Case` objects yourself, and pass them to `pipeline.test(cases=...)` or
-`pipeline.run(cases=...)`. Forecasts made earlier, by a model TimeGym cannot
+`Case` objects yourself, and pass them to `pipeline.run(cases=...)`. Forecasts made earlier, by a model TimeGym cannot
 run, are scored with
 [`ForecastRun.from_forecasts`](../api/pipeline.md#signatures). The checks that
 need an answer key say `UNSUPPORTED`, and these cases cannot be replayed from
@@ -62,8 +61,8 @@ by accident.
 
 In code: `Pipeline.predict(context, future_index)` fits the model on a copy of
 the history and then asks for a forecast with a copy of the future dates. A
-target transform is fitted on that history alone. `Pipeline.test`,
-`Pipeline.run` and `Pipeline.scorecard` all forecast this way.
+target transform is fitted on that history alone. `Pipeline.run`
+forecasts this way, for the scorecard as for your own data.
 
 What TimeGym cannot see is leakage in how you prepared your own data before
 the test. If a feature was computed with a window that reaches forward in

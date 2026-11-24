@@ -8,7 +8,7 @@ import math
 import os
 import textwrap
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from numbers import Real
 from pathlib import Path
 import numpy as np
@@ -18,7 +18,7 @@ from ._internal import positive_int, _deprecated
 from .contracts import _describe_shift, _index_shift
 from .diagnostics import _holm, _sign_flip_pvalue
 from .evaluation import ForecastRun
-from .grid import PATTERNS, GridCell, _fresh_attainable, scenario_grid
+from .grid import PATTERNS, GridCell, Pattern, _fresh_attainable, scenario_grid
 from .plotting import _BAND_COLORS, _FORECAST, _HAIRLINE, _INK, _MUTED, _SURFACE
 from .reporting import CHECKS, TestReport, _case_checks, _own_checks
 
@@ -248,9 +248,9 @@ def _attainable(cell, simulate=False):
     """
     pattern = _pattern_of(cell)
     key, noise_sd = cell.pattern, cell.noise_sd
-    context_length, horizon = cell.scenario.context_length, cell.scenario.horizon
     if pattern.attainable_by is None:
         return np.nan
+    context_length, horizon = cell.scenario.context_length, cell.scenario.horizon
     built_in = PATTERNS.get(key) is pattern
     if (
         built_in
@@ -408,6 +408,8 @@ def _mistake_notes(rows):
     same = {frozenset(m.split("; ")) for _, m in found}
     if len(found) > 1 and found[0][1] and len(same) == 1:
         return [found[0][1]]
+    if len(found) == 1:  # one column: its name would only repeat the header
+        return [found[0][1]] if found[0][1] else []
     return [f"{noise.replace(' noise', '')}: {m}" for noise, m in found if m]
 
 
@@ -465,31 +467,89 @@ def _settled(low, high):
     )
 
 
-def _scorecard(
-    pipeline,
-    patterns=None,
-    *,
-    noise_levels=2,
-    instances=10,
-    seed=0,
-    context_length=120,
-    horizon=24,
-    title=None,
-    attainable=False,
-    interval_level=0.95,
-):
-    """Run ``pipeline`` on the pattern-by-noise grid and score every cell (``Pipeline.scorecard``)."""
-    instances = positive_int(instances, "instances")
-    interval_level = _interval_level(interval_level)
-    cells = scenario_grid(
-        patterns, noise_levels, context_length=context_length, horizon=horizon
-    )
-    run = pipeline.run(
-        [cell.scenario for cell in cells], seed=seed, instances=instances
-    )
-    run.titles = [
-        f"{cell.title} · {cell.noise}" for cell in cells
-    ]  # plain row titles for run.plot_*
+_AS_BUILT = "As built"  # the one column of a card made from scenarios you built: each keeps its own noise
+
+
+def _consecutive_seed(seeds):
+    """The base seed when the draws used ``seed + i``, as a baseline needs; None for seeds of your own."""
+    seeds = [int(value) for value in seeds]
+    return seeds[0] if seeds == list(range(seeds[0], seeds[0] + len(seeds))) else None
+
+
+def _run_rows(scenarios, noise_levels=None, context_length=None, horizon=None):
+    """What ``Pipeline.run`` draws, as GridCells, and whether they are the scorecard's kinds of series.
+
+    Nothing, keys of ``PATTERNS`` and ``Pattern`` objects give the pattern-by-noise grid. Scenarios you
+    built give one cell each, as built: a row of the scorecard per scenario and one column.
+    """
+    if isinstance(scenarios, (str, Pattern)):
+        scenarios = [scenarios]
+    entries = None if scenarios is None else list(scenarios)
+    if entries is not None and not entries:
+        raise ValueError("Provide at least one scenario and one seed")
+    if entries is None or all(isinstance(entry, (str, Pattern)) for entry in entries):
+        cells = scenario_grid(
+            entries,
+            2 if noise_levels is None else noise_levels,
+            context_length=120 if context_length is None else context_length,
+            horizon=24 if horizon is None else horizon,
+        )
+        return cells, True
+    if any(isinstance(entry, (str, Pattern)) for entry in entries):
+        raise TypeError(
+            "Pass either kinds of series (keys of timegym.PATTERNS or Pattern objects) or "
+            "scenarios you built, not both in one run"
+        )
+    given = [
+        name
+        for name, value in (
+            ("noise_levels", noise_levels),
+            ("context_length", context_length),
+            ("horizon", horizon),
+        )
+        if value is not None
+    ]
+    if given:
+        raise ValueError(
+            f"{', '.join(given)} set the scorecard's kinds of series; scenarios you built "
+            "carry their own"
+        )
+    counts, cells = {}, []
+    for scenario in entries:
+        kind = str(getattr(scenario, "kind", "scenario"))
+        counts[kind] = counts.get(kind, 0) + 1
+        key = kind if counts[kind] == 1 else f"{kind} ({counts[kind]})"
+        definition = Pattern(
+            key, key, "a scenario you built", "", "", build=_AsBuilt(scenario)
+        )
+        cells.append(GridCell(key, key, _AS_BUILT, float("nan"), scenario, definition))
+    return cells, False
+
+
+class _AsBuilt:
+    """The ``build`` of a row made from a scenario you built: that scenario, whatever the noise."""
+
+    def __init__(self, scenario):
+        self.scenario = scenario
+
+    def __call__(self, noise, context_length, horizon):
+        return self.scenario
+
+
+def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level=None):
+    """Score every cell of ``run`` and return its Scorecard (``ForecastRun.scorecard``).
+
+    It runs while the run still holds its series: the card keeps what it draws and compares with,
+    the first draw of each cell and each series' avoidable error.
+    """
+    interval_level = _interval_level(0.95 if interval_level is None else interval_level)
+    if not any(
+        entry.case is not None and entry.case.reference is not None
+        for entry in run.cases
+    ):
+        raise ValueError(
+            "none of these series has an answer key, so they cannot be scored against one"
+        )
     by_cell = {}
     for entry in run.cases:
         by_cell.setdefault(entry.scenario_index, []).append(entry)
@@ -535,15 +595,47 @@ def _scorecard(
                 "failed_checks": broken,
             }
         )
-    return Scorecard(
-        title=title or _model_title(pipeline),
+    card = Scorecard(
+        title=title,
         table=pd.DataFrame(rows),
         run=run,
         cells=cells,
-        seed=run.metadata["seed"],
-        instances=instances,
+        seed=run.metadata.get("seed", _consecutive_seed(seeds)),
+        instances=len(seeds),
         interval_level=interval_level,
     )
+    card._examples = {index: entries[0] for index, entries in by_cell.items()}
+    card._avoidable = _series_avoidable(card)
+    return card
+
+
+def _scorecard(
+    pipeline,
+    patterns=None,
+    *,
+    noise_levels=2,
+    instances=10,
+    seed=0,
+    context_length=120,
+    horizon=24,
+    title=None,
+    attainable=False,
+    interval_level=0.95,
+):
+    """``pipeline.run(patterns, ..., keep_data=True).scorecard``: the card as ``Pipeline.scorecard`` made it."""
+    _interval_level(interval_level)  # None was never a level here
+    return pipeline.run(
+        patterns,
+        noise_levels=noise_levels,
+        instances=instances,
+        seed=seed,
+        context_length=context_length,
+        horizon=horizon,
+        title=title,
+        attainable=attainable,
+        interval_level=interval_level,
+        keep_data=True,
+    ).scorecard
 
 
 def scorecard(
@@ -559,9 +651,9 @@ def scorecard(
     attainable=False,
     interval_level=0.95,
 ):
-    """Score ``pipeline`` on the pattern-by-noise grid; the same as ``pipeline.scorecard(...)``."""
+    """Score ``pipeline`` on the pattern-by-noise grid; deprecated: use ``pipeline.run(...).scorecard``."""
     _deprecated(
-        "timegym.scorecard.scorecard", "use Pipeline(model).scorecard(...) instead"
+        "timegym.scorecard.scorecard", "use Pipeline(model).run(...).scorecard instead"
     )
     return _scorecard(
         pipeline,
@@ -586,9 +678,14 @@ class Scorecard:
     ``score_low`` and ``score_high`` around it, its ``verdict``, whether that
     verdict is ``settled``, the row's ``attainable`` score, named
     ``mistakes``, the unavoidable and avoidable mean squared errors behind the
-    score, and the mean squared error against what happened (``mse``). ``run`` keeps every series and forecast for plots;
-    ``report`` is the JSON-ready TestReport. In a notebook a Scorecard shows
-    as its image; ``print`` gives Markdown and ``save`` writes the image.
+    score, and the mean squared error against what happened (``mse``).
+    ``pipeline.run(...).scorecard`` makes it. ``run`` is that run, which holds
+    every series and forecast only if it was made with ``keep_data=True``; the
+    card keeps the example forecasts it draws either way. ``report`` is the
+    JSON-ready TestReport. In a notebook a Scorecard shows as its image;
+    ``plot()`` returns that picture, ``print`` gives Markdown and ``save``
+    writes the image. A card made from scenarios you built has one row per
+    scenario and one column, "As built"; it cannot be saved as a baseline.
 
     ``score_low`` to ``score_high`` is the interval around the score: with
     other series of the same kind the score would come out a little
@@ -627,9 +724,11 @@ class Scorecard:
     table: pd.DataFrame
     run: ForecastRun
     cells: list[GridCell]
-    seed: int
+    seed: int | None
     instances: int
     interval_level: float = 0.95
+    _examples: dict | None = field(default=None, init=False, compare=False)
+    _avoidable: list | None = field(default=None, init=False, compare=False)
 
     @property
     def score(self):
@@ -695,11 +794,12 @@ class Scorecard:
         lines = [
             f"## {self.title}: {self.score:.0f}/100",
             "",
-            f"TimeGym scorecard: {_count(self.table['pattern'].nunique(), 'kind of series', 'kinds of series')}"
-            f" x {_count(len(levels), 'noise level', 'noise levels')}, "
-            f"{_count(self.instances, 'instance', 'instances')} each, seed {self.seed}.",
+            f"TimeGym scorecard: {_rows_words(self, ' x ')}, "
+            f"{_count(self.instances, 'instance', 'instances')} each, {_seed_words(self)}.",
             "",
-            "| Pattern | " + " | ".join(levels) + " | Mistakes |",
+            f"| {'Scenario' if _built(self) else 'Pattern'} | "
+            + " | ".join(levels)
+            + " | Mistakes |",
             "|---|" + "---|" * len(levels) + "---|",
         ]
         for key, rows in self.table.groupby("pattern", sort=False):
@@ -829,8 +929,32 @@ def _unsettled_line(count, total, instances):
     return (
         f"{count} of {total} {'verdict' if total == 1 else 'verdicts'} {'is' if count == 1 else 'are'} "
         f"not settled at {_count(instances, 'instance', 'instances')}. "
-        f"Run scorecard(instances={more}) to narrow {'it' if count == 1 else 'them'}."
+        f"Run pipeline.run(instances={more}) to narrow {'it' if count == 1 else 'them'}."
     )
+
+
+def _built(card):
+    """True for a card made from scenarios you built: one column, as each scenario was built."""
+    return all(
+        cell.noise == _AS_BUILT and not np.isfinite(cell.noise_sd)
+        for cell in card.cells
+    )
+
+
+def _rows_words(card, times):
+    """What the card's rows and columns are, in words: "10 kinds of series x 2 noise levels"."""
+    if _built(card):
+        return _count(len(card.cells), "scenario you built", "scenarios you built")
+    levels = list(dict.fromkeys(card.table["noise"]))
+    return (
+        f"{_count(card.table['pattern'].nunique(), 'kind of series', 'kinds of series')}{times}"
+        f"{_count(len(levels), 'noise level', 'noise levels')}"
+    )
+
+
+def _seed_words(card):
+    """How the draws were seeded: "seed 0", or "your own seeds" for an explicit list."""
+    return "your own seeds" if card.seed is None else f"seed {card.seed}"
 
 
 # %% ../source/13_scorecard.ipynb #scorecard-compare
@@ -851,7 +975,12 @@ _CHANGES = ("unchanged", "changed, no worse", "changed and worse")
 
 
 def _series_avoidable(card):
-    """Each cell's avoidable error per series, in instance order; None where a series was not scored."""
+    """Each cell's avoidable error per series, in instance order; None where a series was not scored.
+
+    A card made by a run keeps them, since the run may drop its series.
+    """
+    if card._avoidable is not None:
+        return card._avoidable
     found = [[None] * card.instances for _ in card.cells]
     for entry in card.run.cases:
         numbers = _case_numbers(entry)
@@ -859,6 +988,20 @@ def _series_avoidable(card):
             None if numbers is None else numbers[1]
         )
     return found
+
+
+def _needs_grid(card):
+    """A baseline names its series by grid and seed: refuse a card whose series it cannot name."""
+    if _built(card):
+        raise ValueError(
+            "A baseline needs a scorecard of TimeGym's kinds of series or your own patterns; "
+            "this one was made from scenarios you built, which a baseline cannot name"
+        )
+    if card.seed is None:
+        raise ValueError(
+            "A baseline needs draws seeded seed, seed + 1, ...; this card was made with "
+            "seeds of your own"
+        )
 
 
 def _grid(card):
@@ -876,6 +1019,7 @@ def _grid(card):
 
 def _baseline_record(card):
     """The JSON-ready baseline of a scorecard (``Scorecard.save_baseline``)."""
+    _needs_grid(card)
     cells = []
     for row, avoidable in zip(card.table.itertuples(), _series_avoidable(card)):
         cells.append(
@@ -1012,6 +1156,7 @@ def _compare(card, baseline, alpha):
         record, name = _read_baseline(baseline), Path(baseline).name
     else:
         raise TypeError("baseline must be a path to a saved baseline or a Scorecard")
+    _needs_grid(card)
     _check_same_series(record, card, name)
     if card.instances < _FEW_INSTANCES:
         warnings.warn(
@@ -1379,9 +1524,11 @@ def _plot_scorecard(card, *, compact=False):
     patterns = {cell.pattern: _pattern_of(cell) for cell in card.cells}
     levels = list(dict.fromkeys(table["noise"]))
     sds = list(dict.fromkeys(table["noise_sd"]))
-    first = {}
-    for entry in card.run.cases:
-        first.setdefault(entry.scenario_index, entry)
+    first = card._examples
+    if first is None:  # a card built by hand around a run that still holds its series
+        first = {}
+        for entry in card.run.cases:
+            first.setdefault(entry.scenario_index, entry)
     rows_by_cell = {
         (row.pattern, row.noise): (index, row)
         for index, row in enumerate(table.itertuples())
@@ -1389,9 +1536,8 @@ def _plot_scorecard(card, *, compact=False):
     good, fails = card.good_at, card.fails_at
     headline = f"{card.title}: {card.score:.0f}/100"
     subtitle = (
-        f"TimeGym scorecard · {_count(len(keys), 'kind of series', 'kinds of series')} × "
-        f"{_count(len(levels), 'noise level', 'noise levels')} · "
-        f"{_count(card.instances, 'instance', 'instances')} each · seed {card.seed}"
+        f"TimeGym scorecard · {_rows_words(card, ' × ')} · "
+        f"{_count(card.instances, 'instance', 'instances')} each · {_seed_words(card)}"
     )
     verdict_lines = [
         f"Good at: {', '.join(good) or 'none'}.",
@@ -1507,12 +1653,24 @@ def _plot_scorecard(card, *, compact=False):
             figure.text(
                 0.012, legend_at / height, legend, fontsize=8, va="top", color=_MUTED
             )
-        noise_headers = [f"{level} (sd {sd:g})" for level, sd in zip(levels, sds)]
+        noise_headers = [
+            level if not np.isfinite(sd) else f"{level} (sd {sd:g})"
+            for level, sd in zip(levels, sds)
+        ]
         if compact and any(len(header) > 18 for header in noise_headers):
             # Narrow columns: every noise sd goes under its name, so the headers line up.
-            noise_headers = [f"{level}\n(sd {sd:g})" for level, sd in zip(levels, sds)]
+            noise_headers = [
+                level if not np.isfinite(sd) else f"{level}\n(sd {sd:g})"
+                for level, sd in zip(levels, sds)
+            ]
         headers = (
-            ["Pattern" if compact else "What can and can't be predicted"]
+            [
+                (
+                    "Scenario"
+                    if _built(card)
+                    else "Pattern" if compact else "What can and can't be predicted"
+                )
+            ]
             + noise_headers
             + ["Mistakes"]
         )
@@ -1537,7 +1695,11 @@ def _plot_scorecard(card, *, compact=False):
                     color=_MUTED,
                     va="top",
                 )
-                body = f"✓ {_wrap(pattern.predictable, 54)}\n✗ {_wrap(pattern.unpredictable, 54)}"
+                body = (
+                    f"✓ {_wrap(pattern.predictable, 54)}\n✗ {_wrap(pattern.unpredictable, 54)}"
+                    if pattern.predictable or pattern.unpredictable
+                    else ""
+                )
                 ax.text(0, 0.52, body, fontsize=8.6, va="top", linespacing=1.3)
             notes = _mistake_notes(table.loc[table["pattern"] == key])
             for column, level in enumerate(levels, start=1):

@@ -106,7 +106,7 @@ def build_scorecard(root: Path):
     model = SCORECARD_MODEL
     pipeline = (Pipeline(window_length=model["window_length"]).add(StandardScaler())
                 .add(Ridge(alpha=model["ridge_alpha"])))
-    card = pipeline.scorecard()
+    card = pipeline.run(keep_data=True).scorecard
     table = card.table
     keys = list(dict.fromkeys(table["pattern"]))
     levels = list(dict.fromkeys(table["noise"]))
@@ -175,7 +175,7 @@ def build_scorecard(root: Path):
         "model": {**model, "pipeline": "Pipeline(window_length=24).add(StandardScaler()).add(Ridge(alpha=1.0))",
                   "title": card.title},
         "specification_source": "paper/figure_scorecard.py",
-        "scorecard_call": "pipeline.scorecard() with package defaults",
+        "scorecard_call": "pipeline.run(keep_data=True).scorecard with package defaults",
         "seed": int(card.seed), "instances": int(card.instances),
         "context_length": len(card.run.cases[0].case.task.context), "forecast_horizon": horizon,
         "visible_context": visible, "example_instance": 1,
