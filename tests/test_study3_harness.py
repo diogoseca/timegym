@@ -50,7 +50,9 @@ def toy_config(tmp_path, workers):
                       "evaluation": [list(range(3000, 3006)), list(range(4000, 4006))]},
             "screen_sizes": {"6": 1, "24": 2, "48": 3}, "settings": SETTINGS, "learner_module": TOYS,
             "learner_tag": 400, "reference": TOYS + ":reference_forecast", "clean_source": CLEAN,
-            "time_limit": {"factor": 5.0, "minimum": 5.0}, "workers": workers, "scratch": str(tmp_path / "units"),
+            # No toy source here loops, so the limit only has to outlast a busy machine: at 5 seconds a
+            # unit that finished every case was sometimes stopped first, and a continued run then differed.
+            "time_limit": {"factor": 5.0, "minimum": 60.0}, "workers": workers, "scratch": str(tmp_path / "units"),
             "sign_flip_tag": 600, "sign_flips": 999, "part1_checks": runner.PART1_CHECKS}
 
 
