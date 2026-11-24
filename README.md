@@ -7,35 +7,12 @@
 [![PyPI](https://img.shields.io/pypi/v/timegym)](https://pypi.org/project/timegym/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-[OpenAI Gym](https://arxiv.org/abs/1606.01540) gave reinforcement-learning
-agents a standard set of environments to train and be tested in. TimeGym does
-the same for forecasters. It generates time series whose future it already
-knows the odds of: noise, trends, seasons, sudden shifts, cycles, levels pulled
-back to their mean, random walks, each at low and at high noise. It hands your
-forecaster the past, asks for the future, and scores the answer against the
-truth. One picture shows what your algorithm nails, where it struggles and
-where it fails.
-
 **[Documentation](https://diogoseca.github.io/timegym/)** ·
 [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) ·
 [Examples](https://diogoseca.github.io/timegym/docs/examples/) ·
 [Tutorials](https://diogoseca.github.io/timegym/docs/tutorials/) ·
 [API](https://diogoseca.github.io/timegym/docs/reference/) ·
 [Changelog](CHANGELOG.md)
-
-## Sixty seconds
-
-```bash
-pip install timegym
-```
-
-<!-- BEGIN PYTHON SUPPORT -->
-Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
-<!-- END PYTHON SUPPORT -->
-
-Wrap your forecaster in a `Pipeline` and ask for its scorecard. The built-in
-`LastValueForecaster`, which repeats the last value it saw, stands in for yours
-here:
 
 ```python
 from timegym import LastValueForecaster, Pipeline
@@ -47,9 +24,32 @@ card.save("scorecard.png")
 
 [![The scorecard of the last-value forecaster: a score per kind of series and noise level, with example forecasts](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/scorecard.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/scorecard.png)
 
-Each row is a kind of series and each column a noise level. The left column
-says what can and cannot be predicted for that kind of series, and the right
-column names the mistakes the model made there. A score of 100 means the
+[OpenAI Gym](https://arxiv.org/abs/1606.01540) gave reinforcement-learning
+agents a standard set of environments to train and be tested in. TimeGym does
+the same for forecasters. It generates time series whose future it already
+knows the odds of: noise, trends, seasons, sudden shifts, cycles, levels pulled
+back to their mean, random walks, each at low and at high noise. It hands your
+forecaster the past, asks for the future, and scores the answer against the
+truth. One picture shows what your algorithm nails, where it struggles and
+where it fails.
+
+## Sixty seconds
+
+```bash
+pip install timegym
+```
+
+<!-- BEGIN PYTHON SUPPORT -->
+Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
+<!-- END PYTHON SUPPORT -->
+
+Wrap your forecaster in a `Pipeline` and ask for its scorecard, as the code at
+the top of this page does. The built-in `LastValueForecaster`, which repeats the
+last value it saw, stands in for yours there.
+
+Each scorecard row is a kind of series and each column a noise level. The left
+column says what can and cannot be predicted for that kind of series, and the
+right column names the mistakes the model made there. A score of 100 means the
 forecasts were as close as those of a forecaster that knows exactly how the
 series was made; 50 means the model's avoidable error is as large as the noise
 nobody could avoid. The bands read "Nails it" from 90, "Good" from 70,
