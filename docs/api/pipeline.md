@@ -68,7 +68,9 @@ run.report.assert_passed()
 
 `.scorecard(patterns=None, *, noise_levels=2, instances=10, seed=0,
 context_length=120, horizon=24, title=None, attainable=False, interval_level=0.95)` runs the scenario grid and returns
-a `Scorecard`; see [Scorecards and the scenario grid](scorecard.md).
+a `Scorecard`; see [Scorecards and the scenario grid](scorecard.md). `patterns`
+takes keys of `PATTERNS` and `Pattern` objects of your own, side by side
+([Your own kind of series](scorecard.md#your-own-kind-of-series)).
 
 `.run(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None, ...)` accepts the
 same seeding, ready-made cases and diagnostic settings and returns a `ForecastRun`. Its `.report` is the usual `TestReport`; `.cases`

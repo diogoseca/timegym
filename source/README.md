@@ -34,9 +34,9 @@ on the code.
 | [06 · Forecasting models](06_forecasting_models.ipynb) | Built-in baselines, which one to beat, and three ways to turn a regressor into a forecaster |
 | [07 · Pipeline](07_pipeline.ipynb) | `test`, `predict`, `scorecard` and `run`: a fresh model for every case, runs kept for plots, your own cases and forecasts made elsewhere |
 | [08 · Forecast contracts](08_forecast_contracts.ipynb) | What a model sees and returns, the five output checks, what sample paths say that quantiles can't, and your own series cut into cases |
-| [09 · Scores and diagnostics](09_scores_and_diagnostics.ipynb) | Which score to read, why the answer key settles comparisons sooner, scores for yes/no outcomes and your own scores, whether one forecaster beats another, checks of your own, the five verdicts, and what each check catches |
+| [09 · Scores and diagnostics](09_scores_and_diagnostics.ipynb) | Which score to read, why the answer key settles comparisons sooner, scores for yes/no outcomes and your own scores, whether one forecaster beats another, checks of your own, whether yes/no chances are honest, the five verdicts, and what each check catches |
 | [10 · Reports and replay](10_reports_and_replay.ipynb) | Read a report, gate CI on it, save and load it strictly, and replay a case months later |
-| [11 · Plotting](11_plotting.ipynb) | Forecast panels and error histograms: read a forecast against the answer key, find the draws a model gets wrong |
+| [11 · Plotting](11_plotting.ipynb) | Forecast panels, error histograms and reliability diagrams: read a forecast against the answer key, find the draws a model gets wrong |
 | [12 · Package](12_package.ipynb) | Shared guards, which notebook owns each public name, and how an edit becomes package code |
 | [13 · Scorecard](13_scorecard.ipynb) | How the scorecard is built and read: ten patterns at two noise levels, the score, named mistakes, seeds, a kind of series of your own |
 | [14 · Controlled processes](14_controlled_processes.ipynb) | Series built one ingredient at a time, plus jumps, calm and stormy periods and hidden regimes, each with its answer key |

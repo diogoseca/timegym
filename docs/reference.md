@@ -25,13 +25,14 @@ Underscore-prefixed names and modules, including `_internal` and
 | `DiagnosticStatus`, `DiagnosticCategory`, `__version__` | `timegym` | Public | [Pipeline and reports](api/pipeline.md); [Diagnostics catalogue](api/diagnostics.md#diagnostics-catalogue) |
 | `DEFAULT_LEVELS` | `timegym.contracts` | Public | [Scenarios and references](api/scenarios.md) |
 | `mse`, `mae`, `rmse`, `mase`, `rmsse`, `mean_reference_mse`, `pinball`, `interval_score`, `weighted_interval_score`, `crps`, `energy_score`, `variogram_score`, `brier`, `log_loss`, `UndefinedMetricError` | `timegym.metrics` | Public | [Scores and diagnostics](api/diagnostics.md) |
-| `evaluate_forecast`, `ReportComparison`, `covariance_dependence_check`, `rank_alarm`, `RankAlarm` | `timegym.diagnostics` | Public | [Scores and diagnostics](api/diagnostics.md) |
+| `evaluate_forecast`, `ReportComparison`, `calibration`, `Calibration`, `covariance_dependence_check`, `rank_alarm`, `RankAlarm` | `timegym.diagnostics` | Public | [Scores and diagnostics](api/diagnostics.md) |
 | `within` | `timegym.checks` | Public | [Scores and diagnostics](api/diagnostics.md#your-own-output-checks) |
 | `check_shift_equivariance` | `timegym.checks` | Public; opt-in model property | [Scores and diagnostics](api/diagnostics.md) |
 | `SklearnForecaster` | `timegym.models` | Public; sklearn loaded when needed | [Models and reductions](api/models.md) |
 | `REDUCTIONS` | `timegym.models` | Public | [Models and reductions](api/models.md) |
 | `MUTATIONS`, `mutate_forecast` | `timegym.mutations` | Public controlled fixtures | [Fault fixtures](api/fault-fixtures.md) |
 | `plot_forecasts`, `plot_errors` | `timegym.plotting` | Public; Matplotlib imported when drawing | [Pipeline and reports](api/pipeline.md) |
+| `plot_calibration` | `timegym.plotting` | Public; Matplotlib imported when drawing | [Scores and diagnostics](api/diagnostics.md#are-the-chances-honest) |
 | `wilson_interval`, `paired_t_interval` | `timegym.statistics` | Public; independent cases | [Scores and diagnostics](api/diagnostics.md) |
 | `default_scenarios` | `timegym.scenarios` | Public | [Scenarios and references](api/scenarios.md) |
 | `differencing` | `timegym.target` | Public | [Data preparation](api/data-preparation.md) |
