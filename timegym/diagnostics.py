@@ -1495,6 +1495,25 @@ _CALIBRATION_RESAMPLES = 2000
 _CALIBRATION_CLIP = 1e-6
 
 
+def _separated(x, y, weights):
+    """For each row of ``weights``, whether the forecasts separate the outcomes, so no finite slope exists.
+
+    True when every forecast whose outcome is 1 sits at or above every forecast whose outcome is 0, or at
+    or below, counting only values with positive weight; a single outcome counts too. It compares values
+    only, so every machine gives the same answer, where a fit drifting toward an infinite slope can stop
+    at a large finite one depending on the last digits of its arithmetic.
+    """
+    weights = np.atleast_2d(weights)
+    one, zero = (weights > 0) & (y == 1), (weights > 0) & (y == 0)
+    lowest_one, highest_one = np.where(one, x, np.inf).min(1), np.where(
+        one, x, -np.inf
+    ).max(1)
+    lowest_zero, highest_zero = np.where(zero, x, np.inf).min(1), np.where(
+        zero, x, -np.inf
+    ).max(1)
+    return (highest_zero <= lowest_one) | (highest_one <= lowest_zero)
+
+
 def _logistic_fit(x, y, weights, *, free_slope):
     """Maximum-likelihood logistic regression of the 0/1 ``y`` on the log-odds ``x``, by Newton's method.
 
@@ -1506,6 +1525,8 @@ def _logistic_fit(x, y, weights, *, free_slope):
     design = (
         np.column_stack([np.ones_like(x), x]) if free_slope else np.ones((len(x), 1))
     )
+    if free_slope and _separated(x, y, weights)[0]:
+        return np.full(2, np.nan)
     offset = 0.0 if free_slope else x
     beta = np.zeros(design.shape[1])
 
@@ -1545,7 +1566,9 @@ def _logistic_fit(x, y, weights, *, free_slope):
 def _bootstrap_slopes(x, y, unit_index, units, start, rng, batch=100):
     """The slope refitted on resamples of whole units, a batch at a time, from the full-data fit.
 
-    NaN for a resample whose fit does not settle: all one outcome, or outcomes separated.
+    NaN for a resample with no finite slope: all one outcome, or outcomes the forecasts separate, found
+    by comparing values (``_separated``). A resample that the batch's plain Newton steps do not settle is
+    refitted alone by ``_logistic_fit``, which halves its steps.
     """
     slopes = []
     for first in range(0, _CALIBRATION_RESAMPLES, batch):
@@ -1554,6 +1577,7 @@ def _bootstrap_slopes(x, y, unit_index, units, start, rng, batch=100):
         weights = np.stack([np.bincount(row, minlength=units) for row in draws])[
             :, unit_index
         ].astype(float)
+        apart = _separated(x, y, weights)
         a, b = np.full(size, start[0]), np.full(size, start[1])
         with np.errstate(all="ignore"):
             for _ in range(50):
@@ -1564,10 +1588,17 @@ def _bootstrap_slopes(x, y, unit_index, units, start, rng, batch=100):
                 det = h00 * h11 - h01**2
                 da, db = (h11 * g0 - h01 * g1) / det, (h00 * g1 - h01 * g0) / det
                 a, b = a + da, b + db
-                if np.all(~np.isfinite(b) | (np.abs(da) + np.abs(db) < 1e-10)):
+                if np.all(apart | ~np.isfinite(b) | (np.abs(da) + np.abs(db) < 1e-10)):
                     break
-        settled = np.isfinite(b) & (np.abs(da) + np.abs(db) < 1e-8) & (np.abs(b) < 1e4)
-        slopes.append(np.where(settled, b, np.nan))
+        settled = (
+            ~apart
+            & np.isfinite(b)
+            & (np.abs(da) + np.abs(db) < 1e-8)
+            & (np.abs(b) < 1e4)
+        )
+        for row in np.flatnonzero(~apart & ~settled):
+            b[row] = _logistic_fit(x, y, weights[row], free_slope=True)[1]
+        slopes.append(np.where(apart, np.nan, b))
     return np.concatenate(slopes)
 
 

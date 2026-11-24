@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from scipy.optimize import minimize_scalar
 
-from timegym import Forecast, NaiveForecaster, Pipeline, cases_from_series
+from timegym import Forecast, NaiveForecaster, Pipeline, cases_from_series, diagnostics
 from timegym.diagnostics import Calibration, calibration
 from timegym.plotting import plot_calibration
 
@@ -229,6 +229,28 @@ def test_an_interval_needs_most_resamples_to_have_a_slope():
     cal = calibration([0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1], [.1, .2, .3, .35, .4, .5, .55, .6, .7, .8, .2, .9])
     assert np.isfinite(cal.slope)
     assert np.isnan(cal.slope_interval[0]) and "resamples, so it has no interval" in cal.note
+
+
+def test_a_resample_has_no_slope_exactly_when_the_forecasts_separate_it():
+    # Decided by comparing values, so every machine counts the same resamples. A fit drifting toward an
+    # infinite slope used to stop at 75 to 350 on some machines and count as a slope.
+    observed = np.array([0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1], float)
+    x = log_odds(np.array([.1, .2, .3, .35, .4, .5, .55, .6, .7, .8, .2, .9]))
+    start = diagnostics._logistic_fit(x, observed, np.ones(12), free_slope=True)
+    slopes = diagnostics._bootstrap_slopes(x, observed, np.arange(12), 12, start, np.random.default_rng(0))
+    rng = np.random.default_rng(0)
+    draws = np.concatenate([rng.integers(0, 12, (100, 12)) for _ in range(20)])  # the same draws
+    for draw, slope in zip(draws, slopes):
+        used = np.bincount(draw, minlength=12) > 0
+        ones, zeros = x[used & (observed == 1)], x[used & (observed == 0)]
+        apart = ones.size == 0 or zeros.size == 0 or zeros.max() <= ones.min() or ones.max() <= zeros.min()
+        assert np.isnan(slope) == apart
+    assert np.isnan(slopes).sum() == 113 and np.nanmax(np.abs(slopes)) < 10
+    # A tie at the edge still separates; a value with weight 0 does not count.
+    y = np.array([0, 0, 1, 1.0])
+    assert diagnostics._separated(np.array([1, 3, 3, 4.0]), y, np.ones(4))[0]
+    assert not diagnostics._separated(np.array([1, 3, 2, 4.0]), y, np.ones(4))[0]
+    assert diagnostics._separated(np.array([1, 3, 2, 4.0]), y, np.array([1, 0, 1, 1.0]))[0]
 
 
 def test_sure_forecasts_are_counted_and_pull_the_slope_down():
