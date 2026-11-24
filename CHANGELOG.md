@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.13.1 — 2026-11-24
 
 - Added your own kinds of series to the scorecard. `Pattern` is now exported
   from `timegym`, and `Pipeline.scorecard(patterns=...)` and `scenario_grid`
