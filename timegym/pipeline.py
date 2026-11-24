@@ -572,8 +572,9 @@ class Pipeline:
     ):
         """Score the model on a grid of patterns and noise levels; returns a Scorecard.
 
-        Rows are patterns from ``timegym.PATTERNS`` (all ten by default) and
-        columns are noise levels from low to high. Each cell is drawn
+        Rows are patterns from ``timegym.PATTERNS`` (all ten by default), or
+        ``Pattern`` objects of your own beside their keys, as in
+        ``scenario_grid``, and columns are noise levels from low to high. Each cell is drawn
         ``instances`` times with seeds ``seed + i``, the same draws in every
         cell. A cell's score is ``100 * unavoidable / (unavoidable + avoidable)``
         mean squared error, pooled over its instances; instances that crash or
@@ -591,7 +592,9 @@ class Pipeline:
         level, ``context_length`` or ``horizon``) the column is NaN unless
         ``attainable=True``, which simulates the missing values once per
         session: about 3 to 5 seconds for each autoregressive or random-walk
-        cell and well under a second for the others.
+        cell and well under a second for the others. A pattern of your own
+        has no stored values: with ``Pattern.attainable_by`` and ``attainable=True``
+        its attainable score is simulated in the same way, otherwise it is NaN.
         """
         from timegym.scorecard import _scorecard
 

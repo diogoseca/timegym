@@ -713,12 +713,31 @@ def test_scoring_an_ordinary_card_raises_no_warning():
 
 # --- What a fitted model could score ----------------------------------------------------------
 
-def test_every_pattern_has_a_fitted_estimator_and_six_arguments_still_build_a_pattern():
+def test_every_pattern_has_its_own_model_and_six_arguments_still_build_a_pattern():
     from timegym.grid import Pattern
 
-    assert all(callable(pattern.fitted) for pattern in PATTERNS.values())
+    for pattern in PATTERNS.values():
+        assert callable(pattern.attainable_by.fit) and callable(pattern.attainable_by.predict)
     plain = Pattern("x", "X", "x", "y", "z", lambda s, n, h: Scenario("white_noise", n, h, {"sigma": s}))
-    assert plain.fitted is None
+    assert plain.attainable_by is None
+
+
+def test_fitted_is_the_old_name_of_attainable_by_and_still_works_with_a_warning():
+    from timegym.grid import Pattern
+
+    build = PATTERNS["trend"].build
+    with pytest.warns(DeprecationWarning, match=r"Pattern\(fitted=...\) is now Pattern\(attainable_by=...\)"):
+        old = Pattern("x", "X", "x", "y", "z", build, fitted=lambda: NaiveForecaster("mean"))
+    assert isinstance(old.attainable_by(), NaiveForecaster)
+    with pytest.warns(DeprecationWarning, match=r"Pattern.fitted is now Pattern.attainable_by"):
+        fresh = PATTERNS["trend"].fitted
+    first, second = fresh(), fresh()
+    assert type(first) is type(PATTERNS["trend"].attainable_by) and first is not second
+    assert first is not PATTERNS["trend"].attainable_by
+    with pytest.warns(DeprecationWarning):
+        assert Pattern("x", "X", "x", "y", "z", build).fitted is None
+    with pytest.warns(DeprecationWarning), pytest.raises(TypeError, match="not both"):
+        Pattern("x", "X", "x", "y", "z", build, NaiveForecaster("mean"), fitted=NaiveForecaster)
 
 
 @pytest.mark.parametrize("key, instances, floor", [
@@ -727,7 +746,7 @@ def test_every_pattern_has_a_fitted_estimator_and_six_arguments_still_build_a_pa
     ("random_walk_drift", 5, 80),
 ])
 def test_each_fitted_estimator_scores_well_on_its_own_row(key, instances, floor):
-    card = Pipeline(PATTERNS[key].fitted()).scorecard([key], instances=instances)
+    card = Pipeline(PATTERNS[key].attainable_by).scorecard([key], instances=instances)
     assert (card.table["score"] >= floor).all() and card.table["failed_checks"].sum() == 0
 
 
@@ -769,7 +788,7 @@ def test_a_custom_cell_is_simulated_once_and_agrees_with_a_pipeline_scorecard():
     assert again.table["attainable"].iloc[0] == first.table["attainable"].iloc[0]
     cell = scenario_grid(["trend"], [1.0], horizon=6)[0]
     direct = _attainable_score(PATTERNS["trend"], cell.scenario, series=20)
-    piped = Pipeline(PATTERNS["trend"].fitted()).scorecard(["trend"], noise_levels=[1.0], horizon=6,
+    piped = Pipeline(PATTERNS["trend"].attainable_by).scorecard(["trend"], noise_levels=[1.0], horizon=6,
                                                            instances=20, seed=_ATTAINABLE_SEED)
     assert direct == pytest.approx(piped.table["score"].iloc[0], abs=1e-9)
 
@@ -788,9 +807,9 @@ def test_a_custom_cell_is_nan_and_not_simulated_unless_asked():
 
 
 def test_card_titles_drop_leading_underscores_from_class_names():
-    card = Pipeline(PATTERNS["trend"].fitted()).scorecard(["trend"], instances=1)
+    card = Pipeline(PATTERNS["trend"].attainable_by).scorecard(["trend"], instances=1)
     assert card.title == "LeastSquaresLine"
-    assert Pipeline(PATTERNS["seasonal"].fitted()).scorecard(["noise"], instances=1).title == \
+    assert Pipeline(PATTERNS["seasonal"].attainable_by).scorecard(["noise"], instances=1).title == \
         "Sinusoid(period=12.0, trend=False)"
 
 
@@ -801,7 +820,7 @@ def _attainable_marks(figure):
 def test_a_pattern_without_a_fitted_estimator_has_no_attainable_score_or_mark(monkeypatch):
     import dataclasses
 
-    monkeypatch.setitem(PATTERNS, "noise", dataclasses.replace(PATTERNS["noise"], fitted=None))
+    monkeypatch.setitem(PATTERNS, "noise", dataclasses.replace(PATTERNS["noise"], attainable_by=None))
     card = Pipeline(NaiveForecaster()).scorecard(["noise"], instances=2)
     assert card.table["attainable"].isna().all()
     for compact in (False, True):

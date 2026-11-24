@@ -16,6 +16,7 @@ script.
 | Output check | `within(lower, upper)`, or a function that returns True or a message, passed with `checks=` | [Scores and diagnostics](../api/diagnostics.md#your-own-output-checks) |
 | Answer key from a curve you know | `Reference.from_function(curve, dates, covariance=...)` | [Scenarios and references](../api/scenarios.md) |
 | Kind of series, with its answer key | an object with `kind` and `generate(seed)` that returns a `Case` | this page |
+| Kind of series on the scorecard | a `Pattern` whose `simulate(rng, history, horizon, noise)` returns a series with its true mean and variance, passed in `patterns=` | [Scorecards](../api/scorecard.md#your-own-kind-of-series) |
 
 ## Your model
 
@@ -224,4 +225,7 @@ report = Pipeline(RepeatLast()).test([NoisyLine()], seeds=[0, 1, 2])
 With an answer key, the report has the error against it
 (`mean_reference_mse`), which separates a weak model from an unlucky one.
 Replay rebuilds only TimeGym's own scenarios, so keep this code with the
-report.
+report. To put a kind of series on the scorecard, give a `Pattern` a function
+that simulates one series and returns its true mean and variance, or a `build`
+that returns such an object
+([Your own kind of series](../api/scorecard.md#your-own-kind-of-series)).

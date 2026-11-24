@@ -18,7 +18,7 @@ from .reporting import (
     CaseResult,
 )
 from .evaluation import ForecastRun, EvaluatedCase
-from .grid import PATTERNS, GridCell, scenario_grid
+from .grid import PATTERNS, GridCell, Pattern, scenario_grid
 from .scorecard import Scorecard
 from .diagnostics import compare_reports
 
@@ -42,6 +42,7 @@ __all__ = [
     "CaseResult",
     "Scorecard",
     "PATTERNS",
+    "Pattern",
     "GridCell",
     "scenario_grid",
     "cases_from_series",
