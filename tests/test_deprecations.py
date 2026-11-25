@@ -1,4 +1,4 @@
-"""Names that leave in TimeGym 2.0 still work, warn once at the caller's line and name what to use instead."""
+"""Deprecated names still work, warn once at the caller's line and name what to use instead."""
 from pathlib import Path
 import warnings
 
@@ -16,7 +16,7 @@ from timegym.processes import PROCESS_KINDS, generate_process, process_label, re
 from timegym.joint_processes import generate_joint_process
 from timegym.scenarios import default_scenarios, scenario_label
 
-GONE = "will be removed in TimeGym 2.0"
+LATER = "is deprecated and will be removed in a later release"
 
 
 def deprecated_call(match, function, *args, **kwargs):
@@ -25,7 +25,7 @@ def deprecated_call(match, function, *args, **kwargs):
         result = function(*args, **kwargs)
     messages = [str(warning.message) for warning in caught if warning.category is DeprecationWarning]
     assert len(messages) == 1, messages
-    assert GONE in messages[0] and match in messages[0], messages[0]
+    assert LATER in messages[0] and match in messages[0], messages[0]
     assert Path(caught[0].filename).resolve() == Path(__file__).resolve()
     return result
 
@@ -195,19 +195,8 @@ def test_old_default_scenarios_path_is_the_same_function_and_silent(recwarn):
 
 # The past a forecaster sees is its history: the old name, context, still works and warns.
 
-LATER = "is deprecated and will be removed in a later release"
 FIXTURES = Path(__file__).parent / "fixtures"
-
-
-def renamed_call(match, function, *args, **kwargs):
-    """Call ``function`` expecting one warning that an old name was used, raised at this file's call line."""
-    with pytest.warns(DeprecationWarning) as caught:
-        result = function(*args, **kwargs)
-    messages = [str(warning.message) for warning in caught if warning.category is DeprecationWarning]
-    assert len(messages) == 1, messages
-    assert LATER in messages[0] and match in messages[0], messages[0]
-    assert Path(caught[0].filename).resolve() == Path(__file__).resolve()
-    return result
+renamed_call = deprecated_call  # renamed arguments and attributes warn the same way
 
 
 def test_scenario_takes_history_length_and_still_its_old_name():

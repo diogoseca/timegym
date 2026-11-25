@@ -275,6 +275,11 @@
 - Added a sentence to the Pipeline page saying that `scorecard(patterns=...)`
   takes your own `Pattern` objects beside the keys of `PATTERNS`.
 
+- Every deprecation warning now says that the old name "will be removed in a
+  later release". The older ones, such as those for `get_stock`,
+  `generate_process` and `Pipeline.plot_tests`, said "in TimeGym 2.0"; a
+  warnings filter that matched those words needs the new ones.
+
 ## 1.13.1 — 2026-11-24
 
 - Added your own kinds of series to the scorecard. `Pattern` is now exported

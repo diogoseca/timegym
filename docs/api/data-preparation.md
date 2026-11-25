@@ -10,8 +10,8 @@ never mutates the supplied object. Row offsets are positional, so a lag of one
 means the previous row even when timestamps are irregular. The reversible target
 transforms below are the exception: a `Pipeline` fits and inverts them on each
 case. The smoothing, feature, label and fractional-difference helpers of TimeGym
-1.4.0 are deprecated, leave the package in TimeGym 2.0 and are no longer
-documented here; the changelog names what to use instead.
+1.4.0 are deprecated, will leave the package in a later release and are no
+longer documented here; the changelog names what to use instead.
 
 ## Differences
 

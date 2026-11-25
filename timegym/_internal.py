@@ -130,9 +130,9 @@ def _warn_deprecated(message: str) -> None:
 
 
 def _deprecated(name: str, instead: str) -> None:
-    """Warn at the caller's line that ``name`` leaves in TimeGym 2.0, and say what to use instead."""
+    """Warn at the caller's line that ``name`` will be removed in a later release, and say what to use instead."""
     _warn_deprecated(
-        f"{name} is deprecated and will be removed in TimeGym 2.0; {instead}"
+        f"{name} is deprecated and will be removed in a later release; {instead}"
     )
 
 

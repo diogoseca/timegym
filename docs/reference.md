@@ -5,8 +5,8 @@ and other helpers are public through their modules; for example,
 `from timegym.metrics import mase` and
 `from timegym.checks import within`.
 “Public” means supported in this release; consult the changelog when upgrading.
-Deprecated names still work in 1.x, warn with what to use instead and leave in
-TimeGym 2.0; the changelog lists them and they are not listed here.
+Deprecated names still work, warn with what to use instead and will be removed
+in a later release; the changelog lists them and they are not listed here.
 Schema constants describe stored formats independently of the package version.
 Underscore-prefixed names and modules, including `_internal` and
 `_process_common`, are private and have no compatibility guarantee.
