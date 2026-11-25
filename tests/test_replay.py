@@ -121,7 +121,7 @@ def test_report_replay_method_and_example_script(tmp_path):
     report = Pipeline(DriftForecaster()).test([Scenario("trend")], seeds=[2])
     assert report.replay_case().metadata["replay"]["metrics_match"] is True
     saved, output = tmp_path / "report.json", tmp_path / "replayed.json"
-    report.to_json(saved)
+    report.save(saved)
     script = Path(__file__).resolve().parents[1] / "examples" / "reproduce_report.py"
     completed = subprocess.run([sys.executable, str(script), str(saved), "--output", str(output)],
                                text=True, capture_output=True, check=False)
@@ -130,7 +130,7 @@ def test_report_replay_method_and_example_script(tmp_path):
     assert json.loads(output.read_text())["metadata"]["replay"]["metrics_match"] is True
     moved = report.to_dict()
     moved["metadata"]["source"]["digest"] = "different source"
-    TestReport.from_dict(moved).to_json(saved)
+    TestReport.from_dict(moved).save(saved)
     for gate, status in [([], 0), (["--require-same-environment"], 1)]:
         completed = subprocess.run([sys.executable, str(script), str(saved), *gate],
                                    text=True, capture_output=True, check=False)
@@ -246,8 +246,8 @@ def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp
     assert not comparison["traceback_match"]
     assert comparison["same_environment"]
     path = tmp_path / "error.json"
-    report.to_json(path)
-    loaded = TestReport.read(path).replay_case().metadata["replay"]
+    report.save(path)
+    loaded = TestReport.load(path).replay_case().metadata["replay"]
     assert loaded["reproduced"] and loaded["same_environment"]
     diagnostic.evidence["exception_message"] = "a different failure"
     assert not report.replay_case().metadata["replay"]["reproduced"]

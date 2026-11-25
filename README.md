@@ -128,7 +128,7 @@ For CI and for later:
 
 ```python
 card.report.assert_passed()          # fail a CI build on a malformed forecast or a crash
-card.report.to_json("report.json")   # every case, enough to replay one on another machine
+card.report.save("report.json")      # every case, enough to replay one on another machine
 ```
 
 To catch a change that makes the model worse, save the scorecard of the version

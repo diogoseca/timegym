@@ -64,7 +64,7 @@ result = Pipeline(LastValueForecaster()).run()
 result.scorecard.plot()     # the scorecard picture
 print(result.scorecard)     # the same as a table
 result.assert_passed()      # raises if a forecast failed an output check
-result.to_json("report.json")
+result.save("report.json")  # the report, to read back with TestReport.load
 ```
 
 What to forecast goes first. With nothing, `run()` draws the scorecard's ten
@@ -86,8 +86,8 @@ traceback evidence. Invalid scenario configuration is a caller error and is
 raised rather than counted as a model fault.
 
 The result holds the report and the scorecard. `result.report` is the
-`TestReport`; `result.checks`, `result.assert_passed()` and
-`result.to_json(path=None)` read it directly. `result.scorecard` is a
+`TestReport`; `result.checks`, `result.assert_passed()`, `result.save(path)`
+and `result.to_json()` read it directly. `result.scorecard` is a
 `Scorecard` ([Scorecards and the scenario grid](scorecard.md)), titled by
 the pipeline's name or, without one, by its model; `attainable` and
 `interval_level` (0.95 by default) are its settings. A run of your own data
@@ -239,12 +239,16 @@ Result construction validates these fields, nonempty names, dictionary evidence,
 nonnegative integer or absent seeds, and finite numeric metrics. Serialization
 canonicalizes NumPy scalars and builtin subclasses and rejects nonfinite values
 in evidence and metadata as well as metrics; it also revalidates mutable results.
-`report.to_json(path=None)` serializes diagnostics, measurements and manifests.
-`TestReport.from_dict(payload)`, `TestReport.from_json(text)`, and
-`TestReport.read(path)` load reports without executing saved model descriptions.
+`report.save(path)` writes diagnostics, measurements and manifests to a JSON
+file, and `report.to_json()` returns the same JSON as text. `to_json(path)`,
+the old way to write the file, still does and warns.
+`TestReport.load(path)`, `TestReport.from_json(text)`, and
+`TestReport.from_dict(payload)` load reports without executing saved model
+descriptions; `TestReport.read(path)`, the old name of `load`, still works and
+warns.
 They reject unknown schemas/statuses/categories, nonfinite values, duplicate JSON keys,
 malformed records, and stored summary counts that disagree with the diagnostics.
-`from_json` always expects JSON text; use `read` for a file. Evidence and metadata
+`from_json` always expects JSON text; use `load` for a file. Evidence and metadata
 are copied so later edits to the input dictionary cannot change the loaded report.
 `report.checks` counts, per output check in plain words, the cases that passed
 and failed: one `{"check", "title", "passed", "failed"}` dictionary per check

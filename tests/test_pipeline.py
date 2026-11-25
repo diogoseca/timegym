@@ -13,7 +13,7 @@ def test_default_end_to_end_report(tmp_path):
     assert len(report.cases) == 2
     assert all(c.metrics for c in report.cases)
     report.assert_passed()
-    report.to_json(tmp_path / "report.json")
+    assert report.save(tmp_path / "report.json") == tmp_path / "report.json"
     assert (tmp_path / "report.json").exists()
 
 

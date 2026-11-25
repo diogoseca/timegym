@@ -360,7 +360,8 @@ def test_report_json_is_safe_and_preserves_detailed_failures(tmp_path):
     })
     report = TestReport([CaseResult("example", 2, [diagnostic])], {"number": np.float64(3.0)})
     path = tmp_path / "report.json"
-    encoded = report.to_json(path)
+    report.save(path)
+    encoded = report.to_json()
     payload = json.loads(encoded)
     assert json.loads(path.read_text()) == payload
     assert payload["summary"]["status_counts"]["ERROR"] == 1

@@ -5,7 +5,7 @@
 - Made `Pipeline.run` the one call for testing a model. Its result now
   carries the scorecard: `result = pipeline.run()`, then
   `result.scorecard.plot()` or `print(result.scorecard)`, with
-  `result.assert_passed()`, `result.to_json(path)` and `result.checks` read
+  `result.assert_passed()`, `result.save(path)` and `result.checks` read
   straight from its report. With no arguments `run()` draws the scorecard's
   ten kinds of series at low and high noise, 10 times each (200 series), and
   it takes the scorecard's settings: `noise_levels`, `history_length`,
@@ -221,6 +221,18 @@
 - Moved the docs, the README, the source notebooks and the tests that compare
   one candidate to `result.compare`. The scores page shows the method for one
   candidate and `compare_reports` for several.
+
+- Added `result.save(path)` and `report.save(path)`, which write the report to
+  a JSON file and return `path`, and `TestReport.load(path)`, which reads it
+  back. `to_json()` with no path returns the text, as before, and
+  `TestReport.from_json(text)` reads text.
+- `report.to_json(path)`, `result.to_json(path)` and `TestReport.read(path)`
+  still work and now warn; they will be removed in a later release. Saved
+  reports load as before. `card.save(path)`, which saves the scorecard's
+  picture, and `card.save_baseline(path)` are unchanged.
+- Moved the docs, the README, the tutorials, the source notebooks, the tests,
+  `examples/reproduce_report.py` and the installed-package check to `save`
+  and `load`.
 
 - Added `result.calibration(*, bins=10, cluster=None, interval_level=0.95,
   seed=0)` to a run, and `timegym.diagnostics.calibration(run, ...)`, which

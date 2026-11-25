@@ -61,8 +61,8 @@ def main():
     assert "index_mismatch" in fault_codes and shifted.metrics == {}
     with TemporaryDirectory(prefix="timegym-wheel-report-") as temporary:
         report_path = args.report or Path(temporary) / "report.json"
-        run.report.to_json(report_path)
-        replay = TestReport.read(report_path).replay_case(0)
+        run.report.save(report_path)
+        replay = TestReport.load(report_path).replay_case(0)
         assert replay.metadata["replay"]["reproduced"]
     joint_processes = []
     for kind in ("composite", "merton_jump_diffusion", "garch", "markov_switching"):

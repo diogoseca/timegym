@@ -263,7 +263,7 @@ def _evaluate_ready_made(cases, make_forecast, settings, metrics=None, checks=No
 _TEST_MOVED = (
     "pipeline.test(...) is deprecated and will be removed in a later release: use "
     "pipeline.run(...), which returns the same report as result.report, with result.assert_passed(), "
-    "result.to_json() and result.scorecard. Name the series you test: with none, run() draws the "
+    "result.save(path) and result.scorecard. Name the series you test: with none, run() draws the "
     "scorecard's ten kinds of series, test() the five of default_scenarios()."
 )
 _SCORECARD_MOVED = (
@@ -571,7 +571,7 @@ class Pipeline:
         The result holds every case's metrics and output checks:
         ``result.scorecard`` (a ``Scorecard``: ``result.scorecard.plot()``,
         ``print(result.scorecard)``), ``result.assert_passed()``,
-        ``result.to_json(path)``, ``result.checks``, ``result.report`` and
+        ``result.save(path)``, ``result.checks``, ``result.report`` and
         ``result.plot_errors()``. The series, answer keys and forecasts are
         dropped once every case is measured, unless ``keep_data=True``: then
         ``result.cases`` holds them and ``result.plot_forecasts()`` can draw
@@ -807,7 +807,7 @@ class Pipeline:
         defaults: with no scenarios it draws ``default_scenarios()``, the five
         core kinds, 3 times each. It warns and will be removed in a later
         release; ``run`` returns the same report as ``result.report``, with
-        ``result.assert_passed()``, ``result.to_json()`` and the scorecard.
+        ``result.assert_passed()``, ``result.save(path)`` and the scorecard.
         """
         _warn_deprecated(_TEST_MOVED)
         settings, checks = _dependence_request("Pipeline.test", checks, old_arguments)

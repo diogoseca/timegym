@@ -123,7 +123,7 @@ class ForecastRun:
 
     ``scorecard`` is the run's Scorecard, ``metrics`` every case's metrics in
     one table, ``assert_passed()`` fails on a crash or a malformed forecast,
-    ``to_json(path)`` saves the report, ``checks`` counts the output checks,
+    ``save(path)`` saves the report, ``checks`` counts the output checks,
     and ``report`` is the JSON-ready TestReport, which holds no histories,
     observations or forecast arrays. Each entry of ``cases`` holds one
     case's parts, such as ``result.cases[0].observed``.
@@ -336,9 +336,27 @@ class ForecastRun:
             self, bins=bins, cluster=cluster, interval_level=interval_level, seed=seed
         )
 
+    def save(self, path):
+        """Write the run's report to a JSON file at ``path`` and return ``path``; series stay out of it.
+
+        ``TestReport.load(path)`` reads it back, and ``replay_case`` reruns a case from it.
+        """
+        return self.report.save(path)
+
     def to_json(self, path=None):
-        """Return the report as JSON, also writing it to ``path`` when given; series stay out of it."""
-        return self.report.to_json(path)
+        """Return the run's report as JSON text; series stay out of it. ``save(path)`` writes it to a file.
+
+        ``to_json(path)``, the old way to write the file, still writes it,
+        returns the text and warns.
+        """
+        report = self.report
+        if path is not None:
+            _warn_deprecated(
+                "result.to_json(path) is deprecated and will be removed in a later release: "
+                "use result.save(path)"
+            )
+            report.save(path)
+        return report.to_json()
 
     def _set_scorecard(self, make, *, now):
         """Keep how to make the scorecard: made at once when the series are about to be dropped."""

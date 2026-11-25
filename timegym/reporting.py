@@ -465,13 +465,31 @@ class TestReport:
         }
 
     def to_json(self, path=None):
-        """Return the report as indented JSON, also writing it to ``path`` when given."""
+        """Return the report as indented JSON text; ``save(path)`` writes it to a file.
+
+        ``to_json(path)``, the old way to write the file, still writes it,
+        returns the text and warns.
+        """
         serialized = json.dumps(
             self.to_dict(), indent=2, sort_keys=True, allow_nan=False
         )
         if path is not None:
+            _warn_deprecated(
+                "report.to_json(path) is deprecated and will be removed in a later release: "
+                "use report.save(path)"
+            )
             Path(path).write_text(serialized + "\n", encoding="utf-8")
         return serialized
+
+    def save(self, path):
+        """Write the report to a JSON file at ``path`` and return ``path``; ``TestReport.load(path)`` reads it back.
+
+        The file holds every case's metrics, findings and manifest and the
+        run's metadata, as ``to_json()`` gives them: enough to replay a case
+        with ``replay_case``, and no series or forecasts.
+        """
+        Path(path).write_text(self.to_json() + "\n", encoding="utf-8")
+        return path
 
     @classmethod
     def from_dict(cls, payload):
@@ -538,12 +556,12 @@ class TestReport:
     def from_json(cls, text):
         """Parse JSON text/bytes, rejecting duplicate keys and nonfinite numbers.
 
-        This method never interprets a string as a path. Use ``read(path)``
+        This method never interprets a string as a path. Use ``load(path)``
         for a saved report. Loading data does not execute replay or model code.
         """
         if not isinstance(text, (str, bytes, bytearray)):
             raise TypeError(
-                "from_json expects JSON text or bytes; use read(path) for a file"
+                "from_json expects JSON text or bytes; use TestReport.load(path) for a file"
             )
 
         def unique_object(pairs):
@@ -566,9 +584,18 @@ class TestReport:
         return cls.from_dict(payload)
 
     @classmethod
-    def read(cls, path):
-        """Read and validate a report file; paths are explicit, never guessed."""
+    def load(cls, path):
+        """Read and validate the report file at ``path``, as ``save`` wrote it; paths are explicit, never guessed."""
         return cls.from_json(Path(path).read_bytes())
+
+    @classmethod
+    def read(cls, path):
+        """Read a report file by the old name of ``load``, with a warning."""
+        _warn_deprecated(
+            "TestReport.read(path) is deprecated and will be removed in a later release: "
+            "use TestReport.load(path)"
+        )
+        return cls.load(path)
 
     @property
     def checks(self):

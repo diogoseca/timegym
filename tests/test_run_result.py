@@ -119,12 +119,20 @@ def test_the_result_answers_for_its_report():
         Pipeline(Broken()).run(["trend"], instances=1).assert_passed()
 
 
-def test_to_json_writes_the_report(tmp_path):
+def test_save_writes_the_report_and_load_reads_it_back(tmp_path):
     result = Pipeline(LastValueForecaster()).run(["trend"], instances=2)
     path = tmp_path / "report.json"
-    text = result.to_json(path)
-    assert path.read_text(encoding="utf-8") == text + "\n"
-    assert TestReport.read(path).to_dict() == result.report.to_dict()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        assert result.save(path) == path
+        assert path.read_text(encoding="utf-8") == result.to_json() + "\n"
+        loaded = TestReport.load(path)
+        assert loaded.to_dict() == result.report.to_dict()
+        assert loaded.save(tmp_path / "again.json") == tmp_path / "again.json"
+        assert (tmp_path / "again.json").read_text(encoding="utf-8") == path.read_text(encoding="utf-8")
+        pd.testing.assert_frame_equal(loaded.metrics, result.metrics)
+    with pytest.raises(TypeError, match=r"use TestReport\.load\(path\) for a file"):
+        TestReport.from_json(path)
 
 
 def test_scenarios_you_built_give_one_row_each():

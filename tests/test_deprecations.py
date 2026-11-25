@@ -363,7 +363,7 @@ def test_a_build_of_your_own_whose_scenario_says_context_length_still_works():
 def test_a_report_saved_by_timegym_1_13_loads_replays_and_compares():
     from timegym import TestReport
 
-    old = TestReport.read(FIXTURES / "report-1.13.1.json")
+    old = TestReport.load(FIXTURES / "report-1.13.1.json")
     assert old.cases[0].manifest["context_length"] == 24
     assert old.metadata["pipeline_config"]["model"]["class"] == "NaiveForecaster"
     with warnings.catch_warnings():
@@ -704,7 +704,7 @@ def test_a_report_saved_by_timegym_1_13_loads_its_error_against_the_answer_key_a
 
     path = FIXTURES / "report-1.13.1.json"
     saved = json.loads(path.read_text(encoding="utf-8"))["cases"]
-    old = TestReport.read(path)
+    old = TestReport.load(path)
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)
         for case, record in zip(old.cases, saved):
@@ -845,3 +845,20 @@ def test_an_entrys_result_still_reads_and_sets_its_record_and_warns():
         made = EvaluatedCase(None, None, record, 0, 0)
         assert made.metrics is record.metrics and EvaluatedCase(case=None, forecast=None, result=record,
                                                                 scenario_index=0, seed_index=1).seed_index == 1
+
+
+def test_to_json_with_a_path_and_read_still_write_and_load_a_report_and_warn(tmp_path):
+    result = Pipeline(LastValueForecaster()).run(["trend"], instances=2)
+    report = result.report
+    message = f"report.to_json(path) {LATER}: use report.save(path)"
+    text = renamed_call(message, report.to_json, tmp_path / "report.json")
+    assert (tmp_path / "report.json").read_text(encoding="utf-8") == text + "\n"
+    message = f"result.to_json(path) {LATER}: use result.save(path)"
+    text = renamed_call(message, result.to_json, tmp_path / "run.json")
+    assert (tmp_path / "run.json").read_text(encoding="utf-8") == text + "\n"
+    message = f"TestReport.read(path) {LATER}: use TestReport.load(path)"
+    loaded = renamed_call(message, TestReport.read, tmp_path / "run.json")
+    assert loaded.to_dict() == TestReport.load(tmp_path / "report.json").to_dict() == report.to_dict()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        assert result.to_json() == report.to_json() == text  # text only: no warning

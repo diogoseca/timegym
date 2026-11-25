@@ -356,8 +356,8 @@ def test_target_transform_is_recorded_and_replayed_from_the_report(tmp_path):
     assert run.metadata["pipeline_config"] == config
     assert all(d.status != "ERROR" for entry in run.cases for d in entry.diagnostics)
     path = tmp_path / "report.json"
-    run.report.to_json(path)
-    replayed = TestReport.read(path).replay_case(1)
+    run.report.save(path)
+    replayed = TestReport.load(path).replay_case(1)
     assert replayed.metadata["replay"]["reproduced"]
     assert replayed.cases[0].to_dict() == run.report.cases[1].to_dict()
 
