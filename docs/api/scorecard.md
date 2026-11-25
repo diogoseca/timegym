@@ -462,7 +462,7 @@ differences are not shifted upward: symmetric about zero, or below it. It
 also assumes that the series' differences are independent.
 
 The same sign flips and Holm's correction compare any two reports in
-[`compare_reports`](diagnostics.md#compare-two-forecasters-on-the-same-cases),
+[`result.compare`](diagnostics.md#compare-two-forecasters-on-the-same-cases),
 which asks the two-sided question, better or worse, on your own data too.
 
 `ScorecardComparison.table` has one row per cell: `pattern`, `title`,

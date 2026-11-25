@@ -14,7 +14,6 @@ from timegym import (
     Scenario,
     TestReport,
     cases_from_series,
-    compare_reports,
 )
 from timegym.checks import within
 from timegym.diagnostics import _describe_checks, evaluate_forecast
@@ -315,7 +314,7 @@ def test_a_case_failing_your_check_counts_as_newly_failing_in_a_comparison():
     cases = rain_cases()
     baseline = Pipeline(LastValueForecaster()).test(cases=cases, checks=[within(0, None)])
     candidate = Pipeline(GaussianAR1Forecaster()).test(cases=cases, checks=[within(0, None)])
-    table = compare_reports(candidate, baseline, metric="mae").table
+    table = candidate.compare(baseline, metric="mae").table
     assert table.loc[0, "newly_failing"] == len(cases)
 
 

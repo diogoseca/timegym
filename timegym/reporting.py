@@ -443,11 +443,11 @@ class TestReport:
         ``kind`` is the case's kind, such as ``"ar1"``, or for your own data
         the name its cases were cut under; ``seed`` is its seed and ``origin``
         where its history ends, each when the cases have one. These are the
-        manifest keys that ``compare_reports(by=...)`` groups by, so
+        manifest keys that ``compare(by=...)`` groups by, so
         ``report.metrics.groupby("kind")["mae"].mean()`` gives the mean error
         of each kind. One column per metric follows, in alphabetical order.
         A case that crashed or failed an output check is not scored, so its
-        metrics are NaN, as in ``compare_reports`` and the scorecard;
+        metrics are NaN, as in ``compare`` and the scorecard;
         ``case.metrics`` still holds any it recorded. The row label is the
         case's position in ``report.cases``. The table is made from the cases
         each time it is read, so it follows any change to them.
@@ -614,6 +614,41 @@ class TestReport:
                 "TimeGym detected failures:\n" + "\n".join(failed + failures)
             )
         return self
+
+    def compare(
+        self,
+        baseline,
+        *,
+        metric,
+        by=None,
+        cluster=None,
+        alpha=0.05,
+        higher_is_better=False,
+        seed=0,
+    ):
+        """Compare this report with ``baseline`` on the same cases, one metric at a time; returns a ReportComparison.
+
+        ``report.compare(baseline, metric="mae")`` is
+        ``compare_reports(report, baseline, metric="mae")``: the same paired
+        test, the same table and the same arguments. ``baseline`` is a report,
+        or a run, made on the same cases in the same order; ``by`` gives one
+        row per value of a manifest key, ``cluster`` names a manifest key whose
+        cases move together, and lower is better unless
+        ``higher_is_better=True``. To set several candidates against one
+        baseline at once, use ``compare_reports([a, b], baseline, ...)``.
+        """
+        from timegym.diagnostics import compare_reports
+
+        return compare_reports(
+            self,
+            baseline,
+            metric=metric,
+            by=by,
+            cluster=cluster,
+            alpha=alpha,
+            higher_is_better=higher_is_better,
+            seed=seed,
+        )
 
     def replay_case(self, case_index=0):
         """Re-evaluate one case when its built-in model configuration is replayable."""

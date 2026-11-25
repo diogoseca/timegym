@@ -200,7 +200,7 @@
   `result.metrics["mae"]` or `result.metrics.groupby("kind")["mae"].mean()`.
   It has one row per case, in order, labelled by the case's position. The
   case's `kind` and `seed` come first, or for cases cut from your own data its
-  `kind` and `origin`, the manifest keys `compare_reports(by=...)` groups by;
+  `kind` and `origin`, the manifest keys `result.compare(by=...)` groups by;
   then one column per metric, in alphabetical order. A case that crashed or
   failed an output check is not scored, so its metrics are NaN, as in
   `compare_reports` and the scorecard. It reads only the metrics, so it works
@@ -211,6 +211,16 @@
   by hand to `result.metrics`, and showed it on the Pipeline and reports page.
   A run of your own data, which has no scorecard, now points to
   `result.metrics` for its errors.
+
+- Added `result.compare(baseline, *, metric, by=None, cluster=None,
+  alpha=0.05, higher_is_better=False, seed=0)` to a run and to a
+  `TestReport`. `candidate.compare(baseline, metric="mae")` is
+  `compare_reports(candidate, baseline, metric="mae")`: the same settings and
+  the same `ReportComparison`. `compare_reports` stays, without a warning, to
+  compare several candidates with one baseline at once.
+- Moved the docs, the README, the source notebooks and the tests that compare
+  one candidate to `result.compare`. The scores page shows the method for one
+  candidate and `compare_reports` for several.
 
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come

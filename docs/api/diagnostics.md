@@ -52,7 +52,8 @@ Each case with an answer key records the distance from it as `avoidable_mse`:
 the part of the error the model could have avoided, beside the noise no
 forecaster can remove, under the name the scorecard's table gives the same
 number. Its old name still reads it, and warns: `case.metrics["mean_reference_mse"]`
-and `metric="mean_reference_mse"` in `plot_errors` and `compare_reports`.
+and `metric="mean_reference_mse"` in `plot_errors`, `result.compare` and
+`compare_reports`.
 Reports saved by TimeGym 1.13.1 and earlier load with the new name, so they
 compare with new ones.
 
@@ -443,11 +444,11 @@ diagnostic, so it has no row.
 
 ## Compare two forecasters on the same cases
 
-`timegym.compare_reports(candidate, baseline, *, metric, by=None,
-cluster=None, alpha=0.05, higher_is_better=False, seed=0)` says whether a
-candidate forecaster is better or worse than a baseline on the same cases, or
-shows no clear difference. Both reports must come from the same cases, in the
-same order: it pairs them by position and refuses two reports whose case
+`result.compare(baseline, *, metric, by=None, cluster=None, alpha=0.05,
+higher_is_better=False, seed=0)` says whether the forecaster behind `result`,
+a run or a report, is better or worse than a baseline on the same cases, or
+shows no clear difference. `baseline` is a run or a report too. Both must come
+from the same cases, in the same order: it pairs them by position and refuses two reports whose case
 manifests differ, naming the first difference. Name the model where you make
 it, with `Pipeline(model, name=...)`, not in the case manifest. `metric` is
 any metric in `case.metrics`, your own included; lower is better unless
@@ -457,7 +458,7 @@ any metric in `case.metrics`, your own included; lower is better unless
 import numpy as np
 import pandas as pd
 from timegym import (DriftForecaster, LastValueForecaster, MeanForecaster, Pipeline,
-                     SeasonalLastValueForecaster, cases_from_series, compare_reports)
+                     SeasonalLastValueForecaster, cases_from_series)
 
 rng = np.random.default_rng(0)
 days = pd.date_range("2024-01-01", periods=140, freq="D")
@@ -470,7 +471,7 @@ for store in range(16):
 
 baseline = Pipeline(LastValueForecaster()).run(cases=cases)
 candidate = Pipeline(SeasonalLastValueForecaster(period=7)).run(cases=cases)
-diff = compare_reports(candidate, baseline, metric="mae", by="region", cluster="store")
+diff = candidate.compare(baseline, metric="mae", by="region", cluster="store")
 print(diff)
 diff.assert_no_regression()
 ```
@@ -513,12 +514,17 @@ rows. `assert_no_regression()` raises when a row is worse or too few to tell.
 
 ### Many candidates against one baseline
 
-Pass a list of reports, each labelled by the name its pipeline was given or,
-without one, by its model; a dictionary of reports keyed by name works too.
-Each candidate's p-value is adjusted for how many were tried, so the best of
-many does not beat the baseline by luck.
+`timegym.compare_reports(candidates, baseline, *, metric, ...)` takes the
+same settings and compares several candidates with one baseline at once; with
+one candidate it is `candidate.compare(baseline, ...)`. Pass it a list of
+reports, each labelled by the name its pipeline was given or, without one, by
+its model; a dictionary of reports keyed by name works too. Each candidate's
+p-value is adjusted for how many were tried, so the best of many does not
+beat the baseline by luck.
 
 ```python
+from timegym import compare_reports
+
 candidates = [
     Pipeline(SeasonalLastValueForecaster(period=7), name="same weekday last week").run(cases=cases),
     Pipeline(MeanForecaster(), name="mean so far").run(cases=cases),

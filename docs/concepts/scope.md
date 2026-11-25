@@ -42,8 +42,8 @@ a report, because they cannot be drawn again: keep your data with the report.
 Several cases cut from one series are several looks at one history, not
 independent tests.
 
-To compare two forecasters on the same cases, pass both reports to
-[`compare_reports`](../api/diagnostics.md#compare-two-forecasters-on-the-same-cases).
+To compare two forecasters on the same cases, call
+[`result.compare(baseline, metric=...)`](../api/diagnostics.md#compare-two-forecasters-on-the-same-cases).
 It says whether the difference is larger than chance would explain, by group
 if you ask, and counts cases cut from one series as one piece of evidence when
 you name that series with `cluster=`.

@@ -168,7 +168,7 @@ class ForecastRun:
         checks and metrics of ``Pipeline.run``, and the run's report and plots
         work as usual. ``name`` says what made the forecasts, for example
         ``name="weather service"``: it is ``result.metadata["name"]``, heads
-        the plots and labels the run in ``compare_reports``, as
+        the plots and labels the run in a comparison, as
         ``Pipeline(..., name=...)`` does. ``metadata`` is added to the run's
         metadata, for example ``{"made_on": "2024-05-01"}``; naming the
         forecasts there with ``{"model": ...}`` still works and warns.
@@ -284,6 +284,39 @@ class ForecastRun:
     def assert_passed(self):
         """Raise AssertionError when any case crashed or failed an output check, as in ``TestReport``."""
         return self.report.assert_passed()
+
+    def compare(
+        self,
+        baseline,
+        *,
+        metric,
+        by=None,
+        cluster=None,
+        alpha=0.05,
+        higher_is_better=False,
+        seed=0,
+    ):
+        """Compare this run with ``baseline`` on the same cases, one metric at a time; returns a ReportComparison.
+
+        ``result.compare(baseline, metric="mae")`` is
+        ``compare_reports(result, baseline, metric="mae")``, as in
+        ``TestReport.compare``: ``baseline`` is a run, or a report, made on the
+        same cases in the same order. It reads only the metrics, so it works
+        whether or not either run kept its data. To set several candidates
+        against one baseline at once, use ``compare_reports([a, b], baseline, ...)``.
+        """
+        from timegym.diagnostics import compare_reports
+
+        return compare_reports(
+            self,
+            baseline,
+            metric=metric,
+            by=by,
+            cluster=cluster,
+            alpha=alpha,
+            higher_is_better=higher_is_better,
+            seed=seed,
+        )
 
     def to_json(self, path=None):
         """Return the report as JSON, also writing it to ``path`` when given; series stay out of it."""

@@ -28,7 +28,7 @@ returns, so evaluation sees the original scale.
 `name` names the model once for everything a run shows:
 `Pipeline(RandomForestRegressor(), window_length=12, name="Forest")` titles
 the scorecard "Forest", heads `plot_forecasts()` and `plot_errors()`, labels
-the run in `compare_reports` and is `result.metadata["name"]`, while
+the run in a comparison and is `result.metadata["name"]`, while
 `result.metadata["model"]` still names the class. The name is saved with the
 pipeline's configuration, so a replay keeps it. Without a name, the scorecard
 is titled by the model and the plots have no heading.
@@ -119,7 +119,7 @@ call, and `scenario_index` and `seed_index` place it in the run.
 with one row per case, in order. The case's labels come first: its `kind` and
 `seed`, or for cases cut from your own data its `kind` (the name given to
 `cases_from_series`) and `origin`, where its history ends. These are the
-manifest keys that `compare_reports(by=...)` groups by. One column per metric
+manifest keys that `result.compare(by=...)` groups by. One column per metric
 follows, in alphabetical order. A case that crashed or failed an output check
 is not scored, so its metrics are NaN. The table reads only the metrics, so it
 works whether or not the run kept its data, and `report.metrics` gives the
@@ -171,7 +171,7 @@ model's `predict` returns. `None` marks a case with no recorded forecast, which
 fails "Runs without errors". The result is a `ForecastRun`, so its report and
 plots work as usual. `name` says what made the forecasts, as
 `Pipeline(..., name=...)` does: it is `run.metadata["name"]`, heads the plots
-and labels the run in `compare_reports`. `metadata` is added to the run's
+and labels the run in a comparison. `metadata` is added to the run's
 metadata, for example `{"made_on": "2024-05-01"}`; naming the forecasts there
 with `{"model": ...}` still works and warns. With the rain `cases` from
 [Your own data](tasks-and-forecasts.md#your-own-data):

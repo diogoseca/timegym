@@ -141,8 +141,8 @@ diff = pipeline.scorecard(instances=30).compare("scorecard-baseline.json")
 diff.assert_no_regression()          # fail a CI build on a cell that got worse
 ```
 
-On your own data, which has no answer key, `timegym.compare_reports` pairs two
-reports case by case and says whether the candidate is better, worse, or shows
+On your own data, which has no answer key, `result.compare(baseline, metric="mae")`
+pairs two runs case by case and says whether `result` is better, worse, or shows
 no clear difference, by group if you ask
 ([Metrics and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/#compare-two-forecasters-on-the-same-cases)).
 Checks of your own join the built-in ones with `checks=`, such as

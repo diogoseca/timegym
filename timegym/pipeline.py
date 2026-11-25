@@ -339,7 +339,7 @@ class Pipeline:
 
     ``name`` names the model wherever a run shows it: ``Pipeline(model,
     name="Forest")`` titles the scorecard "Forest", heads the run's plots,
-    labels it in ``compare_reports`` and is ``result.metadata["name"]``,
+    labels it in a comparison and is ``result.metadata["name"]``,
     while ``result.metadata["model"]`` still names the class. The name is
     saved with the pipeline's configuration, so replay keeps it. Without a
     name the scorecard is titled by the model, such as

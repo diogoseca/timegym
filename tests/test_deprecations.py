@@ -362,7 +362,6 @@ def test_a_build_of_your_own_whose_scenario_says_context_length_still_works():
 
 def test_a_report_saved_by_timegym_1_13_loads_replays_and_compares():
     from timegym import TestReport
-    from timegym.diagnostics import compare_reports
 
     old = TestReport.read(FIXTURES / "report-1.13.1.json")
     assert old.cases[0].manifest["context_length"] == 24
@@ -374,9 +373,9 @@ def test_a_report_saved_by_timegym_1_13_loads_replays_and_compares():
     assert replayed.cases[0].manifest["history_length"] == 24
     scenarios = [Scenario("ar1", history_length=24, horizon=3), Scenario("trend", history_length=16, horizon=2)]
     new = Pipeline(LastValueForecaster()).run(scenarios, seeds=[0, 1]).report
-    comparison = compare_reports(new, old, metric="mse")
+    comparison = new.compare(old, metric="mse")
     assert comparison.table["cases"].sum() > 0
-    by_length = compare_reports(new, old, metric="mse", by="history_length")
+    by_length = new.compare(old, metric="mse", by="history_length")
     assert set(by_length.table["group"]) == {24, 16}
 
 
@@ -694,13 +693,14 @@ def test_metric_mean_reference_mse_still_draws_and_compares_and_warns():
         assert figure.axes[-1].get_xlabel() == draw().axes[-1].get_xlabel() == (
             "Error against the answer key (MSE), one value per case")
         plt.close("all")
+    old = renamed_call(message, other.compare, run, metric="mean_reference_mse")
+    pd.testing.assert_frame_equal(old.table, other.compare(run, metric="avoidable_mse").table)
     old = renamed_call(message, compare_reports, other, run, metric="mean_reference_mse")
     pd.testing.assert_frame_equal(old.table, compare_reports(other, run, metric="avoidable_mse").table)
 
 
 def test_a_report_saved_by_timegym_1_13_loads_its_error_against_the_answer_key_as_avoidable_mse():
     import json
-    from timegym.diagnostics import compare_reports
 
     path = FIXTURES / "report-1.13.1.json"
     saved = json.loads(path.read_text(encoding="utf-8"))["cases"]
@@ -716,7 +716,7 @@ def test_a_report_saved_by_timegym_1_13_loads_its_error_against_the_answer_key_a
     assert replay["metrics_match"] is True and replay["diagnostics_match"] is True
     scenarios = [Scenario("ar1", history_length=24, horizon=3), Scenario("trend", history_length=16, horizon=2)]
     new = Pipeline(LastValueForecaster()).run(scenarios, seeds=[0, 1])
-    assert compare_reports(new, old, metric="avoidable_mse").table["cases"].sum() == 4
+    assert new.compare(old, metric="avoidable_mse").table["cases"].sum() == 4
 
 
 def test_a_saved_finding_on_the_old_name_loads_under_the_new_one():

@@ -1391,6 +1391,9 @@ def compare_reports(
     counts how often the most extreme of all candidates and groups, under the
     same sign flips, is at least as extreme, so the best of many does not beat
     the baseline by luck. ``seed`` fixes the random sign flips.
+
+    With one candidate, ``candidate.compare(baseline, metric=...)`` on a run
+    or a report does the same.
     """
     if isinstance(alpha, bool) or not isinstance(alpha, numbers.Real):
         raise ValueError("alpha must be a number in (0, 1)")
