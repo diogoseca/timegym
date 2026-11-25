@@ -696,7 +696,7 @@ def mutants_section(first):
         f"{first['not_runnable']} raise an exception on every input, so no check is needed to see them. Of the "
         f"{ray['runnable']} that run, {ray['equivalent']} return the clean forecast on all 24 screening inputs and "
         f"are counted as equivalent; {ray['mutants']} change a forecast. Of the {catalogue['generated']} catalogue "
-        "mutants one is equivalent, a target scaler reused across contexts (the Ridge fit is linear in its "
+        "mutants one is equivalent, a target scaler reused across histories (the Ridge fit is linear in its "
         "targets, so the inverse transform undoes it), and none of the four Study 2 bugs is. The "
         "equivalent sources were also run on every evaluation case, and none differed from the clean pipeline "
         "there; 6 and 48 screening inputs give the same equivalent mutants as 24.",

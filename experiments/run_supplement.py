@@ -29,7 +29,7 @@ from timegym.metrics import crps, energy_score, mse, variogram_score
 from timegym.mutations import mutate_forecast
 from threadpoolctl import threadpool_info, threadpool_limits
 
-from .common import protect_output, sha256
+from .common import protect_output, scenario_settings, sha256
 
 from .model_faults import (FAULTS, LagRidgeImplementation, normal_equation_forecast,
                            point_agreement, target_shift_agreement)
@@ -79,7 +79,7 @@ def holm_rejections(pvalues, alpha):
 
 
 def scenario_from_condition(condition):
-    return Scenario(**{key: value for key, value in condition.items() if key != "id"})
+    return Scenario(**scenario_settings({key: value for key, value in condition.items() if key != "id"}))
 
 
 def validate_protocol(protocol):
@@ -127,16 +127,16 @@ def validate_protocol(protocol):
 def evaluate_implementation(case, branch, independent, calibration_scores, threshold, spec):
     """All comparisons are made on freshly fitted models and the same case."""
     pipeline = Pipeline(LagRidgeImplementation(branch, spec["window"], spec["ridge_alpha"]))
-    forecast = pipeline.predict(case.task.context, case.task.future_index)
+    forecast = pipeline.predict(case.task.history, case.task.future_index)
     violations = forecast.validate(case.task)
     contract_alarm = bool(violations)
     if contract_alarm:
         raise RuntimeError(f"The semantic-fault fixture unexpectedly violated its contract: {violations}")
-    scalar = check_shift_equivariance(pipeline, case.task.context, case.task.future_index,
+    scalar = check_shift_equivariance(pipeline, case.task.history, case.task.future_index,
                                       shift=spec["scalar_shift"], atol=spec["atol"], rtol=spec["rtol"])
     if scalar.status not in {"PASS", "FAIL"}:
         raise RuntimeError(f"Unexpected scalar-shift outcome: {scalar.to_dict()}")
-    target = target_shift_agreement(pipeline, case.task.context, case.task.future_index, forecast,
+    target = target_shift_agreement(pipeline, case.task.history, case.task.future_index, forecast,
                                     shifts=spec["target_shifts"], atol=spec["atol"], rtol=spec["rtol"])
     differential = point_agreement(forecast.point, independent.point, atol=spec["atol"], rtol=spec["rtol"])
     loss = mse(case.observed.to_numpy(), forecast.point)
@@ -169,7 +169,7 @@ def run_model_study(spec):
             seed = spec["calibration_seed_base"] + condition_index*spec["condition_seed_stride"] + index
             case = scenario.generate(seed=seed)
             model = Pipeline(LagRidgeImplementation(window=spec["window"], alpha=spec["ridge_alpha"]))
-            output = model.predict(case.task.context, case.task.future_index)
+            output = model.predict(case.task.history, case.task.future_index)
             score = mse(case.observed.to_numpy(), output.point)
             calibration_scores.append(score)
             calibration.append({"condition": condition["id"], "seed": seed, "realized_mse": score})
@@ -178,7 +178,7 @@ def run_model_study(spec):
         for index in range(spec["evaluation_cases"]):
             seed = spec["evaluation_seed_base"] + condition_index*spec["condition_seed_stride"] + index
             case = scenario.generate(seed=seed)
-            independent = normal_equation_forecast(case.task.context, case.task.future_index,
+            independent = normal_equation_forecast(case.task.history, case.task.future_index,
                                                    window=spec["window"], alpha=spec["ridge_alpha"])
             branches, outputs = {}, {}
             for branch in ("clean",) + tuple(spec["faults"]):

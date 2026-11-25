@@ -5,6 +5,7 @@ import numpy as np
 from .contracts import ForecastTask
 from .reporting import DiagnosticResult
 from .diagnostics import exception_evidence
+from ._internal import _renamed_keywords
 
 __all__ = ["check_shift_equivariance", "within"]
 
@@ -12,24 +13,28 @@ __all__ = ["check_shift_equivariance", "within"]
 
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-43
+@_renamed_keywords(context="history")
 def check_shift_equivariance(
-    pipeline, context, future_index, *, shift=10.0, atol=1e-8, rtol=1e-7
+    pipeline, history, future_index, *, shift=10.0, atol=1e-8, rtol=1e-7
 ):
     """Check f(y+c)=f(y)+c for a model declaring location equivariance.
 
-    This property is not universal: regularization, clipping or absolute features
-    may intentionally violate it. Callers choose whether it applies to their model.
+    The pipeline forecasts ``future_index`` from ``history`` and from the
+    history shifted by ``shift``. This property is not universal:
+    regularization, clipping or absolute features may intentionally violate
+    it. Callers choose whether it applies to their model. The old keyword
+    ``context=`` still works and warns.
     """
     if not np.isfinite(shift) or shift == 0:
         raise ValueError("shift must be finite and nonzero")
     if not np.isfinite(atol) or not np.isfinite(rtol) or atol < 0 or rtol < 0:
         raise ValueError("atol and rtol must be finite and nonnegative")
     try:
-        original = pipeline.predict(context, future_index)
-        shifted = pipeline.predict(context + shift, future_index)
+        original = pipeline.predict(history, future_index)
+        shifted = pipeline.predict(history + shift, future_index)
         violations = original.validate(
-            ForecastTask(context, future_index)
-        ) + shifted.validate(ForecastTask(context + shift, future_index))
+            ForecastTask(history, future_index)
+        ) + shifted.validate(ForecastTask(history + shift, future_index))
         if violations:
             return DiagnosticResult(
                 "shift_equivariance",
@@ -56,7 +61,7 @@ def check_shift_equivariance(
             "shift_equivariance",
             "PASS" if passed else "FAIL",
             "metamorphic",
-            "Declared location-equivariance relation tested on paired contexts.",
+            "Declared location-equivariance relation tested on paired histories.",
             {"shift": shift, "max_absolute_error": error, "atol": atol, "rtol": rtol},
         )
     except Exception as exc:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 from collections.abc import Sequence
 from copy import deepcopy
-from ._internal import positive_int, nonnegative_int, _levels
+from ._internal import positive_int, nonnegative_int, _levels, _old_name
 import numpy as np
 import pandas as pd
 from .contracts import DEFAULT_LEVELS, Forecast
@@ -27,60 +27,60 @@ class _ConfiguredForecaster:
 
 
 # %% ../source/06_forecasting_models.ipynb #06_forecasting_model-07
-def _require_regular_future(context_index, future_index):
+def _require_regular_future(history_index, future_index):
     """Step-based models require the next H observations on a regular grid."""
     if not isinstance(future_index, pd.Index) or len(future_index) == 0:
         raise ValueError("future_index must be a nonempty pandas Index")
     # One observation cannot establish spacing, regardless of index type.
-    if len(context_index) == 1:
+    if len(history_index) == 1:
         if (
             not future_index.is_unique
             or not future_index.is_monotonic_increasing
-            or not future_index[0] > context_index[-1]
+            or not future_index[0] > history_index[-1]
         ):
-            raise ValueError("future_index must be increasing and follow context")
+            raise ValueError("future_index must be increasing and follow the history")
         return
-    if isinstance(context_index, (pd.DatetimeIndex, pd.TimedeltaIndex, pd.PeriodIndex)):
-        frequency = context_index.freq
-        if frequency is None and len(context_index) >= 3:
-            frequency = pd.infer_freq(context_index)
-        if frequency is None and len(context_index) == 2:
-            frequency = context_index[1] - context_index[0]
+    if isinstance(history_index, (pd.DatetimeIndex, pd.TimedeltaIndex, pd.PeriodIndex)):
+        frequency = history_index.freq
+        if frequency is None and len(history_index) >= 3:
+            frequency = pd.infer_freq(history_index)
+        if frequency is None and len(history_index) == 2:
+            frequency = history_index[1] - history_index[0]
         if frequency is None:
             raise ValueError(
-                "Step-based models require a regular context index with a known frequency"
+                "Step-based models require a regular history index with a known frequency"
             )
         constructor = (
             pd.date_range
-            if isinstance(context_index, pd.DatetimeIndex)
+            if isinstance(history_index, pd.DatetimeIndex)
             else (
                 pd.timedelta_range
-                if isinstance(context_index, pd.TimedeltaIndex)
+                if isinstance(history_index, pd.TimedeltaIndex)
                 else pd.period_range
             )
         )
-        expected_context = constructor(
-            start=context_index[0], periods=len(context_index), freq=frequency
+        expected_history = constructor(
+            start=history_index[0], periods=len(history_index), freq=frequency
         )
         expected_future = constructor(
-            start=context_index[-1], periods=len(future_index) + 1, freq=frequency
+            start=history_index[-1], periods=len(future_index) + 1, freq=frequency
         )[1:]
-        matches_context = context_index.equals(expected_context)
+        matches_history = history_index.equals(expected_history)
         matches_future = future_index.equals(expected_future)
-    elif pd.api.types.is_numeric_dtype(context_index.dtype):
-        values = context_index.to_numpy()
+    elif pd.api.types.is_numeric_dtype(history_index.dtype):
+        values = history_index.to_numpy()
         step = (
-            context_index.step
-            if isinstance(context_index, pd.RangeIndex)
+            history_index.step
+            if isinstance(history_index, pd.RangeIndex)
             else (values[1] - values[0] if len(values) >= 2 else None)
         )
         if step is None or step <= 0:
             raise ValueError(
-                "Step-based models require a regular context index with a known positive step"
+                "Step-based models require a regular history index with a known positive step"
             )
         expected = values[-1] + step * np.arange(1, len(future_index) + 1)
-        if pd.api.types.is_float_dtype(context_index.dtype):
-            matches_context = bool(
+        if pd.api.types.is_float_dtype(history_index.dtype):
+            matches_history = bool(
                 np.allclose(np.diff(values), step, rtol=1e-10, atol=0)
             )
             roundoff = 4 * np.finfo(float).eps * max(1, np.max(np.abs(expected)))
@@ -88,7 +88,7 @@ def _require_regular_future(context_index, future_index):
                 future_index.dtype
             ) and np.allclose(future_index.to_numpy(), expected, rtol=0, atol=roundoff)
         else:
-            matches_context = bool(np.all(np.diff(values) == step))
+            matches_history = bool(np.all(np.diff(values) == step))
             matches_future = pd.api.types.is_numeric_dtype(
                 future_index.dtype
             ) and np.array_equal(future_index.to_numpy(), expected)
@@ -96,11 +96,11 @@ def _require_regular_future(context_index, future_index):
         raise ValueError(
             "Step-based models require regular numeric, datetime, timedelta, or period indexes"
         )
-    if not matches_context:
-        raise ValueError("Step-based models require a regular context index")
+    if not matches_history:
+        raise ValueError("Step-based models require a regular history index")
     if not matches_future:
         raise ValueError(
-            "Step-based models require consecutive future labels immediately after context"
+            "Step-based models require consecutive future labels immediately after the history"
         )
 
 
@@ -108,8 +108,9 @@ def _require_regular_future(context_index, future_index):
 class NaiveForecaster(_ConfiguredForecaster):
     """Last value, historical mean, seasonal persistence, seasonal mean or endpoint drift.
 
-    A single observation permits any increasing future index after context;
-    its spacing cannot be verified. Longer contexts require a regular grid.
+    A single observation permits any increasing future index after the
+    history; its spacing cannot be verified. Longer histories require a
+    regular grid.
     """
 
     def __init__(self, strategy="last", period=1):
@@ -125,22 +126,32 @@ class NaiveForecaster(_ConfiguredForecaster):
         """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return dict(strategy=self.strategy, period=self.period)
 
-    def fit(self, context):
-        """Keep a copy of the context; raise when it is too short for the strategy."""
-        self.context_ = context.copy(deep=True)
+    def fit(self, history):
+        """Keep a copy of the history; raise when it is too short for the strategy."""
+        self.history_ = history.copy(deep=True)
         minimum = (
             self.period
             if self.strategy in ("seasonal", "seasonal_mean")
             else (2 if self.strategy == "drift" else 1)
         )
-        if len(context) < minimum:
-            raise ValueError("Insufficient context")
+        if len(history) < minimum:
+            raise ValueError("Insufficient history")
         return self
 
+    @property
+    def context_(self):
+        """The old name of ``history_``, the history ``fit`` kept; it still works and warns."""
+        if "history_" not in self.__dict__:
+            raise AttributeError(
+                f"{type(self).__name__} has not been fitted, so it has no context_"
+            )
+        _old_name(type(self).__name__, "context_", "history_")
+        return self.history_
+
     def predict(self, future_index):
-        """Return a point forecast for labels that continue the context's grid."""
-        _require_regular_future(self.context_.index, future_index)
-        y = self.context_.to_numpy(dtype=float)
+        """Return a point forecast for labels that continue the history's grid."""
+        _require_regular_future(self.history_.index, future_index)
+        y = self.history_.to_numpy(dtype=float)
         h = len(future_index)
         if self.strategy == "mean":
             point = np.tile(y.mean(axis=0), (h, 1))
@@ -160,7 +171,7 @@ class NaiveForecaster(_ConfiguredForecaster):
         return Forecast(
             index=future_index.copy(),
             point=point,
-            target_names=tuple(self.context_.columns),
+            target_names=tuple(self.history_.columns),
         )
 
 
@@ -185,7 +196,7 @@ class GaussianAR1Forecaster(_ConfiguredForecaster):
     """Per-target OLS AR(1) with intercept and paired Gaussian innovations.
 
     Residual innovation covariance is pooled across targets with n-3 degrees
-    of freedom for n context observations. The point is the exact iterated
+    of freedom for n observations of history. The point is the exact iterated
     conditional mean under fitted parameters. Joint samples (256 by default)
     and marginal quantiles at ``levels`` come from a seeded Monte Carlo
     generator. This baseline omits parameter uncertainty and is not a reference.
@@ -204,16 +215,16 @@ class GaussianAR1Forecaster(_ConfiguredForecaster):
         """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return dict(n_samples=self.n_samples, seed=self.seed, levels=self.levels)
 
-    def fit(self, context):
+    def fit(self, history):
         """Fit each target's intercept and AR(1) coefficient, and the shared innovation covariance.
 
-        Needs at least five context rows.
+        Needs at least five rows of history.
         """
-        y = context.to_numpy(dtype=float)
+        y = history.to_numpy(dtype=float)
         if len(y) < 5:
-            raise ValueError("AR(1) requires at least five context observations")
-        self.names_ = tuple(context.columns)
-        self.index_ = context.index.copy()
+            raise ValueError("AR(1) requires at least five observations of history")
+        self.names_ = tuple(history.columns)
+        self.index_ = history.index.copy()
         self.last_ = y[-1].copy()
         coefs = [
             np.linalg.lstsq(
@@ -263,7 +274,7 @@ def _lag_windows(values, window_length, steps):
     """Pair each flattened lag window, oldest row first, with its next ``steps`` rows.
 
     Only windows whose labels are rows of ``values`` are returned, so no
-    training label lies beyond the last context observation.
+    training label lies beyond the last observation of history.
     """
     count = len(values) - window_length - steps + 1
     windows = np.asarray([values[i : i + window_length].ravel() for i in range(count)])
@@ -286,7 +297,7 @@ def _native_multioutput(estimator):
 class SklearnForecaster(_ConfiguredForecaster):
     """Reduce an sklearn regression pipeline to multi-step forecasts from lag windows.
 
-    Every reduction trains on the same flattened lag windows of the context,
+    Every reduction trains on the same flattened lag windows of the history,
     oldest row first, and fits transformers only on those training rows.
     ``recursive`` fits one-step regressors and appends each prediction to the
     window. ``direct`` fits one regressor per horizon step and target, always
@@ -341,21 +352,21 @@ class SklearnForecaster(_ConfiguredForecaster):
             steps[-1] = MultiOutputRegressor(steps[-1])
         return SkPipeline([(f"step_{i}", step) for i, step in enumerate(steps)])
 
-    def fit(self, context):
-        """Fit fresh copies of the steps on lag windows of the context.
+    def fit(self, history):
+        """Fit fresh copies of the steps on lag windows of the history.
 
-        ``recursive`` needs ``window_length + 1`` context rows; ``direct`` and
+        ``recursive`` needs ``window_length + 1`` rows of history; ``direct`` and
         ``multioutput`` need ``window_length + horizon``.
         """
-        y = context.to_numpy(dtype=float)
+        y = history.to_numpy(dtype=float)
         steps = 1 if self.reduction == "recursive" else self.horizon
         if len(y) < self.window_length + steps:
             raise ValueError(
                 f"The {self.reduction} reduction needs at least window_length + {steps} = "
-                f"{self.window_length + steps} context rows"
+                f"{self.window_length + steps} rows of history"
             )
-        self.names_, self.history_ = tuple(context.columns), y.copy()
-        self.index_ = context.index.copy()
+        self.names_, self.history_ = tuple(history.columns), y.copy()
+        self.index_ = history.index.copy()
         windows, labels = _lag_windows(y, self.window_length, steps)
         targets = range(y.shape[1])
         if self.reduction == "direct":
@@ -378,9 +389,9 @@ class SklearnForecaster(_ConfiguredForecaster):
         return self
 
     def predict(self, future_index):
-        """Return a point forecast from the last context window.
+        """Return a point forecast from the last window of history.
 
-        The labels must continue the context's grid; with a ``horizon``, there
+        The labels must continue the history's grid; with a ``horizon``, there
         can be at most that many.
         """
         _require_regular_future(self.index_, future_index)

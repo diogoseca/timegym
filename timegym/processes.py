@@ -6,7 +6,7 @@ import numpy as np
 from scipy.special import logsumexp
 from scipy.stats import poisson
 from . import joint_processes
-from ._internal import _deprecated
+from ._internal import _deprecated, _renamed_keywords
 from timegym._process_common import (
     PROCESS_KINDS,
     resolve_process,
@@ -519,7 +519,7 @@ def _markov(p, length, horizon, n_targets, seed):
 
 # %% ../source/14_controlled_processes.ipynb #controlled-fn-generate-process
 def _generate_resolved_process(
-    kind, parameters, context_length, horizon, n_targets=1, seed=0
+    kind, parameters, history_length, horizon, n_targets=1, seed=0
 ):
     entry = _PROCESS_REGISTRY[kind]
     builder = (
@@ -528,11 +528,12 @@ def _generate_resolved_process(
         else getattr(joint_processes, entry["joint"])
     )
     return _build_case(
-        builder, kind, parameters, context_length, horizon, n_targets, seed
+        builder, kind, parameters, history_length, horizon, n_targets, seed
     )
 
 
-def generate_process(kind, parameters, context_length, horizon, n_targets=1, seed=0):
+@_renamed_keywords(context_length="history_length")
+def generate_process(kind, parameters, history_length, horizon, n_targets=1, seed=0):
     """Resolve a controlled mechanism and generate a history-conditioned case.
 
     Hidden states, future shocks and schedules remain evaluator-only.
@@ -540,12 +541,12 @@ def generate_process(kind, parameters, context_length, horizon, n_targets=1, see
     """
     _deprecated(
         "generate_process",
-        "use Scenario(kind, context_length, horizon, parameters, n_targets, seed)"
+        "use Scenario(kind, history_length, horizon, parameters, n_targets, seed)"
         ".generate() instead",
     )
     resolved = resolve_process(
-        kind, parameters, context_length, horizon, n_targets, seed
+        kind, parameters, history_length, horizon, n_targets, seed
     )
     return _generate_resolved_process(
-        kind, resolved, context_length, horizon, n_targets, seed
+        kind, resolved, history_length, horizon, n_targets, seed
     )

@@ -24,18 +24,18 @@ from timegym.checks import check_shift_equivariance
 
 
 def fixture_case():
-    return Scenario("ar1", context_length=72, horizon=7, n_targets=2,
+    return Scenario("ar1", history_length=72, horizon=7, n_targets=2,
                     parameters={"phi": .65, "mean": [5., -3.],
                                 "sigma": [1., .7], "correlation": .4}).generate(seed=931)
 
 
 def test_independent_normal_equations_agree_with_two_separate_implementations():
     case = fixture_case()
-    independent = normal_equation_forecast(case.task.context, case.task.future_index, window=4, alpha=.7)
+    independent = normal_equation_forecast(case.task.history, case.task.future_index, window=4, alpha=.7)
     standardized_targets = Pipeline(LagRidgeImplementation(window=4, alpha=.7)).predict(
-        case.task.context, case.task.future_index)
+        case.task.history, case.task.future_index)
     public_adapter = Pipeline(window_length=4).add(StandardScaler()).add(Ridge(alpha=.7)).predict(
-        case.task.context, case.task.future_index)
+        case.task.history, case.task.future_index)
     np.testing.assert_allclose(independent.point, standardized_targets.point, atol=1e-10, rtol=1e-10)
     np.testing.assert_allclose(independent.point, public_adapter.point, atol=1e-10, rtol=1e-10)
     assert independent.validate(case.task) == []
@@ -44,9 +44,9 @@ def test_independent_normal_equations_agree_with_two_separate_implementations():
 @pytest.mark.parametrize("fault", FAULTS)
 def test_actual_prediction_branches_break_agreement_without_breaking_contract(fault):
     case = fixture_case()
-    reference = normal_equation_forecast(case.task.context, case.task.future_index)
-    broken = Pipeline(LagRidgeImplementation(fault)).predict(case.task.context, case.task.future_index)
-    repaired = Pipeline(LagRidgeImplementation()).predict(case.task.context, case.task.future_index)
+    reference = normal_equation_forecast(case.task.history, case.task.future_index)
+    broken = Pipeline(LagRidgeImplementation(fault)).predict(case.task.history, case.task.future_index)
+    repaired = Pipeline(LagRidgeImplementation()).predict(case.task.history, case.task.future_index)
     assert broken.validate(case.task) == repaired.validate(case.task) == []
     assert point_agreement(broken.point, reference.point, atol=1e-8, rtol=1e-7)["alarm"]
     assert not point_agreement(repaired.point, reference.point, atol=1e-8, rtol=1e-7)["alarm"]
@@ -65,9 +65,9 @@ def test_actual_prediction_branches_break_agreement_without_breaking_contract(fa
 def test_declared_shift_checks_retain_expected_blind_spots(fault, scalar_alarm, target_alarm):
     case = fixture_case()
     pipeline = Pipeline(LagRidgeImplementation(fault))
-    original = pipeline.predict(case.task.context, case.task.future_index)
-    scalar = check_shift_equivariance(pipeline, case.task.context, case.task.future_index)
-    target = target_shift_agreement(pipeline, case.task.context, case.task.future_index, original,
+    original = pipeline.predict(case.task.history, case.task.future_index)
+    scalar = check_shift_equivariance(pipeline, case.task.history, case.task.future_index)
+    target = target_shift_agreement(pipeline, case.task.history, case.task.future_index, original,
                                     shifts=[7., -11.], atol=1e-8, rtol=1e-7)
     assert (scalar.status == "FAIL") == scalar_alarm
     assert target["alarm"] == target_alarm

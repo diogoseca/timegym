@@ -59,7 +59,7 @@ afterwards, against what happened and against the answer key. So inside a
 TimeGym test there is no data leakage: a model cannot use future values, even
 by accident.
 
-In code: `Pipeline.predict(context, future_index)` fits the model on a copy of
+In code: `Pipeline.predict(history, future_index)` fits the model on a copy of
 the history and then asks for a forecast with a copy of the future dates. A
 target transform is fitted on that history alone. `Pipeline.run`
 forecasts this way, for the scorecard as for your own data.

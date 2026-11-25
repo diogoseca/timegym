@@ -12,7 +12,7 @@ from timegym.reporting import CaseResult, DiagnosticResult
 @pytest.fixture(scope="module")
 def saved_report():
     return Pipeline(GaussianAR1Forecaster(n_samples=24, seed=18)).test(
-        [Scenario("ar1", context_length=16, horizon=3)], seeds=[6]).to_dict()
+        [Scenario("ar1", history_length=16, horizon=3)], seeds=[6]).to_dict()
 
 
 def test_report_roundtrip_file_and_replay_preserve_evidence(saved_report, tmp_path):

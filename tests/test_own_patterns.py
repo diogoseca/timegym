@@ -30,20 +30,20 @@ class RainScenario:
 
     kind = "rain"
 
-    def __init__(self, swing, context_length, horizon):
-        self.swing, self.context_length, self.horizon = swing, context_length, horizon
+    def __init__(self, swing, history_length, horizon):
+        self.swing, self.history_length, self.horizon = swing, history_length, horizon
 
     def generate(self, seed):
-        steps = np.arange(self.context_length + self.horizon)
+        steps = np.arange(self.history_length + self.horizon)
         chance = 0.5 + self.swing * np.sin(2 * np.pi * steps / 12)
         rain = (np.random.default_rng(seed).random(len(steps)) < chance).astype(float)
         series = pd.DataFrame({"rain": rain}, index=pd.RangeIndex(len(steps)))
-        future = series.index[self.context_length:]
-        p = chance[self.context_length:]
+        future = series.index[self.history_length:]
+        p = chance[self.history_length:]
         answer_key = Reference(mean=p[:, None], variance=(p * (1 - p))[:, None],
                                covariance=np.diag(p * (1 - p)), index=future, target_names=("rain",))
-        task = ForecastTask(series.iloc[:self.context_length], future)
-        return Case(task, series.iloc[self.context_length:], answer_key, {"kind": "rain", "seed": seed})
+        task = ForecastTask(series.iloc[:self.history_length], future)
+        return Case(task, series.iloc[self.history_length:], answer_key, {"kind": "rain", "seed": seed})
 
 
 def simulate_rain(rng, history, horizon, noise):
@@ -55,8 +55,8 @@ def simulate_rain(rng, history, horizon, noise):
     return dict(values=rained, mean=ahead, variance=ahead * (1 - ahead))
 
 
-def built_rain(noise, context_length, horizon):
-    return RainScenario(0.45 / (1 + noise) ** 0.5, context_length, horizon)
+def built_rain(noise, history_length, horizon):
+    return RainScenario(0.45 / (1 + noise) ** 0.5, history_length, horizon)
 
 
 SEASONAL_MEAN = NaiveForecaster("seasonal_mean", period=12)
@@ -147,9 +147,9 @@ def test_own_pattern_can_reuse_a_built_in_recipe():
     gentle = Pattern("gentle_trend", "Gentle trend", "a slow straight line", "The slope.", "The noise.",
                      build=lambda s, n, h: Scenario("trend", n, h, {"slope": 0.01, "sigma": s}))
     card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[gentle], instances=2,
-                                                       context_length=60, horizon=12)
+                                                       history_length=60, horizon=12)
     assert list(card.table["pattern"]) == ["gentle_trend", "gentle_trend"]
-    assert card.cells[0].scenario.context_length == 60
+    assert card.cells[0].scenario.history_length == 60
 
 
 def test_scenario_grid_keeps_the_pattern_of_each_row():
@@ -219,8 +219,8 @@ def test_grid_refuses_two_rows_with_one_key():
 
 def test_grid_refuses_a_pattern_without_one_way_to_make_its_series():
     neither = Pattern("rain", "Rain or no rain", "", "", "")
-    with pytest.raises(TypeError, match=r"needs simulate\(rng, history, horizon, noise\) or "
-                                        r"build\(noise, context_length, horizon\), one of the two; got neither"):
+    with pytest.raises(TypeError, match=r"needs simulate\(rng, history_length, horizon, noise\) or "
+                                        r"build\(noise, history_length, horizon\), one of the two; got neither"):
         scenario_grid([neither])
     with pytest.raises(TypeError, match="one of the two; got simulate and build"):
         scenario_grid([rain_pattern(simulate=simulate_rain, build=built_rain)])
@@ -237,12 +237,12 @@ def test_grid_refuses_an_attainable_by_that_is_not_a_model():
 
 
 class _NoGenerate:
-    kind, context_length, horizon = "rain", 120, 24
+    kind, history_length, horizon = "rain", 120, 24
 
 
 def _shifted(**changes):
-    def build(noise, context_length, horizon):
-        scenario = RainScenario(0.3, context_length, horizon)
+    def build(noise, history_length, horizon):
+        scenario = RainScenario(0.3, history_length, horizon)
         for name, value in changes.items():
             setattr(scenario, name, value)
         return scenario
@@ -271,9 +271,9 @@ class _FlatAnswerKey(RainScenario):
 
 @pytest.mark.parametrize("build, error, message", [
     (lambda s, n, h: _NoGenerate(), TypeError, r"build returned a _NoGenerate without generate\(seed\)"),
-    (lambda s, n, h: object(), TypeError, "without generate\\(seed\\), kind, context_length, horizon"),
+    (lambda s, n, h: object(), TypeError, "without generate\\(seed\\), kind, history_length, horizon"),
     (_shifted(kind=""), ValueError, "kind must be a nonempty string"),
-    (_shifted(context_length=100), ValueError,
+    (_shifted(history_length=100), ValueError,
      "build was asked for 120 steps of history and 24 ahead, but its scenario has 100 and 24"),
     (lambda s, n, h: _ReturnsATable(0.3, n, h), TypeError, r"generate\(seed\) must return a Case; got a DataFrame"),
     (lambda s, n, h: _NoAnswerKey(0.3, n, h), ValueError, "its cases have no answer key"),
@@ -289,9 +289,9 @@ def test_pipeline_scorecard_refuses_before_anything_runs():
     calls = []
 
     class Counting(NaiveForecaster):
-        def fit(self, context):
+        def fit(self, history):
             calls.append(1)
-            return super().fit(context)
+            return super().fit(history)
 
     with pytest.raises(ValueError, match="no answer key"):
         Pipeline(Counting("mean")).scorecard(
@@ -302,7 +302,7 @@ def test_pipeline_scorecard_refuses_before_anything_runs():
 # --- simulate: one series and its answer key, the case built by TimeGym -------------------------
 
 def _case(pattern, noise=0.5, seed=0, history=120, horizon=24):
-    (cell,) = [cell for cell in scenario_grid([pattern], [noise], context_length=history, horizon=horizon)]
+    (cell,) = [cell for cell in scenario_grid([pattern], [noise], history_length=history, horizon=horizon)]
     return cell.scenario.generate(seed)
 
 
@@ -317,7 +317,7 @@ def test_simulate_values_are_cut_into_history_and_future():
     case = _case(rain_pattern("ramp", simulate=ramp, attainable_by=None), noise=2.0, history=30, horizon=6)
     assert (seen["history"], seen["horizon"], seen["noise"]) == (30, 6, 2.0)
     assert isinstance(seen["rng"], np.random.Generator)
-    assert case.task.context["y"].tolist() == list(range(30))
+    assert case.task.history["y"].tolist() == list(range(30))
     assert case.observed["y"].tolist() == list(range(30, 36))
     assert list(case.task.future_index) == list(range(30, 36))
     assert case.reference.mean[:, 0].tolist() == list(range(30, 36))
@@ -327,9 +327,9 @@ def test_simulate_values_are_cut_into_history_and_future():
 
 def test_simulate_yes_no_values_become_zeros_and_ones_and_the_seed_repeats_them():
     first, again, other = (_case(rain_pattern(), seed=seed) for seed in (3, 3, 4))
-    assert set(np.unique(first.task.context.to_numpy())) <= {0.0, 1.0}
-    pd.testing.assert_frame_equal(first.task.context, again.task.context)
-    assert not first.task.context.equals(other.task.context)
+    assert set(np.unique(first.task.history.to_numpy())) <= {0.0, 1.0}
+    pd.testing.assert_frame_equal(first.task.history, again.task.history)
+    assert not first.task.history.equals(other.task.history)
 
 
 def test_simulate_takes_several_series_and_a_covariance():
@@ -339,7 +339,7 @@ def test_simulate_takes_several_series_and_a_covariance():
         return dict(values=values, mean=np.zeros((horizon, 2)), variance=np.ones((horizon, 2)), covariance=covariance)
 
     case = _case(rain_pattern("pair", simulate=pair, attainable_by=None), horizon=4)
-    assert list(case.task.context.columns) == ["y0", "y1"]
+    assert list(case.task.history.columns) == ["y0", "y1"]
     assert case.reference.covariance[0, 1] == 0.5
     card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[rain_pattern("pair", simulate=pair,
                                                                               attainable_by=None)], instances=2)
@@ -380,7 +380,7 @@ def test_attainable_by_takes_a_model_and_never_fits_the_one_you_passed():
     card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[rain_pattern(attainable_by=model)], instances=2,
                                                        attainable=True)
     assert card.table["attainable"].between(85, 95).all()
-    assert not hasattr(model, "context_")  # each series fitted a copy
+    assert not hasattr(model, "history_")  # each series fitted a copy
 
 
 @pytest.mark.parametrize("given", [
@@ -396,7 +396,7 @@ def test_attainable_by_gives_the_same_score_as_a_model_or_a_function(given):
 
 def test_attainable_by_takes_a_class():
     class Half:
-        def fit(self, context):
+        def fit(self, history):
             return self
 
         def predict(self, future_index):
@@ -419,18 +419,18 @@ def test_fitted_still_makes_a_pattern_with_a_warning():
 
 def test_seasonal_mean_forecasts_the_mean_at_each_point_of_the_cycle():
     values = [1, 0, 0, 1, 1, 0, 0, 1, 0, 1]  # positions 0..9 on a cycle of 3
-    context = pd.DataFrame({"y": values}, index=pd.RangeIndex(10))
-    forecast = NaiveForecaster("seasonal_mean", period=3).fit(context).predict(pd.RangeIndex(10, 16))
+    history = pd.DataFrame({"y": values}, index=pd.RangeIndex(10))
+    forecast = NaiveForecaster("seasonal_mean", period=3).fit(history).predict(pd.RangeIndex(10, 16))
     # step 10 is at point 1 of the cycle (0, 1, 1), step 11 at point 2 (0, 0, 0), step 12 at point 0 (1, 1, 0, 1)
     assert np.allclose(forecast.point[:, 0], [2 / 3, 0, 3 / 4, 2 / 3, 0, 3 / 4])
 
 
 def test_seasonal_mean_works_on_several_series_and_needs_one_full_cycle():
-    context = pd.DataFrame({"a": np.arange(8.0), "b": np.arange(8.0) % 4}, index=pd.RangeIndex(8))
-    forecast = NaiveForecaster("seasonal_mean", period=4).fit(context).predict(pd.RangeIndex(8, 12))
+    history = pd.DataFrame({"a": np.arange(8.0), "b": np.arange(8.0) % 4}, index=pd.RangeIndex(8))
+    forecast = NaiveForecaster("seasonal_mean", period=4).fit(history).predict(pd.RangeIndex(8, 12))
     assert np.allclose(forecast.point, [[2, 0], [3, 1], [4, 2], [5, 3]])
-    with pytest.raises(ValueError, match="Insufficient context"):
-        NaiveForecaster("seasonal_mean", period=12).fit(context)
+    with pytest.raises(ValueError, match="Insufficient history"):
+        NaiveForecaster("seasonal_mean", period=12).fit(history)
     copy = NaiveForecaster("seasonal_mean", period=4).clone_unfitted()
     assert (copy.strategy, copy.period) == ("seasonal_mean", 4)
 

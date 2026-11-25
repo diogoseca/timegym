@@ -102,8 +102,8 @@ def test_clusters_resample_together_and_widen_the_interval_when_they_share_luck(
 class CycleShare:
     """The share of rainy steps so far at the same point of the 12-step cycle, with one of each added."""
 
-    def fit(self, context):
-        values = context.to_numpy()[:, 0]
+    def fit(self, history):
+        values = history.to_numpy()[:, 0]
         self.length_ = len(values)
         self.share_ = np.array([(values[k::12].sum() + 1) / (len(values[k::12]) + 2) for k in range(12)])
         return self
@@ -160,17 +160,17 @@ def test_samples_stand_in_for_a_missing_point_forecast(rain_cases):
 
 def test_cases_without_a_usable_forecast_are_left_out_and_counted(rain_cases):
     class SometimesFails(CycleShare):
-        def fit(self, context):
-            if len(context) == 168:
+        def fit(self, history):
+            if len(history) == 168:
                 raise RuntimeError("no forecast for this origin")
-            return super().fit(context)
+            return super().fit(history)
 
     cal = calibration(Pipeline(SometimesFails()).run(cases=rain_cases, keep_data=True))
     assert cal.skipped == 6 and cal.cases == 12 and cal.forecasts == 12 * 24
     assert "(6 cases left out: no usable forecast)" in str(cal)
 
     class AlwaysFails(CycleShare):
-        def fit(self, context):
+        def fit(self, history):
             raise RuntimeError("never")
 
     with pytest.raises(ValueError, match="none of the run's 18 cases has a forecast to read"):

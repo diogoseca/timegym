@@ -7,9 +7,9 @@ script.
 
 | To bring your own | Write or call | Full description |
 | --- | --- | --- |
-| Model | an object with `fit(context)` and `predict(future_index)` | [Pipeline and reports](../api/pipeline.md) |
+| Model | an object with `fit(history)` and `predict(future_index)` | [Pipeline and reports](../api/pipeline.md) |
 | scikit-learn regressor | `Pipeline(Ridge(), window_length=12)` | [Models and reductions](../api/models.md) |
-| Target transform | an object with `clone_unfitted()`, `fit_transform(context)` and `inverse_transform(forecast)` | [Data preparation](../api/data-preparation.md#reversible-target-transforms) |
+| Target transform | an object with `clone_unfitted()`, `fit_transform(history)` and `inverse_transform(forecast)` | [Data preparation](../api/data-preparation.md#reversible-target-transforms) |
 | Data | `cases_from_series(series, origins, horizon)` or `Case(...)`, then `pipeline.run(cases=...)` | [Tasks and forecasts](../api/tasks-and-forecasts.md#your-own-data) |
 | Forecasts made elsewhere | `ForecastRun.from_forecasts(cases, forecasts)` | [Pipeline and reports](../api/pipeline.md) |
 | Score | a function whose argument names say what it needs, passed with `scores=` | [Scores and diagnostics](../api/diagnostics.md#your-own-scores) |
@@ -20,7 +20,7 @@ script.
 
 ## Your model
 
-A model is any object with two methods. `fit(context)` gets the history, a
+A model is any object with two methods. `fit(history)` gets the history, a
 DataFrame with one column per series. `predict(future_index)` gets the dates to
 forecast and returns one value per date: a list, a NumPy array, a pandas Series
 or DataFrame, or a `Forecast`. TimeGym fits a fresh copy for every case, so
@@ -33,8 +33,8 @@ from timegym import Pipeline
 
 
 class RepeatLast:
-    def fit(self, context):
-        self.last = context.iloc[-1].to_numpy()   # the last row seen
+    def fit(self, history):
+        self.last = history.iloc[-1].to_numpy()   # the last row seen
         return self
 
     def predict(self, future_index):
@@ -75,8 +75,8 @@ class PerHundred:
     def clone_unfitted(self):
         return PerHundred()
 
-    def fit_transform(self, context):
-        return context / 100
+    def fit_transform(self, history):
+        return history / 100
 
     def inverse_transform(self, forecast):
         def back(values):
@@ -115,7 +115,7 @@ with no forecast.
 ```python
 from timegym import ForecastRun
 
-made_elsewhere = [np.full(7, case.task.context.iloc[-1, 0]) for case in cases]
+made_elsewhere = [np.full(7, case.task.history.iloc[-1, 0]) for case in cases]
 run = ForecastRun.from_forecasts(cases, made_elsewhere, metadata={"model": "weather service"})
 run.report.assert_passed()
 ```
@@ -125,7 +125,7 @@ run.report.assert_passed()
 Every report records the same scores. Ask for more with `scores=`: names of
 functions in `timegym.metrics`, such as `"brier"` for yes/no outcomes, or
 functions of your own. A score says what it needs by its argument names:
-`observed`, `predicted`, `quantiles`, `levels`, `samples` and `context`. Each
+`observed`, `predicted`, `quantiles`, `levels`, `samples` and `history`. Each
 value lands in `case.metrics` under its name.
 
 ```python
@@ -164,9 +164,9 @@ from timegym import GaussianAR1Forecaster
 from timegym.checks import within
 
 
-def below_record(predicted, context):
+def below_record(predicted, history):
     """Point forecast no wetter than the wettest day so far."""
-    record = context.max()
+    record = history.max()
     return bool(np.all(predicted <= record)) or f"forecasts {predicted.max():.1f} mm, above the record {record:.1f} mm"
 
 

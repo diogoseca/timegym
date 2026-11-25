@@ -99,7 +99,7 @@ def test_get_stock_warns_and_names_its_chapter():
 @pytest.mark.parametrize("n_targets", [1, 2])
 def test_generate_process_matches_scenario_generate(kind, n_targets):
     expected = Scenario(kind, 24, 4, {}, n_targets, 7).generate()
-    case = deprecated_call("use Scenario(kind, context_length, horizon, parameters, n_targets, seed).generate()",
+    case = deprecated_call("use Scenario(kind, history_length, horizon, parameters, n_targets, seed).generate()",
                            generate_process, kind, {}, 24, 4, n_targets, 7)
     assert case.manifest == expected.manifest
     pd.testing.assert_frame_equal(case.observed, expected.observed)
@@ -111,7 +111,7 @@ def test_generate_joint_process_matches_scenario_generate(kind):
     parameters = {"correlation": .5}
     expected = Scenario(kind, 12, 2, parameters, 2, 9).generate()
     resolved = resolve_process(kind, parameters, 12, 2, 2, 9)
-    case = deprecated_call("use Scenario(kind, context_length, horizon, parameters, n_targets, seed).generate()",
+    case = deprecated_call("use Scenario(kind, history_length, horizon, parameters, n_targets, seed).generate()",
                            generate_joint_process, kind, resolved, 12, 2, 2, 9)
     assert case.manifest == expected.manifest
     np.testing.assert_array_equal(case.reference.sample(8, 2), expected.reference.sample(8, 2))
@@ -147,7 +147,7 @@ def test_scorecard_function_matches_the_pipeline_method():
 def test_replay_case_function_matches_the_report_method():
     from timegym.pipeline import replay_case
 
-    report = Pipeline().run([Scenario("ar1", context_length=20, horizon=3)], seeds=[0, 1]).report
+    report = Pipeline().run([Scenario("ar1", history_length=20, horizon=3)], seeds=[0, 1]).report
     replayed = deprecated_call("use report.replay_case(case_index)", replay_case, report, 1)
     expected = report.replay_case(1)
     assert replayed.metadata["replay"] == expected.metadata["replay"]
@@ -162,7 +162,7 @@ def _pixels(figure):
 
 
 def test_pipeline_plot_tests_matches_run_plot_forecasts():
-    scenarios = [Scenario("white_noise", context_length=10, horizon=3)]
+    scenarios = [Scenario("white_noise", history_length=10, horizon=3)]
     pipeline = Pipeline()
     figure = deprecated_call(
         "use Pipeline.run(..., keep_data=True).plot_forecasts()", pipeline.plot_tests, scenarios, seeds=[4]
@@ -170,12 +170,12 @@ def test_pipeline_plot_tests_matches_run_plot_forecasts():
     expected = pipeline.run(scenarios, seeds=[4], keep_data=True).plot_forecasts()
     np.testing.assert_array_equal(_pixels(figure), _pixels(expected))
     default = deprecated_call("Pipeline.plot_tests", pipeline.plot_tests, seeds=[0])
-    suite = default_scenarios(context_length=240, horizon=80)
+    suite = default_scenarios(history_length=240, horizon=80)
     np.testing.assert_array_equal(_pixels(default), _pixels(pipeline.run(suite, seeds=[0], keep_data=True).plot_forecasts()))
 
 
 def test_pipeline_plot_errors_matches_run_plot_errors():
-    scenarios = [Scenario("white_noise", context_length=10, horizon=3)]
+    scenarios = [Scenario("white_noise", history_length=10, horizon=3)]
     pipeline = Pipeline()
     figure = deprecated_call("use Pipeline.run(...).plot_errors()", pipeline.plot_errors, scenarios, metric="mse")
     expected = pipeline.run(scenarios, instances=20).plot_errors(metric="mse")
@@ -189,3 +189,190 @@ def test_old_default_scenarios_path_is_the_same_function_and_silent(recwarn):
     assert synthetic.Case is Case and synthetic.Scenario is Scenario
     assert synthetic.default_scenarios()[0].kind == "white_noise"
     assert not [warning for warning in recwarn if warning.category is DeprecationWarning]
+
+
+# The past a forecaster sees is its history: the old name, context, still works and warns.
+
+LATER = "is deprecated and will be removed in a later release"
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def renamed_call(match, function, *args, **kwargs):
+    """Call ``function`` expecting one warning that an old name was used, raised at this file's call line."""
+    with pytest.warns(DeprecationWarning) as caught:
+        result = function(*args, **kwargs)
+    messages = [str(warning.message) for warning in caught if warning.category is DeprecationWarning]
+    assert len(messages) == 1, messages
+    assert LATER in messages[0] and match in messages[0], messages[0]
+    assert Path(caught[0].filename).resolve() == Path(__file__).resolve()
+    return result
+
+
+def test_scenario_takes_history_length_and_still_its_old_name():
+    scenario = Scenario("ar1", history_length=30, horizon=4)
+    old = renamed_call("use Scenario(history_length=...)", Scenario, "ar1", context_length=30, horizon=4)
+    assert old == scenario and old.history_length == 30
+    assert renamed_call("use Scenario.history_length", getattr, scenario, "context_length") == 30
+    renamed_call("use Scenario.history_length", setattr, old, "context_length", 40)
+    assert old.history_length == 40
+    with pytest.raises(TypeError, match="give history_length only"):
+        Scenario("ar1", history_length=30, context_length=30)
+    case = scenario.generate(seed=3)
+    assert case.manifest["history_length"] == 30 and "context_length" not in case.manifest
+
+
+def test_default_scenarios_and_scenario_grid_take_the_old_keyword():
+    from timegym.grid import scenario_grid
+
+    assert renamed_call("use default_scenarios(history_length=...)", default_scenarios, context_length=30) == \
+        default_scenarios(history_length=30)
+    cells = renamed_call("use scenario_grid(history_length=...)", scenario_grid, ["trend"], context_length=60)
+    assert [cell.scenario.history_length for cell in cells] == [60, 60]
+
+
+def test_process_functions_take_the_old_keyword():
+    expected = Scenario("composite", 24, 4, {}, 1, 7).generate()
+    with pytest.warns(DeprecationWarning) as caught:
+        case = generate_process("composite", {}, context_length=24, horizon=4, n_targets=1, seed=7)
+        resolved = resolve_process("garch", {}, context_length=12, horizon=2, n_targets=2, seed=9)
+        joint = generate_joint_process("garch", resolved, context_length=12, horizon=2, n_targets=2, seed=9)
+    messages = [str(warning.message) for warning in caught]
+    assert sum("use generate_process(history_length=...)" in message for message in messages) == 1
+    assert sum("use resolve_process(history_length=...)" in message for message in messages) == 1
+    assert sum("use generate_joint_process(history_length=...)" in message for message in messages) == 1
+    assert all(Path(warning.filename).resolve() == Path(__file__).resolve() for warning in caught)
+    assert case.manifest == expected.manifest
+    assert joint.manifest == Scenario("garch", 12, 2, {}, 2, 9).generate().manifest
+
+
+def test_forecast_task_takes_history_and_still_its_old_name():
+    from timegym import ForecastTask
+
+    history, future = pd.DataFrame({"y": [1.0, 2.0, 3.0]}), pd.RangeIndex(3, 5)
+    task = ForecastTask(history, future)
+    old = renamed_call("use ForecastTask(history=...)", ForecastTask, context=history, future_index=future)
+    pd.testing.assert_frame_equal(old.history, task.history)
+    pd.testing.assert_frame_equal(renamed_call("use ForecastTask.history", getattr, task, "context"), history)
+    renamed_call("use ForecastTask.history", setattr, task, "context", history + 1)
+    pd.testing.assert_frame_equal(task.history, history + 1)
+
+
+def test_predict_metrics_and_the_shift_check_take_the_old_keyword():
+    from timegym.checks import check_shift_equivariance
+    from timegym.metrics import mase, rmsse
+
+    case = Scenario("random_walk", history_length=30, horizon=4).generate(seed=2)
+    pipeline = Pipeline(NaiveForecaster())
+    history, future = case.task.history, case.task.future_index
+    forecast = renamed_call("use Pipeline.predict(history=...)", pipeline.predict, context=history, future_index=future)
+    np.testing.assert_array_equal(forecast.point, pipeline.predict(history, future).point)
+    observed, past = case.observed.to_numpy(), history.to_numpy()
+    for metric in (mase, rmsse):
+        old = renamed_call(f"use {metric.__name__}(history=...)", metric, observed, forecast.point, context=past)
+        assert old == metric(observed, forecast.point, history=past)
+    old = renamed_call("use check_shift_equivariance(history=...)", check_shift_equivariance, pipeline,
+                       context=history, future_index=future)
+    assert old.status == check_shift_equivariance(pipeline, history, future).status
+
+
+def test_scorecard_calls_take_the_old_keyword():
+    from timegym.scorecard import scorecard
+
+    pipeline = Pipeline(NaiveForecaster())
+    expected = pipeline.run(["trend"], instances=2, history_length=40).scorecard
+    with pytest.warns(DeprecationWarning) as caught:
+        method = pipeline.scorecard(["trend"], instances=2, context_length=40)
+        function = scorecard(pipeline, ["trend"], instances=2, context_length=40)
+    messages = [str(warning.message) for warning in caught]
+    assert sum("use Pipeline.scorecard(history_length=...)" in message for message in messages) == 1
+    assert sum("use scorecard(history_length=...)" in message for message in messages) == 1
+    for card in (method, function):
+        pd.testing.assert_frame_equal(card.table, expected.table)
+
+
+def test_naive_forecaster_keeps_its_history_and_the_old_attribute_warns():
+    history = pd.DataFrame({"y": [1.0, 2.0, 3.0]})
+    model = NaiveForecaster().fit(history)
+    pd.testing.assert_frame_equal(model.history_, history)
+    pd.testing.assert_frame_equal(renamed_call("use NaiveForecaster.history_", getattr, model, "context_"), history)
+    assert not hasattr(NaiveForecaster(), "context_")
+
+
+def test_a_score_or_check_that_asks_for_context_gets_the_history_and_warns_once_per_run():
+    def history_rows(history):
+        return float(len(history))
+
+    def context_rows(context):
+        return float(len(context))
+
+    def history_is_finite(history):
+        """History is finite"""
+        return bool(np.isfinite(history).all())
+
+    def context_is_finite(context):
+        """Context is finite"""
+        return bool(np.isfinite(context).all())
+
+    scenarios, pipeline = [Scenario("ar1", history_length=30, horizon=3)], Pipeline(NaiveForecaster())
+    with pytest.warns(DeprecationWarning) as caught:
+        run = pipeline.run(scenarios, seeds=[0, 1, 2], scores=[history_rows, context_rows],
+                           checks=[history_is_finite, context_is_finite])
+    messages = [str(warning.message) for warning in caught]
+    assert messages == [
+        f"context as an input of score 'context_rows' {LATER}: name the argument history, which gets the same values",
+        f"context as an input of check 'context_is_finite' {LATER}: name the argument history, which gets the same "
+        "values",
+    ]
+    assert all(Path(warning.filename).resolve() == Path(__file__).resolve() for warning in caught)
+    for entry in run.cases:
+        assert entry.result.metrics["context_rows"] == entry.result.metrics["history_rows"] == 30.0
+    run.assert_passed()
+
+
+def test_a_build_of_your_own_whose_scenario_says_context_length_still_works():
+    from timegym import Pattern
+    from timegym.grid import scenario_grid
+
+    class OldScenario:
+        """A scenario of a user's own, written for TimeGym 1.13.1."""
+
+        kind = "old"
+
+        def __init__(self, length, horizon):
+            self.context_length, self.horizon = length, horizon
+            self.scenario = Scenario("trend", history_length=length, horizon=horizon)
+
+        def generate(self, seed):
+            return self.scenario.generate(seed)
+
+    pattern = Pattern("old", "Old scenario", "", "a trend", "noise", build=lambda noise, length, horizon:
+                      OldScenario(length, horizon))
+    with pytest.warns(DeprecationWarning, match=f"a scenario's context_length {LATER}: name it history_length"):
+        cells = scenario_grid([pattern], [0.5], history_length=40, horizon=4)
+    with pytest.warns(DeprecationWarning, match=f"a scenario's context_length {LATER}"):
+        card = Pipeline(NaiveForecaster()).run([pattern], noise_levels=[0.5], instances=2, history_length=40,
+                                               horizon=4).scorecard
+    assert len(cells) == 1 and card.table["instances"].tolist() == [2]
+
+
+def test_a_report_saved_by_timegym_1_13_loads_replays_and_compares():
+    from timegym import TestReport
+    from timegym.diagnostics import compare_reports
+
+    old = TestReport.read(FIXTURES / "report-1.13.1.json")
+    assert old.cases[0].manifest["context_length"] == 24
+    replayed = old.replay_case(0)
+    assert replayed.metadata["replay"]["manifest_match"] is True
+    assert replayed.cases[0].manifest["history_length"] == 24
+    scenarios = [Scenario("ar1", history_length=24, horizon=3), Scenario("trend", history_length=16, horizon=2)]
+    new = Pipeline(NaiveForecaster()).run(scenarios, seeds=[0, 1]).report
+    comparison = compare_reports(new, old, metric="mse")
+    assert comparison.table["cases"].sum() > 0
+    by_length = compare_reports(new, old, metric="mse", by="history_length")
+    assert set(by_length.table["group"]) == {24, 16}
+
+
+def test_a_scorecard_baseline_saved_by_timegym_1_13_still_compares():
+    card = Pipeline(NaiveForecaster()).run(["noise", "trend"], instances=20, seed=4).scorecard
+    comparison = card.compare(FIXTURES / "scorecard-baseline-1.13.1.json")
+    assert set(comparison.table["change"]) == {"unchanged"}

@@ -26,7 +26,7 @@ from timegym.metrics import mse, mae, crps, energy_score, variogram_score
 from timegym.mutations import MUTATIONS, mutate_forecast
 from threadpoolctl import threadpool_info, threadpool_limits
 
-from .common import protect_output, sha256 as fingerprint
+from .common import protect_output, scenario_settings, sha256 as fingerprint
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -96,12 +96,12 @@ def validate_protocol(protocol):
         for dimension in ("context_length", "horizon", "n_targets"):
             if dimension not in protocol[name]:
                 raise ValueError(f"{name}.{dimension} must be explicit")
-    Scenario(**protocol["scenario"])
+    Scenario(**scenario_settings(protocol["scenario"]))
     spec = protocol["inverse_transform_synthetic"]
-    Scenario(**{key: value for key, value in spec.items() if key != "shift"})
+    Scenario(**scenario_settings({key: value for key, value in spec.items() if key != "shift"}))
     for kind in protocol["capability_scenarios"]:
         for sigma in protocol["capability_sigma"]:
-            Scenario(kind, parameters={"sigma": sigma}, **{key: task[key] for key in ("context_length", "horizon", "n_targets")})
+            Scenario(kind, parameters={"sigma": sigma}, **scenario_settings({key: task[key] for key in ("context_length", "horizon", "n_targets")}))
     strengths = protocol["dependence_strengths"]
     if not strengths or any(not 0 <= strength <= 1 for strength in strengths):
         raise ValueError("dependence_strengths must lie in [0, 1]")
@@ -126,7 +126,7 @@ def provenance(protocol, fingerprints=None):
 
 
 def run(protocol):
-    scenario = Scenario(**protocol["scenario"])
+    scenario = Scenario(**scenario_settings(protocol["scenario"]))
     seeds = range(*protocol["evaluation_seeds"])
     development = range(*protocol["development_seeds"])
     sample_count = protocol["n_samples"]
@@ -206,12 +206,12 @@ def capability_study(protocol):
     for kind in protocol["capability_scenarios"]:
         for sigma in protocol["capability_sigma"]:
             scenario = Scenario(kind, parameters={"sigma": sigma},
-                                **{key: task[key] for key in ("context_length", "horizon", "n_targets")})
+                                **scenario_settings({key: task[key] for key in ("context_length", "horizon", "n_targets")}))
             for name in protocol["capability_models"]:
                 pipeline = Pipeline(constructors[name]())
                 for seed in range(*protocol["capability_seeds"]):
                     case = scenario.generate(seed=seed)
-                    forecast = pipeline.predict(case.task.context, case.task.future_index)
+                    forecast = pipeline.predict(case.task.history, case.task.future_index)
                     rows.append({"scenario": kind, "sigma": sigma, "model": name, "seed": seed,
                                  "mean_reference_mse": mse(case.reference.mean, forecast.point)})
     return rows
@@ -222,11 +222,11 @@ def inverse_repair_study(protocol):
     repaired = Pipeline(StandardizedMeanForecaster(inverse=True))
     rows = []
     spec = protocol["inverse_transform_synthetic"]
-    scenario = Scenario(**{key: value for key, value in spec.items() if key != "shift"})
+    scenario = Scenario(**scenario_settings({key: value for key, value in spec.items() if key != "shift"}))
     for seed in range(*protocol["evaluation_seeds"]):
         case = scenario.generate(seed=seed)
-        checks = [check_shift_equivariance(p, case.task.context, case.task.future_index, shift=spec["shift"]) for p in (defective, repaired)]
-        scores = [mae(case.observed.to_numpy(), p.predict(case.task.context, case.task.future_index).point) for p in (defective, repaired)]
+        checks = [check_shift_equivariance(p, case.task.history, case.task.future_index, shift=spec["shift"]) for p in (defective, repaired)]
+        scores = [mae(case.observed.to_numpy(), p.predict(case.task.history, case.task.future_index).point) for p in (defective, repaired)]
         rows.append({"seed": seed, "faulty_status": checks[0].status, "repaired_status": checks[1].status,
                      "faulty_mae": scores[0], "repaired_mae": scores[1]})
     data = pd.read_csv(ROOT / "experiments/data/AirPassengers.csv")

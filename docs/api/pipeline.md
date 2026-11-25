@@ -10,13 +10,13 @@ classes/factories or the `clone_unfitted()` protocol ensure fresh fits. Optional
 sklearn steps can be added with `.add(estimator, **parameters)`; `reduction`
 selects one of `REDUCTIONS` for them, with the case horizon as the reduction
 horizon, and does not change native models. `target_transform` is an instance
-implementing `clone_unfitted()`, `fit_transform(context)` and
-`inverse_transform(forecast)`. A fresh copy is fitted on each context before the
+implementing `clone_unfitted()`, `fit_transform(history)` and
+`inverse_transform(forecast)`. A fresh copy is fitted on each history before the
 model and inverts the forecast the model returns, so evaluation sees the
 original scale.
 
-`.predict(context, future_index)` returns the model's Forecast for inspection.
-`context` may be a DataFrame, a Series, or a list or NumPy array (labelled 0, 1,
+`.predict(history, future_index)` returns the model's Forecast for inspection.
+`history` may be a DataFrame, a Series, or a list or NumPy array (labelled 0, 1,
 2, ...), and `future_index` any sequence of the labels to forecast, such as
 `range(120, 132)` after 120 values.
 A model's `predict(future_index)` returns one value per requested step: a list
@@ -27,7 +27,7 @@ taken as the requested steps in order. A DataFrame keeps its own index and
 column names, so wrong dates or a wrong series order still fail their checks.
 
 `.run(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None,
-noise_levels=None, context_length=None, horizon=None, keep_data=False,
+noise_levels=None, history_length=None, horizon=None, keep_data=False,
 title=None, attainable=False, interval_level=None, scores=None, checks=None,
 check_dependence=False, n_calibration=99, alpha=0.05,
 dependence_seed_offset=100_000)` forecasts every case with a fresh model,
@@ -48,7 +48,7 @@ What to forecast goes first. With nothing, `run()` draws the scorecard's ten
 kinds of series at low and high noise, 120 steps of history and 24 to
 forecast, 10 times each: 200 series. Keys of `PATTERNS` such as
 `["trend", "seasonal"]`, and `Pattern` objects of your own beside them, give
-those rows of the scorecard; `noise_levels`, `context_length` and `horizon`
+those rows of the scorecard; `noise_levels`, `history_length` and `horizon`
 set its columns and lengths. `Scenario` objects, or anything with
 `generate(seed)` and `kind`, are drawn as they were built, one row each.
 Kinds of series and scenarios you built cannot be mixed in one run.
@@ -111,7 +111,7 @@ from [Your own data](tasks-and-forecasts.md#your-own-data):
 import numpy as np
 from timegym import ForecastRun
 
-recorded = [np.full(7, case.task.context.iloc[-1, 0]) for case in cases]  # made elsewhere
+recorded = [np.full(7, case.task.history.iloc[-1, 0]) for case in cases]  # made elsewhere
 run = ForecastRun.from_forecasts(cases, recorded, metadata={"model": "repeat last"})
 run.report.assert_passed()
 ```
@@ -121,7 +121,7 @@ a run made with `keep_data=True`. It draws
 scenario/target rows and seed columns in the scorecard's look: gray dots are
 observations, the black line is the answer key, blue crosses are the forecast,
 and one key above the panels names them. `history` is how many past steps each
-panel shows: four times the horizon by default, `"all"` for the whole context.
+panel shows: four times the horizon by default, `"all"` for the whole history.
 Optional shading shows marginal intervals. Above each panel, the case's 0-100
 score sits in its colored band (as on the scorecard), next to its error against
 the answer key and its error against what happened.

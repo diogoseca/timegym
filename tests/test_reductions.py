@@ -29,7 +29,7 @@ def fitted_parameters(model):
     return arrays
 
 
-def test_lag_windows_label_only_observed_context_rows():
+def test_lag_windows_label_only_observed_history_rows():
     values = np.arange(20.).reshape(10, 2)
     windows, labels = _lag_windows(values, 3, 4)
     assert windows.shape == (4, 6) and labels.shape == (4, 4, 2)
@@ -41,28 +41,28 @@ def test_lag_windows_label_only_observed_context_rows():
 
 @pytest.mark.parametrize("reduction", REDUCTIONS)
 def test_every_reduction_recovers_a_noiseless_linear_trend(reduction):
-    case = Scenario("trend", context_length=60, horizon=9, parameters={"sigma": 0, "slope": 2}).generate()
+    case = Scenario("trend", history_length=60, horizon=9, parameters={"sigma": 0, "slope": 2}).generate()
     pipeline = Pipeline(window_length=4, reduction=reduction).add(StandardScaler()).add(LinearRegression())
-    forecast = pipeline.predict(case.task.context, case.task.future_index)
+    forecast = pipeline.predict(case.task.history, case.task.future_index)
     np.testing.assert_allclose(forecast.point, case.reference.mean, atol=1e-7)
     assert forecast.validate(case.task) == []
 
 
 def test_direct_and_multioutput_fit_the_expected_regressors():
-    case = Scenario("ar1", context_length=50, horizon=5, n_targets=2).generate(seed=1)
+    case = Scenario("ar1", history_length=50, horizon=5, n_targets=2).generate(seed=1)
     direct = SklearnForecaster([StandardScaler(), Ridge()], window_length=3, reduction="direct", horizon=5)
-    direct.fit(case.task.context)
+    direct.fit(case.task.history)
     assert len(direct.models_) == 2 and all(len(models) == 5 for models in direct.models_)
     assert direct.models_[0][0] is not direct.models_[0][1]
     assert direct.models_[1][4].named_steps["step_0"].n_samples_seen_ == 50 - 3 - 5 + 1
 
     native = SklearnForecaster([StandardScaler(), Ridge()], window_length=3, reduction="multioutput", horizon=5)
-    native.fit(case.task.context)
+    native.fit(case.task.history)
     assert len(native.models_) == 2 and type(native.models_[0].named_steps["step_1"]) is Ridge
     assert native.models_[0].named_steps["step_1"].coef_.shape == (5, 6)
 
     wrapped = SklearnForecaster([SVR()], window_length=3, reduction="multioutput", horizon=5)
-    wrapped.fit(case.task.context)
+    wrapped.fit(case.task.history)
     regressor = wrapped.models_[1].named_steps["step_0"]
     assert type(regressor) is MultiOutputRegressor and len(regressor.estimators_) == 5
     for model in (direct, native, wrapped):
@@ -70,17 +70,17 @@ def test_direct_and_multioutput_fit_the_expected_regressors():
 
 
 def test_linear_least_squares_gives_identical_direct_and_multioutput_forecasts():
-    case = Scenario("seasonal", context_length=120, horizon=12,
+    case = Scenario("seasonal", history_length=120, horizon=12,
                     parameters={"amplitude": 2., "period": 12., "sigma": .5}).generate(seed=3)
     forecasts = {reduction: Pipeline(window_length=6, reduction=reduction).add(StandardScaler()).add(Ridge(alpha=2.))
-                 .predict(case.task.context, case.task.future_index) for reduction in REDUCTIONS}
+                 .predict(case.task.history, case.task.future_index) for reduction in REDUCTIONS}
     np.testing.assert_allclose(forecasts["direct"].point, forecasts["multioutput"].point, rtol=1e-9, atol=1e-9)
     assert not np.allclose(forecasts["direct"].point, forecasts["recursive"].point)
 
 
 def test_one_step_multioutput_needs_no_wrapper():
-    context = pd.DataFrame({"y": np.sin(np.arange(40.))})
-    model = SklearnForecaster([SVR()], window_length=5, reduction="multioutput", horizon=1).fit(context)
+    history = pd.DataFrame({"y": np.sin(np.arange(40.))})
+    model = SklearnForecaster([SVR()], window_length=5, reduction="multioutput", horizon=1).fit(history)
     assert type(model.models_[0].named_steps["step_0"]) is SVR
     assert model.predict(pd.RangeIndex(40, 41)).point.shape == (1, 1)
 
@@ -90,12 +90,12 @@ def test_training_never_reads_evaluation_futures(reduction, monkeypatch):
     fitted = []
     original_fit = SklearnForecaster.fit
 
-    def recording_fit(self, context):
+    def recording_fit(self, history):
         fitted.append(self)
-        return original_fit(self, context)
+        return original_fit(self, history)
 
     monkeypatch.setattr(SklearnForecaster, "fit", recording_fit)
-    scenario = Scenario("ar1", context_length=40, horizon=6, n_targets=2)
+    scenario = Scenario("ar1", history_length=40, horizon=6, n_targets=2)
     pipeline = Pipeline(window_length=5, reduction=reduction).add(StandardScaler()).add(Ridge())
     clean = pipeline.run([scenario], seeds=[11], keep_data=True)
 
@@ -119,7 +119,7 @@ def test_training_never_reads_evaluation_futures(reduction, monkeypatch):
 @pytest.mark.parametrize("reduction", REDUCTIONS)
 def test_reduction_is_recorded_in_the_run_metadata_and_configuration(reduction):
     pipeline = Pipeline(window_length=4, reduction=reduction).add(Ridge())
-    run = pipeline.run([Scenario("ar1", context_length=30, horizon=3)], seeds=[0], keep_data=True)
+    run = pipeline.run([Scenario("ar1", history_length=30, horizon=3)], seeds=[0], keep_data=True)
     config = pipeline.to_config()
     assert run.metadata["reduction"] == config["reduction"] == reduction
     assert run.metadata["pipeline_config"]["reduction"] == reduction
@@ -129,13 +129,13 @@ def test_reduction_is_recorded_in_the_run_metadata_and_configuration(reduction):
 
 @pytest.mark.parametrize("reduction", REDUCTIONS)
 def test_native_models_ignore_the_reduction_and_still_replay(reduction):
-    case = Scenario("trend", context_length=20, horizon=4).generate(seed=5)
-    baseline = Pipeline(NaiveForecaster("drift")).predict(case.task.context, case.task.future_index)
+    case = Scenario("trend", history_length=20, horizon=4).generate(seed=5)
+    baseline = Pipeline(NaiveForecaster("drift")).predict(case.task.history, case.task.future_index)
     pipeline = Pipeline(NaiveForecaster("drift"), reduction=reduction)
-    np.testing.assert_array_equal(pipeline.predict(case.task.context, case.task.future_index).point, baseline.point)
+    np.testing.assert_array_equal(pipeline.predict(case.task.history, case.task.future_index).point, baseline.point)
     config = json.loads(json.dumps(pipeline.to_config()))
     assert config["replayable"] is True and Pipeline.from_config(config).reduction == reduction
-    report = pipeline.test([Scenario("trend", context_length=20, horizon=4)], seeds=[5])
+    report = pipeline.test([Scenario("trend", history_length=20, horizon=4)], seeds=[5])
     assert TestReport.from_json(report.to_json()).replay_case().metadata["replay"]["reproduced"]
 
 
@@ -147,10 +147,10 @@ def test_reduction_configuration_errors_are_precise():
             SklearnForecaster([Ridge()], reduction=reduction)
     with pytest.raises(ValueError, match="horizon"):
         SklearnForecaster([Ridge()], reduction="direct", horizon=0)
-    context = pd.DataFrame({"y": np.arange(10.)})
-    with pytest.raises(ValueError, match="direct reduction needs at least window_length \\+ 4 = 10 context rows"):
-        SklearnForecaster([Ridge()], window_length=6, reduction="direct", horizon=4).fit(context.iloc[:9])
-    model = SklearnForecaster([Ridge()], window_length=6, reduction="multioutput", horizon=4).fit(context)
+    history = pd.DataFrame({"y": np.arange(10.)})
+    with pytest.raises(ValueError, match="direct reduction needs at least window_length \\+ 4 = 10 rows of history"):
+        SklearnForecaster([Ridge()], window_length=6, reduction="direct", horizon=4).fit(history.iloc[:9])
+    model = SklearnForecaster([Ridge()], window_length=6, reduction="multioutput", horizon=4).fit(history)
     assert model.predict(pd.RangeIndex(10, 12)).point.shape == (2, 1)
     with pytest.raises(ValueError, match="5 labels; this model forecasts at most 4"):
         model.predict(pd.RangeIndex(10, 15))

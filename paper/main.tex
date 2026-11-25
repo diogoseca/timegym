@@ -200,9 +200,9 @@ separate question of validation. Everything described here is new work.
 
 \subsection{What the forecaster sees and what it is asked for}
 
-Let $Y_t\in\R^D$ denote the target vector and let the observed context be
+Let $Y_t\in\R^D$ denote the target vector and let the observed history be
 $y_{0:L-1}$. The task requests $H$ future steps,
-$Y_{L:L+H-1}$. The forecaster sees this context and
+$Y_{L:L+H-1}$. The forecaster sees this history and
 the forecast indices. In the implemented generators, the evaluator also
 knows the fixed DGP parameters $\theta$. Its reference distribution is
 \begin{equation}
@@ -308,7 +308,7 @@ $c=0$ does not prevent an individual path from wandering upward or
 downward. A trend and a random walk with drift therefore differ in whether
 shocks persist and how uncertainty grows, not in a visible slope.
 
-The AR(1) context starts from the stationary law
+The AR(1) history starts from the stationary law
 $Y_0\sim\mathcal{N}(\mu,\Omega/(1-\phi^2))$; the random walk starts at
 a specified deterministic intercept. For white noise, trend, and
 seasonality, future covariance blocks are
@@ -338,7 +338,7 @@ sees $X_t=Y_t+\eta_t$ with independent
 $\eta_t\sim\mathcal{N}(0,\tau^2)$, so the current state of the process is
 hidden; the innovation scale is fixed and the noise level sets $\tau$.
 These are linear Gaussian state-space models, so the answer key stays
-exact: a Kalman filter over the context gives the conditional mean and
+exact: a Kalman filter over the history gives the conditional mean and
 covariance of the future observations~\cite{kalman1960new}, and $\tau=0$
 recovers the formulas above. The two remaining scorecard rows, a trend
 with a seasonal cycle and a sudden level shift, use the composite scenario
@@ -667,7 +667,7 @@ precision (Section~\ref{sec:third-study}).
 
 Study 1 uses 64 evaluation seeds (10000--10063), disjoint from development
 seeds 0--15. Its fault and dependence experiments use one bivariate AR(1)
-task with a context of 120 observations, $H=8$, $D=2$, and $S=128$
+task with a history of 120 observations, $H=8$, $D=2$, and $S=128$
 samples; the AR(1) coefficient is 0.8 and the innovation correlation is
 0.7. Each corruption is applied to the exact reference forecast, one at a
 time, and the clean, faulty, and repaired variants use the same generated
@@ -723,7 +723,7 @@ wrong calculation~\cite{tambon2024silent}. In a study of 1,000 bugs in four
 deep-learning frameworks, 24.3\% showed incorrect functionality without a
 crash, a symptom the authors tie to the test oracle
 problem~\cite{chen2023toward}. The repair
-is the clean implementation fitted to the identical context.
+is the clean implementation fitted to the identical history.
 
 Six fixed conditions cover white noise with unequal target locations,
 positive and negative AR(1), opposing trends, seasonality, and random
@@ -769,7 +769,7 @@ loss on every noisy future.
 
 \paragraph{What each check can see.} A shift relation detects exactly the
 faults that break the equivariance it states. This pipeline refits its lag
-and target scalers on the shifted context, so reversing the lag window or
+and target scalers on the shifted history, so reversing the lag window or
 freezing the recursive state leaves the forecast translation equivariant:
 neither shift check can detect them, whatever the data. Swapping the target
 columns commutes with a common shift but not with unequal shifts, and
@@ -848,7 +848,7 @@ sources, reported separately: every mutant that Cosmic Ray
 catalogue of 16 time-series mutants written for the study (a lag window
 off by one or including the target, reversed lag order, a recursion state
 that is not updated, a horizon index off by one, swapped columns, a scaler
-reused across contexts, an inverse transform skipped or applied twice, a
+reused across histories, an inverse transform skipped or applied twice, a
 seasonal period off by one, and training rows dropped from the wrong end);
 and the four Study 2 bugs rewritten on this subject. All sources were
 generated, and their fingerprints committed, before any was executed. A

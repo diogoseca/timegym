@@ -22,7 +22,7 @@ card.save("scorecard.png") # or .svg / .pdf
 `PATTERNS` is ten kinds of series, in plain words. Each `Pattern` carries a
 `title`, an `aka` (the textbook name), and two sentences: `predictable`, what a
 forecaster that knew the process could get right, and `unpredictable`, what no
-forecaster can get right by design. `build(noise, context_length, horizon)`
+forecaster can get right by design. `build(noise, history_length, horizon)`
 returns the row's `Scenario`, and `attainable_by` holds a model of the
 generator's own family (see [What a fitted model could score](#what-a-fitted-model-could-score)).
 
@@ -50,7 +50,7 @@ The noise is the standard deviation of an error added to each observation. For
 the AR and random-walk rows it is measurement noise on top of the hidden
 process, so the answer key comes from an exact Kalman filter.
 
-`scenario_grid(patterns=None, noise_levels=2, *, context_length=120,
+`scenario_grid(patterns=None, noise_levels=2, *, history_length=120,
 horizon=24)` returns one `GridCell(pattern, title, noise, noise_sd, scenario,
 definition)` per pattern and noise level, rows first. Each `scenario` is an
 ordinary `Scenario` that can also be passed to `Pipeline.run` or
@@ -197,7 +197,7 @@ table.assign(lost_on_top=table["attainable"] - table["score"])[
 ```
 
 Each `Pattern` carries the model as `attainable_by`, copied fresh for each
-series. It is an ordinary model with `fit(context)` and `predict(future_index)`,
+series. It is an ordinary model with `fit(history)` and `predict(future_index)`,
 so it can be scored like any other:
 
 ```python
@@ -283,9 +283,9 @@ yours. The function returns a dict:
 TimeGym cuts the history from the future and builds the case and its answer
 key. Before anything runs, the grid draws one series per cell and says what is
 missing or has the wrong length. A kind of series that needs more, such as
-dates or inputs known in advance, can give `build(noise, context_length,
+dates or inputs known in advance, can give `build(noise, history_length,
 horizon)` instead, returning an object with `generate(seed)`, `kind`,
-`context_length` and `horizon`, as `Scenario` has, whose cases carry an answer
+`history_length` and `horizon`, as `Scenario` has, whose cases carry an answer
 key. A Pattern takes `simulate` or `build`, not both.
 
 `noise` is there to use or ignore. The rain row turns higher noise into a

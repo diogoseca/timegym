@@ -77,7 +77,7 @@ def test_static_loader_gaps_still_apply():
 
 
 def _definition(obj):
-    tree = ast.parse(Path(inspect.getsourcefile(obj)).read_text(encoding="utf-8"))
+    tree = ast.parse(Path(inspect.getsourcefile(inspect.unwrap(obj))).read_text(encoding="utf-8"))
     kinds = (ast.ClassDef, ast.FunctionDef)
     matches = [node for node in tree.body if isinstance(node, kinds) and node.name == obj.__qualname__]
     assert len(matches) == 1, obj.__qualname__

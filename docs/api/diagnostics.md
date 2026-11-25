@@ -31,20 +31,20 @@ distribution, so it has to match what the point denotes
 | --- | --- | --- | --- |
 | `mse(observed, predicted)` | Mean squared error over all coordinates | The mean: squared error is minimized in expectation by the predictive mean | With a point output |
 | `mae(observed, predicted)` | Mean absolute error over all coordinates | The median: absolute error is minimized in expectation by the predictive median | With a point output |
-| `mase(observed, predicted, context, seasonality=1)` | Absolute error divided, per target, by the mean absolute `seasonality`-step change of that target in the context (time is axis zero), then averaged | The median, as for `mae`, because each target's scale is fixed by the context | With a point output, always with `seasonality=1` |
+| `mase(observed, predicted, history, seasonality=1)` | Absolute error divided, per target, by the mean absolute `seasonality`-step change of that target in the history (time is axis zero), then averaged | The median, as for `mae`, because each target's scale is fixed by the history | With a point output, always with `seasonality=1` |
 | `rmse(observed, predicted)` | Square root of `mse`, in the data's units | The mean, as for `mse` | When asked for with `scores=` |
-| `rmsse(observed, predicted, context, seasonality=1)` | Each target's RMSE divided by the root mean squared `seasonality`-step change of that target in the context, then averaged over targets: the scaled error of the M5 competition ([Makridakis, Spiliotis and Assimakopoulos 2022](https://doi.org/10.1016/j.ijforecast.2021.11.013)) | The mean, as for `mse` | When asked for with `scores=` |
+| `rmsse(observed, predicted, history, seasonality=1)` | Each target's RMSE divided by the root mean squared `seasonality`-step change of that target in the history, then averaged over targets: the scaled error of the M5 competition ([Makridakis, Spiliotis and Assimakopoulos 2022](https://doi.org/10.1016/j.ijforecast.2021.11.013)) | The mean, as for `mse` | When asked for with `scores=` |
 | `mean_reference_mse(reference_mean, predicted)` | Mean squared distance from a supplied conditional mean | The conditional mean itself: with a valid conditional mean it is the conditional excess squared-error risk, not realized loss against a future observation | With a point output and a case reference |
 
 `mase` and `rmsse` raise `UndefinedMetricError` when a target's naive-error
-scale is zero, as for a constant target, or when the context is no longer than
+scale is zero, as for a constant target, or when the history is no longer than
 `seasonality`; they add no epsilon to the denominator and do not drop constant
 targets. MAPE and sMAPE are left out on purpose: they are undefined when an
 actual value is zero and favour forecasts that are too low
 ([Hyndman and Koehler 2006](https://doi.org/10.1016/j.ijforecast.2006.03.001));
 `mase` and `rmsse` meet the same need.
 `evaluate_forecast` always calls `mase` with `seasonality=1`, so the evaluator
-scales each target by its lag-1 naive in-context MAE whatever the scenario's
+scales each target by its lag-1 naive MAE over the history whatever the scenario's
 seasonal period; `point_accuracy` evidence records `mase_seasonality: 1`.
 `mean_reference_mse` is not a reference for other losses.
 
@@ -130,15 +130,16 @@ scores = {"log_loss": partial(log_loss, eps=1e-6), "close": within_10_percent}  
 ```
 
 A score says what it needs by its argument names: `observed` (what happened),
-`predicted` (the point forecast), `quantiles`, `levels`, `samples` and `context`
-(the history), each a NumPy array shaped as above, time on the first axis of
-`observed` and `context`. An argument with a default is passed only when the
-forecast has it; any other argument must have a default, or the request is
-refused before anything runs. A request is also refused when its name is
-already recorded in every report, such as `"mse"`, or asked for twice: record a
-score again with other settings under a new name, such as
-`{"mase_12": partial(mase, seasonality=12)}`. A function needs a name of its
-own, so give a `lambda` or a `partial` one with a dictionary.
+`predicted` (the point forecast), `quantiles`, `levels`, `samples` and `history`
+(the past the model saw), each a NumPy array shaped as above, time on the first
+axis of `observed` and `history`. An argument with a default is passed only when
+the forecast has it; any other argument must have a default, or the request is
+refused before anything runs. An argument named `context`, the old name of
+`history`, still gets the history and warns once per run. A request is also
+refused when its name is already recorded in every report, such as `"mse"`, or
+asked for twice: record a score again with other settings under a new name,
+such as `{"mase_12": partial(mase, seasonality=12)}`. A function needs a name
+of its own, so give a `lambda` or a `partial` one with a dictionary.
 
 For each case, a score whose required input the forecast lacks is
 `UNSUPPORTED`, one that raises `UndefinedMetricError` is `INCONCLUSIVE`, and one
@@ -189,7 +190,7 @@ values and the most extreme one, such as `quantiles: 7 values below 0 (lowest
 
 A check of your own is a function that asks for its inputs by argument name,
 as a score does (`observed`, `predicted`, `quantiles`, `levels`, `samples`,
-`context`), and may also ask for `target_names`, the names of the series in
+`history`), and may also ask for `target_names`, the names of the series in
 order. It returns `True` when the forecast passes, or a message saying what is
 wrong. Its title, shown in `report.checks` and in the error of
 `assert_passed`, is the first line of its docstring without a final full stop,
@@ -273,7 +274,7 @@ result = rank_alarm(observed, calibration, alpha=0.05)
 result.p_value, result.status, result.threshold
 ```
 
-`timegym.checks.check_shift_equivariance(pipeline, context, future_index, *,
+`timegym.checks.check_shift_equivariance(pipeline, history, future_index, *,
 shift=10.0, atol=1e-8, rtol=1e-7)` tests
 f(y+c)=f(y)+c. Use it only when this property is part of the model's intended
 contract; many legitimate models are not location equivariant.
@@ -571,8 +572,8 @@ for station in range(20):
 class ShareAtThisPointOfTheCycle:
     """The share of rainy steps so far at this point of the cycle, after adding one rainy and one dry step."""
 
-    def fit(self, context):
-        values = context.to_numpy()[:, 0]
+    def fit(self, history):
+        values = history.to_numpy()[:, 0]
         self.length_ = len(values)
         self.share_ = np.array([(values[phase::12].sum() + 1) / (len(values[phase::12]) + 2)
                                 for phase in range(12)])

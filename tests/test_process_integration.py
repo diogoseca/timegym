@@ -23,7 +23,7 @@ PROCESS_CASES = [
 
 @pytest.mark.parametrize("kind,parameters", PROCESS_CASES)
 def test_public_pipeline_report_round_trip_and_replay_each_new_family(kind, parameters):
-    scenario = Scenario(kind, context_length=24, horizon=3, parameters=parameters)
+    scenario = Scenario(kind, history_length=24, horizon=3, parameters=parameters)
     pipeline = Pipeline()
     run = pipeline.run([scenario], seeds=[3, 5], keep_data=True)
     assert len(run.cases) == 2
@@ -50,7 +50,7 @@ def test_public_pipeline_report_round_trip_and_replay_each_new_family(kind, para
 
 
 def jump_regimes():
-    return Scenario("markov_switching", context_length=24, horizon=3, parameters={
+    return Scenario("markov_switching", history_length=24, horizon=3, parameters={
         "dt": 0.1, "regime_jump_rate": [0.2, 1.0],
         "regime_jump_mean": [-0.02, -0.1], "regime_jump_sigma": [0.02, 0.1],
     })
@@ -87,7 +87,7 @@ def test_composed_regime_jump_report_preserves_approximation_and_quantile_settin
 
 
 def test_exact_merton_reference_exposes_a_calibrated_covariance_diagnostic():
-    generated = Scenario("merton_jump_diffusion", context_length=24, horizon=3,
+    generated = Scenario("merton_jump_diffusion", history_length=24, horizon=3,
                          parameters={"output": "log_return", "dt": 0.1}).generate(seed=3)
     forecast = generated.reference.forecast(n_samples=64, seed=93)
     result = evaluate_forecast(generated, forecast, check_dependence=True,
@@ -113,7 +113,7 @@ def test_exact_merton_reference_exposes_a_calibrated_covariance_diagnostic():
     ("markov_switching", "price", "price"),
 ])
 def test_public_scenario_labels_carry_output_units(kind, output, unit):
-    specification = Scenario(kind, context_length=12, horizon=2, parameters={"output": output})
+    specification = Scenario(kind, history_length=12, horizon=2, parameters={"output": output})
     generated = specification.generate(seed=3)
     expected = scenario_label(kind, generated.manifest["parameters"])
     assert specification.display_name == expected
@@ -134,7 +134,7 @@ class CoreOnly(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, CoreOnly())
 from timegym import Pipeline, Scenario
 for kind in ("composite", "merton_jump_diffusion", "garch", "markov_switching"):
-    run = Pipeline().run([Scenario(kind, context_length=12, horizon=2)], seeds=[3])
+    run = Pipeline().run([Scenario(kind, history_length=12, horizon=2)], seeds=[3])
     assert len(run.cases) == 1
     assert "mse" in run.cases[0].result.metrics
     assert not any(d.status == "ERROR" for d in run.cases[0].result.diagnostics)
@@ -153,7 +153,7 @@ def test_plot_legend_distinguishes_approximate_filtered_mean_from_exact_referenc
 
     run = Pipeline().run([
         jump_regimes(),
-        Scenario("merton_jump_diffusion", context_length=24, horizon=3),
+        Scenario("merton_jump_diffusion", history_length=24, horizon=3),
     ], seeds=[3], keep_data=True)
     figure = run.plot_forecasts()
     try:

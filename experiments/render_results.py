@@ -24,7 +24,7 @@ from timegym.statistics import paired_t_interval
 from timegym import Scenario
 from timegym.grid import NOISE_LOW
 from timegym.scorecard import verdict
-from .common import interval_cell, rate_cell, require_conclusion, scientific_tex, sha256
+from .common import interval_cell, rate_cell, require_conclusion, scenario_settings, scientific_tex, sha256
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -101,7 +101,7 @@ def capability_unavoidable(protocol):
     for kind in protocol["capability_scenarios"]:
         for sigma in protocol["capability_sigma"]:
             scenario = Scenario(kind, parameters={"sigma": sigma},
-                                **{key: task[key] for key in ("context_length", "horizon", "n_targets")})
+                                **scenario_settings({key: task[key] for key in ("context_length", "horizon", "n_targets")}))
             variances = [np.asarray(scenario.generate(seed=seed).reference.variance, dtype=float)
                          for seed in (first, first + 1)]
             # The table uses one value per scenario and scale, which is valid only
@@ -327,7 +327,7 @@ def render_tex(results, manifest, summary, followup=None):
     lines.extend(capability_section(summary, protocol, followup))
     lines.extend([
         r"\subsection{Study 1: an inverse-scaling repair}",
-        "A separate predictor standardizes its training context and forecasts the "
+        "A separate predictor standardizes its training history and forecasts the "
         "mean in standardized units. The fault omits the inverse transform; the "
         "repair applies the training mean and scale. The historical-mean predictor "
         "is shift equivariant, so this particular metamorphic relation is a valid "

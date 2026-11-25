@@ -15,11 +15,11 @@ def test_point_scores_match_manual_values():
 
 
 def test_mase_scales_each_target_before_averaging():
-    context = [[0, 0], [2, 1], [4, 2]]
-    assert mase([[1, 2], [3, 4]], np.zeros((2, 2)), context) == 2.0
+    history = [[0, 0], [2, 1], [4, 2]]
+    assert mase([[1, 2], [3, 4]], np.zeros((2, 2)), history) == 2.0
     with pytest.raises(UndefinedMetricError, match="zero"):
         mase([[1, 2]], [[0, 0]], [[0, 0], [1, 0]])
-    with pytest.raises(UndefinedMetricError, match="more context"):
+    with pytest.raises(UndefinedMetricError, match="more observations of history"):
         mase([[1]], [[0]], [[0]], seasonality=1)
 
 
@@ -107,7 +107,7 @@ def test_ensemble_scores_reject_complex_values_without_lossy_conversion(function
             function([[0, 1]], np.ones((2, 1, 2), dtype=complex))
 
 
-def test_quantile_and_context_scores_reject_complex_values():
+def test_quantile_and_history_scores_reject_complex_values():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         with pytest.raises(ValueError, match="real-valued"):

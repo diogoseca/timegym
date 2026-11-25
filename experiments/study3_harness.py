@@ -51,6 +51,7 @@ import traceback
 import types
 import warnings
 
+from .common import scenario_settings
 from .study3_threads import require_one_thread, start_with_one_thread
 
 CHECKS = ("scores", "scalar_shift", "target_shift", "second_implementation", "calibrated_shift")
@@ -124,7 +125,7 @@ class _Unit:
         self.build, self.stream = learner_module.build, learner_module.SeedStream
         self.learner_name, self.learner_index, self.tag = learner["name"], learner["index"], learner["tag"]
         condition = {key: value for key, value in spec["condition"].items() if key != "id"}
-        self.scenario = Scenario(**condition)
+        self.scenario = Scenario(**scenario_settings(condition))
         self.n_targets = int(condition.get("n_targets", 1))
         self.reference = resolve(spec["reference"]) if spec.get("reference") else None
 
@@ -138,7 +139,7 @@ class _Unit:
         case = self.scenario.generate(seed=self.spec["warmup_seed"])
         started = time.perf_counter()
         try:
-            self.pipeline(self.spec["warmup_seed"]).predict(case.task.context, case.task.future_index)
+            self.pipeline(self.spec["warmup_seed"]).predict(case.task.history, case.task.future_index)
             error = None
         except Exception as exc:  # the warm-up result is discarded; an error is recorded
             error = _error(exc)
@@ -151,7 +152,7 @@ class _Unit:
         from timegym.metrics import mse
 
         case = self.scenario.generate(seed=seed)
-        context, future = case.task.context, case.task.future_index
+        context, future = case.task.history, case.task.future_index
         settings = self.settings
         record = {"kind": "case", "stage": stage, "seed": seed, "raised": False, "error": None}
         started = time.perf_counter()
@@ -216,7 +217,7 @@ class _Unit:
         from .study3_shift import calibrated_shift_check
 
         case = self.scenario.generate(seed=seed)
-        context, future = case.task.context, case.task.future_index
+        context, future = case.task.history, case.task.future_index
         settings, started = self.settings, time.perf_counter()
         if mode == "classification_public":
             result = check_shift_equivariance(self.pipeline(seed), context, future, shift=settings["scalar_shift"],

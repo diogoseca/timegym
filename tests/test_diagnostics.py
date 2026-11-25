@@ -16,7 +16,7 @@ def get_diagnostic(result, name):
 
 
 def test_reference_scores_do_not_claim_automatic_capability_pass():
-    case = Scenario("white_noise", context_length=12, horizon=4).generate(seed=3)
+    case = Scenario("white_noise", history_length=12, horizon=4).generate(seed=3)
     result = evaluate_forecast(case, case.reference.forecast(n_samples=64, seed=5))
     assert get_diagnostic(result, "forecast_contract").status == "PASS"
     assert get_diagnostic(result, "point_accuracy").status == "INCONCLUSIVE"
@@ -27,7 +27,7 @@ def test_reference_scores_do_not_claim_automatic_capability_pass():
 
 
 def test_interval_width_overflow_is_an_error_without_losing_valid_coverage():
-    case = Scenario("white_noise", context_length=8, horizon=2).generate(seed=0)
+    case = Scenario("white_noise", history_length=8, horizon=2).generate(seed=0)
     forecast = Forecast(case.task.future_index,
                         quantiles=np.broadcast_to([-1e308, 1e308], (2, 1, 2)).copy(),
                         levels=(0.1, 0.9))
@@ -51,7 +51,7 @@ def test_interval_width_overflow_is_an_error_without_losing_valid_coverage():
 
 
 def test_representable_mean_width_survives_large_individual_intervals():
-    case = Scenario("white_noise", context_length=8, horizon=2).generate(seed=0)
+    case = Scenario("white_noise", history_length=8, horizon=2).generate(seed=0)
     forecast = Forecast(case.task.future_index,
                         quantiles=np.array([[[-1e308, 1e308]], [[0.0, 0.0]]]),
                         levels=(0.1, 0.9))
@@ -63,7 +63,7 @@ def test_representable_mean_width_survives_large_individual_intervals():
 
 
 def test_missing_outputs_are_unsupported_and_not_reconstructed():
-    case = Scenario("white_noise", context_length=12, horizon=4).generate()
+    case = Scenario("white_noise", history_length=12, horizon=4).generate()
     forecast = Forecast(index=case.task.future_index, samples=case.reference.sample(30, 3), target_names=case.task.target_names)
     result = evaluate_forecast(case, forecast)
     assert get_diagnostic(result, "point_accuracy").status == "UNSUPPORTED"
@@ -82,7 +82,7 @@ def test_missing_outputs_are_unsupported_and_not_reconstructed():
     ("levels", "duplicate_levels"),
 ])
 def test_explicit_contract_violations_fail_before_scoring(fault, code):
-    case = Scenario("white_noise", context_length=12, horizon=4).generate()
+    case = Scenario("white_noise", history_length=12, horizon=4).generate()
     forecast = case.reference.forecast(n_samples=32)
     if fault == "index":
         forecast.index = forecast.index + 1
@@ -107,7 +107,7 @@ def test_validation_errors_preserve_exception_details():
     class BrokenOutput:
         def validate(self, task):
             raise RuntimeError("original failure detail")
-    case = Scenario("white_noise", context_length=12, horizon=2).generate()
+    case = Scenario("white_noise", history_length=12, horizon=2).generate()
     result = evaluate_forecast(case, BrokenOutput())
     diagnostic = get_diagnostic(result, "forecast_contract")
     assert diagnostic.status == "ERROR"
@@ -116,7 +116,7 @@ def test_validation_errors_preserve_exception_details():
 
 
 def test_invalid_evaluation_data_is_an_error_not_a_model_failure():
-    case = Scenario("white_noise", context_length=12, horizon=2).generate()
+    case = Scenario("white_noise", history_length=12, horizon=2).generate()
     case.observed.index = pd.RangeIndex(100, 102)
     result = evaluate_forecast(case, case.reference.forecast(n_samples=20))
     assert get_diagnostic(result, "evaluation_data").status == "ERROR"
@@ -125,7 +125,7 @@ def test_invalid_evaluation_data_is_an_error_not_a_model_failure():
 
 @pytest.mark.parametrize("fault", ["index", "target_order", "mean_shape", "covariance_shape"])
 def test_misaligned_or_malformed_reference_is_an_evaluation_error(fault):
-    case = Scenario("ar1", context_length=12, horizon=3, n_targets=2).generate()
+    case = Scenario("ar1", history_length=12, horizon=3, n_targets=2).generate()
     forecast = case.reference.forecast(n_samples=20)
     if fault == "index":
         case.reference.index = case.reference.index + 100
@@ -146,7 +146,7 @@ def test_misaligned_or_malformed_reference_is_an_evaluation_error(fault):
 
 @pytest.mark.parametrize("field", ["observed", "mean", "variance", "covariance"])
 def test_complex_evaluation_inputs_are_errors_without_discarding_imaginary_values(field):
-    case = Scenario("ar1", context_length=12, horizon=3, n_targets=2).generate()
+    case = Scenario("ar1", history_length=12, horizon=3, n_targets=2).generate()
     forecast = case.reference.forecast(n_samples=20)
     if field == "observed":
         case.observed = case.observed.astype(complex) + 1j
@@ -164,7 +164,7 @@ def test_complex_evaluation_inputs_are_errors_without_discarding_imaginary_value
 
 @pytest.mark.parametrize("field", ["samples", "mean", "covariance", "sampler"])
 def test_covariance_check_rejects_complex_inputs_without_conversion_warnings(field):
-    case = Scenario("ar1", context_length=12, horizon=3, n_targets=2).generate()
+    case = Scenario("ar1", history_length=12, horizon=3, n_targets=2).generate()
     samples = case.reference.sample(20)
     if field == "samples":
         samples = samples.astype(complex)
@@ -178,15 +178,15 @@ def test_covariance_check_rejects_complex_inputs_without_conversion_warnings(fie
             covariance_dependence_check(case.reference, samples)
 
 
-def test_constant_context_reports_undefined_mase_explicitly():
-    case = Scenario("white_noise", context_length=12, horizon=2, parameters={"sigma": 0}).generate()
+def test_constant_history_reports_undefined_mase_explicitly():
+    case = Scenario("white_noise", history_length=12, horizon=2, parameters={"sigma": 0}).generate()
     result = evaluate_forecast(case, case.reference.forecast(n_samples=20))
     assert get_diagnostic(result, "metric_mase").status == "INCONCLUSIVE"
     assert "mase" not in result.metrics
 
 
 def test_covariance_check_detects_marginal_preserving_permutation_and_repairs():
-    case = Scenario("random_walk", context_length=16, horizon=6, n_targets=2,
+    case = Scenario("random_walk", history_length=16, horizon=6, n_targets=2,
                     parameters={"correlation": 0.8}).generate(seed=3)
     original = case.reference.sample(256, 17)
     shuffled = original.copy().reshape(256, -1)
@@ -206,7 +206,7 @@ def test_covariance_check_detects_marginal_preserving_permutation_and_repairs():
 
 
 def test_covariance_check_exposes_insufficient_calibration_and_support():
-    case = Scenario("white_noise", context_length=12, horizon=2).generate()
+    case = Scenario("white_noise", history_length=12, horizon=2).generate()
     assert covariance_dependence_check(case.reference, None).status == "UNSUPPORTED"
     assert covariance_dependence_check(case.reference, case.reference.sample(10)).status == "INCONCLUSIVE"
     check = covariance_dependence_check(case.reference, case.reference.sample(20), n_calibration=19, alpha=0.01)
@@ -216,7 +216,7 @@ def test_covariance_check_exposes_insufficient_calibration_and_support():
 
 
 def _shuffled_dependence_case():
-    case = Scenario("random_walk", context_length=16, horizon=6, n_targets=2,
+    case = Scenario("random_walk", history_length=16, horizon=6, n_targets=2,
                     parameters={"correlation": 0.8}).generate(seed=3)
     original = case.reference.sample(256, 17)
     shuffled = original.copy().reshape(256, -1)
@@ -387,7 +387,7 @@ def test_ci_gate_does_not_relabel_inconclusive_or_unsupported_checks():
 def test_large_singular_reference_uses_the_same_invariants_during_evaluation():
     from timegym import Pipeline
 
-    scenario = Scenario("random_walk", context_length=40, horizon=12, n_targets=3,
+    scenario = Scenario("random_walk", history_length=40, horizon=12, n_targets=3,
                         parameters={"correlation": 1.0, "sigma": 1e3})
     case = scenario.generate(seed=0)
     case.reference.validate()
@@ -474,7 +474,7 @@ def test_exception_evidence_uses_its_argument_outside_and_inside_another_handler
 
 
 def test_descriptive_scores_share_evidence_and_mase_scaling():
-    case = Scenario("seasonal", context_length=24, horizon=3, parameters={"period": 6}).generate()
+    case = Scenario("seasonal", history_length=24, horizon=3, parameters={"period": 6}).generate()
     result = evaluate_forecast(case, case.reference.forecast(24))
     for name, scores in (("point_accuracy", ("mse", "mae", "mase", "mean_reference_mse")),
                          ("quantile_accuracy", ("pinball",)),
@@ -491,7 +491,7 @@ def test_check_categories_survive_errors_and_undefined_metrics(monkeypatch):
     from timegym.checks import check_shift_equivariance
     from timegym import Pipeline
 
-    case = Scenario("white_noise", context_length=12, horizon=2, parameters={"sigma": 0}).generate()
+    case = Scenario("white_noise", history_length=12, horizon=2, parameters={"sigma": 0}).generate()
     forecast = case.reference.forecast(24)
     undefined = get_diagnostic(evaluate_forecast(case, forecast), "metric_mase")
     def broken(*args, **kwargs):
@@ -508,7 +508,7 @@ def test_check_categories_survive_errors_and_undefined_metrics(monkeypatch):
     assert (dependence.status, dependence.category) == ("ERROR", "distribution")
     pipeline = Pipeline()
     monkeypatch.setattr(pipeline, "predict", broken)
-    shift = check_shift_equivariance(pipeline, case.task.context, case.task.future_index)
+    shift = check_shift_equivariance(pipeline, case.task.history, case.task.future_index)
     assert (shift.status, shift.category) == ("ERROR", "metamorphic")
 
 

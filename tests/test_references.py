@@ -26,20 +26,20 @@ def assert_monte_carlo_moments(samples, mean, covariance):
 @pytest.mark.parametrize("kind", KINDS)
 def test_reproducibility_manifest_round_trip_and_no_global_rng(kind):
     state_before = np.random.get_state()
-    scenario = Scenario(kind, context_length=20, horizon=4, n_targets=2, parameters={"correlation": 0.4}, seed=7)
+    scenario = Scenario(kind, history_length=20, horizon=4, n_targets=2, parameters={"correlation": 0.4}, seed=7)
     case = scenario.generate()
     same = scenario.generate()
-    pd.testing.assert_frame_equal(case.task.context, same.task.context)
+    pd.testing.assert_frame_equal(case.task.history, same.task.history)
     pd.testing.assert_frame_equal(case.observed, same.observed)
     assert case.reference.forecast(seed=13).validate(case.task) == []
     assert case.reference.kind == "analytic_conditional"
     assert case.reference.conditioning["future_observations_used"] is False
     manifest = json.loads(json.dumps(case.manifest))
-    recreated = Scenario(**{key: manifest[key] for key in ("kind", "context_length", "horizon", "parameters", "n_targets", "seed")}).generate()
-    pd.testing.assert_frame_equal(case.task.context, recreated.task.context)
+    recreated = Scenario(**{key: manifest[key] for key in ("kind", "history_length", "horizon", "parameters", "n_targets", "seed")}).generate()
+    pd.testing.assert_frame_equal(case.task.history, recreated.task.history)
     pd.testing.assert_frame_equal(case.observed, recreated.observed)
     altered = scenario.generate(seed=8)
-    assert not altered.task.context.equals(case.task.context)
+    assert not altered.task.history.equals(case.task.history)
     assert scenario.seed == 7
     state_after = np.random.get_state()
     assert state_before[0] == state_after[0]
@@ -54,8 +54,8 @@ def test_conditional_mean_and_full_covariance_against_independent_simulation(kin
         parameters.update(mean=[2.0, -1.0], phi=coefficient)
     else:
         parameters.update(intercept=[2.0, -1.0], drift=[0.3, -0.2])
-    case = Scenario(kind, context_length=25, horizon=4, n_targets=2, parameters=parameters, seed=21).generate()
-    last = case.task.context.iloc[-1].to_numpy()
+    case = Scenario(kind, history_length=25, horizon=4, n_targets=2, parameters=parameters, seed=21).generate()
+    last = case.task.history.iloc[-1].to_numpy()
     rng = np.random.default_rng(90210)
     innovation_covariance = np.array([[0.7 ** 2, 0.35 * 0.7 * 1.4], [0.35 * 0.7 * 1.4, 1.4 ** 2]])
     n = 60_000
@@ -80,7 +80,7 @@ def test_conditional_mean_and_full_covariance_against_independent_simulation(kin
 
 @pytest.mark.parametrize("kind", KINDS)
 def test_reference_joint_samples_have_correct_conditional_moments(kind):
-    case = Scenario(kind, context_length=20, horizon=3, n_targets=2, parameters={"correlation": -0.4}, seed=15).generate()
+    case = Scenario(kind, history_length=20, horizon=3, n_targets=2, parameters={"correlation": -0.4}, seed=15).generate()
     samples = case.reference.sample(40_000, seed=42)
     assert samples.shape == (40_000, 3, 2)
     assert_monte_carlo_moments(samples, case.reference.mean, case.reference.covariance)
@@ -90,21 +90,21 @@ def test_reference_joint_samples_have_correct_conditional_moments(kind):
 
 @pytest.mark.parametrize("kind", KINDS)
 def test_history_and_first_reference_do_not_depend_on_held_out_horizon(kind):
-    short = Scenario(kind, context_length=18, horizon=1, seed=19).generate()
-    long = Scenario(kind, context_length=18, horizon=8, seed=19).generate()
-    pd.testing.assert_frame_equal(short.task.context, long.task.context)
+    short = Scenario(kind, history_length=18, horizon=1, seed=19).generate()
+    long = Scenario(kind, history_length=18, horizon=8, seed=19).generate()
+    pd.testing.assert_frame_equal(short.task.history, long.task.history)
     np.testing.assert_array_equal(short.reference.mean, long.reference.mean[:1])
     np.testing.assert_array_equal(short.reference.variance, long.reference.variance[:1])
-    assert short.task.future_index[0] == short.task.context.index[-1] + 1
+    assert short.task.future_index[0] == short.task.history.index[-1] + 1
 
 
 def test_known_signal_scenarios_and_observation_noise():
-    trend = Scenario("trend", context_length=5, horizon=3, parameters={"intercept": 2, "slope": 0.5, "sigma": 0.3}).generate()
+    trend = Scenario("trend", history_length=5, horizon=3, parameters={"intercept": 2, "slope": 0.5, "sigma": 0.3}).generate()
     np.testing.assert_allclose(trend.reference.mean[:, 0], [4.5, 5.0, 5.5])
     np.testing.assert_allclose(trend.reference.covariance, 0.09 * np.eye(3))
-    seasonal = Scenario("seasonal", context_length=5, horizon=3, parameters={"mean": 1, "amplitude": 2, "period": 4}).generate()
+    seasonal = Scenario("seasonal", history_length=5, horizon=3, parameters={"mean": 1, "amplitude": 2, "period": 4}).generate()
     np.testing.assert_allclose(seasonal.reference.mean[:, 0], [3.0, 1.0, -1.0], atol=1e-14)
-    white = Scenario("white_noise", context_length=5, horizon=3, parameters={"mean": 3, "sigma": 2}).generate()
+    white = Scenario("white_noise", history_length=5, horizon=3, parameters={"mean": 3, "sigma": 2}).generate()
     np.testing.assert_array_equal(white.reference.mean, np.full((3, 1), 3.0))
     np.testing.assert_array_equal(white.reference.covariance, 4 * np.eye(3))
 
@@ -122,8 +122,8 @@ def test_gaussian_quantiles_and_zero_variance_reference():
 
 
 def test_singular_cross_target_correlation_is_supported():
-    case = Scenario("random_walk", context_length=10, horizon=3, n_targets=2, parameters={"correlation": 1.0}, seed=7).generate()
-    np.testing.assert_allclose(case.task.context.iloc[:, 0], case.task.context.iloc[:, 1], atol=1e-14)
+    case = Scenario("random_walk", history_length=10, horizon=3, n_targets=2, parameters={"correlation": 1.0}, seed=7).generate()
+    np.testing.assert_allclose(case.task.history.iloc[:, 0], case.task.history.iloc[:, 1], atol=1e-14)
     samples = case.reference.sample(20)
     np.testing.assert_allclose(samples[:, :, 0], samples[:, :, 1], atol=1e-7)
 
@@ -132,7 +132,7 @@ def test_singular_cross_target_correlation_is_supported():
     "kwargs",
     [
         {"kind": "unknown"},
-        {"context_length": 0},
+        {"history_length": 0},
         {"horizon": -1},
         {"horizon": 1.5},
         {"n_targets": True},

@@ -19,7 +19,7 @@ def test_builtin_configuration_roundtrip_reproduces_exact_outputs(model):
     assert config["replayable"] is True
     restored = Pipeline.from_config(config)
     assert restored.to_config() == config
-    report = pipeline.test([Scenario("ar1", context_length=24, horizon=3, n_targets=2)],
+    report = pipeline.test([Scenario("ar1", history_length=24, horizon=3, n_targets=2)],
                            seeds=[4, 8], check_dependence=True, n_calibration=19,
                            alpha=0.1, dependence_seed_offset=51)
     replayed = TestReport.from_json(report.to_json()).replay_case(1)
@@ -175,8 +175,8 @@ def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options
 def test_builtin_params_cover_constructor_clone_and_replay(model):
     import inspect
     assert set(model.params()) == set(inspect.signature(type(model)).parameters)
-    case = Scenario('ar1', context_length=24, horizon=3).generate()
-    model.fit(case.task.context)
+    case = Scenario('ar1', history_length=24, horizon=3).generate()
+    model.fit(case.task.history)
     clone = model.clone_unfitted()
     assert clone is not model and clone.params() == model.params()
     assert not any(name.endswith('_') for name in vars(clone))
@@ -209,8 +209,8 @@ def test_sklearn_clone_uses_constructor_parameters_without_fitted_state():
     from timegym.models import SklearnForecaster
     model = SklearnForecaster([Ridge(alpha=3.)], window_length=4)
     assert set(model.params()) == set(inspect.signature(type(model)).parameters)
-    case = Scenario('ar1', context_length=24, horizon=3).generate()
-    model.fit(case.task.context)
+    case = Scenario('ar1', history_length=24, horizon=3).generate()
+    model.fit(case.task.history)
     clone = model.clone_unfitted()
     assert clone.params() == model.params()
     assert clone.steps is not model.steps
@@ -218,7 +218,7 @@ def test_sklearn_clone_uses_constructor_parameters_without_fitted_state():
 
 
 def test_replay_rejects_raw_dicts_instead_of_bypassing_report_validation():
-    payload = Pipeline().test([Scenario("trend", context_length=12, horizon=2)], seeds=[0]).to_dict()
+    payload = Pipeline().test([Scenario("trend", history_length=12, horizon=2)], seeds=[0]).to_dict()
     payload["cases"][0]["diagnostics"][0]["status"] = "PASSED"
     with pytest.warns(DeprecationWarning, match="report.replay_case"), pytest.raises(TypeError, match="requires a TestReport"):
         replay_case(payload)
@@ -228,7 +228,7 @@ def test_replay_rejects_raw_dicts_instead_of_bypassing_report_validation():
 
 def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp_path):
     report = Pipeline(NaiveForecaster("seasonal", period=50)).test(
-        [Scenario("ar1", context_length=16, horizon=3)], seeds=[0])
+        [Scenario("ar1", history_length=16, horizon=3)], seeds=[0])
     diagnostic = report.cases[0].diagnostics[0]
     assert diagnostic.status == "ERROR"
     diagnostic.evidence["traceback"] = diagnostic.evidence["traceback"].replace(
@@ -249,7 +249,7 @@ def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp
 
 @pytest.mark.parametrize("field", ["metrics", "diagnostics", "manifest", "source", "dependencies", "python"])
 def test_replay_verdicts_distinguish_results_from_environment(field):
-    report = Pipeline().test([Scenario("ar1", context_length=12, horizon=2)], seeds=[0])
+    report = Pipeline().test([Scenario("ar1", history_length=12, horizon=2)], seeds=[0])
     if field == "metrics":
         report.cases[0].metrics["mse"] += 1
     elif field == "diagnostics":
@@ -273,7 +273,7 @@ def test_schema_constants_describe_current_writes():
     from timegym.provenance import PIPELINE_CONFIG_SCHEMA_VERSION
     from timegym.scenarios import MANIFEST_SCHEMA_VERSION
 
-    report = Pipeline().test([Scenario("ar1", context_length=12, horizon=2)], seeds=[0])
+    report = Pipeline().test([Scenario("ar1", history_length=12, horizon=2)], seeds=[0])
     assert report.to_dict()["schema_version"] == REPORT_SCHEMA_VERSION == "2.0"
     assert report.metadata["pipeline_config"]["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION == 3
     assert report.cases[0].manifest["schema_version"] == MANIFEST_SCHEMA_VERSION == 1

@@ -9,7 +9,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from ._internal import positive_int
+from ._internal import positive_int, _renamed_keywords, _warn_deprecated
 from .contracts import ForecastTask, Reference
 from .models import fresh_model
 from .scenarios import Case, Scenario
@@ -40,20 +40,22 @@ class Pattern:
     ``predictable`` says what a perfect forecaster could get right;
     ``unpredictable`` what no forecaster can, by design.
 
-    The row's series come from one of two functions. ``simulate(rng, history,
-    horizon, noise)`` draws one series and returns a dict: ``values`` for all
-    ``history + horizon`` steps (one column per series when there are several),
-    and the ``mean`` and ``variance`` of each step to forecast, given the
-    history. An optional ``covariance`` is for future steps that move together;
-    without it they count as independent. ``rng`` is a NumPy random generator
-    seeded by the scorecard and ``noise`` the column's standard deviation, which
-    a pattern may use or ignore. TimeGym builds the case and its answer key from
-    these. ``build(noise, context_length, horizon)`` instead returns a whole
-    Scenario for one noise level, as the built-in rows do: the noise is the
-    standard deviation of the random error on each observation.
+    The row's series come from one of two functions. ``simulate(rng,
+    history_length, horizon, noise)`` draws one series and returns a dict:
+    ``values`` for all ``history_length + horizon`` steps (one column per series
+    when there are several), and the ``mean`` and ``variance`` of each step to
+    forecast, given the history. An optional ``covariance`` is for future steps
+    that move together; without it they count as independent. ``rng`` is a
+    NumPy random generator seeded by the scorecard and ``noise`` the column's
+    standard deviation, which a pattern may use or ignore. TimeGym builds the
+    case and its answer key from these. ``build(noise, history_length,
+    horizon)`` instead returns a whole Scenario for one noise level, as the
+    built-in rows do: the noise is the standard deviation of the random error
+    on each observation. TimeGym passes these arguments by position, so your
+    function may name them as it likes.
 
     ``attainable_by`` is a model of the generator's own family with every
-    numeric parameter unknown, with ``fit(context)`` and ``predict(future_index)``:
+    numeric parameter unknown, with ``fit(history)`` and ``predict(future_index)``:
     a model object, copied fresh for each series, or a class or function that
     returns a fresh one. Its score on the row is the row's attainable score; a
     pattern without one (``None``) has none. ``fitted`` is its old name and still
@@ -173,20 +175,20 @@ def _fresh_attainable(model):
 class _Simulated:
     """What a pattern's ``simulate`` becomes for the grid: generate(seed) draws one series and builds its case."""
 
-    def __init__(self, pattern, noise, context_length, horizon):
+    def __init__(self, pattern, noise, history_length, horizon):
         self.pattern, self.noise = pattern, float(noise)
-        self.kind, self.context_length, self.horizon = (
+        self.kind, self.history_length, self.horizon = (
             pattern.key,
-            context_length,
+            history_length,
             horizon,
         )
 
     def generate(self, seed):
-        """Call ``simulate`` with a generator seeded by ``seed``; cut history from future; build the answer key."""
+        """Call ``simulate`` with a generator seeded by ``seed``; cut the history from the future; build the answer key."""
         where = f"pattern {self.kind!r}: simulate"
-        history, horizon = self.context_length, self.horizon
+        length, horizon = self.history_length, self.horizon
         parts = self.pattern.simulate(
-            np.random.default_rng(seed), history, horizon, self.noise
+            np.random.default_rng(seed), length, horizon, self.noise
         )
         if not isinstance(parts, Mapping):
             raise TypeError(
@@ -208,9 +210,9 @@ class _Simulated:
         values = np.asarray(parts["values"], dtype=float)
         if values.ndim == 1:
             values = values[:, None]
-        if values.ndim != 2 or len(values) != history + horizon or values.shape[1] == 0:
+        if values.ndim != 2 or len(values) != length + horizon or values.shape[1] == 0:
             raise ValueError(
-                f"{where}: values must have {history + horizon} steps ({history} of history and {horizon} "
+                f"{where}: values must have {length + horizon} steps ({length} of history and {horizon} "
                 f"to forecast), one column per series; got shape {np.shape(parts['values'])}"
             )
         shape = (horizon, values.shape[1])
@@ -232,7 +234,7 @@ class _Simulated:
             else np.asarray(covariance, dtype=float)
         )
         names = ("y",) if shape[1] == 1 else tuple(f"y{i}" for i in range(shape[1]))
-        future = pd.RangeIndex(history, history + horizon)
+        future = pd.RangeIndex(length, length + horizon)
         try:
             answer_key = Reference(
                 mean=moments["mean"],
@@ -243,18 +245,18 @@ class _Simulated:
             )
         except ValueError as error:
             raise ValueError(f"{where}: {error}") from None
-        context = pd.DataFrame(
-            values[:history], index=pd.RangeIndex(history), columns=names
+        history = pd.DataFrame(
+            values[:length], index=pd.RangeIndex(length), columns=names
         )
-        observed = pd.DataFrame(values[history:], index=future, columns=names)
+        observed = pd.DataFrame(values[length:], index=future, columns=names)
         manifest = {
             "kind": self.kind,
             "seed": seed,
-            "context_length": history,
+            "history_length": length,
             "horizon": horizon,
             "noise": self.noise,
         }
-        return Case(ForecastTask(context, future), observed, answer_key, manifest)
+        return Case(ForecastTask(history, future), observed, answer_key, manifest)
 
 
 def _cycle_coefficients(period=16.0, damping=0.95):
@@ -267,18 +269,18 @@ _SEASON = 12.0  # steps in one seasonal cycle
 
 
 # %% ../source/13_scorecard.ipynb #grid-fitted
-def _history(context):
-    """The first series of a context as a float array."""
-    values = np.asarray(context, dtype=float)
+def _first_series(history):
+    """The first series of a history as a float array."""
+    values = np.asarray(history, dtype=float)
     return values[:, 0] if values.ndim == 2 else values.ravel()
 
 
 class _SampleMean:
     """Forecast the mean of the history at every step: the family of pure noise and of a fixed level."""
 
-    def fit(self, context):
+    def fit(self, history):
         """Average the history."""
-        self.level_ = float(np.mean(_history(context)))
+        self.level_ = float(np.mean(_first_series(history)))
         return self
 
     def predict(self, future_index):
@@ -289,9 +291,9 @@ class _SampleMean:
 class _LeastSquares:
     """Fit the columns of ``_design(steps)`` by least squares and extend them past the history."""
 
-    def fit(self, context):
+    def fit(self, history):
         """Fit the coefficients on steps 0, 1, ... of the history."""
-        values = _history(context)
+        values = _first_series(history)
         self.length_ = len(values)
         self.coef_ = np.linalg.lstsq(
             self._design(np.arange(len(values), dtype=float)), values, rcond=None
@@ -341,9 +343,9 @@ class _MeanAfterBreak:
     before it and a mean after it fit the history best.
     """
 
-    def fit(self, context):
+    def fit(self, history):
         """Find the break and average the history after it."""
-        values = _history(context)
+        values = _first_series(history)
         sums = np.cumsum(values)
         before = np.arange(1, len(values))
         # Least squares picks the split with the largest sum of (segment sum)^2 / (segment length).
@@ -484,9 +486,9 @@ class _AR1PlusNoise:
     the filtered state, pulled back to the mean by the weight at every step.
     """
 
-    def fit(self, context):
+    def fit(self, history):
         """Estimate the four parameters and filter the history."""
-        y = _history(context)
+        y = _first_series(history)
         if len(y) < 4:
             self.mean_, self.phi_, self.state_ = float(np.mean(y)), 0.0, 0.0
             return self
@@ -522,9 +524,9 @@ class _AR2PlusNoise:
     which covers every stationary pair.
     """
 
-    def fit(self, context):
+    def fit(self, history):
         """Estimate the five parameters and filter the history."""
-        y = _history(context)
+        y = _first_series(history)
         if len(y) < 6:
             self.mean_, self.phi_, self.state_ = (
                 float(np.mean(y)),
@@ -580,9 +582,9 @@ class _LocalLevel:
         """The settings, for the scorecard title."""
         return {"drift": self.drift}
 
-    def fit(self, context):
+    def fit(self, history):
         """Estimate the variances (and the drift) and filter the history."""
-        y = _history(context)
+        y = _first_series(history)
         self.length_ = len(y)
         if len(y) < 4:
             self.level_, self.drift_ = float(y[-1]), 0.0
@@ -819,8 +821,8 @@ def _grid_patterns(patterns):
             ]
             if len(makers) != 1:
                 raise TypeError(
-                    f"pattern {entry.key!r} needs simulate(rng, history, horizon, noise) or "
-                    f"build(noise, context_length, horizon), one of the two; got {' and '.join(makers) or 'neither'}"
+                    f"pattern {entry.key!r} needs simulate(rng, history_length, horizon, noise) or "
+                    f"build(noise, history_length, horizon), one of the two; got {' and '.join(makers) or 'neither'}"
                 )
             if not callable(getattr(entry, makers[0])):
                 raise TypeError(
@@ -851,12 +853,19 @@ def _grid_patterns(patterns):
     return found
 
 
-def _checked_scenario(pattern, noise_sd, context_length, horizon):
+def _history_length_of(scenario):
+    """How many steps of history a scenario's cases have: its ``history_length``, or the old name ``context_length``."""
+    if hasattr(scenario, "history_length"):
+        return scenario.history_length
+    return scenario.context_length
+
+
+def _checked_scenario(pattern, noise_sd, history_length, horizon):
     """Build a pattern's scenario; for your own pattern, check that the scorecard can use it and say what is missing."""
     if pattern.simulate is not None:
-        scenario = _Simulated(pattern, noise_sd, context_length, horizon)
+        scenario = _Simulated(pattern, noise_sd, history_length, horizon)
     else:
-        scenario = pattern.build(noise_sd, context_length, horizon)
+        scenario = pattern.build(noise_sd, history_length, horizon)
     if PATTERNS.get(pattern.key) is pattern:
         return scenario
     where = f"pattern {pattern.key!r}"
@@ -865,22 +874,28 @@ def _checked_scenario(pattern, noise_sd, context_length, horizon):
     )
     missing += [
         name
-        for name in ("kind", "context_length", "horizon")
+        for name in ("kind", "history_length", "horizon")
         if not hasattr(scenario, name)
+        and not (name == "history_length" and hasattr(scenario, "context_length"))
     ]
     if missing:
         raise TypeError(
             f"{where}: build returned a {type(scenario).__name__} without {', '.join(missing)}; it must "
-            "return an object with generate(seed), kind, context_length and horizon, as Scenario has"
+            "return an object with generate(seed), kind, history_length and horizon, as Scenario has"
+        )
+    if not hasattr(scenario, "history_length"):
+        _warn_deprecated(
+            f"{where}: a scenario's context_length is deprecated and will be removed in a later "
+            "release: name it history_length, as Scenario does"
         )
     if not isinstance(scenario.kind, str) or not scenario.kind:
         raise ValueError(
             f"{where}: its scenario's kind must be a nonempty string; got {scenario.kind!r}"
         )
-    if (scenario.context_length, scenario.horizon) != (context_length, horizon):
+    if (_history_length_of(scenario), scenario.horizon) != (history_length, horizon):
         raise ValueError(
-            f"{where}: build was asked for {context_length} steps of history and {horizon} ahead, "
-            f"but its scenario has {scenario.context_length} and {scenario.horizon}"
+            f"{where}: build was asked for {history_length} steps of history and {horizon} ahead, "
+            f"but its scenario has {_history_length_of(scenario)} and {scenario.horizon}"
         )
     case = scenario.generate(seed=0)
     if not isinstance(case, Case):
@@ -906,7 +921,8 @@ def _checked_scenario(pattern, noise_sd, context_length, horizon):
     return scenario
 
 
-def scenario_grid(patterns=None, noise_levels=2, *, context_length=120, horizon=24):
+@_renamed_keywords(context_length="history_length")
+def scenario_grid(patterns=None, noise_levels=2, *, history_length=120, horizon=24):
     """Return one GridCell per pattern and noise level, rows first.
 
     ``patterns`` lists keys of ``PATTERNS`` (all ten by default, in their
@@ -915,21 +931,21 @@ def scenario_grid(patterns=None, noise_levels=2, *, context_length=120, horizon=
     of their own; the run supplies it.
 
     Your own pattern needs a key that no built-in pattern has, a title, and
-    one of two functions. ``simulate(rng, history, horizon, noise)`` returns
-    one series and the true mean and variance of each step to forecast, as
-    ``Pattern`` says. ``build(noise, context_length, horizon)`` returns an
-    object with ``generate(seed)``, ``kind``, ``context_length`` and
-    ``horizon``, as ``Scenario`` has, whose cases carry an answer key: a
+    one of two functions. ``simulate(rng, history_length, horizon, noise)``
+    returns one series and the true mean and variance of each step to
+    forecast, as ``Pattern`` says. ``build(noise, history_length, horizon)``
+    returns an object with ``generate(seed)``, ``kind``, ``history_length``
+    and ``horizon``, as ``Scenario`` has, whose cases carry an answer key: a
     reference holding the true mean and variance of what happens. The grid
     draws one case per cell before anything runs and says what is missing.
     ``noise`` is the noise level's standard deviation; a pattern may use it
-    or ignore it.
+    or ignore it. The old keyword ``context_length=`` still works and warns.
     """
     found = _grid_patterns(patterns)
-    context_length = positive_int(context_length, "context_length")
+    history_length = positive_int(history_length, "history_length")
     horizon = positive_int(horizon, "horizon")
-    if context_length < 8:
-        raise ValueError("The scorecard grid needs a context_length of at least 8")
+    if history_length < 8:
+        raise ValueError("The scorecard grid needs a history_length of at least 8")
     levels = _noise_levels(noise_levels)
     return [
         GridCell(
@@ -937,7 +953,7 @@ def scenario_grid(patterns=None, noise_levels=2, *, context_length=120, horizon=
             pattern.title,
             name,
             sd,
-            _checked_scenario(pattern, sd, context_length, horizon),
+            _checked_scenario(pattern, sd, history_length, horizon),
             pattern,
         )
         for pattern in found

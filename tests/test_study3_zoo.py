@@ -211,7 +211,7 @@ class _Card:
 
     def save_baseline(self, path):
         record = {"title": self.title, "seed": run_zoo.SEED, "instances": run_zoo.INSTANCES,
-                  "grid": {"patterns": list(timegym.PATTERNS), "noise_sds": [0.5, 2.0], "context_length": 120,
+                  "grid": {"patterns": list(timegym.PATTERNS), "noise_sds": [0.5, 2.0], "history_length": 120,
                            "horizon": 24},
                   "cells": [{"pattern": row["pattern"], "noise_sd": row["noise_sd"], "score": row["score"],
                              "avoidable": [None] * 30} for row in self.table.to_dict(orient="records")]}

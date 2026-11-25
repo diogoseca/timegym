@@ -27,7 +27,7 @@ never fails `assert_passed`; only a failed output check or a crash does.
 | Scenario | A recipe for a kind of series, such as noise around a trend |
 | Case | One draw from a scenario: a past, a future and its answer key |
 | Seed | The number that fixes a draw, so the same seed gives the same case |
-| Context | The past the model sees: a pandas DataFrame, one row per time step, one column per series |
+| History | The past the model sees: a pandas DataFrame, one row per time step, one column per series |
 | Future index | The time labels the model must forecast |
 | Horizon | How many steps ahead the model forecasts |
 | Target | One of the series being forecast; a single series is named `y` |

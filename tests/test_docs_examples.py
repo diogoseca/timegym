@@ -177,8 +177,8 @@ def test_calibration_example_on_the_scores_page_prints_what_the_page_shows():
     cases = namespace["cases"]
 
     class WithoutAddedSteps(namespace["ShareAtThisPointOfTheCycle"]):
-        def fit(self, context):
-            values = context.to_numpy()[:, 0]
+        def fit(self, history):
+            values = history.to_numpy()[:, 0]
             self.length_ = len(values)
             self.share_ = np.array([values[phase::12].mean() for phase in range(12)])
             return self

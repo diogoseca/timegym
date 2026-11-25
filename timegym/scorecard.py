@@ -14,11 +14,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy import special, stats
-from ._internal import positive_int, _deprecated
+from ._internal import positive_int, _deprecated, _renamed_keywords
 from .contracts import _describe_shift, _index_shift
 from .diagnostics import _holm, _sign_flip_pvalue
 from .evaluation import ForecastRun
-from .grid import PATTERNS, GridCell, Pattern, _fresh_attainable, scenario_grid
+from .grid import (
+    PATTERNS,
+    GridCell,
+    Pattern,
+    _fresh_attainable,
+    _history_length_of,
+    scenario_grid,
+)
 from .plotting import _BAND_COLORS, _FORECAST, _HAIRLINE, _INK, _MUTED, _SURFACE
 from .reporting import CHECKS, TestReport, _case_checks, _own_checks
 
@@ -208,7 +215,7 @@ def _attainable_score(
     for index in range(series):
         case = scenario.generate(seed=seed + index)
         model = _fresh_attainable(pattern.attainable_by)
-        model.fit(case.task.context)
+        model.fit(case.task.history)
         truth = np.asarray(case.reference.mean, dtype=float)
         point = _point_forecast(
             model.predict(case.task.future_index), case.task
@@ -233,10 +240,10 @@ def _point_forecast(output, task):
 
 
 @functools.lru_cache(maxsize=None)
-def _simulated_attainable(key, noise_sd, context_length, horizon):
+def _simulated_attainable(key, noise_sd, history_length, horizon):
     """The attainable score of a row off the shipped table, computed once per session."""
     pattern = PATTERNS[key]
-    return _attainable_score(pattern, pattern.build(noise_sd, context_length, horizon))
+    return _attainable_score(pattern, pattern.build(noise_sd, history_length, horizon))
 
 
 def _attainable(cell, simulate=False):
@@ -250,11 +257,11 @@ def _attainable(cell, simulate=False):
     key, noise_sd = cell.pattern, cell.noise_sd
     if pattern.attainable_by is None:
         return np.nan
-    context_length, horizon = cell.scenario.context_length, cell.scenario.horizon
+    history_length, horizon = _history_length_of(cell.scenario), cell.scenario.horizon
     built_in = PATTERNS.get(key) is pattern
     if (
         built_in
-        and (context_length, horizon) == (120, 24)
+        and (history_length, horizon) == (120, 24)
         and noise_sd in _ATTAINABLE.get(key, {})
     ):
         return _ATTAINABLE[key][noise_sd]
@@ -263,7 +270,7 @@ def _attainable(cell, simulate=False):
     if not built_in:
         return _attainable_score(pattern, cell.scenario)
     return _simulated_attainable(
-        key, float(noise_sd), int(context_length), int(horizon)
+        key, float(noise_sd), int(history_length), int(horizon)
     )
 
 
@@ -476,7 +483,7 @@ def _consecutive_seed(seeds):
     return seeds[0] if seeds == list(range(seeds[0], seeds[0] + len(seeds))) else None
 
 
-def _run_rows(scenarios, noise_levels=None, context_length=None, horizon=None):
+def _run_rows(scenarios, noise_levels=None, history_length=None, horizon=None):
     """What ``Pipeline.run`` draws, as GridCells, and whether they are the scorecard's kinds of series.
 
     Nothing, keys of ``PATTERNS`` and ``Pattern`` objects give the pattern-by-noise grid. Scenarios you
@@ -491,7 +498,7 @@ def _run_rows(scenarios, noise_levels=None, context_length=None, horizon=None):
         cells = scenario_grid(
             entries,
             2 if noise_levels is None else noise_levels,
-            context_length=120 if context_length is None else context_length,
+            history_length=120 if history_length is None else history_length,
             horizon=24 if horizon is None else horizon,
         )
         return cells, True
@@ -504,7 +511,7 @@ def _run_rows(scenarios, noise_levels=None, context_length=None, horizon=None):
         name
         for name, value in (
             ("noise_levels", noise_levels),
-            ("context_length", context_length),
+            ("history_length", history_length),
             ("horizon", horizon),
         )
         if value is not None
@@ -532,7 +539,7 @@ class _AsBuilt:
     def __init__(self, scenario):
         self.scenario = scenario
 
-    def __call__(self, noise, context_length, horizon):
+    def __call__(self, noise, history_length, horizon):
         return self.scenario
 
 
@@ -616,7 +623,7 @@ def _scorecard(
     noise_levels=2,
     instances=10,
     seed=0,
-    context_length=120,
+    history_length=120,
     horizon=24,
     title=None,
     attainable=False,
@@ -629,7 +636,7 @@ def _scorecard(
         noise_levels=noise_levels,
         instances=instances,
         seed=seed,
-        context_length=context_length,
+        history_length=history_length,
         horizon=horizon,
         title=title,
         attainable=attainable,
@@ -638,6 +645,7 @@ def _scorecard(
     ).scorecard
 
 
+@_renamed_keywords(context_length="history_length")
 def scorecard(
     pipeline,
     patterns=None,
@@ -645,7 +653,7 @@ def scorecard(
     noise_levels=2,
     instances=10,
     seed=0,
-    context_length=120,
+    history_length=120,
     horizon=24,
     title=None,
     attainable=False,
@@ -661,7 +669,7 @@ def scorecard(
         noise_levels=noise_levels,
         instances=instances,
         seed=seed,
-        context_length=context_length,
+        history_length=history_length,
         horizon=horizon,
         title=title,
         attainable=attainable,
@@ -959,8 +967,10 @@ def _seed_words(card):
 
 # %% ../source/13_scorecard.ipynb #scorecard-compare
 # A baseline file names its format and version, so a file of another kind, or one written by a
-# newer TimeGym in a format this version cannot read, is refused instead of misread.
-_BASELINE_FORMAT, _BASELINE_VERSION = "timegym-scorecard-baseline", 1
+# newer TimeGym in a format this version cannot read, is refused instead of misread. Version 1,
+# written by TimeGym 1.13.1 and earlier, named the grid's history_length context_length; it is
+# still read.
+_BASELINE_FORMAT, _BASELINE_VERSION = "timegym-scorecard-baseline", 2
 
 # Two avoidable errors of one series agree when they differ by at most this share of the largest
 # avoidable error in the cell, in either version, or by _ABSOLUTE_TOLERANCE, whichever is larger:
@@ -1012,7 +1022,7 @@ def _grid(card):
         "noise_sds": [
             float(sd) for sd in dict.fromkeys(cell.noise_sd for cell in card.cells)
         ],
-        "context_length": int(first.context_length),
+        "history_length": int(_history_length_of(first)),
         "horizon": int(first.horizon),
     }
 
@@ -1063,6 +1073,17 @@ def _read_baseline(path):
             f"{record.get('timegym_version')}; this TimeGym reads version {_BASELINE_VERSION}. "
             "Upgrade TimeGym to compare with it."
         )
+    grid = record.get("grid")
+    if (
+        version == 1
+        and isinstance(grid, dict)
+        and "context_length" in grid
+        and "history_length" not in grid
+    ):
+        record["grid"] = {
+            ("history_length" if key == "context_length" else key): value
+            for key, value in grid.items()
+        }
 
     def number(value):
         return (
@@ -1118,7 +1139,7 @@ def _check_same_series(record, card, name):
     labels = {
         "patterns": "patterns",
         "noise_sds": "noise standard deviations",
-        "context_length": "history length (context_length)",
+        "history_length": "history length",
         "horizon": "horizon",
     }
     differences = [
@@ -1461,9 +1482,9 @@ def _whisker(ax, row, left, right, y, color, track, transform=None):
 def _example(ax, entry, row):
     """Draw instance 1 of a cell: recent history, what happened, answer key, forecast."""
     case, horizon = entry.case, len(entry.case.task.future_index)
-    context = case.task.context.iloc[-min(len(case.task.context), 4 * horizon) :, 0]
+    history = case.task.history.iloc[-min(len(case.task.history), 4 * horizon) :, 0]
     ax.plot(
-        context.index, context.to_numpy(), ".", color=_MUTED, markersize=2.2, alpha=0.75
+        history.index, history.to_numpy(), ".", color=_MUTED, markersize=2.2, alpha=0.75
     )
     ax.plot(
         case.observed.index,
@@ -1480,7 +1501,7 @@ def _example(ax, entry, row):
             color=_INK,
             linewidth=1.1,
         )
-    ax.axvline(context.index[-1] + 0.5, color=_HAIRLINE, linewidth=0.8, linestyle="--")
+    ax.axvline(history.index[-1] + 0.5, color=_HAIRLINE, linewidth=0.8, linestyle="--")
     valid = entry.forecast is not None and all(_case_checks(entry.result).values())
     point = None
     if valid and entry.forecast.point is not None:

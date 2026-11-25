@@ -42,13 +42,13 @@ def main():
         raise AssertionError("The smoke check imported the checkout instead of an installed wheel")
     if not installed_path.is_relative_to(Path(sys.prefix).resolve()):
         raise AssertionError("TimeGym must be installed into the checking interpreter's environment")
-    scenario = Scenario("ar1", context_length=48, horizon=6, n_targets=2,
+    scenario = Scenario("ar1", history_length=48, horizon=6, n_targets=2,
                         parameters={"correlation": .5})
     case = scenario.generate(seed=17)
-    point = Pipeline(NaiveForecaster()).predict(case.task.context, case.task.future_index)
+    point = Pipeline(NaiveForecaster()).predict(case.task.history, case.task.future_index)
     assert point.point.shape == (6, 2) and point.validate(case.task) == []
     joint = Pipeline(GaussianAR1Forecaster(n_samples=32, seed=11)).predict(
-        case.task.context, case.task.future_index)
+        case.task.history, case.task.future_index)
     assert joint.samples.shape == (32, 6, 2) and joint.validate(case.task) == []
     assert np.isfinite(joint.samples).all()
     run = Pipeline(NaiveForecaster()).run([scenario], seeds=[0, 1, 2])
@@ -66,7 +66,7 @@ def main():
         assert replay.metadata["replay"]["reproduced"]
     joint_processes = []
     for kind in ("composite", "merton_jump_diffusion", "garch", "markov_switching"):
-        spec = Scenario(kind, context_length=24, horizon=3, n_targets=2,
+        spec = Scenario(kind, history_length=24, horizon=3, n_targets=2,
                         parameters={"correlation": .6})
         generated = spec.generate(seed=17)
         distribution = generated.reference.forecast(n_samples=64, seed=91)

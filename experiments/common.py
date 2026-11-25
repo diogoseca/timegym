@@ -9,6 +9,11 @@ from pathlib import Path
 MISSING = "---"
 
 
+def scenario_settings(record: dict) -> dict:
+    """A protocol's scenario settings as Scenario takes them now: the frozen protocols name history_length context_length."""
+    return {("history_length" if key == "context_length" else key): value for key, value in record.items()}
+
+
 def sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 

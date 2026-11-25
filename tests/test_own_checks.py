@@ -174,13 +174,13 @@ def test_a_check_gets_what_its_argument_names_ask_for():
     case = one_case()
     seen = {}
 
-    def everything(observed, predicted, context, target_names, quantiles=None, samples=None, levels=None):
-        seen.update(observed=observed.shape, predicted=predicted.shape, context=context.shape,
+    def everything(observed, predicted, history, target_names, quantiles=None, samples=None, levels=None):
+        seen.update(observed=observed.shape, predicted=predicted.shape, history=history.shape,
                     target_names=target_names, quantiles=quantiles, samples=samples, levels=levels)
         return True
 
     evaluate_forecast(case, forecast_for(case, point=np.ones((7, 1))), checks=[everything])
-    assert seen == {"observed": (7, 1), "predicted": (7, 1), "context": (60, 1), "target_names": ("rain_mm",),
+    assert seen == {"observed": (7, 1), "predicted": (7, 1), "history": (60, 1), "target_names": ("rain_mm",),
                     "quantiles": None, "samples": None, "levels": None}
 
 
@@ -337,7 +337,7 @@ def test_scorecard_names_a_failed_check_of_your_own():
 # ---------------------------------------------------------------- replay
 
 def test_replay_runs_within_again_and_lists_your_own_checks():
-    scenario = Scenario("ar1", context_length=60, horizon=6)
+    scenario = Scenario("ar1", history_length=60, horizon=6)
 
     def positive(predicted):
         """Every value above zero."""
@@ -357,7 +357,7 @@ def test_replay_runs_within_again_and_lists_your_own_checks():
 
 
 def test_replay_runs_within_from_its_saved_bounds():
-    scenario = Scenario("ar1", context_length=60, horizon=6)
+    scenario = Scenario("ar1", history_length=60, horizon=6)
     report = Pipeline(NaiveForecaster("last")).test([scenario], seeds=[0], checks=[within(-100, 100)])
     assert report.replay_case(0).metadata["replay"]["diagnostics_match"]
     payload = report.to_dict()

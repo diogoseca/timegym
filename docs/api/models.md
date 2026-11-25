@@ -5,15 +5,15 @@ Built-in forecasters and the sklearn reduction: `NaiveForecaster`,
 from `timegym.models`.
 
 `NaiveForecaster(strategy="last", period=1)` returns explicit point forecasts.
-`last` repeats the final observation and `mean` repeats the context mean; both
+`last` repeats the final observation and `mean` repeats the mean of the history; both
 need at least one observation. `seasonal` repeats the final `period` observations
 and requires at least that many rows. `seasonal_mean` forecasts each step with the
 mean of all past values at the same point of the cycle (for yes/no values, the
 share that happened there) and also needs `period` rows. `drift` extrapolates the slope from the
 first to the last observation and needs at least two rows. `period` is a positive
-integer. With two or more context rows, built-in step models require a regular
+integer. With two or more rows of history, built-in step models require a regular
 index and immediately following consecutive future labels. With one row, the
-naive models can only require increasing future labels after the context.
+naive models can only require increasing future labels after the history.
 
 `LastValueForecaster()` is `NaiveForecaster("last")` with nothing to set, so
 reports and scorecards show it by name (*LastValueForecaster: 51/100*). It is
@@ -21,9 +21,9 @@ the baseline the README and the quick start score, and it replays from a
 report like the other built-in models.
 
 `GaussianAR1Forecaster(n_samples=256, seed=0, levels=DEFAULT_LEVELS)` requires at
-least five context observations. It fits an intercept and lag coefficient by
+least five observations of history. It fits an intercept and lag coefficient by
 OLS per target and pools residual cross-target covariance with `n - 3` degrees
-of freedom for `n` context rows. Its `Forecast` carries the iterated fitted
+of freedom for `n` rows of history. Its `Forecast` carries the iterated fitted
 conditional mean, paired Gaussian trajectories of shape `(n_samples, H, D)`, and
 empirical marginal quantiles at the requested levels (by default 0.1, 0.5, 0.9).
 At least two samples are required. A nonnegative integer seed repeats the draws;
@@ -41,7 +41,7 @@ the last observed window. `multioutput` fits one regressor per target for the
 whole horizon vector, wrapping the final step in `MultiOutputRegressor` when it
 lacks native multioutput support. `direct` and `multioutput` need a positive
 integer `horizon`, forecast at most that many steps, and need at least
-`window_length + horizon` context rows; `recursive` needs `window_length + 1`.
+`window_length + horizon` rows of history; `recursive` needs `window_length + 1`.
 All three return point outputs only. `steps` must end in an sklearn regressor. Before each case a pipeline copies
 the model with `clone_unfitted()` for native instances, sklearn's configuration clone for
 estimators, and otherwise a deep copy, so a plain class with `fit` and

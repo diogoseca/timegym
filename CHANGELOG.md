@@ -8,7 +8,7 @@
   `result.assert_passed()`, `result.to_json(path)` and `result.checks` read
   straight from its report. With no arguments `run()` draws the scorecard's
   ten kinds of series at low and high noise, 10 times each (200 series), and
-  it takes the scorecard's settings: `noise_levels`, `context_length`,
+  it takes the scorecard's settings: `noise_levels`, `history_length`,
   `horizon`, `title`, `attainable` and `interval_level`. Scenarios you built
   give one row each. A run of your own data (`cases=`) has no scorecard,
   since nobody knows its answer key, and reading `result.scorecard` says so
@@ -29,6 +29,40 @@
   `Run pipeline.run(instances=30) to narrow them.`
 - Moved the docs, tutorials, source notebooks, examples, the paper's sentence
   on the scorecard call and the installed-package check to the new call.
+
+- One word for the past a forecaster sees: history. Write `fit(self, history)`
+  in your models, `Scenario(kind, history_length=120, horizon=12)`,
+  `task.history`, `pipeline.predict(history, future_index)`,
+  `mase(observed, predicted, history)`, `rmsse(observed, predicted, history)`,
+  `check_shift_equivariance(pipeline, history, future_index)` and
+  `history_length=` in `run()`, `scenario_grid` and `default_scenarios`. A
+  score or a check of your own asks for the past by naming its argument
+  `history`. The built-in models and target transforms name their argument
+  `history` too, `NaiveForecaster` keeps what it fitted as `history_`, and
+  error messages say history where they said context.
+- The old names still work and warn, and will be removed in a later release:
+  `context_length=` wherever it was taken (`Scenario`, `Pipeline.scorecard`,
+  `scenario_grid`, `default_scenarios`, `generate_process`,
+  `generate_joint_process`, `resolve_process` and
+  `timegym.scorecard.scorecard`), `scenario.context_length`,
+  `ForecastTask(context=...)`, `task.context`, `context=` in
+  `Pipeline.predict`, `mase`, `rmsse` and `check_shift_equivariance`,
+  `NaiveForecaster.context_`, a score or a check whose argument is named
+  `context` (it warns once per run), and a `build` of your own whose scenario
+  has `context_length` instead of `history_length`. A model of your own
+  written `fit(self, context)` needs no change, since TimeGym passes the
+  history by position.
+- New cases, reports and scorecard baselines record `history_length` where
+  they recorded `context_length`. Reports and baselines saved by 1.13.1 and
+  earlier still load, compare with new ones and replay. Code that reads
+  `case.manifest["context_length"]` from a new case needs
+  `case.manifest["history_length"]`: that is the one change that does not
+  warn. Scorecard baselines are now format version 2, so TimeGym 1.13.1
+  refuses a new baseline and asks to be upgraded instead of failing on the
+  missing key; the report format is unchanged.
+- Moved the docs, the glossary (History, where it said Context), the README,
+  tutorials, examples, source notebooks, the installed-package check and the
+  paper to the word history wherever they meant the past a forecaster sees.
 
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come

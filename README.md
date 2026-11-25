@@ -177,17 +177,17 @@ the reason before it scores anything.
 
 ## Bring your own model
 
-A forecaster is any object with two methods. `fit(context)` gets the series so
+A forecaster is any object with two methods. `fit(history)` gets the series so
 far. `predict(future_index)` gets the dates to forecast, the steps right after
-the context, and returns one value per date: a `Forecast`, or simply a list
+the history, and returns one value per date: a `Forecast`, or simply a list
 or NumPy array. This one repeats the last value it saw:
 
 ```python
 from timegym import Forecast, Pipeline
 
 class RepeatLast:
-    def fit(self, context):            # the series so far, one column per series
-        self.last = context.iloc[-1]   # the last row seen
+    def fit(self, history):            # the series so far, one column per series
+        self.last = history.iloc[-1]   # the last row seen
         return self
 
     def predict(self, future_index):   # the dates to forecast

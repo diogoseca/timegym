@@ -71,7 +71,7 @@ def _dense_reference(kind, p, length, horizon):
 def test_hidden_state_references_equal_brute_force_gaussian_conditioning(kind, parameters):
     length, horizon = 50, 8
     case = Scenario(kind, length, horizon, parameters).generate(seed=3)
-    series = np.concatenate([case.task.context["y"], case.observed["y"]])
+    series = np.concatenate([case.task.history["y"], case.observed["y"]])
     mean, joint = _dense_reference(kind, parameters, length, horizon)
     past, future = slice(0, length), slice(length, length + horizon)
     gain = joint[future, past] @ np.linalg.inv(joint[past, past])
@@ -86,8 +86,8 @@ def test_measurement_noise_hides_the_same_path_at_every_noise_level():
     loud = Scenario("random_walk", 40, 5, {"sigma": 0.5, "noise": 2.0}).generate(seed=9)
     hidden = Scenario("random_walk", 40, 5, {"sigma": 0.5}).generate(seed=9)
     # The measurement errors are the same draws, scaled: noise columns are paired.
-    np.testing.assert_allclose(loud.task.context - hidden.task.context,
-                               4 * (quiet.task.context - hidden.task.context))
+    np.testing.assert_allclose(loud.task.history - hidden.task.history,
+                               4 * (quiet.task.history - hidden.task.history))
     # Without measurement noise, the long-standing analytic reference is kept.
     assert "noise" not in hidden.manifest["parameters"]
     assert "last_observed" in hidden.manifest["conditioning"]
@@ -116,7 +116,7 @@ def test_default_grid_has_ten_patterns_at_low_and_high_noise():
         assert pattern.title and pattern.predictable and pattern.unpredictable
     for cell in cells:
         case = cell.scenario.generate(seed=1)
-        assert case.task.context.shape == (120, 1) and len(case.task.future_index) == 24
+        assert case.task.history.shape == (120, 1) and len(case.task.future_index) == 24
 
 
 def test_more_noise_levels_fill_the_range_between_the_same_two_ends():
@@ -131,7 +131,7 @@ def test_more_noise_levels_fill_the_range_between_the_same_two_ends():
 
 
 def test_level_shift_happens_inside_the_history():
-    cell = scenario_grid(["level_shift"], context_length=120)[0]
+    cell = scenario_grid(["level_shift"], history_length=120)[0]
     change = cell.scenario.parameters["change_point"]
     assert 0 < change < 120
     case = cell.scenario.generate(seed=0)
@@ -162,8 +162,8 @@ def test_seed_none_draws_a_seed_and_records_it_for_a_rerun():
 class LastValue:
     """The simplest custom model: a plain class returning a DataFrame."""
 
-    def fit(self, context):
-        self.last = context.iloc[-1]
+    def fit(self, history):
+        self.last = history.iloc[-1]
 
     def predict(self, future_index):
         return pd.DataFrame([self.last] * len(future_index), index=future_index)
@@ -210,19 +210,19 @@ def _answer_keys(cells, seed, instances):
     for cell in cells:
         for i in range(instances):
             case = cell.scenario.generate(seed=seed + i)
-            keys[case.task.context.to_numpy().tobytes()] = case.reference.mean
+            keys[case.task.history.to_numpy().tobytes()] = case.reference.mean
     return keys
 
 
 class AnswerKey:
-    """Looks up the true conditional mean of the context it is fitted on (tests only)."""
+    """Looks up the true conditional mean of the history it is fitted on (tests only)."""
 
     def __init__(self, keys, lag=0, date_shift=0):
         self.keys, self.lag, self.date_shift = keys, lag, date_shift
 
-    def fit(self, context):
-        self.columns = context.columns
-        self.mean = self.keys[context.to_numpy().tobytes()]
+    def fit(self, history):
+        self.columns = history.columns
+        self.mean = self.keys[history.to_numpy().tobytes()]
 
     def predict(self, future_index):
         values = np.concatenate([self.mean[:1]] * self.lag + [self.mean[:len(self.mean) - self.lag]])
@@ -851,10 +851,10 @@ def last_value_baseline():
 class CrashesAboveThree(LastValue):
     """The last value, except that it raises when the history ends above 3."""
 
-    def fit(self, context):
-        if context.iloc[-1, 0] > 3:
+    def fit(self, history):
+        if history.iloc[-1, 0] > 3:
             raise ValueError("intentional crash")
-        super().fit(context)
+        super().fit(history)
 
 
 def _with_differences(path, cells, differences):
@@ -880,10 +880,10 @@ def test_a_saved_baseline_holds_each_series_avoidable_error_and_reads_back_exact
     path = tmp_path / "scorecard-baseline.json"
     assert card.save_baseline(path) == path
     record = json.loads(path.read_text(encoding="utf-8"))
-    assert (record["format"], record["format_version"]) == ("timegym-scorecard-baseline", 1)
+    assert (record["format"], record["format_version"]) == ("timegym-scorecard-baseline", 2)
     assert record["timegym_version"] == card.run.metadata["timegym_version"]
     assert record["title"] == card.title
-    assert record["grid"] == {"patterns": _COMPARED, "noise_sds": [0.5, 2.0], "context_length": 120,
+    assert record["grid"] == {"patterns": _COMPARED, "noise_sds": [0.5, 2.0], "history_length": 120,
                               "horizon": 24}
     assert (record["seed"], record["instances"]) == (4, 20)
     assert len(record["cells"]) == 6
@@ -1081,7 +1081,7 @@ def test_assert_no_regression_names_the_worse_cells_with_their_numbers(last_valu
 @pytest.mark.parametrize("settings, says", [
     ({"patterns": ["noise", "trend"]}, "patterns"),
     ({"noise_levels": 3}, "noise standard deviations"),
-    ({"context_length": 60}, "history length"),
+    ({"history_length": 60}, "history length"),
     ({"horizon": 12}, "horizon"),
     ({"seed": 5}, "seed 5 here, 4 in the baseline"),
     ({"instances": 25}, "instances 25 here, 20 in the baseline"),
@@ -1094,6 +1094,25 @@ def test_a_baseline_on_other_series_is_refused_with_what_differs(tmp_path, last_
     for baseline in (path, last_value_baseline):
         with pytest.raises(ValueError, match=f"other series.*{says}"):
             card.compare(baseline)
+
+
+def test_a_baseline_saved_by_timegym_1_13_still_compares(tmp_path, last_value_baseline):
+    import json
+
+    # TimeGym 1.13.1 wrote format version 1, with the history length under its old name context_length.
+    path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
+    record = json.loads(path.read_text(encoding="utf-8"))
+    grid = {("context_length" if key == "history_length" else key): value for key, value in record["grid"].items()}
+    old = tmp_path / "old-baseline.json"
+    old.write_text(json.dumps({**record, "format_version": 1, "grid": grid}), encoding="utf-8")
+    pd.testing.assert_frame_equal(last_value_baseline.compare(old).table, last_value_baseline.compare(path).table)
+    record["grid"]["history_length"] = 60
+    other = tmp_path / "other-baseline.json"
+    other.write_text(json.dumps({**record, "format_version": 1, "grid": {
+        ("context_length" if key == "history_length" else key): value for key, value in record["grid"].items()}}),
+        encoding="utf-8")
+    with pytest.raises(ValueError, match="history length 120 here, 60 in the baseline"):
+        last_value_baseline.compare(other)
 
 
 def test_a_file_that_is_not_a_baseline_or_is_newer_is_refused(tmp_path, last_value_baseline):
@@ -1110,8 +1129,8 @@ def test_a_file_that_is_not_a_baseline_or_is_newer_is_refused(tmp_path, last_val
         card.compare(broken)
     newer = card.save_baseline(tmp_path / "newer.json")
     record = json.loads(newer.read_text(encoding="utf-8"))
-    newer.write_text(json.dumps({**record, "format_version": 2}), encoding="utf-8")
-    with pytest.raises(ValueError, match="format version 2.*reads version 1"):
+    newer.write_text(json.dumps({**record, "format_version": 3}), encoding="utf-8")
+    with pytest.raises(ValueError, match="format version 3.*reads version 2"):
         card.compare(newer)
     short = card.save_baseline(tmp_path / "short.json")
     record["cells"][0]["avoidable"] = record["cells"][0]["avoidable"][:-1]

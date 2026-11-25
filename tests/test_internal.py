@@ -42,7 +42,7 @@ def test_numpy_integer_settings_are_normalized_across_entry_points():
     settings = diagnostic_settings(n_calibration=np.int64(9), dependence_seed_offset=np.int64(0))
     assert type(settings["n_calibration"]) is int
     assert type(settings["dependence_seed_offset"]) is int
-    assert Scenario("trend", context_length=np.int64(8)).generate(seed=np.int64(1)).manifest["seed"] == 1
+    assert Scenario("trend", history_length=np.int64(8)).generate(seed=np.int64(1)).manifest["seed"] == 1
 
 
 @pytest.mark.parametrize("value", [np.array([1 + 2j]), np.array([1 + 0j], dtype=object)])

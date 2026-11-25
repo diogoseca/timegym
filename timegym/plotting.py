@@ -62,7 +62,7 @@ _STYLE = {
 }
 # Plain names for the figure key; the artists keep their descriptive labels.
 _KEY_NAMES = {
-    "Observed context": "Observations",
+    "Observed history": "Observations",
     "Held-out observations": "Observations",
     "Known conditional mean": "Answer key",
     "Conditional mean (approx. filter)": "Answer key (approximate filter)",
@@ -89,9 +89,9 @@ def _groups(run):
 
 
 # %% ../source/11_plotting.ipynb #11_plotting-11
-def _time_coordinates(context_index, future_index, ax):
+def _time_coordinates(history_index, future_index, ax):
     """Return coordinates and a midpoint without relying on pandas plot state."""
-    indexes = (context_index, future_index)
+    indexes = (history_index, future_index)
     if all(isinstance(index, (pd.DatetimeIndex, pd.PeriodIndex)) for index in indexes):
         import matplotlib.dates as mdates
 
@@ -114,19 +114,19 @@ def _time_coordinates(context_index, future_index, ax):
     else:
         # A custom model may use ordered nonnumeric labels. Show those labels
         # explicitly on an ordinal axis rather than pretending they are dates.
-        labels = list(context_index) + list(future_index)
+        labels = list(history_index) + list(future_index)
         coordinates = [
-            np.arange(len(context_index)),
-            np.arange(len(context_index), len(labels)),
+            np.arange(len(history_index)),
+            np.arange(len(history_index), len(labels)),
         ]
         locations = np.unique(
             np.linspace(0, len(labels) - 1, min(6, len(labels)), dtype=int)
         )
         ax.set_xticks(locations, [str(labels[position]) for position in locations])
         label = "Index label (equally spaced)"
-    context_x, future_x = coordinates
-    cutoff = context_x[-1] + (future_x[0] - context_x[-1]) / 2
-    return context_x, future_x, cutoff, label
+    history_x, future_x = coordinates
+    cutoff = history_x[-1] + (future_x[0] - history_x[-1]) / 2
+    return history_x, future_x, cutoff, label
 
 
 # %% ../source/11_plotting.ipynb #11_plotting-13
@@ -274,19 +274,19 @@ def _draw_case(
         )
         return
     dimension = task.target_names.index(target)
-    start = _history_start(history, len(task.context), len(task.future_index))
-    context_x, future_x, cutoff, xlabel = _time_coordinates(
-        task.context.index[start:], task.future_index, ax
+    start = _history_start(history, len(task.history), len(task.future_index))
+    history_x, future_x, cutoff, xlabel = _time_coordinates(
+        task.history.index[start:], task.future_index, ax
     )
     ax.plot(
-        context_x,
-        task.context.iloc[start:, dimension].to_numpy(),
+        history_x,
+        task.history.iloc[start:, dimension].to_numpy(),
         color=_MUTED,
         alpha=0.8,
         marker=".",
         markersize=2.6,
         linestyle="None",
-        label="Observed context",
+        label="Observed history",
     )
     observed_valid = (
         case.observed.index.equals(task.future_index)
@@ -409,7 +409,7 @@ def _draw_case(
     ax.axvline(
         cutoff, color=_HAIRLINE, linewidth=0.9, linestyle="--", label="Forecast origin"
     )
-    ax.set_xlim(context_x[0], future_x[-1])
+    ax.set_xlim(history_x[0], future_x[-1])
     ax.set_xlabel(xlabel)
     ax.set_ylabel(str(target))
     several = len(task.target_names) > 1
@@ -457,7 +457,7 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
     case's 0-100 score sits in its colored band beside its error against the
     answer key and against what happened. ``history`` is how many past steps
     to show: four times the horizon by default, ``"all"`` for the whole
-    context. Bands, when requested, are marginal intervals, never
+    history. Bands, when requested, are marginal intervals, never
     simultaneous path regions.
     """
     if not isinstance(show_quantiles, bool):

@@ -97,12 +97,12 @@ def test_rmse_is_the_root_of_mse():
 
 
 def test_rmsse_scales_each_series_by_its_history():
-    context = np.array([[0.0, 10.0], [1.0, 10.0], [3.0, 14.0], [2.0, 12.0]])
+    history = np.array([[0.0, 10.0], [1.0, 10.0], [3.0, 14.0], [2.0, 12.0]])
     observed = np.array([[2.0, 12.0], [4.0, 13.0]])
     predicted = np.array([[3.0, 12.0], [2.0, 10.0]])
     scale = np.array([(1 + 4 + 1) / 3, (0 + 16 + 4) / 3])  # mean squared one-step change
     per_series = np.sqrt(np.array([(1 + 4) / 2, (0 + 9) / 2]) / scale)
-    assert rmsse(observed, predicted, context) == pytest.approx(per_series.mean())
+    assert rmsse(observed, predicted, history) == pytest.approx(per_series.mean())
     seasonal = np.array([[1.0], [2.0], [4.0], [3.0], [5.0]])
     assert rmsse(np.array([[6.0]]), np.array([[5.0]]), seasonal, seasonality=2) == pytest.approx(
         1 / np.sqrt((9 + 1 + 1) / 3))
@@ -111,7 +111,7 @@ def test_rmsse_scales_each_series_by_its_history():
 def test_rmsse_is_undefined_without_change_in_the_history():
     with pytest.raises(UndefinedMetricError, match="zero naive-error"):
         rmsse(np.array([[1.0]]), np.array([[2.0]]), np.array([[3.0], [3.0], [3.0]]))
-    with pytest.raises(UndefinedMetricError, match="more context observations"):
+    with pytest.raises(UndefinedMetricError, match="more observations of history"):
         rmsse(np.array([[1.0]]), np.array([[2.0]]), np.array([[3.0], [4.0]]), seasonality=2)
 
 
@@ -187,7 +187,7 @@ def test_a_report_records_the_scores_asked_for():
 
 
 def test_no_request_leaves_reports_as_they_were():
-    report = Pipeline().test([Scenario("ar1", context_length=40, horizon=4)], seeds=[1])
+    report = Pipeline().test([Scenario("ar1", history_length=40, horizon=4)], seeds=[1])
     assert "scores" not in report.metadata
     assert set(report.cases[0].metrics) == {"mse", "mae", "mase", "mean_reference_mse"}
 
@@ -213,12 +213,12 @@ def test_a_score_gets_what_its_argument_names_ask_for():
         seen["shapes"] = samples.shape, observed.shape
         return float(np.std(samples))
 
-    def history_length(context, predicted, quantiles=None):
+    def history_length(history, predicted, quantiles=None):
         seen["quantiles"] = quantiles
-        return float(len(context))
+        return float(len(history))
 
-    case = Scenario("ar1", context_length=40, horizon=4).generate(2)
-    forecast = Pipeline(GaussianAR1Forecaster(n_samples=32, seed=0)).predict(case.task.context, case.task.future_index)
+    case = Scenario("ar1", history_length=40, horizon=4).generate(2)
+    forecast = Pipeline(GaussianAR1Forecaster(n_samples=32, seed=0)).predict(case.task.history, case.task.future_index)
     result = evaluate_forecast(case, forecast, scores=[spread, history_length])
     assert seen["shapes"] == ((32, 4, 1), (4, 1))
     assert seen["quantiles"].shape == (4, 1, 3)
@@ -239,7 +239,7 @@ def test_a_broken_score_is_an_error_with_its_message():
     def several(observed, predicted):
         return np.abs(observed - predicted)
 
-    report = Pipeline().test([Scenario("ar1", context_length=40, horizon=4)], seeds=[1],
+    report = Pipeline().test([Scenario("ar1", history_length=40, horizon=4)], seeds=[1],
                              scores=[broken, several, "brier"])
     problems = {d.name: d for d in report.cases[0].diagnostics if d.name.startswith("metric_")}
     assert problems["metric_broken"].status == "ERROR"
@@ -263,7 +263,7 @@ def test_a_broken_score_is_an_error_with_its_message():
 ])
 def test_requests_that_cannot_work_are_refused_before_anything_runs(scores, error, message):
     class Unreachable:
-        def fit(self, context):
+        def fit(self, history):
             raise AssertionError("no case should run")
 
     with pytest.raises(error, match=message):
@@ -281,7 +281,7 @@ def test_forecasts_made_earlier_get_the_scores_too():
 
 def test_replay_computes_named_scores_again_and_lists_the_others():
     pipeline = Pipeline(GaussianAR1Forecaster(n_samples=32, seed=3))
-    report = pipeline.test([Scenario("ar1", context_length=40, horizon=4)], seeds=[5],
+    report = pipeline.test([Scenario("ar1", history_length=40, horizon=4)], seeds=[5],
                            scores={"rmse": "rmse", "wis": "weighted_interval_score", "close": within_10_percent})
     assert {"rmse", "wis", "close"} <= set(report.cases[0].metrics)
     replay = report.replay_case(0).metadata["replay"]

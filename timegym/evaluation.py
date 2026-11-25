@@ -40,7 +40,7 @@ class ForecastRun:
     ``scorecard`` is the run's Scorecard, ``assert_passed()`` fails on a crash
     or a malformed forecast, ``to_json(path)`` saves the report, ``checks``
     counts the output checks, and ``report`` is the JSON-ready TestReport,
-    which holds no contexts, observations or forecast arrays.
+    which holds no histories, observations or forecast arrays.
 
     ``kept_data`` says whether each case still holds its series, answer key
     and forecast. ``Pipeline.run`` drops them once every case is scored
@@ -84,7 +84,12 @@ class ForecastRun:
         ``checks`` adds output checks of your own, as in ``Pipeline.run``. No
         model is kept, so these cases cannot be replayed.
         """
-        from timegym.diagnostics import _describe_checks, _describe_scores
+        from timegym.diagnostics import (
+            _check_requests,
+            _describe_checks,
+            _describe_scores,
+            _score_requests,
+        )
         from timegym.pipeline import _as_forecast, _evaluate_ready_made
         from timegym.provenance import diagnostic_settings, runtime_provenance
 
@@ -104,8 +109,13 @@ class ForecastRun:
             alpha=alpha,
             dependence_seed_offset=dependence_seed_offset,
         )
-        requested = {} if scores is None else {"scores": _describe_scores(scores)}
+        requested = {}
+        if scores is not None:
+            # Read once, so each request warns once, not once per case.
+            scores = _score_requests(scores)
+            requested["scores"] = _describe_scores(scores)
         if checks is not None:
+            checks = _check_requests(checks)
             requested["checks"] = _describe_checks(checks)
 
         def recorded(position, case):

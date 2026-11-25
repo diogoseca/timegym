@@ -7,6 +7,9 @@ import traceback
 from typing import Any
 import warnings
 import numpy as np
+import functools
+import os
+import sys
 
 __all__ = ["positive_int", "nonnegative_int"]
 
@@ -110,10 +113,79 @@ def _json_safe(value):
 
 
 # %% ../source/12_package.ipynb #shared-deprecation
+
+
+def _warn_deprecated(message: str) -> None:
+    """Warn with ``message`` at the first line outside TimeGym: the user's own call, however deep the warning starts."""
+    import timegym
+
+    package = os.path.dirname(os.path.abspath(timegym.__file__)) + os.sep
+    frame, level = sys._getframe(0), 1
+    while frame is not None:
+        name = frame.f_code.co_filename
+        if name.startswith("<") or not os.path.abspath(name).startswith(package):
+            break
+        frame, level = frame.f_back, level + 1
+    warnings.warn(message, DeprecationWarning, stacklevel=level)
+
+
 def _deprecated(name: str, instead: str) -> None:
     """Warn at the caller's line that ``name`` leaves in TimeGym 2.0, and say what to use instead."""
-    warnings.warn(
-        f"{name} is deprecated and will be removed in TimeGym 2.0; {instead}",
-        DeprecationWarning,
-        stacklevel=3,
+    _warn_deprecated(
+        f"{name} is deprecated and will be removed in TimeGym 2.0; {instead}"
     )
+
+
+def _renamed_keywords(**renames):
+    """Let a function, or a class's constructor, keep taking keyword arguments under their old names.
+
+    ``@_renamed_keywords(context="history")`` turns ``f(context=x)`` into ``f(history=x)`` and warns
+    at the caller's line; passing both names is refused. The signature shown is the new one.
+    """
+
+    def decorate(target):
+        function = target.__init__ if isinstance(target, type) else target
+        where = target.__qualname__
+
+        @functools.wraps(function)
+        def accept_old_names(*args, **kwargs):
+            for old, new in renames.items():
+                if old in kwargs:
+                    if new in kwargs:
+                        raise TypeError(
+                            f"{where}() got {new}= and its old name {old}=; give {new} only"
+                        )
+                    _warn_deprecated(
+                        f"{where}({old}=...) is deprecated and will be removed in a later release: "
+                        f"use {where}({new}=...)"
+                    )
+                    kwargs[new] = kwargs.pop(old)
+            return function(*args, **kwargs)
+
+        if isinstance(target, type):
+            target.__init__ = accept_old_names
+            return target
+        return accept_old_names
+
+    return decorate
+
+
+def _old_name(owner: str, old: str, new: str) -> None:
+    """Warn at the caller's line that an attribute was read by its old name: ``owner.old`` is now ``owner.new``."""
+    _warn_deprecated(
+        f"{owner}.{old} is deprecated and will be removed in a later release: use {owner}.{new}"
+    )
+
+
+def _current_manifest(manifest: dict) -> dict:
+    """A case manifest with the keys that older versions of TimeGym saved, under their current names.
+
+    TimeGym 1.13.1 and earlier saved ``history_length`` as ``context_length``. Reading both under the
+    new name lets a report or a replay compare an old case with a new one as the same case.
+    """
+    if "context_length" in manifest and "history_length" not in manifest:
+        manifest = {
+            ("history_length" if key == "context_length" else key): value
+            for key, value in manifest.items()
+        }
+    return manifest

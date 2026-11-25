@@ -29,9 +29,9 @@ not filled with zero. It applies no inverse; use
 ## Reversible target transforms
 
 `LogTransform()`, `BoxCoxTransform()` and `DifferenceTransform(order=1, lag=1)`
-implement `fit_transform(context)`, `inverse_transform(forecast)` and
+implement `fit_transform(history)`, `inverse_transform(forecast)` and
 `clone_unfitted()`. `ComposedTransform(transforms)` applies bundled members in
-order and inverts them in reverse order. Each transform is fitted on the context
+order and inverts them in reverse order. Each transform is fitted on the history
 only. Log and Box-Cox require strictly positive finite targets; Box-Cox fits one
 lambda per target by maximum likelihood, bounded to `[-1, 2]`, and rejects a
 constant target and transformed forecasts without a preimage. Inversion
@@ -43,7 +43,7 @@ requires a valid forecast with the fitted target names in the fitted order.
   else the inverted 0.5 quantile, else the inverted point read as a median.
 - `DifferenceTransform` integrates points and samples exactly. It recomputes
   quantiles from the integrated samples, or omits them when there are none,
-  and assumes the forecast rows immediately follow the context.
+  and assumes the forecast rows immediately follow the history.
 
 A pipeline's saved configuration describes exact bundled classes as `builtin`
 and any other object, including a subclass, as `external`; replay rebuilds

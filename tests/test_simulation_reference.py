@@ -134,7 +134,7 @@ def test_exact_non_gaussian_sampler_calibrates_and_detects_collapsed_variance():
 
 
 def test_non_gaussian_reference_evidence_is_explicit_without_changing_point_scores():
-    baseline = Scenario("white_noise", context_length=12, horizon=2,
+    baseline = Scenario("white_noise", history_length=12, horizon=2,
                         n_targets=2).generate(seed=6)
     reference = bimodal_reference()
     case = Case(baseline.task, baseline.observed, reference, baseline.manifest)

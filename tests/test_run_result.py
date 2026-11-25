@@ -52,11 +52,11 @@ def test_the_runs_scorecard_is_the_old_scorecard_number_for_number():
 
 def test_scorecard_settings_go_through_run():
     pipeline = Pipeline(NaiveForecaster())
-    card = pipeline.run(["random_walk"], noise_levels=[0.2, 0.4], instances=3, context_length=40, horizon=6,
+    card = pipeline.run(["random_walk"], noise_levels=[0.2, 0.4], instances=3, history_length=40, horizon=6,
                         title="Mine", interval_level=0.99).scorecard
     assert card.title == "Mine" and card.interval_level == 0.99
     assert list(card.table["noise_sd"]) == [0.2, 0.4]
-    assert card.cells[0].scenario.context_length == 40 and card.cells[0].scenario.horizon == 6
+    assert card.cells[0].scenario.history_length == 40 and card.cells[0].scenario.horizon == 6
     assert pipeline.run("random_walk", instances=2).scorecard.table["pattern"].tolist() == ["random_walk"] * 2
 
 
@@ -107,7 +107,7 @@ def test_the_result_answers_for_its_report():
     assert json.loads(result.to_json()) == json.loads(result.report.to_json())
 
     class Broken:
-        def fit(self, context):
+        def fit(self, history):
             return self
 
         def predict(self, future_index):
@@ -126,8 +126,8 @@ def test_to_json_writes_the_report(tmp_path):
 
 
 def test_scenarios_you_built_give_one_row_each():
-    scenarios = [Scenario("trend", context_length=30, horizon=5), Scenario("ar1", context_length=30, horizon=5),
-                 Scenario("trend", context_length=30, horizon=5, parameters={"slope": 0.5})]
+    scenarios = [Scenario("trend", history_length=30, horizon=5), Scenario("ar1", history_length=30, horizon=5),
+                 Scenario("trend", history_length=30, horizon=5, parameters={"slope": 0.5})]
     result = Pipeline(LastValueForecaster()).run(scenarios, instances=3)
     card = result.scorecard
     assert card.table["pattern"].tolist() == ["trend", "ar1", "trend (2)"]
@@ -160,7 +160,7 @@ def test_your_own_data_has_no_scorecard():
     plt.close(kept.plot_forecasts())
 
 
-@pytest.mark.parametrize("setting", [{"noise_levels": 3}, {"context_length": 50}, {"horizon": 6},
+@pytest.mark.parametrize("setting", [{"noise_levels": 3}, {"history_length": 50}, {"horizon": 6},
                                      {"title": "Mine"}, {"interval_level": 0.99}, {"attainable": True}])
 def test_scorecard_settings_are_refused_for_your_own_data(setting):
     name = next(iter(setting))
@@ -249,7 +249,7 @@ def test_a_run_with_its_scorecard_pickles():
         again = pickle.loads(pickle.dumps(result))
         assert str(again.scorecard) == str(result.scorecard)
         plt.close(again.scorecard.plot())
-    built = Pipeline(LastValueForecaster()).run([Scenario("trend", context_length=30, horizon=5)], instances=2)
+    built = Pipeline(LastValueForecaster()).run([Scenario("trend", history_length=30, horizon=5)], instances=2)
     assert str(pickle.loads(pickle.dumps(built)).scorecard) == str(built.scorecard)
 
 
@@ -310,9 +310,9 @@ def test_a_bad_interval_level_is_refused_before_any_forecast():
     fits = []
 
     class Counted(LastValueForecaster):
-        def fit(self, context):
+        def fit(self, history):
             fits.append(1)
-            return super().fit(context)
+            return super().fit(history)
 
     with pytest.raises(ValueError, match="interval_level must be a number between 0 and 1"):
         Pipeline(Counted()).run(["trend"], instances=2, interval_level=95)
