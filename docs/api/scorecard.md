@@ -345,7 +345,7 @@ in plain words with how many cases passed and failed:
 | `shape` | Right number of steps and series |
 | `finite` | No missing or infinite values |
 | `quantiles` | Quantiles in order |
-| `dependence` | Joint spread matches the answer key (only with `check_dependence=True`) |
+| `dependence` | Joint spread matches the answer key (only with `checks=[dependence()]`) |
 
 `report.assert_passed()` raises with one line per failed check, for example
 `Forecasts the requested dates: failed in 4 of 4 cases`, followed by the

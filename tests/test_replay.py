@@ -20,9 +20,11 @@ def test_builtin_configuration_roundtrip_reproduces_exact_outputs(model):
     assert config["replayable"] is True
     restored = Pipeline.from_config(config)
     assert restored.to_config() == config
-    report = pipeline.test([Scenario("ar1", history_length=24, horizon=3, n_targets=2)],
-                           seeds=[4, 8], check_dependence=True, n_calibration=19,
-                           alpha=0.1, dependence_seed_offset=51)
+    # A report saved with another seed offset, which only the old arguments can set, still replays.
+    with pytest.warns(DeprecationWarning, match="dependence_seed_offset has no new form"):
+        report = pipeline.test([Scenario("ar1", history_length=24, horizon=3, n_targets=2)],
+                               seeds=[4, 8], check_dependence=True, n_calibration=19,
+                               alpha=0.1, dependence_seed_offset=51)
     replayed = TestReport.from_json(report.to_json()).replay_case(1)
     assert replayed.cases[0].to_dict() == report.cases[1].to_dict()
     assert all(replayed.metadata["replay"].values())

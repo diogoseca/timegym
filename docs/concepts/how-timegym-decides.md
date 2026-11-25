@@ -47,7 +47,7 @@ flowchart LR
     F --> C{"Well-formed?"}
     C -- no --> X["FAIL<br/>not scored"]
     C -- yes --> R["Scores against what happened<br/>and the answer key<br/>INCONCLUSIVE: no pass mark"]
-    C -- yes --> D["Optional checks<br/>check_dependence=True"]
+    C -- yes --> D["Optional checks<br/>checks=[dependence()]"]
     R --> T["Report"]
     D --> T
     X --> T
@@ -68,7 +68,7 @@ the next.
 | `ERROR` | The model raised an exception. It is recorded with its traceback, never turned into a large error. |
 
 A report with no `FAIL` and no `ERROR` means every forecast was well-formed and
-every fit and prediction ran; with `check_dependence=True`, it also means no
+every fit and prediction ran; with `checks=[dependence()]`, it also means no
 set of sample paths had the wrong correlation. It does not mean the forecasts
 are accurate. A large error can come from noise in a small test, from a model
 too simple for the series, or from a bug, and a fixed pass mark cannot tell

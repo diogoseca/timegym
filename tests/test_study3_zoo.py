@@ -183,7 +183,7 @@ def test_the_registered_scorecard_uses_exactly_the_zoo_seed_blocks(protocol, mon
         raise _Abort
 
     monkeypatch.setattr(timegym.Scenario, "generate", record_generate)
-    monkeypatch.setattr(timegym.pipeline, "evaluate_forecast", record_evaluate)
+    monkeypatch.setattr(timegym.pipeline, "_evaluate_forecast", record_evaluate)
     monkeypatch.setattr(timegym.pipeline.Pipeline, "run", stop_after_run)
     with pytest.raises(_Abort):
         run_zoo.scorecard(_Zeros())

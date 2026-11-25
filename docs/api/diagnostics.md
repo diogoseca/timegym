@@ -198,6 +198,29 @@ values and the most extreme one, such as `quantiles: 7 values below 0 (lowest
 `ERROR`, so a typo can't switch the check off. Its name in a report is
 `within`; to use two, name them with a dictionary.
 
+`timegym.checks.dependence(n_calibration=99, alpha=0.05)` asks for the
+covariance check below on every case: whether the sample paths of several
+series, or of many steps, move together as the answer key says.
+
+```python
+from timegym.checks import dependence
+
+result = pipeline.run(["seasonal"], checks=[dependence()])
+result.checks            # now also "Joint spread matches the answer key"
+```
+
+It needs sample paths and an answer key with a covariance; without them its
+finding is `UNSUPPORTED`. Its row in `result.checks` is `dependence` and its
+finding in each case is `reference_covariance`. A report records
+`n_calibration` and `alpha` under `metadata["diagnostic_settings"]`, so replay
+runs the same check. Each case's calibration draws are seeded 100,000 after the
+case's own seed, so they never reuse the case's draws; `evaluate_forecast`
+takes that seed as `dependence_seed`. The old way to ask for it,
+`check_dependence=True` with `n_calibration=`, `alpha=` and
+`dependence_seed_offset=` on `Pipeline.run`, `ForecastRun.from_forecasts`,
+`evaluate_forecast` and `Pipeline.test`, still works and warns; given beside
+`dependence()`, it is refused.
+
 A check of your own is a function that asks for its inputs by argument name,
 as a metric does (`observed`, `predicted`, `quantiles`, `levels`, `samples`,
 `history`), and may also ask for `target_names`, the names of the series in
@@ -245,8 +268,9 @@ no multiple-comparison adjustment is silently applied. Too few samples or
 insufficient p-value resolution yield `INCONCLUSIVE`. Fewer than two coordinates
 or a deterministic reference yield `UNSUPPORTED`. Both this check and
 `evaluate_forecast` require explicit nonnegative integer dependence seeds.
-Invalid seeds, calibration counts, alpha, or dependence flags are caller errors
-and raise before evaluation, including when dependence checking is disabled.
+Invalid seeds are caller errors and raise before evaluation, including when
+the dependence check is not asked for; `dependence()` refuses invalid
+calibration counts and alpha when it is made.
 Point, quantile, and sample accuracy diagnostics include their available metrics
 in evidence, with reference capabilities when a simulation reference supplies them.
 
@@ -398,7 +422,7 @@ diagnostic, so it has no row.
 
 ### `reference_covariance`
 
-- **Emitted by:** `covariance_dependence_check`; `evaluate_forecast`, `Pipeline.test` and `Pipeline.run` with `check_dependence=True`, where an exception becomes the `ERROR`
+- **Emitted by:** `covariance_dependence_check`; `evaluate_forecast`, `Pipeline.test` and `Pipeline.run` with `dependence()` (`timegym.checks.dependence`) in `checks=`, where an exception becomes the `ERROR`
 - **Evidence keys:** `statistic`, `statistic_name`, `p_value`, `alpha`, `n_calibration`, `critical_value`, `minimum_p_value`, `n_samples`, `n_coordinates`, `seed`, `null`, `multiplicity`; `reference`, and `covariance_target` for a Monte Carlo covariance target. Early `UNSUPPORTED` and `INCONCLUSIVE` results record fewer keys; `ERROR` records exception evidence
 - **Threshold or tolerance:** `FAIL` when the Monte Carlo rank p-value is at most `alpha` (defaults `alpha=0.05`, `n_calibration=99`). `INCONCLUSIVE` below 20 samples or when `1 / (n_calibration + 1)` exceeds `alpha`
 - **What a FAIL or ERROR usually means:** `FAIL`: the ensemble covariance differs from the reference law, through a variance or dependence error or samples that are not independent draws. `ERROR`: the comparison raised, for example on invalid reference calibration draws.
@@ -707,6 +731,8 @@ The t interval is for continuous differences in a metric, not differences in ala
 ::: timegym.checks.check_shift_equivariance
 
 ::: timegym.checks.within
+
+::: timegym.checks.dependence
 
 ::: timegym.statistics.wilson_interval
 

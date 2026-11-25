@@ -105,7 +105,7 @@ SHOWN_BY = {
     "point_accuracy": {"avoidable_mse"},
     "quantile_accuracy": {"pinball"},
     "sample_scores": {"crps", "energy_score", "variogram_score"},
-    "reference_covariance": {"covariance_dependence_check", "check_dependence=True"},
+    "reference_covariance": {"covariance_dependence_check", "dependence()"},
     "shift_equivariance": {"check_shift_equivariance"},
 }
 

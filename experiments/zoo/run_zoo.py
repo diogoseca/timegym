@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
-import inspect
 import json
 from pathlib import Path
 import platform
@@ -30,6 +29,7 @@ from threadpoolctl import threadpool_limits
 
 from timegym import Pipeline
 from timegym.grid import scenario_grid
+from timegym.provenance import diagnostic_settings
 
 from experiments import study3_common as common
 from experiments.common import sha256
@@ -46,8 +46,8 @@ PACKAGES = ("numpy", "scipy", "pandas", "scikit-learn", "threadpoolctl", "statsf
             "statsmodels", "matplotlib", "torch", "transformers", "accelerate", "chronos-forecasting")
 
 
-# The dependence seed offset that Pipeline.run uses by default, and so the scorecard.
-DEPENDENCE_SEED_OFFSET = int(inspect.signature(Pipeline.run).parameters["dependence_seed_offset"].default)
+# The dependence seed offset that Pipeline.run uses, and so the scorecard.
+DEPENDENCE_SEED_OFFSET = diagnostic_settings()["dependence_seed_offset"]
 
 
 def check_scorecard_seeds(protocol, seed=SEED, instances=INSTANCES):

@@ -26,7 +26,7 @@ Underscore-prefixed names and modules, including `_internal` and
 | `DEFAULT_LEVELS` | `timegym.contracts` | Public | [Scenarios and references](api/scenarios.md) |
 | `mse`, `mae`, `rmse`, `mase`, `rmsse`, `mean_reference_mse`, `pinball`, `interval_score`, `weighted_interval_score`, `crps`, `energy_score`, `variogram_score`, `brier`, `log_loss`, `UndefinedMetricError` | `timegym.metrics` | Public | [Metrics and diagnostics](api/diagnostics.md) |
 | `evaluate_forecast`, `ReportComparison`, `calibration`, `Calibration`, `covariance_dependence_check`, `rank_alarm`, `RankAlarm` | `timegym.diagnostics` | Public | [Metrics and diagnostics](api/diagnostics.md) |
-| `within` | `timegym.checks` | Public | [Metrics and diagnostics](api/diagnostics.md#your-own-output-checks) |
+| `within`, `dependence` | `timegym.checks` | Public | [Metrics and diagnostics](api/diagnostics.md#your-own-output-checks) |
 | `check_shift_equivariance` | `timegym.checks` | Public; opt-in model property | [Metrics and diagnostics](api/diagnostics.md) |
 | `SklearnForecaster` | `timegym.models` | Public; sklearn loaded when needed | [Models and reductions](api/models.md) |
 | `REDUCTIONS` | `timegym.models` | Public | [Models and reductions](api/models.md) |

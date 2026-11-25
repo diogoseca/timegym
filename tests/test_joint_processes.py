@@ -8,6 +8,7 @@ import pytest
 from scipy.stats import multivariate_normal
 
 from timegym import LastValueForecaster, Scenario, Pipeline, TestReport as Report, SimulationReference
+from timegym.checks import dependence
 from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
 
 
@@ -295,7 +296,7 @@ def test_joint_dependence_mutation_keeps_marginals_and_is_detected():
 def test_garch_exact_sampler_calibrates_fixed_numerical_covariance_target():
     c=generate('garch',{'correlation':.6},horizon=3)
     forecast=c.reference.forecast(64,71)
-    result=evaluate_forecast(c,forecast,check_dependence=True,n_calibration=19)
+    result=evaluate_forecast(c,forecast,checks=[dependence(n_calibration=19)])
     check=next(d for d in result.diagnostics if d.name=='reference_covariance')
     assert check.status in ('PASS','FAIL')
     assert 'fixed_independently_estimated' in check.evidence['covariance_target']

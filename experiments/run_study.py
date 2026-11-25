@@ -20,7 +20,7 @@ from timegym.statistics import paired_t_interval as mean_interval
 from timegym.statistics import wilson_interval as rate_interval
 
 from timegym import Forecast, Pipeline, Scenario, GaussianAR1Forecaster, LastValueForecaster, SeasonalLastValueForecaster
-from timegym.checks import check_shift_equivariance
+from timegym.checks import check_shift_equivariance, dependence
 from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
 from timegym.metrics import mse, mae, crps, energy_score, variogram_score
 from timegym.mutations import MUTATIONS, mutate_forecast
@@ -170,10 +170,9 @@ def run(protocol):
                             "repair_contract_alarm": repair_contract, "repair_covariance_status": repair_covariance,
                             "violations": violations, "manifest": case.manifest})
             if seed == seeds.start and name in {"index_shift", "dependence_shuffle"}:
-                report = evaluate_forecast(case, forecast, check_dependence=not violations,
-                                           dependence_seed=seed+protocol["seed_offsets"]["calibration"],
-                                           n_calibration=protocol["n_calibration"],
-                                           alpha=protocol["alpha_per_check"])
+                check = dependence(n_calibration=protocol["n_calibration"], alpha=protocol["alpha_per_check"])
+                report = evaluate_forecast(case, forecast, checks=None if violations else [check],
+                                           dependence_seed=seed+protocol["seed_offsets"]["calibration"])
                 examples[name] = report.to_dict()
         clean_scores = {"crps": crps(observed, clean.samples), "energy": energy_score(observed, clean.samples),
                         "variogram": variogram_score(observed, clean.samples)}

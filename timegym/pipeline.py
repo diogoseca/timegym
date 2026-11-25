@@ -25,11 +25,12 @@ from .models import (
 )
 from .scenarios import Scenario, MANIFEST_SCHEMA_VERSION, default_scenarios
 from .diagnostics import (
-    evaluate_forecast,
     exception_evidence,
     _check_requests,
+    _dependence_request,
     _describe_checks,
     _describe_metrics,
+    _evaluate_forecast,
     _metric_requests,
     _rebuild_checks,
     _rebuild_metrics,
@@ -198,15 +199,15 @@ def _evaluate_case(
     forecast = None
     try:
         forecast = make_forecast(case)
-        result = evaluate_forecast(
+        result = _evaluate_forecast(
             case,
             forecast,
             check_dependence=settings["check_dependence"],
             dependence_seed=dependence_seed,
             n_calibration=settings["n_calibration"],
             alpha=settings["alpha"],
-            metrics=metrics,
-            checks=checks,
+            requests=_metric_requests(metrics),
+            check_requests=_check_requests(checks),
         )
     except Exception as exc:
         result = CaseResult(
@@ -538,10 +539,7 @@ class Pipeline:
         interval_level=None,
         metrics=None,
         checks=None,
-        check_dependence=False,
-        n_calibration=99,
-        alpha=0.05,
-        dependence_seed_offset=100_000,
+        **old_arguments,
     ):
         """Forecast every case with a fresh model, check each forecast and measure its errors; return a ForecastRun.
 
@@ -605,10 +603,16 @@ class Pipeline:
         None)``, or a dictionary from name to function. They appear in
         ``result.checks`` and ``assert_passed`` like the built-in checks.
         ``result.metadata["checks"]`` lists them with their titles, and says
-        which replay can run again.
+        which replay can run again. ``timegym.checks.dependence()`` among them
+        checks that the sample paths of every case move together as its answer
+        key says; its row in ``result.checks`` is "dependence", and
+        ``result.metadata["diagnostic_settings"]`` records its settings for
+        replay. ``check_dependence``, ``n_calibration``, ``alpha`` and
+        ``dependence_seed_offset``, its old form, still work and warn.
         """
         if not isinstance(keep_data, bool):
             raise TypeError("keep_data must be True or False")
+        settings, checks = _dependence_request("Pipeline.run", checks, old_arguments)
         return self._run(
             scenarios,
             seeds,
@@ -623,10 +627,7 @@ class Pipeline:
             interval_level=interval_level,
             metrics=metrics,
             checks=checks,
-            check_dependence=check_dependence,
-            n_calibration=n_calibration,
-            alpha=alpha,
-            dependence_seed_offset=dependence_seed_offset,
+            **settings,
             default_instances=10,
         )
 
@@ -798,10 +799,7 @@ class Pipeline:
         cases=None,
         metrics=None,
         checks=None,
-        check_dependence=False,
-        n_calibration=99,
-        alpha=0.05,
-        dependence_seed_offset=100_000,
+        **old_arguments,
     ):
         """Evaluate each scenario on each instance and return a TestReport; use ``run`` instead.
 
@@ -812,6 +810,7 @@ class Pipeline:
         ``result.assert_passed()``, ``result.to_json()`` and the scorecard.
         """
         _warn_deprecated(_TEST_MOVED)
+        settings, checks = _dependence_request("Pipeline.test", checks, old_arguments)
         return self._run(
             scenarios,
             seeds,
@@ -821,10 +820,7 @@ class Pipeline:
             keep_data=False,
             metrics=metrics,
             checks=checks,
-            check_dependence=check_dependence,
-            n_calibration=n_calibration,
-            alpha=alpha,
-            dependence_seed_offset=dependence_seed_offset,
+            **settings,
             default_instances=3,
             old_scenarios=True,
             make_card=False,

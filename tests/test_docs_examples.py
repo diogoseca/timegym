@@ -91,7 +91,7 @@ def test_own_metrics_on_the_extend_page_land_in_the_report():
 
 def test_own_checks_examples_on_the_scores_page_run():
     import pandas as pd
-    from timegym import LastValueForecaster, MeanForecaster, Pipeline, cases_from_series
+    from timegym import GaussianAR1Forecaster, LastValueForecaster, MeanForecaster, Pipeline, cases_from_series
 
     text = (ROOT / "docs/api/diagnostics.md").read_text(encoding="utf-8")
     section = text[text.index("## Your own output checks"):text.index("## Statistical and metamorphic")]
@@ -105,16 +105,20 @@ def test_own_checks_examples_on_the_scores_page_run():
     assert namespace["result"].checks[-1] == {"check": "within", "title": "Values between 0 and 1",
                                               "passed": 3, "failed": 0}
     exec(blocks[1], namespace)
+    namespace["pipeline"] = Pipeline(GaussianAR1Forecaster(n_samples=40, seed=3))  # the check needs sample paths
+    exec(blocks[2], namespace)
+    (row,) = [row for row in namespace["result"].checks if row["check"] == "dependence"]
+    assert row["title"] == "Joint spread matches the answer key" and row["passed"] + row["failed"] == 20
     north, south = rng.poisson(3, 120), rng.poisson(2, 120)
     sales = pd.DataFrame({"north": north, "south": south, "total": north + south}, index=days).astype(float)
     namespace.update(pipeline=Pipeline(LastValueForecaster()),
                      cases=cases_from_series(sales, origins=[60, 80, 100], horizon=7, name="coats"))
-    exec(blocks[2], namespace)
+    exec(blocks[3], namespace)
     assert namespace["result"].checks[-2:] == [
         {"check": "within", "title": "Values at least 0", "passed": 3, "failed": 0},
         {"check": "totals_add_up", "title": "Store totals add up", "passed": 3, "failed": 0},
     ]
-    assert len(blocks) == 3
+    assert len(blocks) == 4
 
 
 def test_own_checks_on_the_extend_page_fail_and_pass_as_the_comment_says():

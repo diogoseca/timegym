@@ -731,3 +731,97 @@ def test_a_saved_finding_on_the_old_name_loads_under_the_new_one():
     loaded = TestReport.from_dict(payload)
     assert loaded.cases[0].metrics == report.cases[0].metrics
     assert loaded.cases[0].diagnostics[-1].name == "metric_avoidable_mse"
+
+
+# The dependence check is asked for like the other checks: checks=[dependence()]. Its four old arguments warn.
+
+def _dependence_scenarios():
+    return [Scenario("ar1", history_length=30, horizon=3, n_targets=2)]
+
+
+@pytest.mark.parametrize("settings", [{}, {"n_calibration": 19, "alpha": 0.1}])
+def test_dependence_runs_the_check_of_check_dependence_with_the_same_seeds_and_results(settings):
+    from timegym import GaussianAR1Forecaster
+    from timegym.checks import dependence
+
+    pipeline = Pipeline(GaussianAR1Forecaster(n_samples=40, seed=3))
+    old = renamed_call("use Pipeline.run(checks=[dependence(", pipeline.run, _dependence_scenarios(), seeds=[1, 2, 3],
+                       check_dependence=True, **settings)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        new = pipeline.run(_dependence_scenarios(), seeds=[1, 2, 3], checks=[dependence(**settings)])
+        replay = new.report.replay_case(2).metadata["replay"]
+    assert new.report.to_dict() == old.report.to_dict()  # every finding, seed and setting
+    findings = [d for case in new.report.cases for d in case.diagnostics if d.name == "reference_covariance"]
+    assert len(findings) == 3 and all(d.evidence["n_calibration"] == settings.get("n_calibration", 99)
+                                      for d in findings)
+    assert new.metadata["diagnostic_settings"] == {"check_dependence": True, "n_calibration": 19 if settings else 99,
+                                                   "alpha": 0.1 if settings else 0.05,
+                                                   "dependence_seed_offset": 100_000}
+    assert [row for row in new.checks if row["check"] == "dependence"] == [
+        {"check": "dependence", "title": "Joint spread matches the answer key", "passed": 3, "failed": 0}]
+    assert "checks" not in new.metadata and replay["reproduced"] is True
+
+
+def test_the_old_dependence_arguments_warn_on_every_call_and_give_the_same_findings():
+    from timegym import ForecastRun, GaussianAR1Forecaster
+    from timegym.checks import dependence
+    from timegym.diagnostics import evaluate_forecast
+
+    pipeline = Pipeline(GaussianAR1Forecaster(n_samples=40, seed=3))
+    new = pipeline.run(_dependence_scenarios(), seeds=[1, 2], checks=[dependence(n_calibration=19)])
+    with pytest.warns(DeprecationWarning) as caught:
+        tested = pipeline.test(_dependence_scenarios(), seeds=[1, 2], check_dependence=True, n_calibration=19)
+    messages = [str(warning.message) for warning in caught]
+    assert len(messages) == 2 and "use Pipeline.test(checks=[dependence(n_calibration=...)])" in messages[1], messages
+    assert all(Path(warning.filename).resolve() == Path(__file__).resolve() for warning in caught)
+    assert tested.to_dict()["cases"] == new.report.to_dict()["cases"]
+    cases = [scenario.generate(seed=1) for scenario in _dependence_scenarios()]
+    forecasts = [pipeline.predict(case.task.history, case.task.future_index) for case in cases]
+    recorded = renamed_call("use ForecastRun.from_forecasts(checks=[dependence(n_calibration=...)])",
+                            ForecastRun.from_forecasts, cases, forecasts, check_dependence=True, n_calibration=19)
+    assert recorded.report.to_dict()["cases"] == ForecastRun.from_forecasts(
+        cases, forecasts, checks=[dependence(n_calibration=19)]).report.to_dict()["cases"]
+    one = renamed_call("use evaluate_forecast(checks=[dependence(alpha=...)])", evaluate_forecast, cases[0],
+                       forecasts[0], check_dependence=True, alpha=0.2, dependence_seed=5)
+    assert one.to_dict() == evaluate_forecast(cases[0], forecasts[0], checks=[dependence(alpha=0.2)],
+                                              dependence_seed=5).to_dict()
+    offset = renamed_call("dependence_seed_offset has no new form", pipeline.run, _dependence_scenarios(),
+                          seeds=[1], dependence_seed_offset=51)
+    assert offset.metadata["diagnostic_settings"]["dependence_seed_offset"] == 51
+    with pytest.raises(ValueError, match="boolean"):
+        renamed_call("use evaluate_forecast(checks=[dependence()])", evaluate_forecast, None, None,
+                     check_dependence="false")
+
+
+def test_run_has_no_dependence_arguments_and_both_forms_are_refused():
+    import inspect
+    from timegym import ForecastRun
+    from timegym.checks import dependence, within
+    from timegym.diagnostics import evaluate_forecast
+
+    old = {"check_dependence", "n_calibration", "alpha", "dependence_seed_offset"}
+    assert not old & set(inspect.signature(Pipeline.run).parameters)
+    pipeline, scenarios = Pipeline(LastValueForecaster()), _dependence_scenarios()
+    with pytest.raises(TypeError, match=r"Pipeline.run\(\) got checks=\[dependence\(\)\] and alpha= of its old form; "
+                                        r"give checks=\[dependence\(...\)\] only"):
+        pipeline.run(scenarios, seeds=[0], checks=[dependence()], alpha=0.1)
+    case = scenarios[0].generate(seed=0)
+    with pytest.raises(TypeError, match="give checks=.dependence"):
+        evaluate_forecast(case, pipeline.predict(case.task.history, case.task.future_index),
+                          checks=[dependence()], check_dependence=True)
+    with pytest.raises(TypeError, match="give checks=.dependence"):
+        ForecastRun.from_forecasts([case], [None], checks={"dependence": dependence()}, n_calibration=19)
+    with pytest.raises(TypeError, match=r"Pipeline.run\(\) got an unexpected keyword argument 'dependence_seed'"):
+        pipeline.run(scenarios, seeds=[0], dependence_seed=3)
+    with pytest.raises(ValueError, match="asked for twice"):
+        pipeline.run(scenarios, seeds=[0], checks=[dependence(), dependence(alpha=0.1)])
+    with pytest.raises(ValueError, match="named 'dependence' in every report"):
+        pipeline.run(scenarios, seeds=[0], checks={"joint": dependence()})
+    from timegym import GaussianAR1Forecaster
+
+    named = Pipeline(GaussianAR1Forecaster(n_samples=40, seed=3)).run(
+        scenarios, seeds=[0], checks={"dependence": dependence(), "range": within(-50, 50)})
+    assert [row["check"] for row in named.checks][-2:] == ["dependence", "range"]
+    assert named.metadata["diagnostic_settings"]["check_dependence"] is True
+    assert repr(dependence(alpha=0.1)) == "dependence(n_calibration=99, alpha=0.1)"

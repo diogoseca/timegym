@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from timegym import LastValueForecaster, Pipeline, Scenario, TestReport
+from timegym.checks import dependence
 from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
 from timegym.scenarios import scenario_label
 
@@ -75,8 +76,8 @@ def test_composed_regime_jump_report_preserves_approximation_and_quantile_settin
     replay = restored.replay_case()
     assert replay.metadata["replay"]["manifest_match"]
     forecast = generated.reference.forecast(n_samples=32, seed=93)
-    result = evaluate_forecast(generated, forecast, check_dependence=True,
-                               dependence_seed=101, n_calibration=19)
+    result = evaluate_forecast(generated, forecast, checks=[dependence(n_calibration=19)],
+                               dependence_seed=101)
     diagnostic = next(item for item in result.diagnostics if item.name == "reference_covariance")
     assert diagnostic.status == "UNSUPPORTED"
     assert diagnostic.evidence["reference"]["sampler_kind"] == "approximate_conditional"
@@ -90,8 +91,8 @@ def test_exact_merton_reference_exposes_a_calibrated_covariance_diagnostic():
     generated = Scenario("merton_jump_diffusion", history_length=24, horizon=3,
                          parameters={"output": "log_return", "dt": 0.1}).generate(seed=3)
     forecast = generated.reference.forecast(n_samples=64, seed=93)
-    result = evaluate_forecast(generated, forecast, check_dependence=True,
-                               dependence_seed=101, n_calibration=19)
+    result = evaluate_forecast(generated, forecast, checks=[dependence(n_calibration=19)],
+                               dependence_seed=101)
     diagnostic = next(item for item in result.diagnostics if item.name == "reference_covariance")
     # A valid null may reject at its declared error rate; test availability,
     # finite evidence and reproducibility rather than requiring a lucky PASS.

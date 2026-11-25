@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from timegym.contracts import Case, Forecast, ForecastTask, Reference
+from timegym.checks import dependence
 from timegym.diagnostics import evaluate_forecast
 
 
@@ -104,7 +105,7 @@ def test_function_reference_scores_truth_without_exposing_it_to_the_model():
     manifest = {"kind": "user_curve", "seed": 12}
     known = evaluate_forecast(Case(task, observed, supplied, manifest), forecast)
     unknown = evaluate_forecast(Case(task, observed, None, manifest), forecast,
-                                check_dependence=True)
+                                checks=[dependence()])
     assert known.metrics["avoidable_mse"] == 0
     assert known.metrics["mse"] == unknown.metrics["mse"] == 0.25
     assert "avoidable_mse" not in unknown.metrics

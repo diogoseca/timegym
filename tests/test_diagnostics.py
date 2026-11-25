@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 import warnings
 
+from timegym.checks import dependence
 from timegym.contracts import Forecast
 from timegym.diagnostics import RankAlarm, covariance_dependence_check, evaluate_forecast, rank_alarm
 from timegym.reporting import CaseResult, DiagnosticResult, TestReport
@@ -96,7 +97,7 @@ def test_explicit_contract_violations_fail_before_scoring(fault, code):
         forecast.quantiles = forecast.quantiles[..., ::-1]
     elif fault == "levels":
         forecast.levels = (0.1, 0.1, 0.9)
-    result = evaluate_forecast(case, forecast, check_dependence=True)
+    result = evaluate_forecast(case, forecast, checks=[dependence()])
     assert get_diagnostic(result, "contract_" + code).status == "FAIL"
     assert result.metrics == {}
     with pytest.raises(AssertionError, match=code):
@@ -135,7 +136,7 @@ def test_misaligned_or_malformed_reference_is_an_evaluation_error(fault):
         case.reference.mean = case.reference.mean[:-1]
     elif fault == "covariance_shape":
         case.reference.covariance = case.reference.covariance[:-1, :-1]
-    result = evaluate_forecast(case, forecast, check_dependence=True)
+    result = evaluate_forecast(case, forecast, checks=[dependence()])
     assert get_diagnostic(result, "forecast_contract").status == "PASS"
     diagnostic = get_diagnostic(result, "evaluation_reference")
     assert diagnostic.status == "ERROR"
@@ -154,7 +155,7 @@ def test_complex_evaluation_inputs_are_errors_without_discarding_imaginary_value
         setattr(case.reference, field, getattr(case.reference, field).astype(complex) + 1j)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        result = evaluate_forecast(case, forecast, check_dependence=True)
+        result = evaluate_forecast(case, forecast, checks=[dependence()])
     name = "evaluation_data" if field == "observed" else "evaluation_reference"
     diagnostic = get_diagnostic(result, name)
     assert diagnostic.status == "ERROR"
@@ -425,17 +426,17 @@ def test_reference_validation_rechecks_mutated_moments(fault):
     ({"alpha": None}, "alpha"),
     ({"alpha": True}, "alpha"),
     ({"alpha": float("nan")}, "alpha"),
-    ({"dependence_seed": None}, "dependence_seed"),
-    ({"dependence_seed": -1}, "dependence_seed"),
-    ({"dependence_seed": True}, "dependence_seed"),
-    ({"dependence_seed": 1.5}, "dependence_seed"),
-    ({"check_dependence": "false"}, "boolean"),
 ])
-@pytest.mark.parametrize("check_dependence", [False, True])
-def test_evaluate_settings_raise_before_case_or_forecast_processing(kwargs, message, check_dependence):
-    settings = {"check_dependence": check_dependence, **kwargs}
+def test_dependence_settings_raise_when_the_check_is_asked_for(kwargs, message):
     with pytest.raises(ValueError, match=message):
-        evaluate_forecast(None, None, **settings)
+        dependence(**kwargs)
+
+
+@pytest.mark.parametrize("seed", [None, -1, True, 1.5])
+@pytest.mark.parametrize("checks", [None, [dependence()]])
+def test_evaluate_settings_raise_before_case_or_forecast_processing(seed, checks):
+    with pytest.raises(ValueError, match="dependence_seed"):
+        evaluate_forecast(None, None, dependence_seed=seed, checks=checks)
 
 
 @pytest.mark.parametrize("seed", [None, -1, True, np.bool_(False), 1.5, "2"])
@@ -500,12 +501,12 @@ def test_check_categories_survive_errors_and_undefined_metrics(monkeypatch):
     monkeypatch.setattr(case.reference, "sample", broken)
     case.reference.covariance[:] = np.eye(2)
     case.reference.variance[:] = 1
-    result = evaluate_forecast(case, forecast, check_dependence=True)
+    result = evaluate_forecast(case, forecast, checks=[dependence()])
     failed = get_diagnostic(result, "metric_mase")
     assert (undefined.status, failed.status) == ("INCONCLUSIVE", "ERROR")
     assert undefined.category == failed.category == "capability"
-    dependence = get_diagnostic(result, "reference_covariance")
-    assert (dependence.status, dependence.category) == ("ERROR", "distribution")
+    covariance = get_diagnostic(result, "reference_covariance")
+    assert (covariance.status, covariance.category) == ("ERROR", "distribution")
     pipeline = Pipeline(LastValueForecaster())
     monkeypatch.setattr(pipeline, "predict", broken)
     shift = check_shift_equivariance(pipeline, case.task.history, case.task.future_index)

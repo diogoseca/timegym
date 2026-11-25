@@ -88,10 +88,7 @@ class ForecastRun:
         metadata=None,
         metrics=None,
         checks=None,
-        check_dependence=False,
-        n_calibration=99,
-        alpha=0.05,
-        dependence_seed_offset=100_000,
+        **old_arguments,
     ):
         """Check forecasts made earlier, one per case, and measure their errors, without a model.
 
@@ -107,18 +104,21 @@ class ForecastRun:
         metadata, for example ``{"made_on": "2024-05-01"}``; naming the
         forecasts there with ``{"model": ...}`` still works and warns.
         ``metrics`` records more metrics and ``checks`` adds output checks of
-        your own, as in ``Pipeline.run``. No model is kept, so these cases
-        cannot be replayed. ``scores``, the old name of ``metrics``, still
-        works and warns.
+        your own, as in ``Pipeline.run``, ``timegym.checks.dependence()``
+        included. No model is kept, so these cases cannot be replayed.
+        ``scores``, the old name of ``metrics``, still works and warns, and so
+        do ``check_dependence``, ``n_calibration``, ``alpha`` and
+        ``dependence_seed_offset``, the old form of ``dependence()``.
         """
         from timegym.diagnostics import (
             _check_requests,
+            _dependence_request,
             _describe_checks,
             _describe_metrics,
             _metric_requests,
         )
         from timegym.pipeline import _as_forecast, _evaluate_ready_made
-        from timegym.provenance import diagnostic_settings, runtime_provenance
+        from timegym.provenance import runtime_provenance
 
         if isinstance(cases, Case):
             raise TypeError("cases must be a list of Case objects, not one Case")
@@ -137,11 +137,8 @@ class ForecastRun:
                 f"Got {len(forecasts)} forecasts for {len(cases)} cases; pass one "
                 "forecast per case, in the same order"
             )
-        settings = diagnostic_settings(
-            check_dependence=check_dependence,
-            n_calibration=n_calibration,
-            alpha=alpha,
-            dependence_seed_offset=dependence_seed_offset,
+        settings, checks = _dependence_request(
+            "ForecastRun.from_forecasts", checks, old_arguments
         )
         requested = {}
         if metrics is not None:

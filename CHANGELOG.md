@@ -159,6 +159,28 @@
   `avoidable_mse`. The study records under `experiments/` keep
   `mean_reference_mse`; the scripts that read them accept both names.
 
+- Added `timegym.checks.dependence(n_calibration=99, alpha=0.05)`, the check
+  that the forecast samples spread together the way the answer key does, asked
+  for like any other check: `pipeline.run(scenarios, checks=[dependence()])`.
+  It runs the same check, with the same seeds, as `check_dependence=True` did,
+  gives the same findings and the same `dependence` row in `result.checks`,
+  and works the same way in `ForecastRun.from_forecasts`,
+  `timegym.diagnostics.evaluate_forecast` and `Pipeline.test`.
+- `check_dependence=`, `n_calibration=`, `alpha=` and
+  `dependence_seed_offset=` still work on `run()`, `from_forecasts()` and
+  `Pipeline.test()`, as do the first three on `evaluate_forecast()`, and warn;
+  they will be removed in a later release. `run()` no longer lists them in its
+  signature. Passing them beside `dependence()` is refused. With
+  `dependence()` the check's draws are seeded 100000 after the case's, the old
+  default. `dependence_seed_offset` has no new form: any offset gives an
+  equally good check, since it only keeps the check's draws apart from the
+  case's.
+- Reports record the check's settings under `diagnostic_settings` as before,
+  so reports saved with either form, or by 1.13.1 and earlier, compare and
+  replay the same way.
+- Moved the docs, tutorials, source notebooks, tests and experiment scripts to
+  `checks=[dependence()]`.
+
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
   true as often as they say: of the days given a 70% chance of rain, did it

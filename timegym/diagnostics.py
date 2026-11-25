@@ -469,6 +469,91 @@ def _rebuild_metrics(records):
 
 # %% ../source/09_scores_and_diagnostics.ipynb #own-checks
 _CHECK_INPUTS = _METRIC_INPUTS + ("target_names",)
+# The arguments that asked for the dependence check before checks=[dependence()], with their defaults.
+_OLD_DEPENDENCE = {
+    "check_dependence": False,
+    "n_calibration": 99,
+    "alpha": 0.05,
+    "dependence_seed_offset": 100_000,
+}
+
+
+def _is_dependence(entry):
+    return (
+        getattr(entry, "_dependence_settings", None) is not None
+    )  # set by timegym.checks.dependence
+
+
+def _dependence_request(where, checks, old_arguments, allowed=tuple(_OLD_DEPENDENCE)):
+    """Read ``timegym.checks.dependence()`` out of ``checks=``, or the old arguments that asked for it.
+
+    Returns ``(settings, checks)``: the ``diagnostic_settings`` a report records, and the other
+    checks, for ``_check_requests`` (None when ``dependence()`` was the only one). The old
+    arguments still work and warn; given beside ``dependence()``, they are refused.
+    """
+    unknown = [name for name in old_arguments if name not in allowed]
+    if unknown:
+        raise TypeError(f"{where}() got an unexpected keyword argument {unknown[0]!r}")
+    found = []
+    if isinstance(checks, dict):
+        found = [entry for entry in checks.values() if _is_dependence(entry)]
+        if any(
+            _is_dependence(entry) and name != "dependence"
+            for name, entry in checks.items()
+        ):
+            raise ValueError(
+                "dependence() is named 'dependence' in every report; name it so, "
+                "or put it in a list, such as checks=[dependence()]"
+            )
+        if found:
+            checks = {
+                name: entry
+                for name, entry in checks.items()
+                if not _is_dependence(entry)
+            } or None
+    elif (
+        checks is not None
+        and not isinstance(checks, (str, bytes))
+        and not callable(checks)
+    ):
+        try:
+            entries = list(checks)
+        except TypeError:
+            entries = None  # _check_requests says what checks= takes
+        if entries is not None:
+            found = [entry for entry in entries if _is_dependence(entry)]
+            rest = [entry for entry in entries if not _is_dependence(entry)]
+            checks = rest if rest or not found else None
+    if len(found) > 1:
+        raise ValueError(
+            "dependence() is asked for twice; give it once, with the settings you want"
+        )
+    given = [name for name in allowed if name in old_arguments]
+    if found and given:
+        raise TypeError(
+            f"{where}() got checks=[dependence()] and {', '.join(name + '=' for name in given)} "
+            "of its old form; give checks=[dependence(...)] only"
+        )
+    settings = dict(_OLD_DEPENDENCE)
+    if found:
+        settings.update(check_dependence=True, **found[0]._dependence_settings)
+    elif given:
+        named = ", ".join(
+            f"{name}=..." for name in given if name in ("n_calibration", "alpha")
+        )
+        message = (
+            f"{where}({', '.join(name + '=...' for name in given)}) is deprecated and will be removed "
+            f"in a later release: use {where}(checks=[dependence({named})]) to run the dependence "
+            "check, with dependence from timegym.checks"
+        )
+        if "dependence_seed_offset" in given:
+            message += (
+                "; dependence_seed_offset has no new form: the check's draws are always seeded "
+                "100000 after the case's"
+            )
+        _warn_deprecated(message)
+        settings.update({name: old_arguments[name] for name in given})
+    return diagnostic_settings(**settings), checks
 
 
 def _check_title(name, function):
@@ -639,17 +724,13 @@ def _run_check(name, function, title, given):
 
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-38
+# The old arguments of evaluate_forecast that asked for the dependence check.
+_EVALUATOR_DEPENDENCE = ("check_dependence", "n_calibration", "alpha")
+
+
 @_renamed_keywords(scores="metrics")
 def evaluate_forecast(
-    case,
-    forecast,
-    *,
-    check_dependence=False,
-    dependence_seed=0,
-    n_calibration=99,
-    alpha=0.05,
-    metrics=None,
-    checks=None,
+    case, forecast, *, dependence_seed=0, metrics=None, checks=None, **old_arguments
 ):
     """Validate a forecast and record metrics without inventing pass thresholds.
 
@@ -681,11 +762,40 @@ def evaluate_forecast(
     first line of its docstring. Checks run only on a forecast that passed
     the built-in checks. ``scores``, the old name of ``metrics``, still
     works and warns.
+
+    ``timegym.checks.dependence()`` among the checks runs the dependence
+    check, ``reference_covariance``: whether the sample paths move together
+    as the answer key says. Its calibration draws are seeded with
+    ``dependence_seed``. ``check_dependence``, ``n_calibration`` and
+    ``alpha``, its old form, still work and warn.
     """
-    requests = _metric_requests(metrics)
-    # The request is read: from here on, metrics is the module timegym.metrics.
-    metrics = globals()["metrics"]
-    check_requests = _check_requests(checks)
+    settings, checks = _dependence_request(
+        "evaluate_forecast", checks, old_arguments, _EVALUATOR_DEPENDENCE
+    )
+    return _evaluate_forecast(
+        case,
+        forecast,
+        check_dependence=settings["check_dependence"],
+        dependence_seed=dependence_seed,
+        n_calibration=settings["n_calibration"],
+        alpha=settings["alpha"],
+        requests=_metric_requests(metrics),
+        check_requests=_check_requests(checks),
+    )
+
+
+def _evaluate_forecast(
+    case,
+    forecast,
+    *,
+    check_dependence,
+    dependence_seed,
+    n_calibration,
+    alpha,
+    requests,
+    check_requests,
+):
+    """``evaluate_forecast`` with its requests read and its settings spelled out; a run calls it for each case."""
     dependence_seed = nonnegative_int(dependence_seed, "dependence_seed")
     settings = diagnostic_settings(
         check_dependence=check_dependence, n_calibration=n_calibration, alpha=alpha
