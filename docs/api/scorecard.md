@@ -467,7 +467,7 @@ which asks the two-sided question, better or worse, on your own data too.
 
 `ScorecardComparison.table` has one row per cell: `pattern`, `title`,
 `noise`, `noise_sd`, `change`, `baseline_score`, `score`,
-`baseline_avoidable` and `avoidable` (each card's mean avoidable error over
+`baseline_avoidable_mse` and `avoidable_mse` (each card's mean avoidable error over
 the series it scored), `p_value` (before Holm's correction; NaN where no
 series moved beyond roundoff), and `newly_failing` and `newly_passing`, the
 numbers of series that crash or fail an output check now but did not in the

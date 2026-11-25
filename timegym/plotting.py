@@ -6,6 +6,7 @@ import textwrap
 import numpy as np
 import pandas as pd
 from . import metrics
+from .reporting import _metric_name
 from .scenarios import scenario_label
 
 __all__ = ["plot_forecasts", "plot_errors", "plot_calibration"]
@@ -550,10 +551,13 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
 
 # %% ../source/11_plotting.ipynb #11_plotting-23
 def plot_errors(
-    run, metric="mean_reference_mse", *, bins=None, missing="raise", figsize=None
+    run, metric="avoidable_mse", *, bins=None, missing="raise", figsize=None
 ):
     """Show distributions of retained whole-case metrics, one row per scenario.
 
+    ``metric`` names a metric in ``case.metrics``; the default,
+    ``"avoidable_mse"``, is the error against the answer key, and
+    ``"mean_reference_mse"``, its old name, still works and warns.
     These are distributions over evaluated cases, not over predictive sample
     draws or dependent coordinates. A black line marks each row's median.
     Scenario positions remain distinct even when their kind strings match.
@@ -564,6 +568,7 @@ def plot_errors(
     groups = _groups(run)
     if not isinstance(metric, str) or not metric:
         raise ValueError("metric must be a nonempty metric name")
+    metric = _metric_name(metric)
     if missing not in {"raise", "annotate"}:
         raise ValueError("missing must be 'raise' or 'annotate'")
     if bins is not None:
@@ -606,7 +611,7 @@ def plot_errors(
         )
         label = (
             "Error against the answer key (MSE)"
-            if metric == "mean_reference_mse"
+            if metric == "avoidable_mse"
             else "Error against what happened (MSE)" if metric == "mse" else metric
         )
         for ax, (scenario_index, entries) in zip(axes[:, 0], groups.items()):

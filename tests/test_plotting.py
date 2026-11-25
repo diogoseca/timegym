@@ -231,7 +231,7 @@ def test_unknown_or_partly_missing_metrics_never_disappear_silently():
     run = Pipeline(LastValueForecaster()).run([Scenario("ar1", history_length=12, horizon=3)], seeds=[1, 2], keep_data=True)
     with pytest.raises(ValueError, match="unknown_score"):
         run.plot_errors("unknown_score")
-    del run.cases[1].result.metrics["mean_reference_mse"]
+    del run.cases[1].result.metrics["avoidable_mse"]
     with pytest.raises(ValueError, match="seed 2"):
         run.plot_errors()
     axis = run.plot_errors(missing="annotate").axes[0]

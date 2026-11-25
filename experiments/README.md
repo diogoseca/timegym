@@ -138,7 +138,8 @@ It takes well under a minute on one CPU thread. The record answers:
 - **Answer-key alarm.** The 768 clean Study 2 calibration fits are re-run; the
   same conformal rule at 5% is applied to each case's mean squared distance
   from the answer key, and the threshold to the frozen evaluation records'
-  `mean_reference_mse`. Counts appear beside the frozen loss alarm in
+  `mean_reference_mse` (the records keep that name; TimeGym's reports now call
+  the same number `avoidable_mse`). Counts appear beside the frozen loss alarm in
   column K of the complete Study 2 table and in the diagnostic-evidence figure.
 - **Repair mechanism** on the random walk with drift: own-lag coefficient sums
   of the clean fit, the per-step distance from the answer key of the clean and

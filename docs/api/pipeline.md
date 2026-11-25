@@ -154,10 +154,11 @@ panel shows: four times the horizon by default, `"all"` for the whole history.
 Optional shading shows marginal intervals. Above each panel, the case's 0-100
 score sits in its colored band (as on the scorecard), next to its error against
 the answer key and its error against what happened.
-`run.plot_errors(metric="mean_reference_mse", *, bins=None, missing="raise",
+`run.plot_errors(metric="avoidable_mse", *, bins=None, missing="raise",
 figsize=None)` shows one value of the metric per whole case, with a black line at each row's
 median; `missing="annotate"` explicitly permits unavailable values and labels
-their counts and reasons. `run.titles` optionally names each scenario position in plain
+their counts and reasons. `metric="mean_reference_mse"`, the old name of the
+default, still works and warns. `run.titles` optionally names each scenario position in plain
 words for both plots; a run of kinds of series sets them to the kind and noise
 level, so `pipeline.run(["trend"], keep_data=True).plot_forecasts()` zooms
 into those rows of the scorecard. Neither method refits models. Matplotlib is installed with

@@ -917,7 +917,7 @@ class Pipeline:
         *,
         seed=0,
         instances=None,
-        metric="mean_reference_mse",
+        metric="avoidable_mse",
         bins=None,
         missing="raise",
         figsize=None,

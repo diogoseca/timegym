@@ -21,7 +21,7 @@ def test_reference_scores_do_not_claim_automatic_capability_pass():
     assert get_diagnostic(result, "forecast_contract").status == "PASS"
     assert get_diagnostic(result, "point_accuracy").status == "INCONCLUSIVE"
     assert get_diagnostic(result, "interval_coverage").status == "INCONCLUSIVE"
-    assert result.metrics["mean_reference_mse"] == 0
+    assert result.metrics["avoidable_mse"] == 0
     assert {"mse", "mae", "mase", "pinball", "crps", "energy_score", "variogram_score"} <= result.metrics.keys()
     assert result.manifest == case.manifest
 
@@ -392,7 +392,7 @@ def test_large_singular_reference_uses_the_same_invariants_during_evaluation():
     case = scenario.generate(seed=0)
     case.reference.validate()
     result = evaluate_forecast(case, case.reference.forecast(32))
-    assert result.metrics["mean_reference_mse"] == 0
+    assert result.metrics["avoidable_mse"] == 0
     assert not any(item.failed for item in result.diagnostics)
     report = Pipeline(LastValueForecaster()).test([scenario], seeds=(0,))
     assert report.summary["failed_cases"] == 0
@@ -476,7 +476,7 @@ def test_exception_evidence_uses_its_argument_outside_and_inside_another_handler
 def test_descriptive_scores_share_evidence_and_mase_scaling():
     case = Scenario("seasonal", history_length=24, horizon=3, parameters={"period": 6}).generate()
     result = evaluate_forecast(case, case.reference.forecast(24))
-    for name, scores in (("point_accuracy", ("mse", "mae", "mase", "mean_reference_mse")),
+    for name, scores in (("point_accuracy", ("mse", "mae", "mase", "avoidable_mse")),
                          ("quantile_accuracy", ("pinball",)),
                          ("sample_scores", ("crps", "energy_score", "variogram_score"))):
         diagnostic = get_diagnostic(result, name)

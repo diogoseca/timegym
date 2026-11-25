@@ -102,7 +102,7 @@ def test_catalogue_statuses_and_categories_match_the_code():
 CAPABILITY_MAP = ROOT / "docs" / "concepts" / "capability-map.md"
 # A tutorial shows a diagnostic by name, or through a score or call its catalogue entry names.
 SHOWN_BY = {
-    "point_accuracy": {"mean_reference_mse"},
+    "point_accuracy": {"avoidable_mse"},
     "quantile_accuracy": {"pinball"},
     "sample_scores": {"crps", "energy_score", "variogram_score"},
     "reference_covariance": {"covariance_dependence_check", "check_dependence=True"},

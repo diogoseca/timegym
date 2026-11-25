@@ -917,7 +917,7 @@ def test_the_same_model_on_the_same_series_is_unchanged_everywhere(tmp_path, las
     assert (diff.table["change"] == "unchanged").all()
     assert diff.table["p_value"].isna().all() and diff.worse.empty
     assert list(diff.table.columns) == ["pattern", "title", "noise", "noise_sd", "change", "baseline_score",
-                                        "score", "baseline_avoidable", "avoidable", "p_value",
+                                        "score", "baseline_avoidable_mse", "avoidable_mse", "p_value",
                                         "newly_failing", "newly_passing"]
     diff.assert_no_regression()
     assert str(diff).splitlines() == [
@@ -972,7 +972,7 @@ def test_each_cell_is_unchanged_changed_no_worse_or_changed_and_worse(last_value
     assert diff.table["p_value"].notna().all()
     worse = diff.worse
     assert set(worse["pattern"]) >= {"random_walk"}
-    assert (worse["avoidable"] > worse["baseline_avoidable"]).all()
+    assert (worse["avoidable_mse"] > worse["baseline_avoidable_mse"]).all()
     lines = str(diff).splitlines()
     assert any(line.strip().startswith("Random walk: shocks never fade, low noise") and "p = " in line
                for line in lines)
@@ -1044,13 +1044,13 @@ def test_a_p_value_recomputed_by_hand_from_the_stored_numbers(tmp_path, last_val
     index = 4  # random walk, low noise
     old = json.loads(path.read_text(encoding="utf-8"))["cells"][index]["avoidable"]
     new = [entry for entry in card.run.cases if entry.scenario_index == index]
-    new = [n for _, n in sorted((entry.seed_index, entry.result.metrics["mean_reference_mse"]) for entry in new)]
+    new = [n for _, n in sorted((entry.seed_index, entry.result.metrics["avoidable_mse"]) for entry in new)]
     d = np.array(new) - np.array(old)
     flips = np.random.default_rng([4, len(d)]).choice([-1.0, 1.0], size=(9999, len(d)))
     p = (1 + np.sum((flips * d).mean(axis=1) >= d.mean())) / 10000
     assert diff.table.loc[index, "p_value"] == pytest.approx(p)
-    assert diff.table.loc[index, "baseline_avoidable"] == pytest.approx(np.mean(old))
-    assert diff.table.loc[index, "avoidable"] == pytest.approx(np.mean(new))
+    assert diff.table.loc[index, "baseline_avoidable_mse"] == pytest.approx(np.mean(old))
+    assert diff.table.loc[index, "avoidable_mse"] == pytest.approx(np.mean(new))
 
 
 def test_p_values_repeat_and_do_not_depend_on_the_other_patterns(last_value_baseline):
@@ -1073,7 +1073,7 @@ def test_assert_no_regression_names_the_worse_cells_with_their_numbers(last_valu
     from timegym.scorecard import _error
 
     for row in diff.worse.itertuples():
-        assert f"{row.title}, {row.noise.lower()}: avoidable error {_error(row.baseline_avoidable)} -> " in message
+        assert f"{row.title}, {row.noise.lower()}: avoidable error {_error(row.baseline_avoidable_mse)} -> " in message
     assert (_error(2.0), _error(0.0455), _error(100.0), _error(np.nan)) == ("2.00", "0.0455", "100", "none scored")
     assert "Pure noise" not in message
 

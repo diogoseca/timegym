@@ -189,7 +189,7 @@ def test_a_report_records_the_metrics_asked_for():
 def test_no_request_leaves_reports_as_they_were():
     report = Pipeline(LastValueForecaster()).test([Scenario("ar1", history_length=40, horizon=4)], seeds=[1])
     assert "metrics" not in report.metadata and "scores" not in report.metadata
-    assert set(report.cases[0].metrics) == {"mse", "mae", "mase", "mean_reference_mse"}
+    assert set(report.cases[0].metrics) == {"mse", "mae", "mase", "avoidable_mse"}
 
 
 def test_settings_go_through_a_dictionary():

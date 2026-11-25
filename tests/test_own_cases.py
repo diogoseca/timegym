@@ -128,7 +128,7 @@ def test_run_and_test_take_your_own_cases():
     for entry in run.cases:
         expected = np.mean((entry.case.observed.to_numpy() - entry.case.task.history.iloc[-1].to_numpy()) ** 2)
         assert entry.result.metrics["mse"] == pytest.approx(expected)
-        assert "mean_reference_mse" not in entry.result.metrics  # no answer key for real data
+        assert "avoidable_mse" not in entry.result.metrics  # no answer key for real data
     report = Pipeline(LastValueForecaster()).test(cases=cases)
     assert [case.metrics for case in report.cases] == [entry.result.metrics for entry in run.cases]
     report.assert_passed()

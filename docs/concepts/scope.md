@@ -133,8 +133,8 @@ The score needs some noise. On a series with no noise at all, nobody is forced
 to make any error, so the score is 100 for a forecast that matches the answer
 key exactly and 0 for every other forecast, however close: an extra error of
 `1e-30` scores 0. That number says nothing about how good a forecast is, so do
-not read it. Compare the extra error itself instead (`avoidable_mse` in
-`card.table`, `mean_reference_mse` in a report). The scorecard's own grid
+not read it. Compare the extra error itself instead (`avoidable_mse`, in
+`card.table` and in each case of a report). The scorecard's own grid
 always has noise, so this only comes up with series you define yourself.
 
 Chaotic series are the usual example. They are deterministic: their future is

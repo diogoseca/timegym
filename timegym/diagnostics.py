@@ -19,7 +19,14 @@ import numpy as np
 import pandas as pd
 from . import metrics
 from .contracts import SimulationReference
-from .reporting import CHECKS, CaseResult, DiagnosticResult, TestReport, _case_checks
+from .reporting import (
+    CHECKS,
+    CaseResult,
+    DiagnosticResult,
+    TestReport,
+    _case_checks,
+    _metric_name,
+)
 from .provenance import diagnostic_settings
 
 __all__ = [
@@ -280,7 +287,7 @@ _RECORDED_METRICS = frozenset(
         "mse",
         "mae",
         "mase",
-        "mean_reference_mse",
+        "avoidable_mse",
         "pinball",
         "interval_coverage",
         "interval_nominal_coverage",
@@ -288,6 +295,7 @@ _RECORDED_METRICS = frozenset(
         "crps",
         "energy_score",
         "variogram_score",
+        "mean_reference_mse",  # the old name of avoidable_mse, which still reads it
     }
 )
 # The functions of timegym.metrics that can be asked for by name.
@@ -848,7 +856,7 @@ def evaluate_forecast(
         )
         if case.reference is not None:
             score(
-                "mean_reference_mse",
+                "avoidable_mse",
                 metrics.mean_reference_mse,
                 case.reference.mean,
                 forecast.point,
@@ -856,7 +864,7 @@ def evaluate_forecast(
         descriptive(
             "point_accuracy",
             "Point scores are descriptive; no capability acceptance tolerance was declared.",
-            ("mse", "mae", "mase", "mean_reference_mse"),
+            ("mse", "mae", "mase", "avoidable_mse"),
             mase_seasonality=1,
         )
 
@@ -1254,7 +1262,8 @@ def compare_reports(
     name (``Pipeline(..., name=...)``) or, without one, by its model, or a
     dictionary of named reports.
     ``metric`` is a metric in ``case.metrics``, your own included; lower is
-    better unless ``higher_is_better=True``.
+    better unless ``higher_is_better=True``. ``"mean_reference_mse"``, the
+    old name of ``"avoidable_mse"``, still works and warns.
 
     Each row says whether the candidate is ``"better"``, ``"worse"`` or shows
     ``"no clear difference"``, from a two-sided paired sign-flip test on the
@@ -1283,6 +1292,7 @@ def compare_reports(
     seed = nonnegative_int(seed, "seed")
     if not isinstance(metric, str) or not metric:
         raise TypeError("metric must be the name of a metric, such as metric='mae'")
+    metric = _metric_name(metric)
     base = _as_report(baseline, "baseline")
     candidates = _candidate_reports(candidate)
     labels = [label for label, _ in candidates]

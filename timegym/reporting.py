@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from ._internal import _json_safe, nonnegative_int
+from ._internal import _json_safe, nonnegative_int, _warn_deprecated
 from enum import Enum
 import json
 from pathlib import Path
@@ -104,13 +104,59 @@ class DiagnosticResult:
 
 
 # %% ../source/10_reports_and_replay.ipynb #10_reports_and_repla-13
+# Metrics a report recorded under another name before, and the name each has now.
+_RENAMED_METRICS = {"mean_reference_mse": "avoidable_mse"}
+
+
+def _metric_name(metric):
+    """The name ``metric`` is recorded under now: an old name, such as ``"mean_reference_mse"``, warns."""
+    if isinstance(metric, str) and metric in _RENAMED_METRICS:
+        new = _RENAMED_METRICS[metric]
+        _warn_deprecated(
+            f'metric="{metric}" is deprecated and will be removed in a later release: '
+            f'use metric="{new}"'
+        )
+        return new
+    return metric
+
+
+class _CaseMetrics(dict):
+    """A case's metrics: a plain dictionary in which a metric's old name still reads it, and warns."""
+
+    def _key(self, key):
+        if (
+            isinstance(key, str)
+            and key in _RENAMED_METRICS
+            and not dict.__contains__(self, key)
+        ):
+            new = _RENAMED_METRICS[key]
+            _warn_deprecated(
+                f'case.metrics["{key}"] is deprecated and will be removed in a later release: '
+                f'use case.metrics["{new}"]'
+            )
+            return new
+        return key
+
+    def __getitem__(self, key):
+        return dict.__getitem__(self, self._key(key))
+
+    def __contains__(self, key):
+        return dict.__contains__(self, self._key(key))
+
+    def get(self, key, default=None):
+        return dict.get(self, self._key(key), default)
+
+
 @dataclass
 class CaseResult:
     """The diagnostics and metrics recorded for one case.
 
     ``scenario`` labels the case and ``seed`` is its generator seed.
     ``metrics`` maps metric names to finite numbers, and ``manifest`` is the
-    case manifest that replay rebuilds a generated scenario from.
+    case manifest that replay rebuilds a generated scenario from. A case with
+    an answer key has ``avoidable_mse``, the squared distance from the
+    forecast to it; reading it under its old name, ``"mean_reference_mse"``,
+    still works and warns.
     """
 
     scenario: str
@@ -144,7 +190,7 @@ class CaseResult:
                 )
             ):
                 raise ValueError(f"case.metrics.{name} must be a finite number")
-        self.metrics = _json_safe(self.metrics)
+        self.metrics = _CaseMetrics(_json_safe(self.metrics))
         self.manifest = _json_safe(self.manifest)
 
     def to_dict(self):
@@ -182,6 +228,32 @@ def _report_fields(value, expected, path):
         raise ValueError(
             f"{path} must contain exactly these fields: {', '.join(sorted(expected))}"
         )
+
+
+def _renamed_metrics(values):
+    """Saved metrics under the names they have now: TimeGym 1.13.1 saved ``avoidable_mse`` as ``mean_reference_mse``."""
+    if not isinstance(values, dict):
+        return values  # CaseResult refuses it
+    renamed = {}
+    for name, value in values.items():
+        new = _RENAMED_METRICS.get(name, name)
+        renamed[name if new in values else new] = value
+    return renamed
+
+
+def _renamed_diagnostic(item):
+    """A saved finding with today's metric names, in its name (``metric_<name>``) and in ``point_accuracy``'s evidence."""
+    item = dict(item)
+    name = item["name"]
+    if (
+        isinstance(name, str)
+        and name.startswith("metric_")
+        and name[len("metric_") :] in _RENAMED_METRICS
+    ):
+        item["name"] = "metric_" + _RENAMED_METRICS[name[len("metric_") :]]
+    if name == "point_accuracy":
+        item["evidence"] = _renamed_metrics(item["evidence"])
+    return item
 
 
 def _report_text(value, path, *, allow_empty=False):
@@ -364,6 +436,9 @@ class TestReport:
         Unknown fields/statuses, malformed records, nonfinite metrics, and a
         saved summary inconsistent with the diagnostics are rejected. Metadata
         and evidence remain JSON data. The returned report owns copied values.
+        A metric saved under an old name, such as ``mean_reference_mse`` by
+        TimeGym 1.13.1, loads under its name now, ``avoidable_mse``, so old and
+        new reports compare and replay.
         """
         payload = _report_json_value(payload)
         _report_fields(
@@ -395,13 +470,13 @@ class TestReport:
                     {"name", "status", "category", "message", "evidence"},
                     diagnostic_path,
                 )
-                diagnostics.append(DiagnosticResult(**item))
+                diagnostics.append(DiagnosticResult(**_renamed_diagnostic(item)))
             cases.append(
                 CaseResult(
                     record["scenario"],
                     record["seed"],
                     diagnostics,
-                    record["metrics"],
+                    _renamed_metrics(record["metrics"]),
                     record["manifest"],
                 )
             )

@@ -226,7 +226,7 @@ result = Pipeline(RepeatLast()).run([NoisyLine()], seeds=[0, 1, 2])
 ```
 
 With an answer key, the report has the error against it
-(`mean_reference_mse`), which separates a weak model from an unlucky one, and
+(`avoidable_mse`), which separates a weak model from an unlucky one, and
 `result.scorecard` has a row for the new kind of series.
 Replay rebuilds only TimeGym's own scenarios, so keep this code with the
 report. To put a kind of series on the scorecard, give a `Pattern` a function

@@ -247,7 +247,7 @@ class ForecastRun:
         )
 
     def plot_errors(
-        self, metric="mean_reference_mse", *, bins=None, missing="raise", figsize=None
+        self, metric="avoidable_mse", *, bins=None, missing="raise", figsize=None
     ):
         """Draw ``timegym.plotting.plot_errors`` for this run's retained metrics."""
         from timegym.plotting import plot_errors

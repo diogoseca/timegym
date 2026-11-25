@@ -30,7 +30,7 @@ def test_public_pipeline_report_round_trip_and_replay_each_new_family(kind, para
     for entry in run.cases:
         assert entry.result.scenario == entry.case.manifest["kind"] == kind
         assert entry.forecast.validate(entry.case.task) == []
-        assert {"mse", "mae", "mase", "mean_reference_mse"} <= entry.result.metrics.keys()
+        assert {"mse", "mae", "mase", "avoidable_mse"} <= entry.result.metrics.keys()
         assert all(np.isfinite(value) for value in entry.result.metrics.values())
         assert not any(d.status == "ERROR" for d in entry.result.diagnostics)
         assert scenario.display_name == scenario_label(kind, entry.case.manifest["parameters"])

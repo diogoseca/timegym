@@ -25,7 +25,7 @@ import timegym
 from timegym.diagnostics import rank_alarm
 from timegym.statistics import wilson_interval
 
-from .common import protect_output, sha256
+from .common import answer_key_error, protect_output, sha256
 from .run_supplement import holm_rejections
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -160,7 +160,7 @@ def paired_answer_key(spec, conditions, records):
     test = spec["test"]
     if test["generator"] != "numpy.random.default_rng":
         raise ValueError("The addendum declares numpy.random.default_rng")
-    distance = {(row["condition"], row["branch"], row["seed"]): row["mean_reference_mse"] for row in records}
+    distance = {(row["condition"], row["branch"], row["seed"]): answer_key_error(row) for row in records}
     if len(distance) != len(records):
         raise ValueError("Model records repeat a condition, branch and seed")
     seeds = {condition: sorted({row["seed"] for row in records if row["condition"] == condition})

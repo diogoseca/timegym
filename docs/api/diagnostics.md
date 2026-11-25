@@ -1,7 +1,7 @@
 # Metrics and diagnostics
 
 **In short.** Metrics measure how far a forecast is, both from what actually
-happened (`mse`, `mae`, `mase`) and from the answer key (`mean_reference_mse`);
+happened (`mse`, `mae`, `mase`) and from the answer key (`avoidable_mse`);
 lower is better. Every report records these; more metrics, such as `brier` and
 `log_loss` for yes/no outcomes, or functions of your own, are recorded when you
 ask for them with `metrics=`. Output checks of your own, such as a range the
@@ -34,7 +34,7 @@ distribution, so it has to match what the point denotes
 | `mase(observed, predicted, history, seasonality=1)` | Absolute error divided, per target, by the mean absolute `seasonality`-step change of that target in the history (time is axis zero), then averaged | The median, as for `mae`, because each target's scale is fixed by the history | With a point output, always with `seasonality=1` |
 | `rmse(observed, predicted)` | Square root of `mse`, in the data's units | The mean, as for `mse` | When asked for with `metrics=` |
 | `rmsse(observed, predicted, history, seasonality=1)` | Each target's RMSE divided by the root mean squared `seasonality`-step change of that target in the history, then averaged over targets: the scaled error of the M5 competition ([Makridakis, Spiliotis and Assimakopoulos 2022](https://doi.org/10.1016/j.ijforecast.2021.11.013)) | The mean, as for `mse` | When asked for with `metrics=` |
-| `mean_reference_mse(reference_mean, predicted)` | Mean squared distance from a supplied conditional mean | The conditional mean itself: with a valid conditional mean it is the conditional excess squared-error risk, not realized loss against a future observation | With a point output and a case reference |
+| `mean_reference_mse(reference_mean, predicted)` | Mean squared distance from a supplied conditional mean | The conditional mean itself: with a valid conditional mean it is the conditional excess squared-error risk, not realized loss against a future observation | With a point output and a case reference, as `avoidable_mse` |
 
 `mase` and `rmsse` raise `UndefinedMetricError` when a target's naive-error
 scale is zero, as for a constant target, or when the history is no longer than
@@ -47,6 +47,14 @@ actual value is zero and favour forecasts that are too low
 scales each target by its lag-1 naive MAE over the history whatever the scenario's
 seasonal period; `point_accuracy` evidence records `mase_seasonality: 1`.
 `mean_reference_mse` is not a reference for other losses.
+
+Each case with an answer key records the distance from it as `avoidable_mse`:
+the part of the error the model could have avoided, beside the noise no
+forecaster can remove, under the name the scorecard's table gives the same
+number. Its old name still reads it, and warns: `case.metrics["mean_reference_mse"]`
+and `metric="mean_reference_mse"` in `plot_errors` and `compare_reports`.
+Reports saved by TimeGym 1.13.1 and earlier load with the new name, so they
+compare with new ones.
 
 ### Uncertainty metrics
 
@@ -349,7 +357,7 @@ diagnostic, so it has no row.
 ### `point_accuracy`
 
 - **Emitted by:** `evaluate_forecast`
-- **Evidence keys:** `INCONCLUSIVE`: the computed `mse`, `mae`, `mase` and `mean_reference_mse`, `mase_seasonality`, `reference`. `UNSUPPORTED`: none
+- **Evidence keys:** `INCONCLUSIVE`: the computed `mse`, `mae`, `mase` and `avoidable_mse`, `mase_seasonality`, `reference`. `UNSUPPORTED`: none
 - **Threshold or tolerance:** None: descriptive
 - **What a FAIL or ERROR usually means:** Never `FAIL` or `ERROR`; a metric that cannot be recorded appears as `metric_<name>`. `UNSUPPORTED`: no point output.
 
@@ -369,7 +377,7 @@ diagnostic, so it has no row.
 
 ### `metric_<name>`
 
-- **Emitted by:** `evaluate_forecast`, only when a metric cannot be recorded; `<name>` is `mse`, `mae`, `mase`, `mean_reference_mse`, `pinball`, `interval_width`, `crps`, `energy_score`, `variogram_score`, or the name of a metric asked for with `metrics=`
+- **Emitted by:** `evaluate_forecast`, only when a metric cannot be recorded; `<name>` is `mse`, `mae`, `mase`, `avoidable_mse`, `pinball`, `interval_width`, `crps`, `energy_score`, `variogram_score`, or the name of a metric asked for with `metrics=`
 - **Evidence keys:** `INCONCLUSIVE`: `reason` (`undefined_metric`). `ERROR`: exception evidence. `UNSUPPORTED`: `needs`, the inputs the requested metric needs
 - **Threshold or tolerance:** None: descriptive
 - **What a FAIL or ERROR usually means:** `ERROR`: the calculation raised or returned a nonfinite value, such as an overflowing interval width, or a requested metric raised, such as `brier` on outcomes that are not 0 or 1; the metric is missing from `metrics`. `INCONCLUSIVE`: the metric is undefined for valid data, such as `mase` on a constant target, `variogram_score` with one coordinate or `log_loss` on a confident mistake without `eps`. `UNSUPPORTED`: a requested metric needs an output the forecast lacks, such as samples.

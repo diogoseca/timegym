@@ -137,6 +137,28 @@
   their words, so older reports replay exactly.
 - Moved the docs, examples, source notebooks and tests to `metrics=`.
 
+- Every case with an answer key now records `avoidable_mse` where it recorded
+  `mean_reference_mse`: the same number, the squared distance from the
+  forecast to the answer key, which is the part of the error the model could
+  have avoided. It is the number the scorecard's table calls
+  `avoidable_mse`, averaged there over a cell's series, and
+  `result.plot_errors()` draws it by default.
+- Its old name still works and warns: `case.metrics["mean_reference_mse"]`
+  (also with `.get` and `in`) and `metric="mean_reference_mse"` in
+  `plot_errors` and `compare_reports`. It will be removed in a later release.
+  Reports saved by 1.13.1 and earlier load with the new name, in each case's
+  metrics and in the `point_accuracy` evidence, so they compare and replay
+  with new ones. The function `timegym.metrics.mean_reference_mse`, which
+  computes it, keeps its name.
+- The columns `avoidable` and `baseline_avoidable` of a scorecard
+  comparison's `table` (`card.compare(baseline)`) are now `avoidable_mse` and
+  `baseline_avoidable_mse`. A table column cannot warn, so code that reads the
+  old columns needs the new names. Saved scorecard baselines keep their format
+  and still compare.
+- Moved the docs, tutorials, examples, source notebooks and tests to
+  `avoidable_mse`. The study records under `experiments/` keep
+  `mean_reference_mse`; the scripts that read them accept both names.
+
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
   true as often as they say: of the days given a 70% chance of rain, did it

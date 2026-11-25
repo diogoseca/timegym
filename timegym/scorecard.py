@@ -1219,10 +1219,10 @@ def _compare(card, baseline, alpha):
                     np.nan if stored_score is None else float(stored_score)
                 ),
                 "score": row.score,
-                "baseline_avoidable": (
+                "baseline_avoidable_mse": (
                     float(np.mean(scored_before)) if scored_before else np.nan
                 ),
-                "avoidable": row.avoidable_mse,
+                "avoidable_mse": row.avoidable_mse,
                 "p_value": (
                     _sign_flip_pvalue(differences, card.seed) if moved else np.nan
                 ),
@@ -1259,7 +1259,7 @@ class ScorecardComparison:
     ``"unchanged"``, ``"changed, no worse"`` and ``"changed and worse"``),
     the baseline's and this card's ``score`` and mean avoidable error over the
     series each scored (``baseline_score``, ``score``,
-    ``baseline_avoidable``, ``avoidable``), the paired test's ``p_value``
+    ``baseline_avoidable_mse``, ``avoidable_mse``), the paired test's ``p_value``
     before Holm's correction (NaN where no series moved), and the number of
     series that ``newly_failing`` crash or fail an output check and that are
     ``newly_passing``. ``worse`` holds the rows that are changed and worse,
@@ -1355,7 +1355,7 @@ def _row_label(row):
 
 def _row_numbers(row):
     """``avoidable error 0.31 -> 0.74 (+139%), p = 0.0004``, with series that newly fail or pass."""
-    before, after = row["baseline_avoidable"], row["avoidable"]
+    before, after = row["baseline_avoidable_mse"], row["avoidable_mse"]
     text = f"avoidable error {_error(before)} -> {_error(after)}"
     if np.isfinite(before) and np.isfinite(after) and before > 0:
         # Close errors print alike at three digits; the relative change tells them apart.

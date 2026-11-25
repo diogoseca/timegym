@@ -121,7 +121,7 @@ pipeline.scorecard(["trend"], instances=20).run.plot_errors(metric="mse")
 [![Histograms of the error against what happened, 20 draws at low and at high noise](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-errors.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-errors.png)
 
 `mse` is the error against what actually happened. The default,
-`mean_reference_mse`, is the error against the answer key: the part your model
+`avoidable_mse`, is the error against the answer key: the part your model
 could have avoided.
 
 For CI and for later:

@@ -651,3 +651,83 @@ def test_a_report_that_lists_its_metrics_under_scores_still_replays_them():
         warnings.simplefilter("error", DeprecationWarning)
         replay = old.replay_case(0).metadata["replay"]
     assert replay["reproduced"] is True and replay["not_recomputed"] == ["close"]
+
+
+# The error against the answer key is avoidable_mse everywhere; mean_reference_mse still reads it and warns.
+
+def test_every_case_with_an_answer_key_records_avoidable_mse_the_scorecard_number():
+    result = Pipeline(LastValueForecaster()).run(["noise", "trend"], instances=3)
+    for row in result.scorecard.table.itertuples():
+        cases = [entry.result.metrics for entry in result.cases if entry.scenario_index == row.Index]
+        assert all("avoidable_mse" in metrics and "mean_reference_mse" not in metrics.keys() for metrics in cases)
+        assert np.mean([metrics["avoidable_mse"] for metrics in cases]) == pytest.approx(row.avoidable_mse, rel=1e-12)
+
+
+def test_reading_mean_reference_mse_from_a_case_still_works_and_warns():
+    import json
+    import pickle
+
+    metrics = Pipeline(LastValueForecaster()).run(["trend"], instances=1).cases[0].result.metrics
+    value = metrics["avoidable_mse"]
+    message = 'case.metrics["mean_reference_mse"] ' + LATER + ': use case.metrics["avoidable_mse"]'
+    assert renamed_call(message, metrics.__getitem__, "mean_reference_mse") == value
+    assert renamed_call(message, metrics.get, "mean_reference_mse") == value
+    assert renamed_call(message, metrics.__contains__, "mean_reference_mse") is True
+    # Otherwise it is a plain dictionary: it compares, saves and copies like one.
+    plain = dict(metrics)
+    assert metrics == plain and json.dumps(metrics) == json.dumps(plain) and pickle.loads(pickle.dumps(metrics)) == plain
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        assert metrics.get("crps") is None and "crps" not in metrics and list(metrics) == list(plain)
+
+
+def test_metric_mean_reference_mse_still_draws_and_compares_and_warns():
+    from timegym.diagnostics import compare_reports
+    from timegym.plotting import plot_errors
+
+    pipeline = Pipeline(LastValueForecaster())
+    run = pipeline.run(["trend"], instances=6)
+    other = Pipeline(MeanForecaster()).run(["trend"], instances=6)
+    message = f'metric="mean_reference_mse" {LATER}: use metric="avoidable_mse"'
+    for draw in (run.plot_errors, lambda **kwargs: plot_errors(run, **kwargs)):
+        figure = renamed_call(message, draw, metric="mean_reference_mse")
+        assert figure.axes[-1].get_xlabel() == draw().axes[-1].get_xlabel() == (
+            "Error against the answer key (MSE), one value per case")
+        plt.close("all")
+    old = renamed_call(message, compare_reports, other, run, metric="mean_reference_mse")
+    pd.testing.assert_frame_equal(old.table, compare_reports(other, run, metric="avoidable_mse").table)
+
+
+def test_a_report_saved_by_timegym_1_13_loads_its_error_against_the_answer_key_as_avoidable_mse():
+    import json
+    from timegym.diagnostics import compare_reports
+
+    path = FIXTURES / "report-1.13.1.json"
+    saved = json.loads(path.read_text(encoding="utf-8"))["cases"]
+    old = TestReport.read(path)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        for case, record in zip(old.cases, saved):
+            assert case.metrics["avoidable_mse"] == record["metrics"]["mean_reference_mse"]
+            assert "mean_reference_mse" not in case.metrics.keys()
+            evidence = next(d.evidence for d in case.diagnostics if d.name == "point_accuracy")
+            assert evidence["avoidable_mse"] == record["metrics"]["mean_reference_mse"]
+        replay = old.replay_case(0).metadata["replay"]
+    assert replay["metrics_match"] is True and replay["diagnostics_match"] is True
+    scenarios = [Scenario("ar1", history_length=24, horizon=3), Scenario("trend", history_length=16, horizon=2)]
+    new = Pipeline(LastValueForecaster()).run(scenarios, seeds=[0, 1])
+    assert compare_reports(new, old, metric="avoidable_mse").table["cases"].sum() == 4
+
+
+def test_a_saved_finding_on_the_old_name_loads_under_the_new_one():
+    report = Pipeline(LastValueForecaster()).run(["trend"], instances=1).report
+    payload = report.to_dict()
+    case = payload["cases"][0]
+    case["metrics"]["mean_reference_mse"] = case["metrics"].pop("avoidable_mse")
+    case["diagnostics"].append({"name": "metric_mean_reference_mse", "status": "INCONCLUSIVE",
+                                "category": "capability", "message": "undefined", "evidence": {}})
+    payload["summary"]["diagnostics"] += 1
+    payload["summary"]["status_counts"]["INCONCLUSIVE"] += 1
+    loaded = TestReport.from_dict(payload)
+    assert loaded.cases[0].metrics == report.cases[0].metrics
+    assert loaded.cases[0].diagnostics[-1].name == "metric_avoidable_mse"

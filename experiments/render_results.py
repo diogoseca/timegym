@@ -24,7 +24,8 @@ from timegym.statistics import paired_t_interval
 from timegym import Scenario
 from timegym.grid import NOISE_LOW
 from timegym.scorecard import verdict
-from .common import interval_cell, rate_cell, require_conclusion, scenario_settings, scientific_tex, sha256
+from .common import (answer_key_error, interval_cell, rate_cell, require_conclusion, scenario_settings, scientific_tex,
+                     sha256)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -119,7 +120,7 @@ def capability_summary(results, protocol, unavoidable=None):
     for scenario in protocol["capability_scenarios"]:
         for model in protocol["capability_models"]:
             for sigma in protocol["capability_sigma"]:
-                values = [r["mean_reference_mse"] for r in results["capability_records"]
+                values = [answer_key_error(r) for r in results["capability_records"]
                           if r["scenario"] == scenario and r["model"] == model and r["sigma"] == sigma]
                 stat = paired_t_interval(values)
                 mean = stat["mean"]

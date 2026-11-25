@@ -14,6 +14,12 @@ def scenario_settings(record: dict) -> dict:
     return {("history_length" if key == "context_length" else key): value for key, value in record.items()}
 
 
+def answer_key_error(record: dict, prefix: str = "") -> float:
+    """A record's squared distance from the answer key: the frozen records name it mean_reference_mse, TimeGym's reports avoidable_mse."""
+    name = prefix + "avoidable_mse"
+    return record[name] if name in record else record[prefix + "mean_reference_mse"]
+
+
 def sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 

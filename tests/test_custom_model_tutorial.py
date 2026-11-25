@@ -85,5 +85,5 @@ def test_pipeline_refits_tutorial_model_without_fitting_template(model_class):
     assert not hasattr(template, "history_")
     assert all(any(d.name == "forecast_contract" and d.status == "PASS"
                    for d in result.diagnostics) for result in report.cases)
-    assert all("mean_reference_mse" in result.metrics for result in report.cases)
+    assert all("avoidable_mse" in result.metrics for result in report.cases)
     assert pipeline.to_config()["replayable"] is False
