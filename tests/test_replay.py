@@ -11,7 +11,7 @@ from timegym import (DriftForecaster, GaussianAR1Forecaster, LastValueForecaster
 from timegym.pipeline import replay_case
 
 
-@pytest.mark.parametrize("model", [None, SeasonalLastValueForecaster(period=3), LastValueForecaster(),
+@pytest.mark.parametrize("model", [MeanForecaster(), SeasonalLastValueForecaster(period=3), LastValueForecaster(),
                                    GaussianAR1Forecaster(n_samples=40, seed=37),
                                    GaussianAR1Forecaster(n_samples=40, seed=37, levels=(.2, .8))])
 def test_builtin_configuration_roundtrip_reproduces_exact_outputs(model):
@@ -37,14 +37,14 @@ def test_factory_configuration_is_descriptive_without_invoking_factory():
     def factory():
         calls.append(True)
         return LastValueForecaster()
-    config = Pipeline(model_factory=factory).to_config()
+    config = Pipeline(factory).to_config()
     assert calls == []
     assert config["replayable"] is False
     assert config["model"]["kind"] == "factory"
     assert "factory" in config["model"]["qualname"]
     with pytest.raises(ValueError, match="not automatically replayable"):
         Pipeline.from_config(config)
-    report = Pipeline(model_factory=factory).test([Scenario("ar1")], seeds=[1])
+    report = Pipeline(factory).test([Scenario("ar1")], seeds=[1])
     assert len(report.cases) == 1 and len(calls) == 1
 
 
@@ -59,24 +59,26 @@ def test_nondeterministic_model_seed_is_explicitly_not_replayable():
 def test_sklearn_configuration_retains_parameters_but_forbids_automatic_imports():
     from sklearn.linear_model import Ridge
     from sklearn.preprocessing import StandardScaler
-    config = Pipeline(window_length=4).add(StandardScaler(with_mean=False)).add(Ridge(alpha=2.5)).to_config()
+    config = Pipeline([StandardScaler(with_mean=False), Ridge(alpha=2.5)], window_length=4).to_config()
+    assert json.loads(json.dumps(config)) == config
     assert config["replayable"] is False
-    assert config["model"]["steps"][0]["parameters"]["with_mean"] is False
-    assert config["model"]["steps"][1]["parameters"]["alpha"] == 2.5
+    assert config["model"]["kind"] == "external" and config["model"]["qualname"] == "Pipeline"
+    assert config["model"]["parameters"]["standardscaler__with_mean"] is False
+    assert config["model"]["parameters"]["ridge__alpha"] == 2.5
     with pytest.raises(ValueError, match="not automatically replayable"):
         Pipeline.from_config(config)
 
 
 def test_untrusted_model_names_and_parameters_cannot_trigger_imports(tmp_path):
-    malicious = Pipeline().to_config()
+    malicious = Pipeline(LastValueForecaster()).to_config()
     malicious["model"]["class"] = "os.system"
     with pytest.raises(ValueError, match="allowlist"):
         Pipeline.from_config(malicious)
-    config = Pipeline().to_config()
+    config = Pipeline(LastValueForecaster()).to_config()
     config["model"]["module"] = "os"
     with pytest.raises(ValueError, match="allowlisted"):
         Pipeline.from_config(config)
-    config = Pipeline().to_config()
+    config = Pipeline(LastValueForecaster()).to_config()
     config["model"]["parameters"]["callback"] = "print('do not execute')"
     with pytest.raises(ValueError, match="constructor parameters"):
         Pipeline.from_config(config)
@@ -92,7 +94,7 @@ def test_native_subclasses_do_not_inherit_replay_permission():
 
 
 def test_replay_rejects_ambiguous_flags_and_case_identity():
-    report = Pipeline().test([Scenario("ar1")], seeds=[2]).to_dict()
+    report = Pipeline(LastValueForecaster()).test([Scenario("ar1")], seeds=[2]).to_dict()
     changed = deepcopy(report)
     changed["metadata"]["diagnostic_settings"]["check_dependence"] = "false"
     with pytest.raises(ValueError, match="boolean"):
@@ -106,7 +108,7 @@ def test_replay_rejects_ambiguous_flags_and_case_identity():
 
 
 def test_replay_exposes_source_changes_instead_of_asserting_identical_environment():
-    report = Pipeline().test([Scenario("random_walk")], seeds=[2]).to_dict()
+    report = Pipeline(LastValueForecaster()).test([Scenario("random_walk")], seeds=[2]).to_dict()
     report["metadata"]["source"]["digest"] = "different source"
     replayed = TestReport.from_dict(report).replay_case()
     assert replayed.metadata["replay"]["source_matches"] is False
@@ -151,14 +153,14 @@ def test_configuration_parser_does_not_construct_a_pipeline_and_preserves_subcla
 
 @pytest.mark.parametrize("version", [True, 1, 1.0, 2.0, 4, None, "2"])
 def test_pipeline_config_requires_an_exact_supported_schema_version(version):
-    config = Pipeline().to_config()
+    config = Pipeline(LastValueForecaster()).to_config()
     config["schema_version"] = version
     with pytest.raises(ValueError, match="configuration schema"):
         Pipeline.from_config(config)
 
 
 def test_pipeline_config_rejects_ambiguous_reduction_fields():
-    config = Pipeline().to_config()
+    config = Pipeline(LastValueForecaster()).to_config()
     config["strategy"] = "recursive"
     with pytest.raises(ValueError, match="configuration schema"):
         Pipeline.from_config(config)
@@ -166,7 +168,7 @@ def test_pipeline_config_rejects_ambiguous_reduction_fields():
 
 def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options():
     with pytest.raises(ValueError, match="'iterated'.*recursive.*direct.*multioutput"):
-        Pipeline(reduction="iterated")
+        Pipeline(LastValueForecaster(), reduction="iterated")
     with pytest.raises(ValueError, match="unknown.*last.*mean.*seasonal.*drift"):
         NaiveForecaster(strategy="unknown")
 
@@ -220,7 +222,7 @@ def test_sklearn_clone_uses_constructor_parameters_without_fitted_state():
 
 
 def test_replay_rejects_raw_dicts_instead_of_bypassing_report_validation():
-    payload = Pipeline().test([Scenario("trend", history_length=12, horizon=2)], seeds=[0]).to_dict()
+    payload = Pipeline(LastValueForecaster()).test([Scenario("trend", history_length=12, horizon=2)], seeds=[0]).to_dict()
     payload["cases"][0]["diagnostics"][0]["status"] = "PASSED"
     with pytest.warns(DeprecationWarning, match="report.replay_case"), pytest.raises(TypeError, match="requires a TestReport"):
         replay_case(payload)
@@ -251,7 +253,7 @@ def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp
 
 @pytest.mark.parametrize("field", ["metrics", "diagnostics", "manifest", "source", "dependencies", "python"])
 def test_replay_verdicts_distinguish_results_from_environment(field):
-    report = Pipeline().test([Scenario("ar1", history_length=12, horizon=2)], seeds=[0])
+    report = Pipeline(LastValueForecaster()).test([Scenario("ar1", history_length=12, horizon=2)], seeds=[0])
     if field == "metrics":
         report.cases[0].metrics["mse"] += 1
     elif field == "diagnostics":
@@ -275,7 +277,29 @@ def test_schema_constants_describe_current_writes():
     from timegym.provenance import PIPELINE_CONFIG_SCHEMA_VERSION
     from timegym.scenarios import MANIFEST_SCHEMA_VERSION
 
-    report = Pipeline().test([Scenario("ar1", history_length=12, horizon=2)], seeds=[0])
+    report = Pipeline(LastValueForecaster()).test([Scenario("ar1", history_length=12, horizon=2)], seeds=[0])
     assert report.to_dict()["schema_version"] == REPORT_SCHEMA_VERSION == "2.0"
     assert report.metadata["pipeline_config"]["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION == 3
     assert report.cases[0].manifest["schema_version"] == MANIFEST_SCHEMA_VERSION == 1
+
+
+def test_a_built_in_class_in_the_models_place_replays():
+    pipeline = Pipeline(DriftForecaster)
+    config = pipeline.to_config()
+    assert config["model"] == {"kind": "builtin", "class": "DriftForecaster", "parameters": {}}
+    assert config["replayable"] is True and Pipeline.from_config(config).to_config() == config
+    run = pipeline.run([Scenario("trend", history_length=20, horizon=3)], seeds=[0, 1])
+    replayed = TestReport.from_json(run.report.to_json()).replay_case(1)
+    assert replayed.metadata["replay"]["reproduced"] is True
+
+
+def test_a_list_of_steps_is_described_but_never_rebuilt_from_a_report():
+    from sklearn.linear_model import Ridge
+    from sklearn.preprocessing import StandardScaler
+    run = Pipeline([StandardScaler(), Ridge(alpha=2.5)], window_length=4).run(
+        [Scenario("ar1", history_length=20, horizon=3)], seeds=[0])
+    loaded = TestReport.from_json(run.report.to_json())
+    assert loaded.metadata["model"] == "StandardScaler + Ridge"
+    assert loaded.metadata["pipeline_config"]["replayable"] is False
+    with pytest.raises(ValueError, match="not automatically replayable"):
+        loaded.replay_case()

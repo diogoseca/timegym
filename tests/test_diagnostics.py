@@ -385,7 +385,7 @@ def test_ci_gate_does_not_relabel_inconclusive_or_unsupported_checks():
 
 
 def test_large_singular_reference_uses_the_same_invariants_during_evaluation():
-    from timegym import Pipeline
+    from timegym import LastValueForecaster, Pipeline
 
     scenario = Scenario("random_walk", history_length=40, horizon=12, n_targets=3,
                         parameters={"correlation": 1.0, "sigma": 1e3})
@@ -394,7 +394,7 @@ def test_large_singular_reference_uses_the_same_invariants_during_evaluation():
     result = evaluate_forecast(case, case.reference.forecast(32))
     assert result.metrics["mean_reference_mse"] == 0
     assert not any(item.failed for item in result.diagnostics)
-    report = Pipeline().test([scenario], seeds=(0,))
+    report = Pipeline(LastValueForecaster()).test([scenario], seeds=(0,))
     assert report.summary["failed_cases"] == 0
     assert report.cases[0].metrics
 
@@ -489,7 +489,7 @@ def test_descriptive_scores_share_evidence_and_mase_scaling():
 def test_check_categories_survive_errors_and_undefined_metrics(monkeypatch):
     import timegym.diagnostics as diagnostics
     from timegym.checks import check_shift_equivariance
-    from timegym import Pipeline
+    from timegym import LastValueForecaster, Pipeline
 
     case = Scenario("white_noise", history_length=12, horizon=2, parameters={"sigma": 0}).generate()
     forecast = case.reference.forecast(24)
@@ -506,7 +506,7 @@ def test_check_categories_survive_errors_and_undefined_metrics(monkeypatch):
     assert undefined.category == failed.category == "capability"
     dependence = get_diagnostic(result, "reference_covariance")
     assert (dependence.status, dependence.category) == ("ERROR", "distribution")
-    pipeline = Pipeline()
+    pipeline = Pipeline(LastValueForecaster())
     monkeypatch.setattr(pipeline, "predict", broken)
     shift = check_shift_equivariance(pipeline, case.task.history, case.task.future_index)
     assert (shift.status, shift.category) == ("ERROR", "metamorphic")

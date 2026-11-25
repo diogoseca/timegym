@@ -9,7 +9,7 @@ from timegym.mutations import mutate_forecast
 
 
 def test_default_end_to_end_report(tmp_path):
-    report = Pipeline().test([Scenario("random_walk")], seeds=[4, 5])
+    report = Pipeline(LastValueForecaster()).test([Scenario("random_walk")], seeds=[4, 5])
     assert len(report.cases) == 2
     assert all(c.metrics for c in report.cases)
     report.assert_passed()
@@ -21,7 +21,7 @@ def test_sklearn_transformations_and_refit_isolation():
     from sklearn.preprocessing import StandardScaler
     from sklearn.linear_model import LinearRegression
     scaler, regressor = StandardScaler(), LinearRegression()
-    pipeline = Pipeline(window_length=4).add(scaler).add(regressor)
+    pipeline = Pipeline([scaler, regressor], window_length=4)
     case = Scenario("trend", parameters={"sigma": 0, "slope": 2}).generate()
     forecast = pipeline.predict(case.task.history, case.task.future_index)
     np.testing.assert_allclose(forecast.point, case.reference.mean, atol=1e-8)
@@ -50,7 +50,7 @@ def test_exceptions_are_reported_not_hidden():
     class Broken:
         def fit(self, history):
             raise RuntimeError("intentional failure")
-    report = Pipeline(model_factory=Broken).test([Scenario("ar1")], seeds=[0])
+    report = Pipeline(Broken).test([Scenario("ar1")], seeds=[0])
     assert report.cases[0].diagnostics[0].status == "ERROR"
     assert "intentional failure" in report.cases[0].diagnostics[0].message
     assert "RuntimeError" in report.cases[0].diagnostics[0].evidence["traceback"]
@@ -71,7 +71,7 @@ def test_marginal_preserving_shuffle_and_bypass_repair():
 def test_future_index_boundary():
     history = pd.DataFrame({"y": [1., 2., 3.]})
     with pytest.raises(ValueError, match="after"):
-        Pipeline().predict(history, pd.RangeIndex(2, 5))
+        Pipeline(LastValueForecaster()).predict(history, pd.RangeIndex(2, 5))
 
 
 def test_supplied_prefitted_native_template_is_reset_by_clone_protocol():
@@ -122,7 +122,7 @@ def test_native_factory_is_called_per_fit_and_plain_instances_are_copied_per_cas
         return model
 
     history, future = pd.DataFrame({"y": [1.0, 2.0]}), pd.RangeIndex(2, 4)
-    pipeline = Pipeline(model_factory=factory)
+    pipeline = Pipeline(factory)
     pipeline.predict(history, future)
     pipeline.predict(history, future)
     assert len(instances) == 2 and instances[0] is not instances[1]
@@ -131,8 +131,6 @@ def test_native_factory_is_called_per_fit_and_plain_instances_are_copied_per_cas
     copied.predict(history, future)
     copied.predict(history, future)
     assert original.fits == [], "the caller's instance must never be fitted"
-    with pytest.raises(ValueError, match="not both"):
-        Pipeline(Native(), model_factory=factory)
 
 
 def test_clone_protocol_must_not_return_shared_instance():
@@ -150,7 +148,7 @@ def test_direct_sklearn_model_supports_current_estimator_tags_and_cloning(mode):
     model.fit([[0], [1]], [999, 999])  # Old fitted coefficients must be discarded.
     pipeline = (Pipeline(model, window_length=4) if mode == "instance" else
                 Pipeline(LinearRegression, window_length=4) if mode == "class" else
-                Pipeline(model_factory=LinearRegression, window_length=4))
+                Pipeline(lambda: LinearRegression(), window_length=4))
     case = Scenario("trend", parameters={"sigma": 0, "slope": 2}).generate()
     np.testing.assert_allclose(pipeline.predict(case.task.history, case.task.future_index).point,
                                case.reference.mean, atol=1e-8)
@@ -188,11 +186,11 @@ def test_step_based_models_support_regular_time_indexes(history_index, future_in
 def test_duplicate_target_names_are_rejected_at_pipeline_boundary():
     history = pd.DataFrame([[1, 2], [3, 4]], columns=["y", "y"])
     with pytest.raises(ValueError, match="unique"):
-        Pipeline().predict(history, pd.RangeIndex(2, 4))
+        Pipeline(LastValueForecaster()).predict(history, pd.RangeIndex(2, 4))
 
 
 def test_series_integer_zero_name_is_preserved():
-    forecast = Pipeline().predict(pd.Series([1.0, 2.0], name=0), pd.RangeIndex(2, 4))
+    forecast = Pipeline(LastValueForecaster()).predict(pd.Series([1.0, 2.0], name=0), pd.RangeIndex(2, 4))
     assert forecast.target_names == (0,)
 
 
@@ -238,7 +236,7 @@ def test_mutation_fixtures_reject_missing_or_ineffective_output_types():
 def test_metamorphic_tolerances_must_be_declared_valid_values():
     case = Scenario("ar1").generate()
     with pytest.raises(ValueError, match="nonnegative"):
-        check_shift_equivariance(Pipeline(), case.task.history, case.task.future_index, atol=-1)
+        check_shift_equivariance(Pipeline(LastValueForecaster()), case.task.history, case.task.future_index, atol=-1)
 
 
 def test_old_default_test_still_uses_the_public_core_scenario_suite():
@@ -247,14 +245,14 @@ def test_old_default_test_still_uses_the_public_core_scenario_suite():
     specifications = default_scenarios()
     assert tuple(scenario.kind for scenario in specifications) == CORE_KINDS
     with pytest.deprecated_call():
-        report = Pipeline().test(seeds=[0])
+        report = Pipeline(LastValueForecaster()).test(seeds=[0])
     assert [case.manifest for case in report.cases] == [
         scenario.generate().manifest for scenario in specifications
     ]
 
 
 @pytest.mark.parametrize("model, expected", [
-    (None, "NaiveForecaster"), (LastValueForecaster, "LastValueForecaster"),
+    (LastValueForecaster(), "LastValueForecaster"), (LastValueForecaster, "LastValueForecaster"),
     (SeasonalMeanForecaster(period=4), "SeasonalMeanForecaster"), (GaussianAR1Forecaster(), "GaussianAR1Forecaster")])
 def test_model_metadata_name_for_native_models(model, expected):
     assert Pipeline(model)._model_name() == expected
@@ -264,15 +262,19 @@ def test_model_metadata_name_does_not_invoke_factories_and_identifies_steps():
     def factory():
         raise AssertionError("Metadata must not instantiate the model")
 
-    assert Pipeline(model_factory=factory)._model_name() == factory.__qualname__
-    pipeline = Pipeline().add(object())
-    assert pipeline._model_name() == "SklearnForecaster"
+    from sklearn.linear_model import Ridge
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    assert Pipeline(factory)._model_name() == factory.__qualname__
+    assert Pipeline([StandardScaler(), Ridge()])._model_name() == "StandardScaler + Ridge"
+    assert Pipeline(make_pipeline(StandardScaler(), Ridge()))._model_name() == "StandardScaler + Ridge"
 
     class Factory:
         def __call__(self):
             raise AssertionError("Metadata must not instantiate the model")
 
-    assert Pipeline(model_factory=Factory())._model_name() == "model_factory"
+    assert Pipeline(Factory())._model_name() == "Factory"
 
 
 @pytest.mark.parametrize('seed', [-1, 1.5, 'x', True, np.bool_(False)])
@@ -294,10 +296,10 @@ def test_sklearn_configuration_errors_fail_before_case_execution():
     for steps in ([], None, 'Ridge', [StandardScaler()]):
         with pytest.raises(ValueError, match='steps|Final step'):
             SklearnForecaster(steps)
-    pipeline = Pipeline(window_length=4).add(StandardScaler())
-    with pytest.raises(ValueError, match='Final step.*StandardScaler'):
-        pipeline.run([Scenario('ar1')], seeds=[0])
-    pipeline.add(Ridge())
+    for steps in ([], [StandardScaler()], [Ridge(), StandardScaler()]):
+        with pytest.raises(ValueError, match='ending in a regressor'):
+            Pipeline(steps, window_length=4)
+    pipeline = Pipeline([StandardScaler(), Ridge()], window_length=4)
     assert not any(d.status == 'ERROR' for d in pipeline.test(seeds=[0]).cases[0].diagnostics)
 
 
@@ -432,3 +434,58 @@ def test_last_value_forecaster_is_naive_last_with_nothing_to_set():
     assert named.target_names == naive.target_names and named.validate(case.task) == []
     with pytest.raises(TypeError):
         LastValueForecaster(strategy="mean")
+
+
+def test_a_function_or_a_class_in_the_models_place_makes_a_fresh_model_for_every_case():
+    made = []
+
+    def make_model():
+        made.append(LastValueForecaster())
+        return made[-1]
+
+    scenarios = [Scenario("trend", history_length=20, horizon=3)]
+    expected = Pipeline(LastValueForecaster()).run(scenarios, seeds=[0, 1])
+    for model in (lambda: LastValueForecaster(), make_model, LastValueForecaster):
+        run = Pipeline(model).run(scenarios, seeds=[0, 1])
+        assert [case.metrics for case in run.report.cases] == [case.metrics for case in expected.report.cases]
+    assert len(made) == 2 and made[0] is not made[1]
+    assert all(hasattr(model, "history_") for model in made)  # each one fitted by the pipeline
+
+
+def test_an_object_with_fit_and_predict_is_a_model_even_if_it_can_be_called():
+    class CallableModel:
+        def __call__(self):
+            raise AssertionError("a model is copied, never called")
+
+        def fit(self, history):
+            self.last = history.iloc[-1].to_numpy()
+            return self
+
+        def predict(self, future_index):
+            return np.tile(self.last, (len(future_index), 1))
+
+    model = CallableModel()
+    pipeline = Pipeline(model)
+    assert pipeline.predict([1.0, 2.0, 3.0], range(3, 5)).point.ravel().tolist() == [3.0, 3.0]
+    assert not hasattr(model, "last")  # the copy was fitted, not the object passed in
+    assert pipeline._model_name() == "CallableModel"
+    assert pipeline.to_config()["model"]["kind"] == "external"
+
+
+def test_a_list_of_steps_must_end_in_a_regressor_and_is_named_by_its_steps():
+    from sklearn.linear_model import Ridge
+    from sklearn.preprocessing import StandardScaler
+    from timegym import compare_reports
+
+    with pytest.raises(ValueError, match=r"ending in a regressor, such as \[StandardScaler\(\), Ridge\(\)\]"):
+        Pipeline((StandardScaler(),))
+    steps = [StandardScaler(), Ridge()]
+    ridge = Pipeline(steps, window_length=6).run(["trend", "seasonal"], instances=2)
+    assert not hasattr(steps[0], "mean_") and not hasattr(steps[1], "coef_")  # the steps given are never fitted
+    assert ridge.metadata["model"] == "StandardScaler + Ridge"
+    assert ridge.scorecard.title == "StandardScaler + Ridge"
+    assert str(ridge.scorecard).startswith("## StandardScaler + Ridge: ")
+    last = Pipeline(LastValueForecaster()).run(["trend", "seasonal"], instances=2)
+    mean = Pipeline(MeanForecaster()).run(["trend", "seasonal"], instances=2)
+    assert compare_reports([ridge, mean], last, metric="mse").table["candidate"].tolist() == [
+        "StandardScaler + Ridge", "MeanForecaster"]

@@ -7,6 +7,7 @@ scorecard is an illustration of the package output, not a study result.
 from __future__ import annotations
 
 from pathlib import Path
+import warnings
 
 import numpy as np
 from matplotlib.backends.backend_agg import RendererAgg
@@ -104,8 +105,10 @@ def build_scorecard(root: Path):
     from timegym.scorecard import _LEGEND, _mistake_notes
 
     model = SCORECARD_MODEL
-    pipeline = (Pipeline(window_length=model["window_length"]).add(StandardScaler())
-                .add(Ridge(alpha=model["ridge_alpha"])))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)  # kept: the published figure is titled by this chain
+        pipeline = (Pipeline(window_length=model["window_length"]).add(StandardScaler())
+                    .add(Ridge(alpha=model["ridge_alpha"])))
     card = pipeline.run(keep_data=True).scorecard
     table = card.table
     keys = list(dict.fromkeys(table["pattern"]))

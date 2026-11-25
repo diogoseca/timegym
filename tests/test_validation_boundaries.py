@@ -8,17 +8,17 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from timegym import Forecast, ForecastTask, Pipeline, Reference, Scenario
+from timegym import Forecast, ForecastTask, LastValueForecaster, Pipeline, Reference, Scenario
 
 
 @pytest.mark.parametrize("window", [0, -1, True, False, np.bool_(True), 1.5, "12", None])
 def test_invalid_window_rejected_before_a_report_can_claim_replayability(window):
     with pytest.raises(ValueError, match="window_length must be a positive integer"):
-        Pipeline(window_length=window)
+        Pipeline(LastValueForecaster(), window_length=window)
 
 
 def test_numpy_window_is_normalized_and_remains_replayable():
-    pipeline = Pipeline(window_length=np.int64(4))
+    pipeline = Pipeline(LastValueForecaster(), window_length=np.int64(4))
     assert type(pipeline.window_length) is int
     report = pipeline.test([Scenario("white_noise", history_length=8, horizon=2)], seeds=[1])
     assert report.metadata["pipeline_config"]["replayable"]
@@ -86,11 +86,11 @@ def test_missing_or_nonfinite_tuple_components_are_invalid_target_labels(compone
 
 
 def test_replay_schema_versions_do_not_accept_boolean_aliases_for_integers():
-    config = Pipeline().to_config()
+    config = Pipeline(LastValueForecaster()).to_config()
     config["schema_version"] = True
     with pytest.raises(ValueError, match="configuration schema"):
         Pipeline.from_config(config)
-    report = Pipeline().test([Scenario("white_noise", history_length=8, horizon=2)], seeds=[1]).to_dict()
+    report = Pipeline(LastValueForecaster()).test([Scenario("white_noise", history_length=8, horizon=2)], seeds=[1]).to_dict()
     changed = deepcopy(report)
     changed["cases"][0]["manifest"]["schema_version"] = True
     with pytest.raises(ValueError, match="scenario manifest schema"):

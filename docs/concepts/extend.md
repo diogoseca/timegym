@@ -51,14 +51,16 @@ quantiles, several series and a model with settings.
 ## A scikit-learn regressor
 
 A regressor learns to predict each value from the `window_length` values before
-it. `.add()` puts preprocessing steps in front of it; each is fitted on the
-history of each case only.
+it. Pass it as a list of steps that ends in the regressor, with preprocessing
+steps in front of it; each is fitted on the history of each case only. A
+pipeline you already made with scikit-learn's `make_pipeline` can be passed as
+it is.
 
 ```python
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 
-result = Pipeline(window_length=12).add(StandardScaler()).add(Ridge()).run()
+result = Pipeline([StandardScaler(), Ridge()], window_length=12).run()
 ```
 
 ## A target transform

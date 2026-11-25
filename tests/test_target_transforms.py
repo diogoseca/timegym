@@ -309,7 +309,7 @@ def test_pipeline_fits_the_model_on_the_transformed_history_and_inverts_its_fore
                     parameters={"output": "price", "jump_rate": 2.}).generate(seed=3)
     transform = ComposedTransform([LogTransform(), DifferenceTransform()])
     histories, Recorder = recorded_fit_histories()
-    pipeline = Pipeline(model_factory=lambda: Recorder(n_samples=64, seed=9), target_transform=transform)
+    pipeline = Pipeline(lambda: Recorder(n_samples=64, seed=9), target_transform=transform)
     forecast = pipeline.predict(case.task.history, case.task.future_index)
 
     manual = transform.clone_unfitted()
@@ -331,7 +331,7 @@ def test_contract_violations_reach_the_evaluator_uninverted():
             return mutate_forecast(super().predict(future_index), "quantile_crossing")
 
     scenario = Scenario("merton_jump_diffusion", history_length=60, horizon=5, parameters={"output": "price"})
-    pipeline = Pipeline(model_factory=lambda: Crossing(n_samples=32, seed=2), target_transform=DifferenceTransform())
+    pipeline = Pipeline(lambda: Crossing(n_samples=32, seed=2), target_transform=DifferenceTransform())
     case = scenario.generate(seed=1)
     raw = pipeline.predict(case.task.history, case.task.future_index)
     assert np.any(np.diff(raw.quantiles, axis=-1) < 0)
@@ -399,11 +399,11 @@ def test_external_target_transforms_are_described_but_not_replayable():
 def test_pipeline_rejects_target_transforms_without_the_protocol():
     for invalid in (LogTransform, object(), "log"):
         with pytest.raises(TypeError, match="target_transform must be an instance"):
-            Pipeline(target_transform=invalid)
+            Pipeline(LastValueForecaster(), target_transform=invalid)
 
     class Shared(LogTransform):
         def clone_unfitted(self):
             return self
 
     with pytest.raises(ValueError, match="new target transform instance"):
-        Pipeline(target_transform=Shared()).predict(pd.DataFrame({"y": [1., 2., 3.]}), pd.RangeIndex(3, 5))
+        Pipeline(LastValueForecaster(), target_transform=Shared()).predict(pd.DataFrame({"y": [1., 2., 3.]}), pd.RangeIndex(3, 5))

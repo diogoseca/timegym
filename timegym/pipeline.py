@@ -17,7 +17,13 @@ import numpy as np
 import pandas as pd
 from .contracts import Case, Forecast, ForecastTask
 from .models import REDUCTIONS, SklearnForecaster, fresh_model, is_sklearn_regressor
-from .models import NaiveForecaster, _naive_without_warning
+from .models import (
+    NaiveForecaster,
+    _fresh_from,
+    _is_maker,
+    _naive_without_warning,
+    _steps_name,
+)
 from .scenarios import Scenario, MANIFEST_SCHEMA_VERSION, default_scenarios
 from .diagnostics import (
     evaluate_forecast,
@@ -266,6 +272,32 @@ _SCORECARD_MOVED = (
     "Add keep_data=True to keep every series and forecast for result.plot_forecasts()."
 )
 
+_ADD_MOVED = (
+    "Pipeline.add() is deprecated and will be removed in a later release: use a list of the steps, "
+    "such as Pipeline([StandardScaler(), Ridge()], window_length=12), which makes the same forecasts"
+)
+_FACTORY_MOVED = (
+    "Pipeline(model_factory=...) is deprecated and will be removed in a later release: use "
+    "Pipeline(make_model), with the function first; it is called for a fresh model in every case"
+)
+_NO_MODEL = (
+    "Pipeline() with no model is deprecated and will be removed in a later release: use "
+    "Pipeline(LastValueForecaster()), which makes the same forecasts"
+)
+
+
+def _steps_pipeline(steps):
+    """scikit-learn's ``make_pipeline(*steps)`` for a list of steps; a list that ends in no regressor is refused."""
+    steps = list(steps)
+    if not steps or not is_sklearn_regressor(steps[-1]):
+        raise ValueError(
+            "A list of steps must be scikit-learn estimators ending in a regressor, such as "
+            f"[StandardScaler(), Ridge()]; got {steps!r}"
+        )
+    from sklearn.pipeline import make_pipeline
+
+    return make_pipeline(*steps)
+
 
 def _old_settings(settings):
     """The diagnostic settings the old plot helpers passed through, with their old defaults."""
@@ -284,19 +316,29 @@ def _old_settings(settings):
 class Pipeline:
     """Evaluate fresh model instances on independent, seeded scenarios.
 
-    Native models implement fit(history) and predict(future_index). The
-    history is the past as a DataFrame, one row per time step and one column
-    per series (``y`` for one series). ``future_index`` holds the labels of the
-    steps to forecast, continuing the history's index. ``predict`` returns one
-    value per step: a list or NumPy array (one column per series when there
-    are several), a Series or DataFrame indexed by ``future_index``, or a
-    Forecast, which can also carry quantiles and samples. Supply a model
-    instance (copied before every case), a class, or a model_factory
-    producing a fresh unfitted instance.
-    sklearn regressors/transformers can be added with add(); ``reduction``
-    selects one of REDUCTIONS for them and, like ``window_length``, does not
-    change native models. An optional ``target_transform`` is refitted on
-    each history before the model and inverted on the forecast it returns.
+    The model goes first, as one of:
+
+    - a model: anything with ``fit(history)`` and ``predict(future_index)``,
+      copied fresh before every case, even if it can also be called;
+    - a list of scikit-learn steps ending in a regressor, such as
+      ``[StandardScaler(), Ridge()]``, which becomes one scikit-learn
+      pipeline; a scikit-learn pipeline you already have is taken as it is;
+    - a class, or a function that returns a fresh model, called for every case,
+      as ``Pattern(attainable_by=...)`` takes them.
+
+    The history is the past as a DataFrame, one row per time step and one
+    column per series (``y`` for one series). ``future_index`` holds the labels
+    of the steps to forecast, continuing the history's index. ``predict``
+    returns one value per step: a list or NumPy array (one column per series
+    when there are several), a Series or DataFrame indexed by ``future_index``,
+    or a Forecast, which can also carry quantiles and samples. A scikit-learn
+    regressor forecasts from windows of the last ``window_length`` steps, with
+    one of REDUCTIONS; neither setting changes native models. An optional
+    ``target_transform`` is refitted on each history before the model and
+    inverted on the forecast it returns.
+
+    ``add()`` and ``model_factory=`` still work and warn, and so does a
+    pipeline with no model, which tests the last value as ``NaiveForecaster``.
     """
 
     def __init__(
@@ -323,7 +365,17 @@ class Pipeline:
                 "target_transform must be an instance implementing clone_unfitted(), "
                 "fit_transform(history) and inverse_transform(forecast)"
             )
-        self.model = model
+        if model is not None and model_factory is not None:
+            raise ValueError("Specify model or model_factory, not both")
+        if model_factory is not None and not callable(model_factory):
+            raise TypeError(
+                "model_factory must be a callable producing a fresh unfitted model"
+            )
+        if isinstance(model, (list, tuple)):
+            model = _steps_pipeline(model)
+        window_length = positive_int(window_length, "window_length")
+        if model_factory is not None:
+            _warn_deprecated(_FACTORY_MOVED)
         if (
             model is NaiveForecaster
         ):  # the class itself: one warning here, none for each model it makes
@@ -331,23 +383,37 @@ class Pipeline:
                 "NaiveForecaster is deprecated and will be removed in a later release: use "
                 "LastValueForecaster, which makes the same forecasts"
             )
-        if model is not None and model_factory is not None:
-            raise ValueError("Specify model or model_factory, not both")
-        if model_factory is not None and not callable(model_factory):
-            raise TypeError(
-                "model_factory must be a callable producing a fresh unfitted model"
-            )
+        self.model = model
         self.model_factory = model_factory
-        window_length = positive_int(window_length, "window_length")
         self.window_length = int(window_length)
         self.reduction = reduction
         self.target_transform = target_transform
         self.steps = []
+        self._warned_no_model = False
+
+    def _ask_for_a_model(self):
+        """Warn once, when the pipeline is first used, that it has no model and tests the last value."""
+        if (
+            self.model is None
+            and self.model_factory is None
+            and not self.steps
+            and not getattr(self, "_warned_no_model", False)
+        ):
+            self._warned_no_model = True
+            _warn_deprecated(_NO_MODEL)
 
     def add(self, estimator, **parameters):
-        """Add an sklearn transformer or final regressor; returns self."""
+        """Add an sklearn transformer or final regressor and return the pipeline; pass a list of steps instead.
+
+        ``Pipeline(window_length=12).add(StandardScaler()).add(Ridge())`` makes
+        the same forecasts as ``Pipeline([StandardScaler(), Ridge()],
+        window_length=12)``. ``add`` still works and warns once for each
+        pipeline, and will be removed in a later release.
+        """
         if self.model is not None or self.model_factory is not None:
             raise ValueError("Use a native model or sklearn steps, not both")
+        if not self.steps:
+            _warn_deprecated(_ADD_MOVED)
         if inspect.isclass(estimator):
             estimator = estimator(**parameters)
         elif parameters:
@@ -365,41 +431,40 @@ class Pipeline:
             )
         if self.model is None and self.model_factory is None:
             return _naive_without_warning()
-        newly_constructed = self.model_factory is not None or inspect.isclass(
-            self.model
-        )
-        if self.model is NaiveForecaster:
+        if self.model_factory is not None:
+            candidate = self.model_factory()
+        elif self.model is NaiveForecaster:
             candidate = _naive_without_warning()
         else:
-            candidate = (
-                self.model_factory()
-                if self.model_factory is not None
-                else (self.model() if inspect.isclass(self.model) else self.model)
-            )
-        if callable(getattr(candidate, "clone_unfitted", None)):
-            return candidate if newly_constructed else fresh_model(candidate)
-        if is_sklearn_regressor(candidate):
+            # A copy of a model, or a new one from a class or a function: the rule of Pattern(attainable_by=).
+            candidate = _fresh_from(self.model)
+        if is_sklearn_regressor(candidate) and not callable(
+            getattr(candidate, "clone_unfitted", None)
+        ):
             return SklearnForecaster(
                 [candidate],
                 self.window_length,
                 reduction=self.reduction,
                 horizon=horizon,
             )
-        return candidate if newly_constructed else fresh_model(candidate)
+        return candidate
 
     def _model_name(self) -> str:
         if self.steps:
             return "SklearnForecaster"
         if self.model_factory is not None:
             return getattr(self.model_factory, "__qualname__", "model_factory")
+        if self.model is None:
+            return "NaiveForecaster"
         if inspect.isclass(self.model):
             return self.model.__name__
-        if self.model is not None:
-            return type(self.model).__name__
-        return "NaiveForecaster"
+        if _is_maker(self.model):  # a function that returns a fresh model
+            return getattr(self.model, "__qualname__", type(self.model).__name__)
+        return _steps_name(self.model) or type(self.model).__name__
 
     def to_config(self):
         """Return JSON-safe configuration and whether safe automatic replay is supported."""
+        self._ask_for_a_model()
         return pipeline_config(self)
 
     @classmethod
@@ -422,6 +487,7 @@ class Pipeline:
         unchanged, so evaluation reports the model's fault, not the inversion's.
         The old keyword ``context=`` still works and warns.
         """
+        self._ask_for_a_model()
         history = _as_history(history)
         if not isinstance(future_index, pd.Index):
             future_index = pd.Index(future_index)
@@ -591,6 +657,7 @@ class Pipeline:
             _run_rows,
         )
 
+        self._ask_for_a_model()
         if interval_level is not None:
             _interval_level(interval_level)  # refused before any series is drawn
         if cases is not None:

@@ -165,29 +165,29 @@ def test_your_own_data_has_no_scorecard():
 def test_scorecard_settings_are_refused_for_your_own_data(setting):
     name = next(iter(setting))
     with pytest.raises(ValueError, match=f"{name} belongs to the scorecard"):
-        Pipeline().run(cases=_own_data(), **setting)
+        Pipeline(LastValueForecaster()).run(cases=_own_data(), **setting)
 
 
 def test_cases_still_refuse_scenarios_and_seeds():
     with pytest.raises(ValueError, match="not both"):
-        Pipeline().run(["trend"], cases=_own_data())
+        Pipeline(LastValueForecaster()).run(["trend"], cases=_own_data())
     with pytest.raises(ValueError, match="not both"):
-        Pipeline().run(cases=_own_data(), instances=2)
+        Pipeline(LastValueForecaster()).run(cases=_own_data(), instances=2)
 
 
 def test_scorecard_settings_for_kinds_of_series_are_refused_for_scenarios_you_built():
     with pytest.raises(ValueError, match="horizon set the scorecard's kinds of series"):
-        Pipeline().run([Scenario("trend")], horizon=6)
+        Pipeline(LastValueForecaster()).run([Scenario("trend")], horizon=6)
 
 
 def test_kinds_of_series_and_scenarios_do_not_mix():
     with pytest.raises(TypeError, match="not both in one run"):
-        Pipeline().run(["trend", Scenario("ar1")])
+        Pipeline(LastValueForecaster()).run(["trend", Scenario("ar1")])
 
 
 def test_keep_data_must_be_a_boolean():
     with pytest.raises(TypeError, match="keep_data must be True or False"):
-        Pipeline().run(["trend"], keep_data="yes")
+        Pipeline(LastValueForecaster()).run(["trend"], keep_data="yes")
 
 
 def test_explicit_seeds_name_the_card_seed_only_when_they_count_up():
@@ -290,7 +290,7 @@ def test_test_still_takes_ready_made_cases():
         warnings.simplefilter("ignore", DeprecationWarning)
         report = Pipeline(LastValueForecaster()).test(cases=_own_data())
         with pytest.raises(ValueError, match="not both"):
-            Pipeline().test(["trend"], cases=_own_data())
+            Pipeline(LastValueForecaster()).test(["trend"], cases=_own_data())
     assert len(report.cases) == 2
 
 

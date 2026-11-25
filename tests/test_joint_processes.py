@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from scipy.stats import multivariate_normal
 
-from timegym import Scenario, Pipeline, TestReport as Report, SimulationReference
+from timegym import LastValueForecaster, Scenario, Pipeline, TestReport as Report, SimulationReference
 from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
 
 
@@ -35,7 +35,7 @@ def test_joint_shapes_prefix_rng_and_public_replay(kind, d):
     replay = Scenario(**{key: manifest[key] for key in ('kind', 'parameters', 'history_length', 'horizon', 'n_targets', 'seed')}).generate()
     assert replay.manifest == manifest
     np.testing.assert_array_equal(short.reference.sample(32, 7), replay.reference.sample(32, 7))
-    report = Pipeline().test([Scenario(kind, 24, 2, p, n_targets=d)], seeds=[19])
+    report = Pipeline(LastValueForecaster()).test([Scenario(kind, 24, 2, p, n_targets=d)], seeds=[19])
     replay_report = Report.from_json(report.to_json()).replay_case()
     assert all(v for k, v in replay_report.metadata['replay'].items() if k.endswith('match') or k.endswith('matches'))
     after = np.random.get_state()

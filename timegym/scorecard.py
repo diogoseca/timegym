@@ -18,14 +18,8 @@ from ._internal import positive_int, _deprecated, _renamed_keywords
 from .contracts import _describe_shift, _index_shift
 from .diagnostics import _holm, _sign_flip_pvalue
 from .evaluation import ForecastRun
-from .grid import (
-    PATTERNS,
-    GridCell,
-    Pattern,
-    _fresh_attainable,
-    _history_length_of,
-    scenario_grid,
-)
+from .grid import PATTERNS, GridCell, Pattern, _history_length_of, scenario_grid
+from .models import _fresh_from, _is_maker, _steps_name
 from .plotting import _BAND_COLORS, _FORECAST, _HAIRLINE, _INK, _MUTED, _SURFACE
 from .reporting import CHECKS, TestReport, _case_checks, _own_checks
 
@@ -214,7 +208,7 @@ def _attainable_score(
     unavoidable, avoidable = [], []
     for index in range(series):
         case = scenario.generate(seed=seed + index)
-        model = _fresh_attainable(pattern.attainable_by)
+        model = _fresh_from(pattern.attainable_by)
         model.fit(case.task.history)
         truth = np.asarray(case.reference.mean, dtype=float)
         point = _point_forecast(
@@ -434,6 +428,11 @@ def _model_title(pipeline):
         model = _naive_without_warning()
     if isinstance(model, type):
         return _class_name(model)
+    if _is_maker(model):  # a function that returns a fresh model
+        return getattr(model, "__qualname__", _class_name(type(model)))
+    steps = _steps_name(model)
+    if steps:
+        return steps
     params = getattr(model, "params", None)
     if callable(params):
         arguments = ", ".join(f"{key}={value!r}" for key, value in params().items())

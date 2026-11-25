@@ -11,7 +11,7 @@ import pandas as pd
 from scipy.optimize import minimize
 from ._internal import positive_int, _renamed_keywords, _warn_deprecated
 from .contracts import ForecastTask, Reference
-from .models import fresh_model
+from .models import _fresh_from
 from .scenarios import Case, Scenario
 
 __all__ = [
@@ -122,7 +122,7 @@ class Pattern:
         )
         if self.attainable_by is None:
             return None
-        return lambda: _fresh_attainable(self.attainable_by)
+        return lambda: _fresh_from(self.attainable_by)
 
     def __reduce__(self):
         # A built-in row pickles by its key, so a run that holds its scorecard pickles too; the
@@ -163,13 +163,6 @@ def _pattern_from_fields(
         attainable_by,
         simulate=simulate,
     )
-
-
-def _fresh_attainable(model):
-    """A fresh model from ``attainable_by``: a copy of a model object, or a new one from a class or function."""
-    if isinstance(model, type) or not hasattr(model, "fit"):
-        return model()
-    return fresh_model(model)
 
 
 class _Simulated:

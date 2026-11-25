@@ -42,7 +42,7 @@ def test_lag_windows_label_only_observed_history_rows():
 @pytest.mark.parametrize("reduction", REDUCTIONS)
 def test_every_reduction_recovers_a_noiseless_linear_trend(reduction):
     case = Scenario("trend", history_length=60, horizon=9, parameters={"sigma": 0, "slope": 2}).generate()
-    pipeline = Pipeline(window_length=4, reduction=reduction).add(StandardScaler()).add(LinearRegression())
+    pipeline = Pipeline([StandardScaler(), LinearRegression()], window_length=4, reduction=reduction)
     forecast = pipeline.predict(case.task.history, case.task.future_index)
     np.testing.assert_allclose(forecast.point, case.reference.mean, atol=1e-7)
     assert forecast.validate(case.task) == []
@@ -72,7 +72,7 @@ def test_direct_and_multioutput_fit_the_expected_regressors():
 def test_linear_least_squares_gives_identical_direct_and_multioutput_forecasts():
     case = Scenario("seasonal", history_length=120, horizon=12,
                     parameters={"amplitude": 2., "period": 12., "sigma": .5}).generate(seed=3)
-    forecasts = {reduction: Pipeline(window_length=6, reduction=reduction).add(StandardScaler()).add(Ridge(alpha=2.))
+    forecasts = {reduction: Pipeline([StandardScaler(), Ridge(alpha=2.)], window_length=6, reduction=reduction)
                  .predict(case.task.history, case.task.future_index) for reduction in REDUCTIONS}
     np.testing.assert_allclose(forecasts["direct"].point, forecasts["multioutput"].point, rtol=1e-9, atol=1e-9)
     assert not np.allclose(forecasts["direct"].point, forecasts["recursive"].point)
@@ -96,7 +96,7 @@ def test_training_never_reads_evaluation_futures(reduction, monkeypatch):
 
     monkeypatch.setattr(SklearnForecaster, "fit", recording_fit)
     scenario = Scenario("ar1", history_length=40, horizon=6, n_targets=2)
-    pipeline = Pipeline(window_length=5, reduction=reduction).add(StandardScaler()).add(Ridge())
+    pipeline = Pipeline([StandardScaler(), Ridge()], window_length=5, reduction=reduction)
     clean = pipeline.run([scenario], seeds=[11], keep_data=True)
 
     original_generate = Scenario.generate
@@ -118,7 +118,7 @@ def test_training_never_reads_evaluation_futures(reduction, monkeypatch):
 
 @pytest.mark.parametrize("reduction", REDUCTIONS)
 def test_reduction_is_recorded_in_the_run_metadata_and_configuration(reduction):
-    pipeline = Pipeline(window_length=4, reduction=reduction).add(Ridge())
+    pipeline = Pipeline([Ridge()], window_length=4, reduction=reduction)
     run = pipeline.run([Scenario("ar1", history_length=30, horizon=3)], seeds=[0], keep_data=True)
     config = pipeline.to_config()
     assert run.metadata["reduction"] == config["reduction"] == reduction

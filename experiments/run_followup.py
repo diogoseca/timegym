@@ -15,6 +15,7 @@ import importlib.metadata
 import json
 from pathlib import Path
 import platform
+import warnings
 
 import numpy as np
 from sklearn.linear_model import Ridge
@@ -155,7 +156,9 @@ def repair_mechanism(spec, tolerance, study2_protocol, study2):
 
 
 def scorecard_pipeline():
-    return Pipeline(window_length=24).add(StandardScaler()).add(Ridge(alpha=1.0))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)  # kept: the frozen protocol names this .add() chain
+        return Pipeline(window_length=24).add(StandardScaler()).add(Ridge(alpha=1.0))
 
 
 def cell_score(unavoidable, avoidable):

@@ -7,7 +7,7 @@ import sys
 import numpy as np
 import pytest
 
-from timegym import Pipeline, Scenario, TestReport
+from timegym import LastValueForecaster, Pipeline, Scenario, TestReport
 from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
 from timegym.scenarios import scenario_label
 
@@ -24,7 +24,7 @@ PROCESS_CASES = [
 @pytest.mark.parametrize("kind,parameters", PROCESS_CASES)
 def test_public_pipeline_report_round_trip_and_replay_each_new_family(kind, parameters):
     scenario = Scenario(kind, history_length=24, horizon=3, parameters=parameters)
-    pipeline = Pipeline()
+    pipeline = Pipeline(LastValueForecaster())
     run = pipeline.run([scenario], seeds=[3, 5], keep_data=True)
     assert len(run.cases) == 2
     for entry in run.cases:
@@ -57,7 +57,7 @@ def jump_regimes():
 
 
 def test_composed_regime_jump_report_preserves_approximation_and_quantile_settings():
-    run = Pipeline().run([jump_regimes()], seeds=[3], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([jump_regimes()], seeds=[3], keep_data=True)
     generated = run.cases[0].case
     metadata = generated.manifest["conditioning"]
     assert metadata["sampler_kind"] == "approximate_conditional"
@@ -132,9 +132,9 @@ class CoreOnly(importlib.abc.MetaPathFinder):
         if fullname.split(".")[0] in blocked:
             raise AssertionError("optional dependency imported: " + fullname)
 sys.meta_path.insert(0, CoreOnly())
-from timegym import Pipeline, Scenario
+from timegym import LastValueForecaster, Pipeline, Scenario
 for kind in ("composite", "merton_jump_diffusion", "garch", "markov_switching"):
-    run = Pipeline().run([Scenario(kind, history_length=12, horizon=2)], seeds=[3])
+    run = Pipeline(LastValueForecaster()).run([Scenario(kind, history_length=12, horizon=2)], seeds=[3])
     assert len(run.cases) == 1
     assert "mse" in run.cases[0].result.metrics
     assert not any(d.status == "ERROR" for d in run.cases[0].result.diagnostics)
@@ -151,7 +151,7 @@ def test_plot_legend_distinguishes_approximate_filtered_mean_from_exact_referenc
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    run = Pipeline().run([
+    run = Pipeline(LastValueForecaster()).run([
         jump_regimes(),
         Scenario("merton_jump_diffusion", history_length=24, horizon=3),
     ], seeds=[3], keep_data=True)

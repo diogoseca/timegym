@@ -149,7 +149,7 @@ def test_scorecard_function_matches_the_pipeline_method():
 def test_replay_case_function_matches_the_report_method():
     from timegym.pipeline import replay_case
 
-    report = Pipeline().run([Scenario("ar1", history_length=20, horizon=3)], seeds=[0, 1]).report
+    report = Pipeline(LastValueForecaster()).run([Scenario("ar1", history_length=20, horizon=3)], seeds=[0, 1]).report
     replayed = deprecated_call("use report.replay_case(case_index)", replay_case, report, 1)
     expected = report.replay_case(1)
     assert replayed.metadata["replay"] == expected.metadata["replay"]
@@ -165,7 +165,7 @@ def _pixels(figure):
 
 def test_pipeline_plot_tests_matches_run_plot_forecasts():
     scenarios = [Scenario("white_noise", history_length=10, horizon=3)]
-    pipeline = Pipeline()
+    pipeline = Pipeline(LastValueForecaster())
     figure = deprecated_call(
         "use Pipeline.run(..., keep_data=True).plot_forecasts()", pipeline.plot_tests, scenarios, seeds=[4]
     )
@@ -178,7 +178,7 @@ def test_pipeline_plot_tests_matches_run_plot_forecasts():
 
 def test_pipeline_plot_errors_matches_run_plot_errors():
     scenarios = [Scenario("white_noise", history_length=10, horizon=3)]
-    pipeline = Pipeline()
+    pipeline = Pipeline(LastValueForecaster())
     figure = deprecated_call("use Pipeline.run(...).plot_errors()", pipeline.plot_errors, scenarios, metric="mse")
     expected = pipeline.run(scenarios, instances=20).plot_errors(metric="mse")
     np.testing.assert_array_equal(_pixels(figure), _pixels(expected))
@@ -460,3 +460,112 @@ def test_a_pipeline_of_naive_forecaster_warns_once_and_its_report_still_names_an
         replayed = TestReport.from_json(run.report.to_json()).replay_case(4)
     assert replayed.metadata["replay"]["reproduced"] is True
     assert replayed.metadata["model"] == "NaiveForecaster"
+
+
+# The model goes first in Pipeline: scikit-learn steps as a list, a function in the model's place, and always a model.
+
+def _sklearn_series():
+    """Histories long enough for every reduction: one series and several, steps and calendar dates."""
+    cases = [Scenario("seasonal", history_length=48, horizon=6).generate(seed=1),
+             Scenario("trend", history_length=40, horizon=5, n_targets=3).generate(seed=2)]
+    days = pd.date_range("2024-01-01", periods=40, freq="D")
+    rng = np.random.default_rng(4)
+    calendar = pd.DataFrame({"north": rng.poisson(3, 40), "south": rng.poisson(5, 40)}, index=days).astype(float)
+    return [(case.task.history, case.task.future_index) for case in cases] + [
+        (calendar, pd.date_range("2024-02-10", periods=7, freq="D"))]
+
+
+@pytest.mark.parametrize("reduction", ["recursive", "direct", "multioutput"])
+def test_add_warns_once_per_pipeline_and_makes_the_forecasts_of_the_list_of_steps(reduction):
+    from sklearn.linear_model import Ridge
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    chained = Pipeline(window_length=4, reduction=reduction)
+    renamed_call(f"Pipeline.add() {LATER}: use a list of the steps, such as Pipeline([StandardScaler(), Ridge()], "
+                 "window_length=12), which makes the same forecasts", chained.add, StandardScaler())
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        chained.add(Ridge, alpha=2.)  # the second step of the same pipeline: no second warning
+        listed = Pipeline([StandardScaler(), Ridge(alpha=2.)], window_length=4, reduction=reduction)
+        made = Pipeline(make_pipeline(StandardScaler(), Ridge(alpha=2.)), window_length=4, reduction=reduction)
+        for history, future in _sklearn_series():
+            expected = chained.predict(history, future)
+            for other in (listed, made):
+                forecast = other.predict(history, future)
+                np.testing.assert_array_equal(forecast.point, expected.point)
+                assert forecast.target_names == expected.target_names and forecast.index.equals(expected.index)
+        old, new = (pipeline.run(["trend", "seasonal"], instances=2) for pipeline in (chained, listed))
+    assert [case.metrics for case in old.report.cases] == [case.metrics for case in new.report.cases]
+    assert (old.metadata["model"], new.metadata["model"]) == ("SklearnForecaster", "StandardScaler + Ridge")
+    assert old.scorecard.title == f"StandardScaler → Ridge ({reduction}, window 4)"
+    assert new.scorecard.title == "StandardScaler + Ridge"
+    assert old.metadata["pipeline_config"]["model"]["kind"] == "sklearn_steps"
+
+
+def test_an_add_chain_with_no_regressor_still_fails_before_any_case():
+    from sklearn.linear_model import Ridge
+    from sklearn.preprocessing import StandardScaler
+
+    pipeline = renamed_call("Pipeline.add()", Pipeline(window_length=4).add, StandardScaler())
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        with pytest.raises(ValueError, match="Final step.*StandardScaler"):
+            pipeline.run([Scenario("ar1")], seeds=[0])
+        pipeline.add(Ridge())
+        assert pipeline.run([Scenario("ar1")], seeds=[0]).report.cases[0].diagnostics[0].status == "PASS"
+    with pytest.raises(ValueError, match="not both"):
+        Pipeline(LastValueForecaster()).add(Ridge())
+
+
+def test_model_factory_warns_and_is_the_function_in_the_models_place():
+    made = []
+
+    def make_model():
+        made.append(LastValueForecaster())
+        return made[-1]
+
+    old = renamed_call(f"Pipeline(model_factory=...) {LATER}: use Pipeline(make_model)", Pipeline,
+                       model_factory=make_model)
+    new = Pipeline(make_model)
+    scenarios = [Scenario("trend", history_length=20, horizon=3)]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        runs = [pipeline.run(scenarios, seeds=[0, 1]) for pipeline in (old, new)]
+        cards = [pipeline.run(["trend"], instances=2).scorecard for pipeline in (old, new)]
+    cases = sum(len(run.cases) for run in runs) + sum(len(card.run.cases) for card in cards)
+    assert len(made) == len({id(model) for model in made}) == cases  # a fresh model for every case
+    assert [case.metrics for case in runs[0].report.cases] == [case.metrics for case in runs[1].report.cases]
+    assert runs[0].metadata["model"] == runs[1].metadata["model"] == make_model.__qualname__
+    assert cards[0].title == cards[1].title == make_model.__qualname__
+    assert old.to_config() == new.to_config() and new.to_config()["model"]["kind"] == "factory"
+    with pytest.raises(ValueError, match="not both"):
+        Pipeline(LastValueForecaster(), model_factory=make_model)
+    with pytest.raises(TypeError, match="model_factory must be a callable"):
+        Pipeline(model_factory=LastValueForecaster())
+
+
+def test_a_pipeline_with_no_model_warns_once_when_used_and_still_tests_the_last_value():
+    scenarios = [Scenario("random_walk", history_length=20, horizon=3)]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        pipeline = Pipeline(window_length=6)  # nothing to warn about until it is used
+    run = renamed_call(f"Pipeline() with no model {LATER}: use Pipeline(LastValueForecaster()), which makes the "
+                       "same forecasts", pipeline.run, scenarios, seeds=[0, 1])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        forecast = pipeline.predict([1.0, 2.0, 3.0], range(3, 5))  # once for each pipeline
+        config = pipeline.to_config()
+        assert Pipeline.from_config(config).to_config() == config
+        replayed = TestReport.from_json(run.report.to_json()).replay_case(1)
+    same = Pipeline(LastValueForecaster()).run(scenarios, seeds=[0, 1])
+    assert [case.metrics for case in run.report.cases] == [case.metrics for case in same.report.cases]
+    assert forecast.point.ravel().tolist() == [3.0, 3.0]
+    assert run.metadata["model"] == "NaiveForecaster"
+    assert config["model"] == {"kind": "builtin", "class": "NaiveForecaster",
+                               "parameters": {"strategy": "last", "period": 1}}
+    assert replayed.metadata["replay"]["reproduced"] is True
+    for use in ("to_config", "predict", "run"):
+        fresh = Pipeline()
+        arguments = {"to_config": (), "predict": ([1.0, 2.0], range(2, 3)), "run": (scenarios, [0])}[use]
+        renamed_call("Pipeline() with no model", getattr(fresh, use), *arguments)

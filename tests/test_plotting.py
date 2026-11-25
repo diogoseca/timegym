@@ -42,7 +42,7 @@ def test_run_fits_once_per_case_and_plots_retained_outputs_without_refitting():
             self.predict_count += 1
             return Forecast(future_index, point=np.tile(self.last, (len(future_index), 1)), target_names=self.names)
 
-    run = Pipeline(model_factory=CountingModel).run(
+    run = Pipeline(CountingModel).run(
         [Scenario("trend", history_length=12, horizon=3), Scenario("ar1", history_length=12, horizon=3)], seeds=[5, 7], keep_data=True)
     assert isinstance(run, ForecastRun)
     assert len(models) == len(run.cases) == 4
@@ -69,7 +69,7 @@ def test_test_schema_and_replay_remain_identical_to_run_report():
 
 
 def test_forecasts_are_unconnected_blue_crosses_and_observations_gray_dots():
-    run = Pipeline().run([Scenario("trend", history_length=24, horizon=9)], seeds=[8], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([Scenario("trend", history_length=24, horizon=9)], seeds=[8], keep_data=True)
     figure = run.plot_forecasts()
     axis = figure.axes[0]
     lines = {line.get_label(): line for line in axis.lines}
@@ -100,7 +100,7 @@ def test_forecasts_are_unconnected_blue_crosses_and_observations_gray_dots():
 
 
 def test_forecast_panels_show_recent_history_unless_asked_for_all():
-    run = Pipeline().run([Scenario("trend", history_length=100, horizon=5)], seeds=[8], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([Scenario("trend", history_length=100, horizon=5)], seeds=[8], keep_data=True)
     recent = run.plot_forecasts().axes[0]
     history = next(line for line in recent.lines if line.get_label() == "Observed history")
     np.testing.assert_array_equal(history.get_xdata(), np.arange(80, 100))
@@ -114,7 +114,7 @@ def test_forecast_panels_show_recent_history_unless_asked_for_all():
 
 
 def test_multitarget_single_seed_and_duplicate_scenario_kinds_have_distinct_rows():
-    run = Pipeline().run([
+    run = Pipeline(LastValueForecaster()).run([
         Scenario("ar1", history_length=12, horizon=3, n_targets=2),
         Scenario("ar1", history_length=20, horizon=4, n_targets=1),
     ], seeds=[5], keep_data=True)
@@ -128,7 +128,7 @@ def test_multitarget_single_seed_and_duplicate_scenario_kinds_have_distinct_rows
 
 
 def test_two_seed_columns_preserve_duplicate_seed_positions():
-    run = Pipeline().run([Scenario("white_noise", history_length=10, horizon=3, n_targets=2)], seeds=[5, 5], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([Scenario("white_noise", history_length=10, horizon=3, n_targets=2)], seeds=[5, 5], keep_data=True)
     figure = run.plot_forecasts()
     assert len(figure.axes) == 4
     assert [axis.get_ylabel() for axis in figure.axes] == ["y0", "y0", "y1", "y1"]
@@ -152,7 +152,7 @@ def test_date_period_timedelta_and_numeric_axes_preserve_bounds(index):
             case.reference.index = index[7:]
             return case
 
-    run = Pipeline().run([IndexedScenario("white_noise", history_length=7, horizon=3)], seeds=[2], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([IndexedScenario("white_noise", history_length=7, horizon=3)], seeds=[2], keep_data=True)
     figure = run.plot_forecasts()
     figure.canvas.draw()
     axis = figure.axes[0]
@@ -174,7 +174,7 @@ def test_execution_errors_are_retained_and_annotated():
         def fit(self, history):
             raise RuntimeError("intentional failure")
 
-    run = Pipeline(model_factory=Broken).run([Scenario("ar1", history_length=12, horizon=3)], seeds=[7], keep_data=True)
+    run = Pipeline(Broken).run([Scenario("ar1", history_length=12, horizon=3)], seeds=[7], keep_data=True)
     assert run.cases[0].forecast is None
     assert run.cases[0].result.diagnostics[0].status == "ERROR"
     axis = run.plot_forecasts().axes[0]
@@ -228,7 +228,7 @@ def test_explicit_quantile_bands_are_opt_in_and_labeled_marginal():
 
 
 def test_unknown_or_partly_missing_metrics_never_disappear_silently():
-    run = Pipeline().run([Scenario("ar1", history_length=12, horizon=3)], seeds=[1, 2], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([Scenario("ar1", history_length=12, horizon=3)], seeds=[1, 2], keep_data=True)
     with pytest.raises(ValueError, match="unknown_score"):
         run.plot_errors("unknown_score")
     del run.cases[1].result.metrics["mean_reference_mse"]
@@ -244,7 +244,7 @@ def test_unknown_or_partly_missing_metrics_never_disappear_silently():
 def test_plot_style_is_local_and_pipeline_plots_return_figures():
     scenarios = [Scenario("white_noise", history_length=10, horizon=3)]
     before = dict(plt.rcParams)
-    pipeline = Pipeline()
+    pipeline = Pipeline(LastValueForecaster())
     first = pipeline.run(scenarios, seeds=[4], keep_data=True).plot_forecasts()
     second = pipeline.run(scenarios, seeds=[4, 5], keep_data=True).plot_errors(metric="mse")
     assert len(first.axes) == len(second.axes) == 1
@@ -259,7 +259,7 @@ def test_importing_package_does_not_import_matplotlib():
 
 
 def test_mixed_random_walk_drift_is_named_per_target_and_aggregated_in_error_plot():
-    run = Pipeline().run([Scenario("random_walk", history_length=12, horizon=3, n_targets=2,
+    run = Pipeline(LastValueForecaster()).run([Scenario("random_walk", history_length=12, horizon=3, n_targets=2,
                                    parameters={"drift": [0., 1e-15]})], seeds=[7], keep_data=True)
     axes = run.plot_forecasts().axes
     assert "Random walk without drift · y0" in axes[0].get_title(loc="left")
@@ -277,7 +277,7 @@ def test_custom_case_kind_remains_plotable_without_a_builtin_scenario_label():
             case.manifest["parameters"] = {"source": "custom dataset"}
             return case
 
-    run = Pipeline().run([MeasuredCase("white_noise", history_length=12, horizon=3)], seeds=[7], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([MeasuredCase("white_noise", history_length=12, horizon=3)], seeds=[7], keep_data=True)
     assert "Measured sensor signal" in run.plot_forecasts().axes[0].get_title(loc="left")
     assert "Measured sensor signal" in run.plot_errors().axes[0].get_title(loc="left")
 

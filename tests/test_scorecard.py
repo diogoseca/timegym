@@ -141,19 +141,19 @@ def test_level_shift_happens_inside_the_history():
 # --- Seeds ----------------------------------------------------------------------------------
 
 def test_one_seed_gives_instance_seeds_seed_plus_index():
-    run = Pipeline().run([Scenario("trend", 20, 3)], seed=5, instances=3)
+    run = Pipeline(LastValueForecaster()).run([Scenario("trend", 20, 3)], seed=5, instances=3)
     assert [entry.result.seed for entry in run.cases] == [5, 6, 7]
     assert (run.metadata["seed"], run.metadata["instances"]) == (5, 3)
-    default = Pipeline().test([Scenario("trend", 20, 3)])
-    explicit = Pipeline().test([Scenario("trend", 20, 3)], seeds=[0, 1, 2])
+    default = Pipeline(LastValueForecaster()).test([Scenario("trend", 20, 3)])
+    explicit = Pipeline(LastValueForecaster()).test([Scenario("trend", 20, 3)], seeds=[0, 1, 2])
     assert [case.to_dict() for case in default.cases] == [case.to_dict() for case in explicit.cases]
     with pytest.raises(ValueError, match="not both"):
-        Pipeline().run([Scenario("trend", 20, 3)], seeds=[1], instances=2)
+        Pipeline(LastValueForecaster()).run([Scenario("trend", 20, 3)], seeds=[1], instances=2)
 
 
 def test_seed_none_draws_a_seed_and_records_it_for_a_rerun():
-    first = Pipeline().run([Scenario("ar1", 20, 3)], seed=None, instances=2)
-    again = Pipeline().run([Scenario("ar1", 20, 3)], seed=first.metadata["seed"], instances=2)
+    first = Pipeline(LastValueForecaster()).run([Scenario("ar1", 20, 3)], seed=None, instances=2)
+    again = Pipeline(LastValueForecaster()).run([Scenario("ar1", 20, 3)], seed=first.metadata["seed"], instances=2)
     assert first.report.cases[0].to_dict() == again.report.cases[0].to_dict()
 
 

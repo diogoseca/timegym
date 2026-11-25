@@ -34,7 +34,7 @@ def test_independent_normal_equations_agree_with_two_separate_implementations():
     independent = normal_equation_forecast(case.task.history, case.task.future_index, window=4, alpha=.7)
     standardized_targets = Pipeline(LagRidgeImplementation(window=4, alpha=.7)).predict(
         case.task.history, case.task.future_index)
-    public_adapter = Pipeline(window_length=4).add(StandardScaler()).add(Ridge(alpha=.7)).predict(
+    public_adapter = Pipeline([StandardScaler(), Ridge(alpha=.7)], window_length=4).predict(
         case.task.history, case.task.future_index)
     np.testing.assert_allclose(independent.point, standardized_targets.point, atol=1e-10, rtol=1e-10)
     np.testing.assert_allclose(independent.point, public_adapter.point, atol=1e-10, rtol=1e-10)

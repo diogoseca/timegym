@@ -80,6 +80,29 @@
 - Moved the docs, tutorials, examples, source notebooks and the
   installed-package check to the new classes.
 
+- `Pipeline` takes the model to test first, in one of four forms: a model
+  (anything with `fit` and `predict`, copied fresh for every case, even if it
+  can also be called); a list of scikit-learn steps ending in a regressor,
+  such as `Pipeline([StandardScaler(), Ridge()], window_length=24)`, which
+  becomes one scikit-learn pipeline (a scikit-learn pipeline you already have
+  is taken as it is); a class; or a function that returns a fresh model, now
+  written `Pipeline(make_model)` and called for every case, as
+  `Pattern(attainable_by=...)` calls it. A list that does not end in a
+  regressor is refused when the pipeline is made.
+- Reports, comparisons and the scorecard title name a scikit-learn pipeline by
+  its steps, such as "StandardScaler + Ridge". It is described in the report
+  and not replayed from it, like other models of your own.
+- `.add()`, `model_factory=` and a pipeline with no model still work as before
+  and now warn: use the list of steps, which makes the same forecasts,
+  `Pipeline(make_model)`, and `Pipeline(LastValueForecaster())`, which makes
+  the forecasts a pipeline with no model makes. `.add()` warns once per
+  pipeline and a pipeline with no model warns when it is first used. They will
+  be removed in a later release.
+- Moved the docs, tutorials and source notebooks to the list of steps and to
+  a model in every pipeline. The scripts behind the paper's scorecard figure
+  and the follow-up study keep their `.add()` chain, which the figure's title
+  and the study's registered protocol name.
+
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
   true as often as they say: of the days given a 70% chance of rain, did it

@@ -19,7 +19,7 @@ from .models import (
     SeasonalLastValueForecaster,
     SeasonalMeanForecaster,
 )
-from .models import _naive_without_warning
+from .models import _is_maker, _naive_without_warning
 from .target import transform_config, transform_from_config
 from ._internal import _json_safe
 
@@ -80,20 +80,28 @@ def _describe_estimator(estimator):
 def pipeline_config(pipeline):
     """Describe configuration without constructing a factory or fitting a model."""
     replayable = False
+    supplied = pipeline.model
+    maker = pipeline.model_factory
+    if (
+        maker is None
+        and supplied is not None
+        and not inspect.isclass(supplied)
+        and _is_maker(supplied)
+    ):
+        maker = supplied  # a function that returns a fresh model, in the model's place
     if pipeline.steps:
         model = {
             "kind": "sklearn_steps",
             "steps": [_describe_estimator(step) for step in pipeline.steps],
             "reason": "Arbitrary estimators are not reconstructed from report data.",
         }
-    elif pipeline.model_factory is not None:
+    elif maker is not None:
         model = {
             "kind": "factory",
-            **_descriptor(pipeline.model_factory),
+            **_descriptor(maker),
             "reason": "Factory execution requires explicitly supplied user code.",
         }
     else:
-        supplied = pipeline.model
         model_class = (
             NaiveForecaster
             if supplied is None

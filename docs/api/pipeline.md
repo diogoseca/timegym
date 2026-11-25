@@ -4,16 +4,33 @@ Running a scenario suite and reading, saving and replaying its report:
 `Pipeline`, `ForecastRun`, `TestReport` and the result types from `timegym`,
 with plots in `timegym.plotting` and schema constants in `timegym.provenance` and `timegym.reporting`.
 
-`Pipeline(model=None, window_length=12, reduction="recursive", *, model_factory=None,
-target_transform=None)` uses a last-value baseline by default. Native model
-classes/factories or the `clone_unfitted()` protocol ensure fresh fits. Optional
-sklearn steps can be added with `.add(estimator, **parameters)`; `reduction`
-selects one of `REDUCTIONS` for them, with the case horizon as the reduction
-horizon, and does not change native models. `target_transform` is an instance
-implementing `clone_unfitted()`, `fit_transform(history)` and
-`inverse_transform(forecast)`. A fresh copy is fitted on each history before the
-model and inverts the forecast the model returns, so evaluation sees the
-original scale.
+`Pipeline(model, window_length=12, reduction="recursive", *,
+target_transform=None)` takes the model to test first, as one of:
+
+- a model: anything with `fit(history)` and `predict(future_index)`, copied
+  fresh before every case (through `clone_unfitted()` when it has one), even if
+  it can also be called;
+- a list of scikit-learn steps ending in a regressor, such as
+  `Pipeline([StandardScaler(), Ridge()], window_length=24)`, which becomes one
+  scikit-learn pipeline; a scikit-learn pipeline you already have is taken as
+  it is;
+- a class, or a function that returns a fresh model, called for every case.
+
+A scikit-learn regressor forecasts from windows of the last `window_length`
+steps; `reduction` selects one of `REDUCTIONS`, with the case horizon as the
+reduction horizon. Neither changes native models. Reports and the scorecard
+name a scikit-learn pipeline by its steps, such as "StandardScaler + Ridge".
+`target_transform` is an instance implementing `clone_unfitted()`,
+`fit_transform(history)` and `inverse_transform(forecast)`. A fresh copy is
+fitted on each history before the model and inverts the forecast the model
+returns, so evaluation sees the original scale.
+
+The older ways still work, with their old behaviour, and warn:
+`.add(estimator, **parameters)` adds one step at a time and makes the same
+forecasts as the list; `model_factory=make_model` is `Pipeline(make_model)`;
+and a pipeline with no model tests the last value, as
+`Pipeline(LastValueForecaster())` does. They will be removed in a later
+release.
 
 `.predict(history, future_index)` returns the model's Forecast for inspection.
 `history` may be a DataFrame, a Series, or a list or NumPy array (labelled 0, 1,

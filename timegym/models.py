@@ -3,6 +3,7 @@
 from __future__ import annotations
 from collections.abc import Sequence
 from copy import deepcopy
+import inspect
 from ._internal import (
     positive_int,
     nonnegative_int,
@@ -582,6 +583,42 @@ def fresh_model(model):
 
         return clone(model)
     return deepcopy(model)
+
+
+def _is_maker(model):
+    """Whether ``model`` makes models rather than being one: a class, or a function that returns a model.
+
+    An object with ``fit`` and ``predict`` is a model even if it can also be called.
+    """
+    if inspect.isclass(model):
+        return True
+    is_model = callable(getattr(model, "fit", None)) and callable(
+        getattr(model, "predict", None)
+    )
+    return callable(model) and not is_model
+
+
+def _fresh_from(model):
+    """A fresh, unfitted model for one case: a copy of a model, or a new one from a class or a function."""
+    return model() if _is_maker(model) else fresh_model(model)
+
+
+def _steps_name(model):
+    """A scikit-learn pipeline named by its steps, such as ``"StandardScaler + Ridge"``; None for any other model."""
+    if not hasattr(model, "get_params") or not isinstance(
+        getattr(model, "steps", None), list
+    ):
+        return None
+    from sklearn.pipeline import Pipeline as SkPipeline
+
+    if not isinstance(model, SkPipeline):
+        return None
+    names = [
+        _steps_name(step) or type(step).__name__.lstrip("_") or type(step).__name__
+        for _, step in model.steps
+        if step is not None and not isinstance(step, str)
+    ]
+    return " + ".join(names)
 
 
 # %% ../source/06_forecasting_models.ipynb #06_forecasting_model-17

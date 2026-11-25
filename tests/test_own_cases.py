@@ -166,7 +166,7 @@ def test_hand_built_cases_need_no_kind_or_seed():
 
 def test_drawn_cases_keep_their_identity_and_still_replay():
     drawn = [Scenario("ar1", history_length=40, horizon=4).generate(seed) for seed in (3, 4)]
-    report = Pipeline().test(cases=drawn)
+    report = Pipeline(LastValueForecaster()).test(cases=drawn)
     assert [(c.scenario, c.seed) for c in report.cases] == [("ar1", 3), ("ar1", 4)]
     replayed = report.replay_case(1)
     assert replayed.metadata["replay"]["reproduced"]
