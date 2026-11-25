@@ -167,7 +167,6 @@ def test_calibration_example_on_the_scores_page_prints_what_the_page_shows():
     import io
 
     from timegym import MeanForecaster, Pipeline
-    from timegym.diagnostics import calibration
 
     text = (ROOT / "docs/api/diagnostics.md").read_text(encoding="utf-8")
     section = text[text.index("## Are the chances honest?"):text.index("## Case-level uncertainty intervals")]
@@ -187,9 +186,9 @@ def test_calibration_example_on_the_scores_page_prints_what_the_page_shows():
             self.share_ = np.array([values[phase::12].mean() for phase in range(12)])
             return self
 
-    plain = calibration(Pipeline(WithoutAddedSteps()).run(cases=cases, keep_data=True), cluster="station")
+    plain = Pipeline(WithoutAddedSteps()).run(cases=cases, keep_data=True).calibration(cluster="station")
     assert plain.certain == 130 and f"{plain.slope:.2f}" == "0.46"  # "says 0 or 1 exactly 130 times"
-    mean = calibration(Pipeline(MeanForecaster()).run(cases=cases, keep_data=True), cluster="station")
+    mean = Pipeline(MeanForecaster()).run(cases=cases, keep_data=True).calibration(cluster="station")
     used = mean.table[mean.table["forecasts"] > 0]
     assert used["low"].min() == 0.4 and used["high"].max() == 0.6  # "between 40% and 60%"
     assert f"{mean.slope:.2f}" == "-0.14"

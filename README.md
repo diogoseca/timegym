@@ -148,7 +148,7 @@ no clear difference, by group if you ask
 Checks of your own join the built-in ones with `checks=`, such as
 `within(0, None)` for rainfall or sales, which can't go below zero
 ([Your own output checks](https://diogoseca.github.io/timegym/docs/api/diagnostics/#your-own-output-checks)).
-For yes/no outcomes, `timegym.diagnostics.calibration(run)` says whether a
+For yes/no outcomes, `result.calibration()` says whether a
 forecast of 70% came true about 70% of the time
 ([Are the chances honest?](https://diogoseca.github.io/timegym/docs/api/diagnostics/#are-the-chances-honest)).
 A kind of series you can simulate, with its answer key, becomes a scorecard

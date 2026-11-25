@@ -94,6 +94,8 @@ def test_reading_forecasts_of_a_dropped_run_names_the_switch():
     with pytest.raises(ValueError, match=r"plot_forecasts\(\).*keep_data=True"):
         result.plot_forecasts()
     with pytest.raises(ValueError, match="calibration.*keep_data=True"):
+        result.calibration()
+    with pytest.raises(ValueError, match="calibration.*keep_data=True"):
         calibration(result)
     kept = Pipeline(LastValueForecaster()).run(["trend"], instances=2, keep_data=True)
     plt.close(kept.plot_forecasts())

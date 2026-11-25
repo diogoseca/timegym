@@ -721,7 +721,9 @@ def plot_calibration(calibration, *, figsize=None):
         if np.isfinite(slope):
             summary = f"slope {slope:.2f}"
             if np.isfinite(low):
-                summary += f" ({100 * calibration.level:g}%: {low:.2f} to {high:.2f})"
+                summary += (
+                    f" ({100 * calibration.interval_level:g}%: {low:.2f} to {high:.2f})"
+                )
         else:
             summary = "no slope"
         summary += f" · {calibration.forecasts:,} forecasts"

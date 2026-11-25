@@ -1827,11 +1827,13 @@ def _case_name(entry):
     return f"{entry._result.scenario}" + ("" if seed is None else f", seed {seed}")
 
 
-def calibration(run, predicted=None, *, bins=10, cluster=None, level=0.95, seed=0):
+def calibration(
+    run, predicted=None, *, bins=10, cluster=None, interval_level=0.95, seed=0
+):
     """How often yes/no forecasts came true, by forecast, and the calibration slope; returns a Calibration.
 
-    ``calibration(run)`` reads a run's forecasts of 0/1 outcomes, such as
-    rain or no rain: the point forecast is the chance, or the mean of the
+    ``calibration(run)``, or ``run.calibration()``, reads a run's forecasts
+    of 0/1 outcomes, such as rain or no rain: the point forecast is the chance, or the mean of the
     sample paths when there is none. Cases that crashed or failed a built-in
     check are left out and counted. ``calibration(observed, predicted)``
     reads arrays of outcomes (0 or 1) and chances (between 0 and 1) instead.
@@ -1846,7 +1848,7 @@ def calibration(run, predicted=None, *, bins=10, cluster=None, level=0.95, seed=
     0 means right on average, below 0 forecasts too high, above 0 too low.
     A forecast of exactly 0 or 1 counts as 0.000001 or 0.999999 in both.
 
-    The slope's interval, at ``level``, comes from 2,000 bootstrap resamples
+    The slope's interval, at ``interval_level``, comes from 2,000 bootstrap resamples
     with ``seed``. With a run each case is resampled whole, since its steps
     move together; ``cluster`` names a manifest key whose cases are
     resampled together, such as ``cluster="series"``. With arrays each value
@@ -1856,12 +1858,14 @@ def calibration(run, predicted=None, *, bins=10, cluster=None, level=0.95, seed=
     if bins < 2:
         raise ValueError("bins must be at least 2")
     if (
-        isinstance(level, bool)
-        or not isinstance(level, numbers.Real)
-        or not 0 < level < 1
+        isinstance(interval_level, bool)
+        or not isinstance(interval_level, numbers.Real)
+        or not 0 < interval_level < 1
     ):
-        raise ValueError("level must be a number between 0 and 1, such as 0.95")
-    level = float(level)
+        raise ValueError(
+            "interval_level must be a number between 0 and 1, such as 0.95"
+        )
+    interval_level = float(interval_level)
     seed = nonnegative_int(seed, "seed")
     if predicted is None:
         used, skipped = _run_probabilities(run)
@@ -1948,7 +1952,7 @@ def calibration(run, predicted=None, *, bins=10, cluster=None, level=0.95, seed=
         )
         defined = slopes[np.isfinite(slopes)]
         if len(defined) >= 0.95 * _CALIBRATION_RESAMPLES:
-            tail = (1 - level) / 2
+            tail = (1 - interval_level) / 2
             interval = tuple(
                 float(value) for value in np.quantile(defined, [tail, 1 - tail])
             )
@@ -1962,7 +1966,7 @@ def calibration(run, predicted=None, *, bins=10, cluster=None, level=0.95, seed=
         slope=slope,
         slope_interval=interval,
         intercept=intercept,
-        level=level,
+        interval_level=interval_level,
         forecasts=int(observed.size),
         cases=cases,
         clusters=len(labels) if cluster is not None else None,
@@ -1983,7 +1987,7 @@ class Calibration:
     share that ``happened``; a calibrated forecaster's two columns agree.
     ``slope`` is 1 when calibrated, below 1 when too confident and above 1
     when too timid, and ``slope_interval`` is its bootstrap interval at
-    ``level``. ``intercept`` is 0 when the forecasts are right on average,
+    ``interval_level``. ``intercept`` is 0 when the forecasts are right on average,
     below 0 when they are too high and above 0 when too low. ``forecasts``
     counts the values read, ``cases`` the cases of a run they came from
     (None for arrays), ``clusters`` the clusters resampled, ``skipped`` the
@@ -1996,7 +2000,7 @@ class Calibration:
     slope: float
     slope_interval: tuple
     intercept: float
-    level: float
+    interval_level: float
     forecasts: int
     cases: int | None
     clusters: int | None
@@ -2028,7 +2032,7 @@ class Calibration:
         return text
 
     def __str__(self):
-        percent = f"{100 * self.level:g}%"
+        percent = f"{100 * self.interval_level:g}%"
         low, high = self.slope_interval
         lines = [f"Calibration of {self._source()}"]
         if np.isfinite(self.slope):

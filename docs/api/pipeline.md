@@ -136,7 +136,7 @@ case is measured, so a large run stays small in memory: `history`,
 `None`, while `metrics`, `diagnostics` and `manifest` stay, and
 `result.kept_data` is `False`. The report, the scorecard (with its picture)
 and `result.plot_errors()` work either way. `keep_data=True` keeps them for
-`result.plot_forecasts()`, `timegym.diagnostics.calibration` and your own
+`result.plot_forecasts()`, `result.calibration()` and your own
 reading. This in-memory object keeps arrays separate from the portable report
 schema.
 

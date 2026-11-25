@@ -571,11 +571,12 @@ new version is worse.
 ## Are the chances honest?
 
 When a forecast of a yes/no outcome says 70%, it should happen about 70% of
-the time. `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
-level=0.95, seed=0)` checks that on a run of such forecasts (made with `keep_data=True`, since it
-reads every forecast and what happened), and
-`calibration(observed, predicted, ...)` on arrays of outcomes (0 or 1) and
-chances. It returns a `Calibration`:
+the time. `result.calibration(*, bins=10, cluster=None, interval_level=0.95,
+seed=0)` checks that on a run of such forecasts (made with `keep_data=True`,
+since it reads every forecast and what happened). The function
+`timegym.diagnostics.calibration` does the same on a run,
+`calibration(result, ...)`, and on arrays of outcomes (0 or 1) and chances,
+`calibration(observed, predicted, ...)`. It returns a `Calibration`:
 
 - `table`: one row per bin of equal width, from `low` to `high`, with the
   number of `forecasts` in it, their `mean_forecast` and the share that
@@ -584,7 +585,7 @@ chances. It returns a `Calibration`:
   forecast ([Cox 1958](https://doi.org/10.1093/biomet/45.3-4.562)): 1 is
   calibrated; below 1 the forecasts swing further from the average than what
   happened supports (too confident), above 1 not far enough (too timid).
-  `slope_interval` is its bootstrap interval at `level`.
+  `slope_interval` is its bootstrap interval at `interval_level`.
 - `intercept`, from the same regression with the slope held at 1: 0 is right
   on average, below 0 the forecasts are too high, above 0 too low
   ([Van Calster et al. 2019](https://doi.org/10.1186/s12916-019-1466-7)).
@@ -601,7 +602,6 @@ cycle, after adding one rainy and one dry step to each count:
 import numpy as np
 import pandas as pd
 from timegym import Pipeline, cases_from_series
-from timegym.diagnostics import calibration
 
 rng = np.random.default_rng(5)
 chance = 0.5 + 0.37 * np.sin(2 * np.pi * np.arange(240) / 12)  # rises and falls over 12 steps
@@ -626,7 +626,8 @@ class ShareAtThisPointOfTheCycle:
         return self.share_[np.arange(self.length_, self.length_ + len(future_index)) % 12]
 
 
-cal = calibration(Pipeline(ShareAtThisPointOfTheCycle()).run(cases=cases, keep_data=True), cluster="station")
+result = Pipeline(ShareAtThisPointOfTheCycle()).run(cases=cases, keep_data=True)
+cal = result.calibration(cluster="station")
 print(cal)
 ```
 

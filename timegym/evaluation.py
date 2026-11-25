@@ -131,7 +131,7 @@ class ForecastRun:
     ``kept_data`` says whether each case still holds its series, answer key
     and forecast. ``Pipeline.run`` drops them once every case is scored
     unless it was called with ``keep_data=True``; the scorecard keeps what it
-    draws. ``plot_forecasts()`` and ``timegym.diagnostics.calibration`` read
+    draws. ``plot_forecasts()`` and ``calibration()`` read
     the forecasts, so they need a run that kept them; ``plot_errors()`` reads
     only the metrics. ``titles`` optionally names each scenario position in
     plain words for the plots (a run on the scorecard's kinds of series sets
@@ -316,6 +316,24 @@ class ForecastRun:
             alpha=alpha,
             higher_is_better=higher_is_better,
             seed=seed,
+        )
+
+    def calibration(self, *, bins=10, cluster=None, interval_level=0.95, seed=0):
+        """How often this run's yes/no forecasts came true, and the calibration slope; returns a Calibration.
+
+        ``result.calibration()`` is ``timegym.diagnostics.calibration(result)``.
+        It reads every forecast of a 0/1 outcome, such as rain or no rain, and
+        what happened, so the run must keep its data (``keep_data=True``).
+        ``bins`` splits the chances into that many bins of equal width;
+        ``cluster`` names a manifest key whose cases are resampled together,
+        such as ``cluster="station"``; the slope's interval is at
+        ``interval_level``, from bootstrap resamples drawn with ``seed``.
+        ``calibration(observed, predicted)`` reads arrays instead.
+        """
+        from timegym.diagnostics import calibration
+
+        return calibration(
+            self, bins=bins, cluster=cluster, interval_level=interval_level, seed=seed
         )
 
     def to_json(self, path=None):

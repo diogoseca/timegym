@@ -222,11 +222,12 @@
   one candidate to `result.compare`. The scores page shows the method for one
   candidate and `compare_reports` for several.
 
-- Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
-  level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
-  true as often as they say: of the days given a 70% chance of rain, did it
-  rain on about 70%? It reads a run's point forecasts, or the mean of the
-  sample paths, or arrays with `calibration(observed, predicted)`, and returns
+- Added `result.calibration(*, bins=10, cluster=None, interval_level=0.95,
+  seed=0)` to a run, and `timegym.diagnostics.calibration(run, ...)`, which
+  ask whether forecasts of a yes/no outcome come true as often as they say:
+  of the days given a 70% chance of rain, did it rain on about 70%? It reads
+  a run's point forecasts, or the mean of the sample paths, or arrays with
+  `calibration(observed, predicted)`, and returns
   a `Calibration`: a `table` of bins of equal width with the number of
   forecasts, their mean and the share that happened; the calibration `slope`
   (1 is calibrated, below 1 too confident, above 1 too timid) with a bootstrap
@@ -234,8 +235,10 @@
   `cluster=`; the calibration `intercept` (0 is right on average); and
   `plot()`, a reliability diagram drawn by the new
   `timegym.plotting.plot_calibration`. Forecasts of exactly 0 or 1 are counted
-  in `certain`, since the slope reads them as 0.000001 and 0.999999. Nothing
-  else changes.
+  in `certain`, since the slope reads them as 0.000001 and 0.999999.
+  `interval_level` sets the confidence of the slope's interval, the
+  scorecard's word for the same idea, and `Calibration.interval_level`
+  records it. Nothing else changes.
 - Added a section on calibration to the metrics page, a sentence on the scope
   page and in the README, and a section to the metrics notebook with twenty
   weather stations, where a share learned from few cycles says 0% or 100% too
