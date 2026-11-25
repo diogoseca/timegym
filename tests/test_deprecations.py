@@ -734,8 +734,14 @@ def test_a_report_saved_by_timegym_1_13_loads_its_error_against_the_answer_key_a
             assert "mean_reference_mse" not in case.metrics.keys()
             evidence = next(d.evidence for d in case.diagnostics if d.name == "point_accuracy")
             assert evidence["avoidable_mse"] == record["metrics"]["mean_reference_mse"]
-        replay = old.replay_case(0).metadata["replay"]
-    assert replay["metrics_match"] is True and replay["diagnostics_match"] is True
+        replayed = old.replay_case(0)
+    # The file was saved on another machine, so the recomputed numbers may differ in their last digits:
+    # compare them with a tolerance, and the findings by name and status.
+    again, first = replayed.cases[0], old.cases[0]
+    assert set(again.metrics.keys()) == set(first.metrics.keys()) and "avoidable_mse" in again.metrics.keys()
+    for name, value in first.metrics.items():
+        assert again.metrics[name] == pytest.approx(value, rel=1e-9, abs=1e-12), name
+    assert ([(d.name, d.status) for d in again.diagnostics] == [(d.name, d.status) for d in first.diagnostics])
     scenarios = [Scenario("ar1", history_length=24, horizon=3), Scenario("trend", history_length=16, horizon=2)]
     new = Pipeline(LastValueForecaster()).run(scenarios, seeds=[0, 1])
     assert new.compare(old, metric="avoidable_mse").table["cases"].sum() == 4
