@@ -272,14 +272,16 @@ class ForecastRun:
     def metrics(self):
         """Every case's metrics as a table, one row per case: ``TestReport.metrics`` of this run.
 
-        Its kind and seed come first, or for your own data its name and
-        where its history ends, then one column per metric. A case that
+        Its labels come first: the scorecard's ``pattern`` and ``noise``, or
+        for scenarios you built their ``scenario``, then the ``seed``; for
+        your own data its name and where its history ends. One column per
+        metric follows. A case that
         crashed or failed an output check has NaN metrics. It reads only the
         metrics, so it works whether or not the run kept its data.
         """
         from timegym.reporting import _metrics_table
 
-        return _metrics_table([entry._result for entry in self.cases])
+        return _metrics_table([entry._result for entry in self.cases], self.metadata)
 
     def assert_passed(self):
         """Raise AssertionError when any case crashed or failed an output check, as in ``TestReport``."""

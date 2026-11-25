@@ -197,16 +197,22 @@
   the scorecard and the paper's scorecard figure to the entry's parts.
 
 - Added `result.metrics`, every case's metrics in one pandas table:
-  `result.metrics["mae"]` or `result.metrics.groupby("kind")["mae"].mean()`.
-  It has one row per case, in order, labelled by the case's position. The
-  case's `kind` and `seed` come first, or for cases cut from your own data its
-  `kind` and `origin`, the manifest keys `result.compare(by=...)` groups by;
-  then one column per metric, in alphabetical order. A case that crashed or
+  `result.metrics["mae"]` or
+  `result.metrics.groupby(["pattern", "noise"])["mae"].mean()`. It has one row
+  per case, in order, labelled by the case's position. The case's labels come
+  first and tell the scenarios apart: on the scorecard's kinds of series its
+  `pattern` and `noise`, the scorecard's row and column, and its `seed`; for
+  scenarios you built its `scenario`, the name of its row on the scorecard
+  (`"ar1"`, then `"ar1 (2)"` for a second of that kind), and its `seed`; for
+  cases cut from your own data its `kind` and `origin`. Then one column per
+  metric, in alphabetical order. A run records its scenarios' labels in
+  `result.metadata["scenario_labels"]`, so a saved report keeps them; one saved
+  by an earlier release is labelled by `kind` and `seed`. A case that crashed or
   failed an output check is not scored, so its metrics are NaN, as in
   `compare_reports` and the scorecard. It reads only the metrics, so it works
   in a run that dropped its data, and `report.metrics` gives the same table on
   a `TestReport`, including one read back from its file. The table is made
-  each time it is read. Nothing else changes.
+  each time it is read.
 - Moved the examples, tutorials and source notebooks that built these tables
   by hand to `result.metrics`, and showed it on the Pipeline and reports page.
   A run of your own data, which has no scorecard, now points to

@@ -397,9 +397,9 @@ def test_result_metrics_is_one_row_per_case_with_its_labels_then_its_metrics(tmp
     CrashesOnSeedOne.first_of_seed_one = scenarios[0].generate(seed=1).task.history.iloc[0, 0]
     result = Pipeline(CrashesOnSeedOne()).run(scenarios, instances=3, checks={"small": within(None, 2.0)})
     table = result.metrics
-    assert list(table.columns) == ["kind", "seed", "avoidable_mse", "mae", "mase", "mse"]
+    assert list(table.columns) == ["scenario", "seed", "avoidable_mse", "mae", "mase", "mse"]
     assert table.index.name == "case" and list(table.index) == list(range(6))
-    assert table["kind"].tolist() == ["ar1"] * 3 + ["trend"] * 3 and table["seed"].tolist() == [0, 1, 2] * 2
+    assert table["scenario"].tolist() == ["ar1"] * 3 + ["trend"] * 3 and table["seed"].tolist() == [0, 1, 2] * 2
     for position, entry in enumerate(result.cases):
         row = table.loc[position]
         scored = not any(d.failed for d in entry.diagnostics)
@@ -411,7 +411,7 @@ def test_result_metrics_is_one_row_per_case_with_its_labels_then_its_metrics(tmp
     assert table.loc[1, ["mae", "mse"]].isna().all() and result.cases[1].metrics == {}  # the crash
     failed = [i for i, entry in enumerate(result.cases) if entry.metrics and any(d.failed for d in entry.diagnostics)]
     assert failed and table.loc[failed, "mae"].isna().all()  # though each recorded one
-    assert table.groupby("kind")["mae"].mean().index.tolist() == ["ar1", "trend"]
+    assert table.groupby("scenario")["mae"].mean().index.tolist() == ["ar1", "trend"]
     # The same table on the report, on a report read back from its file, and with the data kept.
     pd.testing.assert_frame_equal(table, result.report.metrics)
     path = tmp_path / "report.json"
@@ -422,6 +422,36 @@ def test_result_metrics_is_one_row_per_case_with_its_labels_then_its_metrics(tmp
     # It is made on each read, so it follows a change to the cases.
     result.cases[0].metrics["mae"] = 99.0
     assert result.metrics.loc[0, "mae"] == 99.0 and table.loc[0, "mae"] != 99.0
+
+
+def test_result_metrics_labels_the_scorecards_cells_so_noise_levels_stay_apart(tmp_path):
+    result = Pipeline(LastValueForecaster()).run(["trend", "seasonal"], instances=2)
+    table = result.metrics
+    assert list(table.columns[:3]) == ["pattern", "noise", "seed"]
+    assert table["pattern"].tolist() == ["trend"] * 4 + ["seasonal"] * 4
+    assert table["noise"].tolist() == ["Low noise", "Low noise", "High noise", "High noise"] * 2
+    cells = table.groupby(["pattern", "noise"], sort=False)["avoidable_mse"].mean()
+    card = result.scorecard.table
+    assert list(cells.index) == list(zip(card["pattern"], card["noise"]))  # one row per cell of the scorecard
+    np.testing.assert_allclose(cells.to_numpy(), card["avoidable_mse"].to_numpy())
+    result.save(tmp_path / "report.json")
+    pd.testing.assert_frame_equal(TestReport.load(tmp_path / "report.json").metrics, table)
+
+
+def test_result_metrics_tells_two_scenarios_of_one_kind_apart_by_their_scorecard_rows():
+    scenarios = [Scenario("ar1", history_length=40, horizon=5),
+                 Scenario("ar1", history_length=40, horizon=5, parameters={"phi": 0.2})]
+    result = Pipeline(LastValueForecaster()).run(scenarios, seeds=[3, 4], keep_data=True)
+    assert result.metrics["scenario"].tolist() == ["ar1", "ar1", "ar1 (2)", "ar1 (2)"]
+    assert result.scorecard.table["pattern"].tolist() == ["ar1", "ar1 (2)"]
+    assert result.metrics["seed"].tolist() == [3, 4, 3, 4]
+    pd.testing.assert_frame_equal(TestReport.from_json(result.to_json()).metrics, result.metrics)
+    # Without the labels the run records, or with cases that are not the run's own, a report has kind and seed.
+    report = result.report
+    unlabelled = {key: value for key, value in report.metadata.items() if key != "scenario_labels"}
+    assert list(TestReport(report.cases, unlabelled).metrics.columns[:2]) == ["kind", "seed"]
+    assert list(TestReport(report.cases[1:3], report.metadata).metrics.columns[:2]) == ["kind", "seed"]
+    assert list(TestReport(report.cases[:2], report.metadata).metrics.columns[:2]) == ["kind", "seed"]
 
 
 def test_result_metrics_labels_your_own_data_by_its_name_and_origin():

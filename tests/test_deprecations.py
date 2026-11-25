@@ -386,6 +386,7 @@ def test_a_report_saved_by_timegym_1_13_loads_replays_and_compares():
 
     old = TestReport.load(FIXTURES / "report-1.13.1.json")
     assert old.cases[0].manifest["context_length"] == 24
+    assert list(old.metrics.columns[:2]) == ["kind", "seed"]  # saved before runs recorded their scenarios
     assert old.metadata["pipeline_config"]["model"]["class"] == "NaiveForecaster"
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)  # its model is rebuilt without NaiveForecaster's warning

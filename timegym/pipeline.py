@@ -769,9 +769,15 @@ class Pipeline:
                         seed_index=seed_index,
                     )
                 )
+        # How result.metrics tells the scenarios apart, by the scorecard's names for its rows and columns.
+        labels = (
+            [{"pattern": cell.pattern, "noise": cell.noise} for cell in cells]
+            if grid
+            else [{"scenario": cell.pattern} for cell in cells]
+        )
         run = ForecastRun(
             cases=results,
-            metadata={**metadata, **(seeding or {})},
+            metadata={**metadata, **(seeding or {}), "scenario_labels": labels},
             titles=[f"{cell.title} · {cell.noise}" for cell in cells] if grid else [],
         )
         if make_card:

@@ -367,7 +367,40 @@ def _own_checks(case):
     return found
 
 
-def _metrics_table(cases):
+def _scenario_labels(cases, metadata):
+    """Each case's labels from ``metadata["scenario_labels"]``, or None when the report has none that fit its cases.
+
+    A run records one dictionary of labels per scenario it drew, in order, such as
+    ``{"pattern": "trend", "noise": "Low noise"}``, and draws every scenario on the same seeds: its
+    cases come scenario by scenario, each scenario's on those seeds in order, and of one kind.
+    """
+    entries = metadata.get("scenario_labels") if isinstance(metadata, dict) else None
+    if (
+        not isinstance(entries, list)
+        or not entries
+        or not cases
+        or len(cases) % len(entries)
+        or not all(
+            isinstance(entry, dict)
+            and entry
+            and all(isinstance(value, str) for value in entry.values())
+            for entry in entries
+        )
+        or len({frozenset(entry) for entry in entries}) != 1
+    ):
+        return None
+    each = len(cases) // len(entries)
+    blocks = [cases[start : start + each] for start in range(0, len(cases), each)]
+    if any(
+        [case.seed for case in block] != [case.seed for case in blocks[0]]
+        or len({case.scenario for case in block}) != 1
+        for block in blocks
+    ):
+        return None  # not the cases the run made, in its order
+    return [entries[position // each] for position in range(len(cases))]
+
+
+def _metrics_table(cases, metadata=None):
     """``TestReport.metrics`` for a list of CaseResults: their labels, then their metrics, NaN where not scored."""
     names = sorted(
         {name for case in cases for name in case.metrics}
@@ -375,7 +408,18 @@ def _metrics_table(cases):
     index = pd.RangeIndex(len(cases), name="case")
     seeds = [case.seed for case in cases]
     origins = [case.manifest.get("origin") for case in cases]
-    labels = {"kind": [case.scenario for case in cases]}
+    scenarios = _scenario_labels(cases, metadata)
+    if (
+        scenarios is None
+    ):  # your own data, or a report saved before runs recorded their scenarios
+        labels = {"kind": [case.scenario for case in cases]}
+    else:
+        # A saved report sorts each entry's keys, so the scorecard's order is set here.
+        first = ("pattern", "noise", "scenario")
+        keys = [key for key in first if key in scenarios[0]] + sorted(
+            set(scenarios[0]) - set(first)
+        )
+        labels = {key: [entry[key] for entry in scenarios] for key in keys}
     if any(seed is not None for seed in seeds):
         labels["seed"] = (
             seeds if None not in seeds else pd.Series(seeds, index=index, dtype=object)
@@ -440,19 +484,26 @@ class TestReport:
     def metrics(self):
         """Every case's metrics as a table: one row per case, in order, its labels first.
 
-        ``kind`` is the case's kind, such as ``"ar1"``, or for your own data
-        the name its cases were cut under; ``seed`` is its seed and ``origin``
-        where its history ends, each when the cases have one. These are the
-        manifest keys that ``compare(by=...)`` groups by, so
-        ``report.metrics.groupby("kind")["mae"].mean()`` gives the mean error
-        of each kind. One column per metric follows, in alphabetical order.
+        The labels tell the scenarios apart. A run on the scorecard's kinds
+        of series labels each case by its row and column on the scorecard,
+        ``pattern`` and ``noise``, so
+        ``report.metrics.groupby(["pattern", "noise"])["mae"].mean()`` gives
+        one value per cell. A run of scenarios you built labels each by
+        ``scenario``, the name of its row on the scorecard: its kind, such as
+        ``"ar1"``, then ``"ar1 (2)"`` for a second scenario of that kind.
+        Both add the case's ``seed``. The run records these labels in
+        ``metadata["scenario_labels"]``, so a report read back from its file
+        has them too. Cases of your own data are labelled by ``kind``, the
+        name they were cut under, and ``origin``, where their history ends; a
+        report saved before runs recorded their labels gets ``kind`` and
+        ``seed``. One column per metric follows, in alphabetical order.
         A case that crashed or failed an output check is not scored, so its
         metrics are NaN, as in ``compare`` and the scorecard;
         ``case.metrics`` still holds any it recorded. The row label is the
         case's position in ``report.cases``. The table is made from the cases
         each time it is read, so it follows any change to them.
         """
-        return _metrics_table(self.cases)
+        return _metrics_table(self.cases, self.metadata)
 
     def to_dict(self):
         """Revalidate the report and return it with its schema version and summary."""

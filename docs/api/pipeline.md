@@ -116,18 +116,25 @@ call, and `scenario_index` and `seed_index` place it in the run.
 `entry.result`, the old way to the report's entry, still works and warns.
 
 `result.metrics` puts every case's metrics in one table, a pandas DataFrame
-with one row per case, in order. The case's labels come first: its `kind` and
-`seed`, or for cases cut from your own data its `kind` (the name given to
-`cases_from_series`) and `origin`, where its history ends. These are the
-manifest keys that `result.compare(by=...)` groups by. One column per metric
-follows, in alphabetical order. A case that crashed or failed an output check
-is not scored, so its metrics are NaN. The table reads only the metrics, so it
-works whether or not the run kept its data, and `report.metrics` gives the
-same table on a report, also one read back from its file.
+with one row per case, in order. The case's labels come first and tell the
+scenarios apart. On the scorecard's kinds of series they are the scorecard's
+row and column, `pattern` and `noise` (such as `"Low noise"`), then the
+`seed`, so grouping by `pattern` and `noise` gives one value per cell of the
+scorecard. Scenarios you built are labelled by `scenario`, the name of their
+row on the scorecard: the kind, such as `"ar1"`, then `"ar1 (2)"` for a
+second scenario of that kind. Cases cut from your own data are labelled by
+`kind` (the name given to `cases_from_series`) and `origin`, where the history
+ends. One column per metric follows, in alphabetical order. A case that
+crashed or failed an output check is not scored, so its metrics are NaN. The
+table reads only the metrics, so it works whether or not the run kept its
+data. The run records its scenarios' labels in
+`result.metadata["scenario_labels"]`, so `report.metrics` gives the same table
+on a report, also one read back from its file; a report saved before this
+release has `kind` and `seed` there instead.
 
 ```python
-errors = result.metrics["avoidable_mse"]       # one value per case
-result.metrics.groupby("kind")["mae"].mean()   # the average error of each kind
+errors = result.metrics["avoidable_mse"]                     # one value per case
+result.metrics.groupby(["pattern", "noise"])["mae"].mean()   # one value per cell of the scorecard
 ```
 
 By default the run drops the series, answer keys and forecasts once every
