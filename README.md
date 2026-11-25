@@ -18,8 +18,8 @@
 from timegym import LastValueForecaster, Pipeline
 
 pipeline = Pipeline(LastValueForecaster())   # put your own forecaster here
-card = pipeline.scorecard()
-card.save("scorecard.png")
+result = pipeline.run()
+result.scorecard.save("scorecard.png")
 ```
 
 [![The scorecard of the last-value forecaster: a score per kind of series and noise level, with example forecasts](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/scorecard.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/scorecard.png)
@@ -43,9 +43,10 @@ pip install timegym
 Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
 <!-- END PYTHON SUPPORT -->
 
-Wrap your forecaster in a `Pipeline` and ask for its scorecard, as the code at
-the top of this page does. The built-in `LastValueForecaster`, which repeats the
-last value it saw, stands in for yours there.
+Wrap your forecaster in a `Pipeline`, call `run()` and look at the scorecard
+on its result, as the code at the top of this page does. The built-in
+`LastValueForecaster`, which repeats the last value it saw, stands in for yours
+there.
 
 Each scorecard row is a kind of series and each column a noise level. The left
 column says what can and cannot be predicted for that kind of series, and the
@@ -56,33 +57,34 @@ nobody could avoid. The bands read "Nails it" from 90, "Good" from 70,
 "Struggles" from 40 and "Fails" below that. The last-value forecaster scores
 51: it nails the random walk and fails trends and seasons. The short line beside
 each score is its 95% interval on a 0 to 100 scale, and a question mark means
-that interval reaches into another band; `pipeline.scorecard(instances=30)`
+that interval reaches into another band; `pipeline.run(instances=30)`
 narrows it, and `interval_level=0.99` asks for a wider, more cautious one. The
 small triangle above that line is what the right kind of model, fitted to the
 same history, would score: the distance from the score up to the triangle is
-what your model loses beyond estimating the parameters. In a notebook, `card`
-on its own shows the picture.
+what your model loses beyond estimating the parameters. In a notebook,
+`result.scorecard` on its own shows the picture.
 
-### Scorecard, test and report
+### Scorecard, report and cases
 
 A scorecard is a test on TimeGym's ten kinds of series, drawn as one picture.
-"Test" is what TimeGym does; the report is the record it hands back. Three
-calls give you three views of the same work:
+"Test" is what TimeGym does; the report is the record it hands back. One call,
+`run()`, does the work, and its result gives three views of it:
 
-| You call | You get | Use it to |
+| You read | You get | Use it to |
 | --- | --- | --- |
-| `pipeline.scorecard()` | A `Scorecard`: the picture and its table | See what the model is good and bad at |
-| `pipeline.test(scenarios)` | A `TestReport`: every case's metrics and output checks | Test series you choose, save them as JSON, fail a CI build |
-| `pipeline.run(scenarios)` | A `ForecastRun`: the report plus every series and forecast | Plot the forecasts behind the scores |
+| `result.scorecard` | A `Scorecard`: the picture and its table | See what the model is good and bad at |
+| `result.report` | A `TestReport`: every case's metrics and output checks | Save them as JSON, fail a CI build |
+| `result.cases` | Every case: its series, forecast, metrics and checks | Plot the forecasts behind the scores, with `keep_data=True` |
 
-A scorecard carries the other two: `card.report` and `card.run`.
+`pipeline.run(scenarios)` tests series you choose, and `pipeline.run(cases=...)`
+your own data, which has no scorecard because nobody knows its answer key.
 
 ### More things to do with a scorecard
 
 Print it as Markdown, for a pull request or a log:
 
 ```python
-print(card)
+print(result.scorecard)
 ```
 
 ```text
@@ -95,19 +97,19 @@ print(card)
 | Random walk: shocks never fade | 99 Nails it | 87 Good? | none found |
 …
 
-14 of 20 verdicts are not settled at 10 instances. Run scorecard(instances=30) to narrow them.
+14 of 20 verdicts are not settled at 10 instances. Run pipeline.run(instances=30) to narrow them.
 ```
 
-Zoom in on one row:
+Zoom in on one row, keeping its series and forecasts to plot them:
 
 ```python
-trend = pipeline.scorecard(["trend"], instances=3)   # one row, both noise levels
+trend = pipeline.run(["trend"], instances=3, keep_data=True)   # one row, both noise levels
 ```
 
 Plot every draw behind that row, with the answer key and the forecast:
 
 ```python
-trend.run.plot_forecasts()
+trend.plot_forecasts()
 ```
 
 [![The three draws of the trend row at each noise level, with the answer key and the last-value forecast](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-forecasts.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-forecasts.png)
@@ -115,7 +117,7 @@ trend.run.plot_forecasts()
 See how the error spreads over 20 draws per noise level:
 
 ```python
-pipeline.scorecard(["trend"], instances=20).run.plot_errors(metric="mse")
+pipeline.run(["trend"], instances=20).plot_errors(metric="mse")
 ```
 
 [![Histograms of the error against what happened, 20 draws at low and at high noise](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-errors.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-errors.png)
@@ -127,8 +129,8 @@ could have avoided.
 For CI and for later:
 
 ```python
-card.report.assert_passed()          # fail a CI build on a malformed forecast or a crash
-card.report.save("report.json")      # every case, enough to replay one on another machine
+result.assert_passed()       # fail a CI build on a malformed forecast or a crash
+result.save("report.json")   # every case, enough to replay one on another machine
 ```
 
 To catch a change that makes the model worse, save the scorecard of the version
@@ -136,8 +138,8 @@ you trust and compare each later version with it on the same series. A paired
 test says, cell by cell, whether the new version is further from the answer key:
 
 ```python
-pipeline.scorecard(instances=30).save_baseline("scorecard-baseline.json")  # once
-diff = pipeline.scorecard(instances=30).compare("scorecard-baseline.json")
+pipeline.run(instances=30).scorecard.save_baseline("scorecard-baseline.json")  # once
+diff = pipeline.run(instances=30).scorecard.compare("scorecard-baseline.json")
 diff.assert_no_regression()          # fail a CI build on a cell that got worse
 ```
 
@@ -156,8 +158,8 @@ row of your own: pass a `Pattern` in `patterns=` beside the built-in keys
 ([Your own kind of series](https://diogoseca.github.io/timegym/docs/api/scorecard/#your-own-kind-of-series)).
 
 The [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) shows the rest: the
-scorecard as a DataFrame (`card.table`), how many draws to use and what `seed=None` does, and
-`pipeline.test` on series you choose. [Scorecards and the scenario grid](https://diogoseca.github.io/timegym/docs/api/scorecard/)
+scorecard as a DataFrame (`result.scorecard.table`), how many draws to use and what `seed=None` does, and
+`run()` on series you choose. [Scorecards and the scenario grid](https://diogoseca.github.io/timegym/docs/api/scorecard/)
 lists every attribute.
 
 ## Why not just backtest?
@@ -193,7 +195,7 @@ class RepeatLast:
     def predict(self, future_index):   # the dates to forecast
         return Forecast(future_index, [self.last] * len(future_index))
 
-card = Pipeline(RepeatLast()).scorecard()
+result = Pipeline(RepeatLast()).run()
 ```
 
 It scores 51, like the built-in `LastValueForecaster`.
@@ -205,7 +207,7 @@ scikit-learn regressors plug in directly, fed the last `window_length` values:
 ```python
 from sklearn.linear_model import Ridge
 
-card = Pipeline(Ridge(), window_length=12).scorecard()
+result = Pipeline(Ridge(), window_length=12).run()
 ```
 
 ## What TimeGym checks
@@ -293,7 +295,7 @@ cause of a bug, repair a model, detect data leakage in general, or work out an
 answer key for data you bring yourself: real data is scored against what
 happened, and the checks that need a key say `UNSUPPORTED`. To score your own
 data, cut a series into cases with `cases_from_series` and pass them to
-`pipeline.test(cases=...)`; forecasts made elsewhere are scored with
+`pipeline.run(cases=...)`; forecasts made elsewhere are scored with
 `ForecastRun.from_forecasts`. Panels, hierarchies and missing observations are
 out of scope for now; [Data preparation](docs/api/data-preparation.md#irregular-readings)
 shows how to put readings taken at irregular times on a regular grid without

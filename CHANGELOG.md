@@ -27,8 +27,9 @@
   will be removed in a later release. `timegym.scorecard.scorecard` warns the
   same way, and the scorecard's closing line now says
   `Run pipeline.run(instances=30) to narrow them.`
-- Moved the docs, tutorials, source notebooks, examples, the paper's sentence
-  on the scorecard call and the installed-package check to the new call.
+- Moved the README, the docs, tutorials, source notebooks, examples, the
+  paper's sentence on the scorecard call, the script that draws the README's
+  pictures and the installed-package check to the new call.
 
 - One word for the past a forecaster sees: history. Write `fit(self, history)`
   in your models, `Scenario(kind, history_length=120, horizon=12)`,
