@@ -43,7 +43,7 @@ class DiagnosticCategory(str, Enum):
     """The kind of evidence a diagnostic records; members equal their string values.
 
     ``correctness`` is a forecast contract, ``evaluation`` the evaluator's own
-    inputs, ``capability`` and ``uncertainty`` descriptive scores,
+    inputs, ``capability`` and ``uncertainty`` descriptive metrics,
     ``distribution`` a statistical check against a reference law,
     ``metamorphic`` a declared relation and ``execution`` a model exception.
     """
@@ -106,10 +106,10 @@ class DiagnosticResult:
 # %% ../source/10_reports_and_replay.ipynb #10_reports_and_repla-13
 @dataclass
 class CaseResult:
-    """The diagnostics and scores recorded for one case.
+    """The diagnostics and metrics recorded for one case.
 
     ``scenario`` labels the case and ``seed`` is its generator seed.
-    ``metrics`` maps score names to finite numbers, and ``manifest`` is the
+    ``metrics`` maps metric names to finite numbers, and ``manifest`` is the
     case manifest that replay rebuilds a generated scenario from.
     """
 
@@ -297,7 +297,7 @@ def _own_checks(case):
 # %% ../source/10_reports_and_replay.ipynb #10_reports_and_repla-15
 @dataclass
 class TestReport:
-    """Diagnostics and scores for every case of one run, with run metadata.
+    """Diagnostics and metrics for every case of one run, with run metadata.
 
     A PASS is scoped to a check; unsupported checks do not establish success.
     """
@@ -457,7 +457,7 @@ class TestReport:
 
         Returns one dictionary per check that ran on at least one case, in the
         order of ``CHECKS`` and then the checks asked for with ``checks=``:
-        ``{"check", "title", "passed", "failed"}``. Scores are not checks:
+        ``{"check", "title", "passed", "failed"}``. Metrics are not checks:
         they have no pass mark.
         """
         counts, titles = {key: [0, 0] for key in CHECKS}, dict(CHECKS)
@@ -476,7 +476,7 @@ class TestReport:
         """Raise when an output check failed or the model raised; otherwise return self.
 
         The error names each failed check in plain words, then lists every
-        failing case. Scores never fail this gate: TimeGym sets no accuracy
+        failing case. Metrics never fail this gate: TimeGym sets no accuracy
         pass mark, so INCONCLUSIVE and UNSUPPORTED results do not raise.
         """
         failures = [

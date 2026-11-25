@@ -13,7 +13,7 @@
   give one row each. A run of your own data (`cases=`) has no scorecard,
   since nobody knows its answer key, and reading `result.scorecard` says so
   and points to `result.checks` and the errors in `result.report`.
-- `run()` now drops the series and forecasts once each one is scored, so a
+- `run()` now drops the series and forecasts once each one is measured, so a
   large run stays small in memory. The report, the scorecard with its
   picture, `save_baseline`, `compare` and `plot_errors()` work as before;
   `keep_data=True` keeps every series and forecast for `plot_forecasts()`,
@@ -36,7 +36,7 @@
   `mase(observed, predicted, history)`, `rmsse(observed, predicted, history)`,
   `check_shift_equivariance(pipeline, history, future_index)` and
   `history_length=` in `run()`, `scenario_grid` and `default_scenarios`. A
-  score or a check of your own asks for the past by naming its argument
+  metric or a check of your own asks for the past by naming its argument
   `history`. The built-in models and target transforms name their argument
   `history` too, `NaiveForecaster` keeps what it fitted as `history_`, and
   error messages say history where they said context.
@@ -47,7 +47,7 @@
   `timegym.scorecard.scorecard`), `scenario.context_length`,
   `ForecastTask(context=...)`, `task.context`, `context=` in
   `Pipeline.predict`, `mase`, `rmsse` and `check_shift_equivariance`,
-  `NaiveForecaster.context_`, a score or a check whose argument is named
+  `NaiveForecaster.context_`, a metric or a check whose argument is named
   `context` (it warns once per run), and a `build` of your own whose scenario
   has `context_length` instead of `history_length`. A model of your own
   written `fit(self, context)` needs no change, since TimeGym passes the
@@ -119,6 +119,24 @@
   `timegym.scorecard.scorecard(title=...)` keep their `title` while they warn.
 - Moved the docs, examples and source notebooks to `name=`.
 
+- `metrics=` is the one name for the numbers a run records for each case:
+  `pipeline.run(cases=cases, metrics=["brier", "log_loss"])`, and the same in
+  `ForecastRun.from_forecasts`, `timegym.diagnostics.evaluate_forecast` and
+  `Pipeline.test`. They are read back in `case.metrics`, chosen with `metric=`
+  and imported from `timegym.metrics`, as before. New reports list what was
+  asked for under `metadata["metrics"]`.
+- `scores=` still works on each of these calls and warns; it will be removed
+  in a later release. Passing both is refused. Reports saved by 1.13.1 and
+  earlier list the metrics asked for under `metadata["scores"]`; they still
+  load, compare and replay them.
+- In the docs and docstrings, a score is now only the scorecard's number from
+  0 to 100; the numbers recorded for each case are metrics. The page "Scores
+  and diagnostics" is now "Metrics and diagnostics", at the same address, and
+  its section "Your own scores" is "Your own metrics". Error messages say
+  metric where they said score; the messages a report saves for a case keep
+  their words, so older reports replay exactly.
+- Moved the docs, examples, source notebooks and tests to `metrics=`.
+
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
   true as often as they say: of the days given a 70% chance of rain, did it
@@ -133,8 +151,8 @@
   `timegym.plotting.plot_calibration`. Forecasts of exactly 0 or 1 are counted
   in `certain`, since the slope reads them as 0.000001 and 0.999999. Nothing
   else changes.
-- Added a section on calibration to the scores page, a sentence on the scope
-  page and in the README, and a section to the scores notebook with twenty
+- Added a section on calibration to the metrics page, a sentence on the scope
+  page and in the README, and a section to the metrics notebook with twenty
   weather stations, where a share learned from few cycles says 0% or 100% too
   often and adding one rainy and one dry step to each count fixes it.
 - Added a sentence to the Pipeline page saying that `scorecard(patterns=...)`

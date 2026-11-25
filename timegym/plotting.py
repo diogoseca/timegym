@@ -557,7 +557,7 @@ def plot_errors(
     These are distributions over evaluated cases, not over predictive sample
     draws or dependent coordinates. A black line marks each row's median.
     Scenario positions remain distinct even when their kind strings match.
-    Missing or nonfinite scores raise by default; ``missing='annotate'``
+    Missing or nonfinite values raise by default; ``missing='annotate'``
     shows their counts and diagnostic reasons in each panel instead, so they
     are never silently dropped. A named run shows its name above the panels.
     """
@@ -653,7 +653,7 @@ def plot_errors(
                         f"{_which_case(entry) or f'case {entry.seed_index + 1}'}: {problem[0] if problem else 'metric unavailable'}"
                     )
                 _annotate(ax, messages)
-        axes[-1, 0].set_xlabel(f"{label}, one score per case")
+        axes[-1, 0].set_xlabel(f"{label}, one value per case")
         _figure_name(fig, _run_name(run))
         return fig
 

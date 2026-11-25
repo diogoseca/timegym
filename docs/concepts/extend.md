@@ -12,8 +12,8 @@ script.
 | Target transform | an object with `clone_unfitted()`, `fit_transform(history)` and `inverse_transform(forecast)` | [Data preparation](../api/data-preparation.md#reversible-target-transforms) |
 | Data | `cases_from_series(series, origins, horizon)` or `Case(...)`, then `pipeline.run(cases=...)` | [Tasks and forecasts](../api/tasks-and-forecasts.md#your-own-data) |
 | Forecasts made elsewhere | `ForecastRun.from_forecasts(cases, forecasts)` | [Pipeline and reports](../api/pipeline.md) |
-| Score | a function whose argument names say what it needs, passed with `scores=` | [Scores and diagnostics](../api/diagnostics.md#your-own-scores) |
-| Output check | `within(lower, upper)`, or a function that returns True or a message, passed with `checks=` | [Scores and diagnostics](../api/diagnostics.md#your-own-output-checks) |
+| Metric | a function whose argument names say what it needs, passed with `metrics=` | [Metrics and diagnostics](../api/diagnostics.md#your-own-metrics) |
+| Output check | `within(lower, upper)`, or a function that returns True or a message, passed with `checks=` | [Metrics and diagnostics](../api/diagnostics.md#your-own-output-checks) |
 | Answer key from a curve you know | `Reference.from_function(curve, dates, covariance=...)` | [Scenarios and references](../api/scenarios.md) |
 | Kind of series, with its answer key | an object with `kind` and `generate(seed)` that returns a `Case` | this page |
 | Kind of series on the scorecard | a `Pattern` whose `simulate(rng, history, horizon, noise)` returns a series with its true mean and variance, passed to `pipeline.run([...])` | [Scorecards](../api/scorecard.md#your-own-kind-of-series) |
@@ -111,7 +111,7 @@ To prepare readings taken at irregular times, see
 ## Forecasts made elsewhere
 
 Forecasts from a model TimeGym cannot run, made earlier or by another program,
-get the same checks and scores. Pass one per case, in order; `None` marks a case
+get the same checks and metrics. Pass one per case, in order; `None` marks a case
 with no forecast.
 
 ```python
@@ -122,11 +122,11 @@ run = ForecastRun.from_forecasts(cases, made_elsewhere, name="weather service")
 run.report.assert_passed()
 ```
 
-## Your own scores
+## Your own metrics
 
-Every report records the same scores. Ask for more with `scores=`: names of
+Every report records the same metrics. Ask for more with `metrics=`: names of
 functions in `timegym.metrics`, such as `"brier"` for yes/no outcomes, or
-functions of your own. A score says what it needs by its argument names:
+functions of your own. A metric says what it needs by its argument names:
 `observed`, `predicted`, `quantiles`, `levels`, `samples` and `history`. Each
 value lands in `case.metrics` under its name.
 
@@ -141,14 +141,14 @@ def within_10_percent(observed, predicted):
     return float(np.mean(np.abs(predicted - observed) <= 0.1 * np.abs(observed)))
 
 
-result = Pipeline(LastValueForecaster()).run(cases=cases, scores=["rmse", within_10_percent])
+result = Pipeline(LastValueForecaster()).run(cases=cases, metrics=["rmse", within_10_percent])
 rainy = cases_from_series((rain > 4).astype(float), origins=[60, 80, 100], horizon=7, name="rainy day")
 result = Pipeline(LastValueForecaster()).run(
-    cases=rainy, scores={"brier": "brier", "log_loss": partial(log_loss, eps=1e-6)})
+    cases=rainy, metrics={"brier": "brier", "log_loss": partial(log_loss, eps=1e-6)})
 ```
 
-Settings go through a dictionary that names each score, as for `log_loss`
-above. Replay computes again the scores from `timegym.metrics`; your own
+Settings go through a dictionary that names each metric, as for `log_loss`
+above. Replay computes again the metrics from `timegym.metrics`; your own
 functions cannot be rebuilt from a saved report, so replay leaves them out and
 says so.
 
@@ -157,7 +157,7 @@ says so.
 The built-in output checks know nothing about your data: rainfall below 0 mm
 passes them. Add checks of your own with `checks=`. `within(lower, upper)`
 checks that every value stays in a range, and `None` leaves a side open. Any
-function works too: it asks for its inputs by argument name, as a score does,
+function works too: it asks for its inputs by argument name, as a metric does,
 plus `target_names`, and returns `True` or a message saying what is wrong. Its
 title is the first line of its docstring.
 

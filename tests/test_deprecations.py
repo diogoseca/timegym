@@ -303,7 +303,7 @@ def test_the_baselines_keep_their_history_and_the_old_attribute_warns():
     pd.testing.assert_frame_equal(renamed_call("use NaiveForecaster.history_", getattr, old, "context_"), history)
 
 
-def test_a_score_or_check_that_asks_for_context_gets_the_history_and_warns_once_per_run():
+def test_a_metric_or_check_that_asks_for_context_gets_the_history_and_warns_once_per_run():
     def history_rows(history):
         return float(len(history))
 
@@ -320,11 +320,11 @@ def test_a_score_or_check_that_asks_for_context_gets_the_history_and_warns_once_
 
     scenarios, pipeline = [Scenario("ar1", history_length=30, horizon=3)], Pipeline(LastValueForecaster())
     with pytest.warns(DeprecationWarning) as caught:
-        run = pipeline.run(scenarios, seeds=[0, 1, 2], scores=[history_rows, context_rows],
+        run = pipeline.run(scenarios, seeds=[0, 1, 2], metrics=[history_rows, context_rows],
                            checks=[history_is_finite, context_is_finite])
     messages = [str(warning.message) for warning in caught]
     assert messages == [
-        f"context as an input of score 'context_rows' {LATER}: name the argument history, which gets the same values",
+        f"context as an input of metric 'context_rows' {LATER}: name the argument history, which gets the same values",
         f"context as an input of check 'context_is_finite' {LATER}: name the argument history, which gets the same "
         "values",
     ]
@@ -603,3 +603,51 @@ def test_the_old_scorecard_calls_keep_their_title_which_heads_the_card_over_the_
     assert (titled.title, named.title, old.title) == ("Mine", "Repeat", "Old")
     assert titled.report.metadata["name"] == "Repeat"
     pd.testing.assert_frame_equal(titled.table, pipeline.run(["trend"], instances=2).scorecard.table)
+
+
+# The numbers asked for in a run are metrics: metrics= on every call, and scores= still works and warns.
+
+def test_scores_still_asks_for_metrics_and_warns_on_every_call():
+    from timegym import ForecastRun
+    from timegym.diagnostics import evaluate_forecast
+
+    scenarios = [Scenario("ar1", history_length=30, horizon=3)]
+    pipeline = Pipeline(LastValueForecaster())
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        new = pipeline.run(scenarios, seeds=[0, 1], metrics=["rmse"])
+    old = renamed_call(f"Pipeline.run(scores=...) {LATER}: use Pipeline.run(metrics=...)", pipeline.run, scenarios,
+                       seeds=[0, 1], scores=["rmse"])
+    assert [case.metrics for case in old.report.cases] == [case.metrics for case in new.report.cases]
+    assert old.metadata["metrics"] == new.metadata["metrics"] and "scores" not in new.metadata
+    with pytest.warns(DeprecationWarning) as caught:
+        tested = pipeline.test(scenarios, seeds=[0, 1], scores=["rmse"])
+    messages = [str(warning.message) for warning in caught]
+    assert len(messages) == 2 and "use Pipeline.test(metrics=...)" in messages[0], messages
+    assert all(Path(warning.filename).resolve() == Path(__file__).resolve() for warning in caught)
+    assert [case.metrics for case in tested.cases] == [case.metrics for case in new.report.cases]
+    cases = [scenarios[0].generate(seed=seed) for seed in (0, 1)]
+    forecasts = [np.full(3, case.task.history.iloc[-1, 0]) for case in cases]
+    recorded = renamed_call("use ForecastRun.from_forecasts(metrics=...)", ForecastRun.from_forecasts, cases,
+                            forecasts, scores=["rmse"])
+    assert recorded.metadata["metrics"][0]["name"] == "rmse"
+    one = renamed_call("use evaluate_forecast(metrics=...)", evaluate_forecast, cases[0],
+                       pipeline.predict(cases[0].task.history, cases[0].task.future_index), scores=["rmse"])
+    assert one.metrics == new.report.cases[0].metrics
+    with pytest.raises(TypeError, match="give metrics only"):
+        pipeline.run(scenarios, seeds=[0], metrics=["rmse"], scores=["rmse"])
+
+
+def test_a_report_that_lists_its_metrics_under_scores_still_replays_them():
+    def close(observed, predicted):
+        return float(np.mean(np.abs(observed - predicted) < 0.5))
+
+    report = Pipeline(LastValueForecaster()).run([Scenario("ar1", history_length=30, horizon=3)], seeds=[4],
+                                                 metrics={"rmse": "rmse", "close": close}).report
+    payload = report.to_dict()
+    payload["metadata"]["scores"] = payload["metadata"].pop("metrics")  # as TimeGym 1.13.1 saved it
+    old = TestReport.from_dict(payload)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        replay = old.replay_case(0).metadata["replay"]
+    assert replay["reproduced"] is True and replay["not_recomputed"] == ["close"]

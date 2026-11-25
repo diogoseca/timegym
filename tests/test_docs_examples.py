@@ -51,12 +51,12 @@ def test_extend_examples_show_what_they_say():
     assert result.scorecard.table["pattern"].tolist() == ["noisy_line"]
 
 
-def test_own_scores_example_on_the_scores_page_runs():
+def test_own_metrics_example_on_the_metrics_page_runs():
     namespace = {}
     exec(python_blocks("docs/api/diagnostics.md")[0], namespace)  # the later block needs your own data
     close = namespace["within_10_percent"]
     assert close(observed=np.array([10.0, 20.0]), predicted=np.array([10.5, 25.0])) == 0.5
-    assert set(namespace["scores"]) == {"log_loss", "close"}
+    assert set(namespace["metrics"]) == {"log_loss", "close"}
 
 
 def test_comparison_examples_on_the_scores_page_print_what_the_page_shows():
@@ -75,7 +75,7 @@ def test_comparison_examples_on_the_scores_page_print_what_the_page_shows():
     assert printed.getvalue() == "".join(shown)
 
 
-def test_own_scores_on_the_extend_page_land_in_the_report():
+def test_own_metrics_on_the_extend_page_land_in_the_report():
     import matplotlib
 
     matplotlib.use("Agg")
@@ -86,7 +86,7 @@ def test_own_scores_on_the_extend_page_land_in_the_report():
             namespace["scored"] = namespace["result"]
     scored = namespace["scored"]
     assert all({"brier", "log_loss"} <= set(case.metrics) for case in scored.report.cases)
-    assert scored.metadata["scores"][0]["name"] == "brier"
+    assert scored.metadata["metrics"][0]["name"] == "brier"
 
 
 def test_own_checks_examples_on_the_scores_page_run():

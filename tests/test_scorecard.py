@@ -322,7 +322,7 @@ def test_zooming_into_a_scorecard_row_keeps_its_plain_titles():
     errors = card.run.plot_errors()
     assert errors.axes[0].get_title(loc="left") == "Straight-line trend · Low noise"
     assert errors.axes[0].get_title(loc="right").endswith("2 scored / 2 evaluated cases")
-    assert errors.axes[-1].get_xlabel() == "Error against the answer key (MSE), one score per case"
+    assert errors.axes[-1].get_xlabel() == "Error against the answer key (MSE), one value per case"
     plt.close("all")
 
 

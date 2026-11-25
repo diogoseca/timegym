@@ -6,6 +6,7 @@ from ._internal import (
     positive_int,
     _exception_evidence,
     _real_array,
+    _renamed_keywords,
     _warn_deprecated,
     _current_manifest,
 )
@@ -270,11 +271,11 @@ def covariance_dependence_check(
 
 
 # %% ../source/09_scores_and_diagnostics.ipynb #own-scores
-_SCORE_INPUTS = ("observed", "predicted", "quantiles", "levels", "samples", "history")
-# Inputs under their old names: a score or a check that asks for context gets the history, and warns.
+_METRIC_INPUTS = ("observed", "predicted", "quantiles", "levels", "samples", "history")
+# Inputs under their old names: a metric or a check that asks for context gets the history, and warns.
 _OLD_INPUTS = {"context": "history"}
-# Scores the evaluator records on its own, so a request may not reuse their names.
-_RECORDED_SCORES = frozenset(
+# Metrics the evaluator records on its own, so a request may not reuse their names.
+_RECORDED_METRICS = frozenset(
     {
         "mse",
         "mae",
@@ -308,8 +309,8 @@ _METRIC_NAMES = (
 )
 
 
-def _score_inputs(name, function, what="score", inputs=_SCORE_INPUTS):
-    """The inputs a score (or a check) asks for, split into those it needs and those it may take."""
+def _metric_inputs(name, function, what="metric", inputs=_METRIC_INPUTS):
+    """The inputs a metric (or a check) asks for, split into those it needs and those it may take."""
     try:
         parameters = inspect.signature(function).parameters.values()
     except (TypeError, ValueError) as exc:
@@ -338,24 +339,24 @@ def _score_inputs(name, function, what="score", inputs=_SCORE_INPUTS):
     return tuple(needs), tuple(may_take)
 
 
-class _ScoreRequests(tuple):
-    """Scores already read by ``_score_requests``: a run reads them once, and warns once, for all its cases."""
+class _MetricRequests(tuple):
+    """Metrics already read by ``_metric_requests``: a run reads them once, and warns once, for all its cases."""
 
 
-def _score_requests(scores):
-    """Turn ``scores=`` into ``(name, function, needs, may_take)`` tuples, refusing what cannot work."""
-    if isinstance(scores, _ScoreRequests):
-        return scores
-    if scores is None:
-        return _ScoreRequests()
-    if isinstance(scores, dict):
-        entries = list(scores.items())
-    elif isinstance(scores, (str, bytes)) or callable(scores):
+def _metric_requests(metrics_asked):
+    """Turn ``metrics=`` into ``(name, function, needs, may_take)`` tuples, refusing what cannot work."""
+    if isinstance(metrics_asked, _MetricRequests):
+        return metrics_asked
+    if metrics_asked is None:
+        return _MetricRequests()
+    if isinstance(metrics_asked, dict):
+        entries = list(metrics_asked.items())
+    elif isinstance(metrics_asked, (str, bytes)) or callable(metrics_asked):
         raise TypeError(
-            "scores must be a list or a dictionary, such as scores=['brier']"
+            "metrics must be a list or a dictionary, such as metrics=['brier']"
         )
     else:
-        entries = [(None, entry) for entry in scores]
+        entries = [(None, entry) for entry in metrics_asked]
     requests, names = [], set()
     for name, entry in entries:
         if isinstance(entry, str):
@@ -363,7 +364,7 @@ def _score_requests(scores):
                 getattr(metrics, entry, None)
             ):
                 raise ValueError(
-                    f"timegym.metrics has no score {entry!r}; the scores it has are "
+                    f"timegym.metrics has no metric {entry!r}; the metrics it has are "
                     f"{', '.join(_METRIC_NAMES)}"
                 )
             function = getattr(metrics, entry)
@@ -374,29 +375,29 @@ def _score_requests(scores):
                 name = getattr(entry, "__name__", None)
                 if not isinstance(name, str) or name == "<lambda>":
                     raise ValueError(
-                        "this score has no name of its own; name it with a dictionary, "
-                        "such as scores={'my_score': ...}"
+                        "this metric has no name of its own; name it with a dictionary, "
+                        "such as metrics={'my_metric': ...}"
                     )
         else:
             raise TypeError(
-                f"a score must be a name from timegym.metrics or a function; got {entry!r}"
+                f"a metric must be a name from timegym.metrics or a function; got {entry!r}"
             )
         if not isinstance(name, str) or not name:
-            raise ValueError("a score's name must be a nonempty string")
-        if name in _RECORDED_SCORES:
+            raise ValueError("a metric's name must be a nonempty string")
+        if name in _RECORDED_METRICS:
             raise ValueError(
                 f"{name!r} is recorded in every report already; to record it with other "
-                f"settings, give it another name, such as scores={{'{name}_2': ...}}"
+                f"settings, give it another name, such as metrics={{'{name}_2': ...}}"
             )
         if name in names:
-            raise ValueError(f"the score name {name!r} is asked for twice")
+            raise ValueError(f"the metric name {name!r} is asked for twice")
         names.add(name)
-        requests.append((name, function, *_score_inputs(name, function)))
-    return _ScoreRequests(requests)
+        requests.append((name, function, *_metric_inputs(name, function)))
+    return _MetricRequests(requests)
 
 
-def _score_record(name, function):
-    """Describe one requested score for the report, and say whether replay can compute it again."""
+def _metric_record(name, function):
+    """Describe one requested metric for the report, and say whether replay can compute it again."""
     base, settings = function, {}
     if isinstance(function, partial):
         base, settings = function.func, dict(function.keywords)
@@ -419,27 +420,28 @@ def _score_record(name, function):
     }
 
 
-def _describe_scores(scores):
-    """Check ``scores=`` and describe each requested score as a report records it in its metadata.
+def _describe_metrics(metrics_asked):
+    """Check ``metrics=`` and describe each requested metric as a report records it in its metadata.
 
     Raises before anything runs when a name is unknown, taken or repeated, or
     when a function needs an argument TimeGym cannot give. Each record has the
-    score's ``name``, its ``function``, its keyword ``settings`` (from
+    metric's ``name``, its ``function``, its keyword ``settings`` (from
     ``functools.partial``) and ``replayable``, True when it is a function of
     ``timegym.metrics`` with plain settings, so replay can compute it again.
     """
     return [
-        _score_record(name, function) for name, function, *_ in _score_requests(scores)
+        _metric_record(name, function)
+        for name, function, *_ in _metric_requests(metrics_asked)
     ]
 
 
-def _rebuild_scores(records):
-    """From a report's score records, rebuild the scores replay can compute again and name the rest."""
+def _rebuild_metrics(records):
+    """From a report's metric records, rebuild the metrics replay can compute again and name the rest."""
     if not isinstance(records, list) or not all(
         isinstance(record, dict) and isinstance(record.get("name"), str)
         for record in records
     ):
-        raise ValueError("Report score requests are malformed")
+        raise ValueError("Report metric requests are malformed")
     rebuilt, not_recomputed = {}, []
     for record in records:
         function, settings = record.get("function"), record.get("settings")
@@ -458,7 +460,7 @@ def _rebuild_scores(records):
 
 
 # %% ../source/09_scores_and_diagnostics.ipynb #own-checks
-_CHECK_INPUTS = _SCORE_INPUTS + ("target_names",)
+_CHECK_INPUTS = _METRIC_INPUTS + ("target_names",)
 
 
 def _check_title(name, function):
@@ -521,7 +523,7 @@ def _check_requests(checks):
                 name,
                 function,
                 _check_title(name, function),
-                *_score_inputs(name, function, "check", _CHECK_INPUTS),
+                *_metric_inputs(name, function, "check", _CHECK_INPUTS),
             )
         )
     return _CheckRequests(requests)
@@ -629,6 +631,7 @@ def _run_check(name, function, title, given):
 
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-38
+@_renamed_keywords(scores="metrics")
 def evaluate_forecast(
     case,
     forecast,
@@ -637,10 +640,10 @@ def evaluate_forecast(
     dependence_seed=0,
     n_calibration=99,
     alpha=0.05,
-    scores=None,
+    metrics=None,
     checks=None,
 ):
-    """Validate a forecast and record scores without inventing pass thresholds.
+    """Validate a forecast and record metrics without inventing pass thresholds.
 
     Malformed forecasts are rejected before scoring. Missing point, quantile,
     or ensemble outputs are UNSUPPORTED, not reconstructed from other output
@@ -651,9 +654,9 @@ def evaluate_forecast(
     ``schema_version``) may leave them out: it is then labelled ``"case"``
     with no seed.
 
-    ``scores`` records more scores in ``result.metrics``: names of functions
+    ``metrics`` records more metrics in ``result.metrics``: names of functions
     in ``timegym.metrics``, your own functions, or a dictionary from name to
-    function. A score asks for ``observed``, ``predicted``, ``quantiles``,
+    function. A metric asks for ``observed``, ``predicted``, ``quantiles``,
     ``levels``, ``samples`` or ``history`` by its argument names (one that
     asks for ``context``, the old name of ``history``, gets the same values
     and warns). One whose input the forecast lacks is UNSUPPORTED,
@@ -662,15 +665,18 @@ def evaluate_forecast(
 
     ``checks`` adds output checks of your own: a list of functions, such as
     ``timegym.checks.within(0, None)``, or a dictionary from name to
-    function. A check asks for the same inputs as a score, plus
+    function. A check asks for the same inputs as a metric, plus
     ``target_names``, and returns True or a message saying what is wrong. Its
     finding is ``check_<name>``: PASS, FAIL with the message, ERROR when it
     raises or returns anything else, or UNSUPPORTED when the forecast lacks
     an input it needs. The finding's evidence keeps the check's title, the
     first line of its docstring. Checks run only on a forecast that passed
-    the built-in checks.
+    the built-in checks. ``scores``, the old name of ``metrics``, still
+    works and warns.
     """
-    requests = _score_requests(scores)
+    requests = _metric_requests(metrics)
+    # The request is read: from here on, metrics is the module timegym.metrics.
+    metrics = globals()["metrics"]
     check_requests = _check_requests(checks)
     dependence_seed = nonnegative_int(dependence_seed, "dependence_seed")
     settings = diagnostic_settings(
@@ -1118,7 +1124,7 @@ def _units_needed(alpha):
 # %% ../source/09_scores_and_diagnostics.ipynb #compare-reports
 _VERDICTS = ("better", "worse", "no clear difference", "too few to tell")
 
-# Two scores of one case agree when they differ by at most this share of the largest score in the
+# Two values of a metric for one case agree when they differ by at most this share of the largest value in the
 # row, or by the absolute amount, whichever is larger: roundoff, not a change in the forecasts.
 # Scorecard.compare uses the same numbers.
 _RELATIVE_TOLERANCE, _ABSOLUTE_TOLERANCE = 1e-8, 1e-9
@@ -1223,7 +1229,7 @@ def _manifest_values(report, key, argument):
 
 
 def _case_state(case, metric):
-    """``"scored"``, ``"failed"`` (it crashed or failed an output check) or ``"unscored"`` (no such score)."""
+    """``"scored"``, ``"failed"`` (it crashed or failed an output check) or ``"unscored"`` (no such metric)."""
     if not all(_case_checks(case).values()):
         return "failed"
     return "scored" if metric in case.metrics else "unscored"
@@ -1240,14 +1246,14 @@ def compare_reports(
     higher_is_better=False,
     seed=0,
 ):
-    """Compare forecasters on the same cases, one score at a time; returns a ReportComparison.
+    """Compare forecasters on the same cases, one metric at a time; returns a ReportComparison.
 
     ``candidate`` and ``baseline`` are reports made on the same cases, in the
     same order: ``pipeline.run(...)`` results or their reports, whose case manifests
     agree. ``candidate`` may also be a list of reports, each labelled by its
     name (``Pipeline(..., name=...)``) or, without one, by its model, or a
     dictionary of named reports.
-    ``metric`` is a score in ``case.metrics``, your own included; lower is
+    ``metric`` is a metric in ``case.metrics``, your own included; lower is
     better unless ``higher_is_better=True``.
 
     Each row says whether the candidate is ``"better"``, ``"worse"`` or shows
@@ -1276,7 +1282,7 @@ def compare_reports(
         raise TypeError("higher_is_better must be True or False")
     seed = nonnegative_int(seed, "seed")
     if not isinstance(metric, str) or not metric:
-        raise TypeError("metric must be the name of a score, such as metric='mae'")
+        raise TypeError("metric must be the name of a metric, such as metric='mae'")
     base = _as_report(baseline, "baseline")
     candidates = _candidate_reports(candidate)
     labels = [label for label, _ in candidates]
@@ -1299,7 +1305,7 @@ def compare_reports(
             }
         )
         raise ValueError(
-            f"no case has a score {metric!r}; the reports have {', '.join(found) or 'no scores'}"
+            f"no case has a metric {metric!r}; the reports have {', '.join(found) or 'no metrics'}"
         )
     groups = _manifest_values(base, by, "by")
     clusters = _manifest_values(base, cluster, "cluster")
@@ -1380,7 +1386,7 @@ def compare_reports(
             row["p_value"], row["verdict"] = (
                 1.0,
                 "no clear difference",
-            )  # the same scores
+            )  # the same values
         if row["newly_failing"]:
             row["verdict"] = "worse"
     table = pd.DataFrame(rows).drop(columns="differing")
@@ -1403,7 +1409,7 @@ class ReportComparison:
     ``table`` has the ``candidate``'s label, the ``group`` (the ``by`` value,
     or ``"all cases"``), the number of ``cases`` both reports scored and of
     ``clusters`` among them, the ``baseline_mean`` and ``candidate_mean`` of
-    the score over those cases and their ``mean_difference`` (candidate minus
+    the metric over those cases and their ``mean_difference`` (candidate minus
     baseline), the ``p_value`` adjusted for every group and candidate tried,
     the ``verdict`` (``"better"``, ``"worse"``, ``"no clear difference"`` or
     ``"too few to tell"``), and the cases that ``newly_failing`` crash or fail
@@ -1421,7 +1427,7 @@ class ReportComparison:
     with the largest of all rows under the same flips, which keeps the chance
     of any false verdict near ``alpha`` however alike the candidates are.
     Rows where too few cases or clusters differ are left out of the
-    correction, and rows with the same scores in both reports get a p-value
+    correction, and rows with the same values in both reports get a p-value
     of 1.
     """
 

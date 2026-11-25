@@ -4,7 +4,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from typing import Any
-from ._internal import _warn_deprecated
+from ._internal import _renamed_keywords, _warn_deprecated
 from .contracts import Forecast
 from .reporting import CaseResult, TestReport
 from .scenarios import Case
@@ -52,7 +52,7 @@ def _checked_name(name):
 
 @dataclass
 class ForecastRun:
-    """What ``Pipeline.run`` returns: every case's scores and checks, and its scorecard.
+    """What ``Pipeline.run`` returns: every case's metrics and checks, and its scorecard.
 
     ``scorecard`` is the run's Scorecard, ``assert_passed()`` fails on a crash
     or a malformed forecast, ``to_json(path)`` saves the report, ``checks``
@@ -64,7 +64,7 @@ class ForecastRun:
     unless it was called with ``keep_data=True``; the scorecard keeps what it
     draws. ``plot_forecasts()`` and ``timegym.diagnostics.calibration`` read
     the forecasts, so they need a run that kept them; ``plot_errors()`` reads
-    only the scores. ``titles`` optionally names each scenario position in
+    only the metrics. ``titles`` optionally names each scenario position in
     plain words for the plots (a run on the scorecard's kinds of series sets
     them to the pattern and noise level); they are not saved in the report.
     ``metadata["name"]``, when the pipeline or the recorded forecasts were
@@ -78,6 +78,7 @@ class ForecastRun:
     _card: Any = field(default=None, init=False, repr=False, compare=False)
 
     @classmethod
+    @_renamed_keywords(scores="metrics")
     def from_forecasts(
         cls,
         cases,
@@ -85,35 +86,36 @@ class ForecastRun:
         *,
         name=None,
         metadata=None,
-        scores=None,
+        metrics=None,
         checks=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
         dependence_seed_offset=100_000,
     ):
-        """Check and score forecasts made earlier, one per case, without a model.
+        """Check forecasts made earlier, one per case, and measure their errors, without a model.
 
         ``forecasts[i]`` is the forecast recorded for ``cases[i]``, in any form
         a model's ``predict`` may return: a list or NumPy array, a pandas Series
         or DataFrame, or a ``Forecast``. ``None`` means nothing was recorded,
         and that case fails "Runs without errors". Each forecast gets the output
-        checks and scores of ``Pipeline.run``, and the run's report and plots
+        checks and metrics of ``Pipeline.run``, and the run's report and plots
         work as usual. ``name`` says what made the forecasts, for example
         ``name="weather service"``: it is ``result.metadata["name"]``, heads
         the plots and labels the run in ``compare_reports``, as
         ``Pipeline(..., name=...)`` does. ``metadata`` is added to the run's
         metadata, for example ``{"made_on": "2024-05-01"}``; naming the
         forecasts there with ``{"model": ...}`` still works and warns.
-        ``scores`` records more scores and ``checks`` adds output checks of
+        ``metrics`` records more metrics and ``checks`` adds output checks of
         your own, as in ``Pipeline.run``. No model is kept, so these cases
-        cannot be replayed.
+        cannot be replayed. ``scores``, the old name of ``metrics``, still
+        works and warns.
         """
         from timegym.diagnostics import (
             _check_requests,
             _describe_checks,
-            _describe_scores,
-            _score_requests,
+            _describe_metrics,
+            _metric_requests,
         )
         from timegym.pipeline import _as_forecast, _evaluate_ready_made
         from timegym.provenance import diagnostic_settings, runtime_provenance
@@ -142,10 +144,10 @@ class ForecastRun:
             dependence_seed_offset=dependence_seed_offset,
         )
         requested = {}
-        if scores is not None:
+        if metrics is not None:
             # Read once, so each request warns once, not once per case.
-            scores = _score_requests(scores)
-            requested["scores"] = _describe_scores(scores)
+            metrics = _metric_requests(metrics)
+            requested["metrics"] = _describe_metrics(metrics)
         if checks is not None:
             checks = _check_requests(checks)
             requested["checks"] = _describe_checks(checks)
@@ -155,7 +157,7 @@ class ForecastRun:
                 raise ValueError("No forecast was recorded for this case")
             return _as_forecast(forecasts[position], case.task)
 
-        results = _evaluate_ready_made(cases, recorded, settings, scores, checks)
+        results = _evaluate_ready_made(cases, recorded, settings, metrics, checks)
         return cls(
             cases=results,
             metadata={
@@ -220,7 +222,7 @@ class ForecastRun:
             self._card = exc
 
     def _drop_data(self):
-        """Forget every series, answer key and forecast; scores, checks and the scorecard stay."""
+        """Forget every series, answer key and forecast; metrics, checks and the scorecard stay."""
         self.cases = [
             dataclasses.replace(entry, case=None, forecast=None) for entry in self.cases
         ]
@@ -247,7 +249,7 @@ class ForecastRun:
     def plot_errors(
         self, metric="mean_reference_mse", *, bins=None, missing="raise", figsize=None
     ):
-        """Draw ``timegym.plotting.plot_errors`` for this run's retained scores."""
+        """Draw ``timegym.plotting.plot_errors`` for this run's retained metrics."""
         from timegym.plotting import plot_errors
 
         return plot_errors(

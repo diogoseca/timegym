@@ -36,7 +36,7 @@ never fails `assert_passed`; only a failed output check or a crash does.
 | Forecast contract | The output checks of question 1 |
 | Diagnostic | One check's result: a verdict, a message and its evidence |
 | Evidence | The numbers a verdict rests on, saved with it |
-| Report | Every case's scores and diagnostics, with the settings and versions that produced them |
+| Report | Every case's metrics and diagnostics, with the settings and versions that produced them |
 
 ## From case to verdict
 
@@ -63,8 +63,8 @@ the next.
 | --- | --- |
 | `PASS` | The check was run and satisfied. A pass covers that check only. |
 | `FAIL` | Something is wrong: a malformed forecast or a broken declared property. |
-| `INCONCLUSIVE` | Scored, but no pass mark is set. Every accuracy score returns it. |
-| `UNSUPPORTED` | Not checked, because the forecast lacks what the check needs, for example quantiles for a quantile score. |
+| `INCONCLUSIVE` | Measured, but no pass mark is set. Every accuracy metric returns it. |
+| `UNSUPPORTED` | Not checked, because the forecast lacks what the check needs, for example quantiles for a quantile loss. |
 | `ERROR` | The model raised an exception. It is recorded with its traceback, never turned into a large error. |
 
 A report with no `FAIL` and no `ERROR` means every forecast was well-formed and
@@ -117,9 +117,9 @@ notices is an established way to evaluate tests
 are chosen by hand and change forecasts, not code, so they are called fault
 fixtures rather than mutants. See [Fault fixtures](../api/fault-fixtures.md).
 
-## Scores
+## Metrics
 
-[Scores and diagnostics](../api/diagnostics.md) lists every score and what it
+[Metrics and diagnostics](../api/diagnostics.md) lists every metric and what it
 rewards.
 
 ## Where these ideas come from
@@ -135,7 +135,7 @@ data with known results, and known properties:
 | --- | --- | --- |
 | Partial oracle | The output checks: shape, dates, finiteness and quantile order | `forecast_contract` diagnostics; [Tasks and forecasts](../api/tasks-and-forecasts.md) |
 | Simplified data with known results | Synthetic scenarios with an answer key | [Scenarios and references](../api/scenarios.md); [Synthetic scenarios](../stress-cases.md) |
-| Known properties | Declared properties such as shift equivariance | `check_shift_equivariance`; [Scores and diagnostics](../api/diagnostics.md) |
+| Known properties | Declared properties such as shift equivariance | `check_shift_equivariance`; [Metrics and diagnostics](../api/diagnostics.md) |
 | Pseudo-oracle | Independent NumPy lag-Ridge comparator | Study only, in `experiments/model_faults.py`; not part of the package |
 | Statistical metamorphic test | Correlation check of sample paths against the answer key; calibrated loss alarm | `reference_covariance` diagnostic; the loss alarm is study only |
 

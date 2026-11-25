@@ -28,7 +28,7 @@ __all__ = [
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-07
 class UndefinedMetricError(ValueError):
-    """A score is undefined for the supplied, otherwise valid, data."""
+    """A metric is undefined for the supplied, otherwise valid, data."""
 
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-09

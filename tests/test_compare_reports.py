@@ -19,7 +19,7 @@ from timegym.diagnostics import ReportComparison, _holm, _holm_adjusted, _paired
 
 
 def report(values, manifests=None, *, metric="mae", model=None, crashed=()):
-    """A report with one score per case; ``None`` leaves a case unscored, ``crashed`` makes it crash."""
+    """A report with one metric value per case; ``None`` leaves a case without it, ``crashed`` makes it crash."""
     cases = []
     for index, value in enumerate(values):
         diagnostics, metrics = [], {}
@@ -203,7 +203,7 @@ def test_reports_on_other_cases_are_refused(change, message):
 
 def test_bad_requests_are_refused():
     base = report(noisy(10), [{"store": "a", "targets": ["y"]} for _ in range(10)])
-    with pytest.raises(ValueError, match="no case has a score 'rmse'; the reports have mae"):
+    with pytest.raises(ValueError, match="no case has a metric 'rmse'; the reports have mae"):
         compare_reports(base, base, metric="rmse")
     with pytest.raises(ValueError, match="case 0 has no manifest key 'region'"):
         compare_reports(base, base, metric="mae", by="region")
@@ -213,7 +213,7 @@ def test_bad_requests_are_refused():
         compare_reports(base, base, metric="mae", alpha=1.5)
     with pytest.raises(TypeError, match="candidate must be a TestReport"):
         compare_reports("report.json", base, metric="mae")
-    with pytest.raises(TypeError, match="metric must be the name of a score"):
+    with pytest.raises(TypeError, match="metric must be the name of a metric"):
         compare_reports(base, base, metric=None)
     with pytest.raises(ValueError, match="at least one report"):
         compare_reports([], base, metric="mae")

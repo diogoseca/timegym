@@ -53,10 +53,10 @@ column names, so wrong dates or a wrong series order still fail their checks.
 
 `.run(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None,
 noise_levels=None, history_length=None, horizon=None, keep_data=False,
-attainable=False, interval_level=None, scores=None, checks=None,
+attainable=False, interval_level=None, metrics=None, checks=None,
 check_dependence=False, n_calibration=99, alpha=0.05,
 dependence_seed_offset=100_000)` forecasts every case with a fresh model,
-checks and scores each forecast, and returns a `ForecastRun`. It is the one
+checks each forecast and measures its errors, and returns a `ForecastRun`. It is the one
 call for testing a model:
 
 ```python
@@ -118,14 +118,14 @@ in a later release.
 example cases cut from your own data with
 [`cases_from_series`](tasks-and-forecasts.md#your-own-data). Each case gets a
 fresh model, fitted on its history only, and the same output checks and
-scores as a drawn case. Cases that share a manifest `kind` share a row of the
+metrics as a drawn case. Cases that share a manifest `kind` share a row of the
 plots, in the order given. `cases` cannot be combined with `scenarios`,
 `seeds`, `seed`, `instances` or the scorecard's settings, and the report's
 metadata has no seed. Pass a list, even of one case.
 
 `ForecastRun.from_forecasts(cases, forecasts, *, name=None, metadata=None,
-check_dependence=False, n_calibration=99, alpha=0.05,
-dependence_seed_offset=100_000)` checks and scores forecasts made earlier,
+metrics=None, checks=None, check_dependence=False, n_calibration=99, alpha=0.05,
+dependence_seed_offset=100_000)` checks forecasts made earlier and measures their errors,
 with no model: `forecasts[i]` belongs to `cases[i]` and can take any form a
 model's `predict` returns. `None` marks a case with no recorded forecast, which
 fails "Runs without errors". The result is a `ForecastRun`, so its report and
@@ -155,8 +155,8 @@ Optional shading shows marginal intervals. Above each panel, the case's 0-100
 score sits in its colored band (as on the scorecard), next to its error against
 the answer key and its error against what happened.
 `run.plot_errors(metric="mean_reference_mse", *, bins=None, missing="raise",
-figsize=None)` shows one score per whole case, with a black line at each row's
-median; `missing="annotate"` explicitly permits unavailable scores and labels
+figsize=None)` shows one value of the metric per whole case, with a black line at each row's
+median; `missing="annotate"` explicitly permits unavailable values and labels
 their counts and reasons. `run.titles` optionally names each scenario position in plain
 words for both plots; a run of kinds of series sets them to the kind and noise
 level, so `pipeline.run(["trend"], keep_data=True).plot_forecasts()` zooms
@@ -188,7 +188,7 @@ tolerance rather than exact floating-point equality.
 `DiagnosticStatus` defines `PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, and
 `ERROR`. Only `FAIL` and `ERROR` count as failures (`DiagnosticResult.failed`).
 `DiagnosticCategory` defines `correctness` (forecast contracts), `evaluation`
-(evaluator inputs), `capability` (descriptive scores), `uncertainty` (intervals),
+(evaluator inputs), `capability` (descriptive metrics), `uncertainty` (intervals),
 `distribution` (joint-law checks), `metamorphic` (declared transformations), and
 `execution` (model execution). A check keeps its category across outcomes;
 `reference_covariance` is always `distribution`, `shift_equivariance` always
@@ -210,7 +210,7 @@ and failed: one `{"check", "title", "passed", "failed"}` dictionary per check
 that ran (`runs`, `dates`, `series`, `shape`, `finite`, `quantiles`,
 `dependence`), then one per check asked for with `checks=`, such as
 `within(0, None)` ([your own output checks](diagnostics.md#your-own-output-checks)).
-Scores are not checks: they have no pass mark.
+Metrics are not checks: they have no pass mark.
 `report.assert_passed()` raises for detected FAIL/ERROR outcomes. Its message
 names each failed check first, for example `Forecasts the requested dates:
 failed in 4 of 4 cases`, then lists the underlying diagnostics. Callers must

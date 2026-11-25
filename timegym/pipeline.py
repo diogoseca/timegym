@@ -12,7 +12,6 @@ from ._internal import _current_manifest
 import dataclasses
 import inspect
 import secrets
-import warnings
 import numpy as np
 import pandas as pd
 from .contracts import Case, Forecast, ForecastTask
@@ -30,10 +29,10 @@ from .diagnostics import (
     exception_evidence,
     _check_requests,
     _describe_checks,
-    _describe_scores,
+    _describe_metrics,
+    _metric_requests,
     _rebuild_checks,
-    _rebuild_scores,
-    _score_requests,
+    _rebuild_metrics,
 )
 from .reporting import CaseResult, DiagnosticResult, TestReport
 from .evaluation import EvaluatedCase, ForecastRun, _checked_name
@@ -186,10 +185,10 @@ def _evaluate_case(
     seed,
     dependence_seed,
     settings,
-    scores=None,
+    metrics=None,
     checks=None,
 ):
-    """Forecast one case with ``make_forecast(case)``, then check and score the forecast.
+    """Forecast one case with ``make_forecast(case)``, then check the forecast and measure its errors.
 
     Returns ``(forecast, result)``. An exception from the model, or from
     reading its output, becomes the case's ``model_execution`` error, so one
@@ -206,7 +205,7 @@ def _evaluate_case(
             dependence_seed=dependence_seed,
             n_calibration=settings["n_calibration"],
             alpha=settings["alpha"],
-            scores=scores,
+            metrics=metrics,
             checks=checks,
         )
     except Exception as exc:
@@ -228,7 +227,7 @@ def _evaluate_case(
     return forecast, result
 
 
-def _evaluate_ready_made(cases, make_forecast, settings, scores=None, checks=None):
+def _evaluate_ready_made(cases, make_forecast, settings, metrics=None, checks=None):
     """Evaluate ready-made cases in order; cases with the same label share a row of the plots."""
     cases, identities = _ready_made(cases)
     rows, results = {}, []
@@ -244,7 +243,7 @@ def _evaluate_ready_made(cases, make_forecast, settings, scores=None, checks=Non
             seed,
             dependence_seed,
             settings,
-            scores,
+            metrics,
             checks,
         )
         results.append(
@@ -522,6 +521,7 @@ class Pipeline:
             forecast = transform.inverse_transform(forecast)
         return forecast
 
+    @_renamed_keywords(scores="metrics")
     def run(
         self,
         scenarios=None,
@@ -536,14 +536,14 @@ class Pipeline:
         keep_data=False,
         attainable=False,
         interval_level=None,
-        scores=None,
+        metrics=None,
         checks=None,
         check_dependence=False,
         n_calibration=99,
         alpha=0.05,
         dependence_seed_offset=100_000,
     ):
-        """Forecast every case with a fresh model, check and score each forecast, and return a ForecastRun.
+        """Forecast every case with a fresh model, check each forecast and measure its errors; return a ForecastRun.
 
         What to forecast, as the first argument:
 
@@ -570,12 +570,12 @@ class Pipeline:
         row of the plots. Real data has no answer key, so such a run has no
         scorecard.
 
-        The result holds every case's scores and output checks:
+        The result holds every case's metrics and output checks:
         ``result.scorecard`` (a ``Scorecard``: ``result.scorecard.plot()``,
         ``print(result.scorecard)``), ``result.assert_passed()``,
         ``result.to_json(path)``, ``result.checks``, ``result.report`` and
         ``result.plot_errors()``. The series, answer keys and forecasts are
-        dropped once every case is scored, unless ``keep_data=True``: then
+        dropped once every case is measured, unless ``keep_data=True``: then
         ``result.cases`` holds them and ``result.plot_forecasts()`` can draw
         them. The scorecard keeps what its picture draws either way.
 
@@ -593,11 +593,12 @@ class Pipeline:
         ``Pattern.attainable_by`` and ``attainable=True`` its attainable score
         is simulated in the same way, otherwise it is NaN.
 
-        ``scores`` records more scores in every case, as in
+        ``metrics`` records more metrics in every case, as in
         ``timegym.diagnostics.evaluate_forecast``: names of functions in
         ``timegym.metrics`` such as ``"brier"``, your own functions, or a
-        dictionary from name to function. ``result.metadata["scores"]`` lists
-        them, and says which replay can compute again.
+        dictionary from name to function. ``result.metadata["metrics"]`` lists
+        them, and says which replay can compute again. ``scores``, their old
+        name, still works and warns.
 
         ``checks`` adds output checks of your own to every case, as in
         ``evaluate_forecast``: functions such as ``timegym.checks.within(0,
@@ -620,7 +621,7 @@ class Pipeline:
             keep_data=keep_data,
             attainable=attainable,
             interval_level=interval_level,
-            scores=scores,
+            metrics=metrics,
             checks=checks,
             check_dependence=check_dependence,
             n_calibration=n_calibration,
@@ -638,7 +639,7 @@ class Pipeline:
         instances,
         cases,
         keep_data,
-        scores,
+        metrics,
         checks,
         check_dependence,
         n_calibration,
@@ -716,11 +717,11 @@ class Pipeline:
             "pipeline_config": config,
             "diagnostic_settings": settings,
         }
-        if scores is not None:
+        if metrics is not None:
             # Read once, so each request warns once, not once per case.
-            scores = _score_requests(scores)
-            metadata["scores"] = _describe_scores(
-                scores
+            metrics = _metric_requests(metrics)
+            metadata["metrics"] = _describe_metrics(
+                metrics
             )  # refuses a bad request before anything runs
         if checks is not None:
             checks = _check_requests(checks)
@@ -732,7 +733,7 @@ class Pipeline:
                     case.task.history, case.task.future_index
                 ),
                 settings,
-                scores,
+                metrics,
                 checks,
             )
             run = ForecastRun(cases=results, metadata=metadata)
@@ -755,7 +756,7 @@ class Pipeline:
                     int(case_seed),
                     int(case_seed) + dependence_seed_offset,
                     settings,
-                    scores,
+                    metrics,
                     checks,
                 )
                 results.append(
@@ -786,6 +787,7 @@ class Pipeline:
             )
         return run if keep_data else run._drop_data()
 
+    @_renamed_keywords(scores="metrics")
     def test(
         self,
         scenarios=None,
@@ -794,7 +796,7 @@ class Pipeline:
         seed=0,
         instances=None,
         cases=None,
-        scores=None,
+        metrics=None,
         checks=None,
         check_dependence=False,
         n_calibration=99,
@@ -809,7 +811,7 @@ class Pipeline:
         release; ``run`` returns the same report as ``result.report``, with
         ``result.assert_passed()``, ``result.to_json()`` and the scorecard.
         """
-        warnings.warn(_TEST_MOVED, DeprecationWarning, stacklevel=2)
+        _warn_deprecated(_TEST_MOVED)
         return self._run(
             scenarios,
             seeds,
@@ -817,7 +819,7 @@ class Pipeline:
             instances=instances,
             cases=cases,
             keep_data=False,
-            scores=scores,
+            metrics=metrics,
             checks=checks,
             check_dependence=check_dependence,
             n_calibration=n_calibration,
@@ -900,7 +902,7 @@ class Pipeline:
             instances=instances,
             cases=None,
             keep_data=True,
-            scores=None,
+            metrics=None,
             checks=None,
             default_instances=3,
             **_old_settings(diagnostic_settings),
@@ -921,7 +923,7 @@ class Pipeline:
         figsize=None,
         **diagnostic_settings,
     ):
-        """Fit once per requested case and plot the retained score distribution.
+        """Fit once per requested case and plot the retained distribution of one metric.
 
         This convenience call draws 20 instances by default. Use an existing
         run's ``plot_errors`` method to inspect previously evaluated forecasts.
@@ -938,7 +940,7 @@ class Pipeline:
             instances=instances,
             cases=None,
             keep_data=True,
-            scores=None,
+            metrics=None,
             checks=None,
             default_instances=3,
             old_scenarios=True,
@@ -978,7 +980,7 @@ def _replay_case(report: TestReport, case_index=0):
 
     The return value is a new TestReport. ``metadata['replay']`` records exact
     result equality excluding tracebacks, plus traceback and environment agreement.
-    Scores asked for by name from ``timegym.metrics`` are computed again; your
+    Metrics asked for by name from ``timegym.metrics`` are computed again; your
     own functions cannot be rebuilt from a report, so they are left out of the
     comparison and listed in ``metadata['replay']['not_recomputed']``.
     Checks made with ``timegym.checks.within`` run again; your own check
@@ -1034,10 +1036,11 @@ def _replay_case(report: TestReport, case_index=0):
     ):
         raise ValueError("Case identity and scenario manifest disagree")
     scenario = Scenario(**{key: manifest[key] for key in constructor_keys})
-    # Scores asked for by name from timegym.metrics are computed again; your own are left out of the comparison.
-    requested = saved_metadata.get("scores")
-    scores, not_recomputed = (
-        (None, []) if requested is None else _rebuild_scores(requested)
+    # Metrics asked for by name from timegym.metrics are computed again; your own are left out of the comparison.
+    # A report saved by TimeGym 1.13.1 or earlier lists them under "scores".
+    requested = saved_metadata.get("metrics", saved_metadata.get("scores"))
+    metrics, not_recomputed = (
+        (None, []) if requested is None else _rebuild_metrics(requested)
     )
     # The same for checks: within() runs again, your own functions are left out.
     requested_checks = saved_metadata.get("checks")
@@ -1051,7 +1054,7 @@ def _replay_case(report: TestReport, case_index=0):
         instances=None,
         cases=None,
         keep_data=False,
-        scores=scores,
+        metrics=metrics,
         checks=checks,
         default_instances=3,
         make_card=False,

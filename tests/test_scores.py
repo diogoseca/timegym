@@ -1,4 +1,4 @@
-"""Scores for yes/no outcomes, the scores added on request, and recording your own scores in a report."""
+"""Metrics for yes/no outcomes, the metrics added on request, and recording your own metrics in a report."""
 
 from functools import partial
 
@@ -160,53 +160,53 @@ def test_band_scores_refuse_levels_they_cannot_read():
         interval_score(observed, quantiles[..., ::-1], (0.1, 0.5, 0.9))
 
 
-def test_every_score_function_can_be_asked_for_by_name():
+def test_every_metric_function_can_be_asked_for_by_name():
     public = {name for name in metrics.__all__ if callable(getattr(metrics, name))
               and not isinstance(getattr(metrics, name), type)} - {"empirical_crps"}
     assert set(_METRIC_NAMES) == public
 
 
-# -------------------------------------------------------- scores= in a report
+# ------------------------------------------------------- metrics= in a report
 
 def yes_no_cases():
     return cases_from_series(rain_days(), origins=[100, 130, 160], horizon=7, name="rain")
 
 
-def test_a_report_records_the_scores_asked_for():
+def test_a_report_records_the_metrics_asked_for():
     cases = yes_no_cases()
     report = Pipeline(MeanForecaster()).test(
-        cases=cases, scores=["brier", "log_loss", within_10_percent])
+        cases=cases, metrics=["brier", "log_loss", within_10_percent])
     for case in report.cases:
         assert {"brier", "log_loss", "within_10_percent"} <= set(case.metrics)
         assert case.metrics["brier"] == pytest.approx(case.metrics["mse"])
-    assert [record["name"] for record in report.metadata["scores"]] == ["brier", "log_loss", "within_10_percent"]
-    assert [record["replayable"] for record in report.metadata["scores"]] == [True, True, False]
-    assert report.metadata["scores"][0]["function"] == "timegym.metrics.brier"
-    assert report.metadata["scores"][2]["function"].endswith("within_10_percent")
+    assert [record["name"] for record in report.metadata["metrics"]] == ["brier", "log_loss", "within_10_percent"]
+    assert [record["replayable"] for record in report.metadata["metrics"]] == [True, True, False]
+    assert report.metadata["metrics"][0]["function"] == "timegym.metrics.brier"
+    assert report.metadata["metrics"][2]["function"].endswith("within_10_percent")
     report.assert_passed()
 
 
 def test_no_request_leaves_reports_as_they_were():
     report = Pipeline(LastValueForecaster()).test([Scenario("ar1", history_length=40, horizon=4)], seeds=[1])
-    assert "scores" not in report.metadata
+    assert "metrics" not in report.metadata and "scores" not in report.metadata
     assert set(report.cases[0].metrics) == {"mse", "mae", "mase", "mean_reference_mse"}
 
 
 def test_settings_go_through_a_dictionary():
     cases = yes_no_cases()
     report = Pipeline(LastValueForecaster()).test(
-        cases=cases, scores={"log_loss": "log_loss", "log_loss_clipped": partial(log_loss, eps=1e-6)})
+        cases=cases, metrics={"log_loss": "log_loss", "log_loss_clipped": partial(log_loss, eps=1e-6)})
     for case in report.cases:  # repeating the last day forecasts exactly 0 or 1
         assert "log_loss_clipped" in case.metrics
         if "log_loss" not in case.metrics:
             (problem,) = [d for d in case.diagnostics if d.name == "metric_log_loss"]
             assert problem.status == "INCONCLUSIVE" and "pass eps" in problem.message
     assert any("log_loss" not in case.metrics for case in report.cases)
-    clipped = report.metadata["scores"][1]
+    clipped = report.metadata["metrics"][1]
     assert clipped["settings"] == {"eps": 1e-6} and clipped["replayable"] is True
 
 
-def test_a_score_gets_what_its_argument_names_ask_for():
+def test_a_metric_gets_what_its_argument_names_ask_for():
     seen = {}
 
     def spread(samples, observed):
@@ -219,12 +219,12 @@ def test_a_score_gets_what_its_argument_names_ask_for():
 
     case = Scenario("ar1", history_length=40, horizon=4).generate(2)
     forecast = Pipeline(GaussianAR1Forecaster(n_samples=32, seed=0)).predict(case.task.history, case.task.future_index)
-    result = evaluate_forecast(case, forecast, scores=[spread, history_length])
+    result = evaluate_forecast(case, forecast, metrics=[spread, history_length])
     assert seen["shapes"] == ((32, 4, 1), (4, 1))
     assert seen["quantiles"].shape == (4, 1, 3)
     assert result.metrics["history_length"] == 40.0
     point_only = Forecast(case.task.future_index, point=forecast.point)
-    result = evaluate_forecast(case, point_only, scores=[spread, history_length])
+    result = evaluate_forecast(case, point_only, metrics=[spread, history_length])
     assert seen["quantiles"] is None  # the forecast has no quantiles, so the default stands
     (missing,) = [d for d in result.diagnostics if d.name == "metric_spread"]
     assert (missing.status, missing.category) == ("UNSUPPORTED", "capability")
@@ -232,7 +232,7 @@ def test_a_score_gets_what_its_argument_names_ask_for():
     assert result.metrics["history_length"] == 40.0
 
 
-def test_a_broken_score_is_an_error_with_its_message():
+def test_a_broken_metric_is_an_error_with_its_message():
     def broken(observed, predicted):
         raise RuntimeError("divided by the wrong thing")
 
@@ -240,7 +240,7 @@ def test_a_broken_score_is_an_error_with_its_message():
         return np.abs(observed - predicted)
 
     report = Pipeline(LastValueForecaster()).test([Scenario("ar1", history_length=40, horizon=4)], seeds=[1],
-                             scores=[broken, several, "brier"])
+                             metrics=[broken, several, "brier"])
     problems = {d.name: d for d in report.cases[0].diagnostics if d.name.startswith("metric_")}
     assert problems["metric_broken"].status == "ERROR"
     assert problems["metric_broken"].message == "Score calculation raised RuntimeError: divided by the wrong thing"
@@ -250,9 +250,9 @@ def test_a_broken_score_is_an_error_with_its_message():
         report.assert_passed()
 
 
-@pytest.mark.parametrize("scores, error, message", [
+@pytest.mark.parametrize("asked, error, message", [
     ("brier", TypeError, "a list or a dictionary"),
-    (["mape"], ValueError, "timegym.metrics has no score 'mape'"),
+    (["mape"], ValueError, "timegym.metrics has no metric 'mape'"),
     (["mse"], ValueError, "'mse' is recorded in every report already"),
     ({"mase": partial(metrics.mase, seasonality=12)}, ValueError, "recorded in every report already"),
     (["brier", "brier"], ValueError, "asked for twice"),
@@ -261,28 +261,28 @@ def test_a_broken_score_is_an_error_with_its_message():
     ({"weighted": lambda observed, predicted, weights: 0.0}, TypeError, "needs 'weights', which TimeGym cannot give"),
     ([3], TypeError, "a name from timegym.metrics or a function"),
 ])
-def test_requests_that_cannot_work_are_refused_before_anything_runs(scores, error, message):
+def test_requests_that_cannot_work_are_refused_before_anything_runs(asked, error, message):
     class Unreachable:
         def fit(self, history):
             raise AssertionError("no case should run")
 
     with pytest.raises(error, match=message):
-        Pipeline(Unreachable()).test(cases=yes_no_cases(), scores=scores)
+        Pipeline(Unreachable()).run(cases=yes_no_cases(), metrics=asked)
     with pytest.raises(error, match=message):
-        ForecastRun.from_forecasts(yes_no_cases(), [None] * 3, scores=scores)
+        ForecastRun.from_forecasts(yes_no_cases(), [None] * 3, metrics=asked)
 
 
-def test_forecasts_made_earlier_get_the_scores_too():
+def test_forecasts_made_earlier_get_the_metrics_too():
     cases = yes_no_cases()
-    recorded = ForecastRun.from_forecasts(cases, [np.full(7, 0.4)] * 3, scores=["brier"])
+    recorded = ForecastRun.from_forecasts(cases, [np.full(7, 0.4)] * 3, metrics=["brier"])
     assert all(entry.result.metrics["brier"] > 0 for entry in recorded.cases)
-    assert recorded.metadata["scores"][0]["name"] == "brier"
+    assert recorded.metadata["metrics"][0]["name"] == "brier"
 
 
-def test_replay_computes_named_scores_again_and_lists_the_others():
+def test_replay_computes_named_metrics_again_and_lists_the_others():
     pipeline = Pipeline(GaussianAR1Forecaster(n_samples=32, seed=3))
     report = pipeline.test([Scenario("ar1", history_length=40, horizon=4)], seeds=[5],
-                           scores={"rmse": "rmse", "wis": "weighted_interval_score", "close": within_10_percent})
+                           metrics={"rmse": "rmse", "wis": "weighted_interval_score", "close": within_10_percent})
     assert {"rmse", "wis", "close"} <= set(report.cases[0].metrics)
     replay = report.replay_case(0).metadata["replay"]
     assert replay["reproduced"] and replay["not_recomputed"] == ["close"]
@@ -290,6 +290,6 @@ def test_replay_computes_named_scores_again_and_lists_the_others():
     from timegym import TestReport
     again = TestReport.from_json(report.to_json()).replay_case(0).metadata["replay"]
     assert again["reproduced"] and again["not_recomputed"] == ["close"]
-    # A score replay can compute is compared: a changed value is caught.
+    # A metric replay can compute is compared: a changed value is caught.
     report.cases[0].metrics["rmse"] += 1.0
     assert not report.replay_case(0).metadata["replay"]["metrics_match"]

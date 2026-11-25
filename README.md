@@ -72,7 +72,7 @@ calls give you three views of the same work:
 | You call | You get | Use it to |
 | --- | --- | --- |
 | `pipeline.scorecard()` | A `Scorecard`: the picture and its table | See what the model is good and bad at |
-| `pipeline.test(scenarios)` | A `TestReport`: every case's scores and output checks | Test series you choose, save them as JSON, fail a CI build |
+| `pipeline.test(scenarios)` | A `TestReport`: every case's metrics and output checks | Test series you choose, save them as JSON, fail a CI build |
 | `pipeline.run(scenarios)` | A `ForecastRun`: the report plus every series and forecast | Plot the forecasts behind the scores |
 
 A scorecard carries the other two: `card.report` and `card.run`.
@@ -144,7 +144,7 @@ diff.assert_no_regression()          # fail a CI build on a cell that got worse
 On your own data, which has no answer key, `timegym.compare_reports` pairs two
 reports case by case and says whether the candidate is better, worse, or shows
 no clear difference, by group if you ask
-([Scores and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/#compare-two-forecasters-on-the-same-cases)).
+([Metrics and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/#compare-two-forecasters-on-the-same-cases)).
 Checks of your own join the built-in ones with `checks=`, such as
 `within(0, None)` for rainfall or sales, which can't go below zero
 ([Your own output checks](https://diogoseca.github.io/timegym/docs/api/diagnostics/#your-own-output-checks)).
@@ -229,7 +229,7 @@ scored, so a bug cannot pass as a slightly worse error.
 
 **3. Does it do what you declared?** Optional checks for specific properties: a model that claims to shift its forecast when the data shift can be tested for it, and sample paths can be tested for the right correlation between series.
 
-Each check returns one of five verdicts (`PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`) and the numbers that led to it. Scores are always `INCONCLUSIVE`: TimeGym tells you how far off you are and leaves the pass mark to you. [How TimeGym decides](https://diogoseca.github.io/timegym/docs/concepts/how-timegym-decides/) explains each verdict, and [Scores and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/) each score.
+Each check returns one of five verdicts (`PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`) and the numbers that led to it. Metrics are always `INCONCLUSIVE`: TimeGym tells you how far off you are and leaves the pass mark to you. [How TimeGym decides](https://diogoseca.github.io/timegym/docs/concepts/how-timegym-decides/) explains each verdict, and [Metrics and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/) each metric.
 
 ## Scenarios
 
