@@ -12,16 +12,17 @@
   `horizon`, `simulate_attainable` and `interval_level`. Scenarios you built
   give one row each. A run of your own data (`cases=`) has no scorecard,
   since nobody knows its answer key, and reading `result.scorecard` says so
-  and points to `result.checks` and the errors in `result.report`.
+  and points to `result.checks` and the errors in `result.metrics`.
 - `run()` now drops the series and forecasts once each one is measured, so a
-  large run stays small in memory. The report, the scorecard with its
-  picture, `save_baseline`, `compare` and `plot_errors()` work as before;
+  large run stays small in memory. The report, the scorecard with its picture,
+  `save_baseline`, `compare` and `plot_errors()` work as before;
   `keep_data=True` keeps every series and forecast for `plot_forecasts()`,
-  `calibration` and your own reading, and `result.kept_data` says which.
-  Code that read `result.cases[i].case` or `.forecast` needs `keep_data=True`.
-  With nothing to forecast named, `run()` used to draw the five kinds of
-  `default_scenarios()` 3 times each; it now draws the scorecard's series, and
-  with scenarios named it draws each 10 times instead of 3.
+  `result.calibration()` and your own reading, and `result.kept_data` says
+  which. Code that read `result.cases[i].case` or `.forecast` needs
+  `keep_data=True`. With nothing to forecast named, `run()` used to draw the
+  five kinds of `default_scenarios()` 3 times each; it now draws the
+  scorecard's series, and with scenarios named it draws each 10 times instead
+  of 3.
 - `Pipeline.test(...)` and `Pipeline.scorecard(...)` still work as before and
   now warn: use `pipeline.run(...)` and `pipeline.run(...).scorecard`. They
   will be removed in a later release. `timegym.scorecard.scorecard` warns the
@@ -39,8 +40,8 @@
   `history_length=` in `run()`, `scenario_grid` and `default_scenarios`. A
   metric or a check of your own asks for the past by naming its argument
   `history`. The built-in models and target transforms name their argument
-  `history` too, `NaiveForecaster` keeps what it fitted as `history_`, and
-  error messages say history where they said context.
+  `history` too, the built-in baselines keep what they fitted as `history_`,
+  and error messages say history where they said context.
 - The old names still work and warn, and will be removed in a later release:
   `context_length=` wherever it was taken (`Scenario`, `Pipeline.scorecard`,
   `scenario_grid`, `default_scenarios`, `generate_process`,
@@ -48,10 +49,10 @@
   `timegym.scorecard.scorecard`), `scenario.context_length`,
   `ForecastTask(context=...)`, `task.context`, `context=` in
   `Pipeline.predict`, `mase`, `rmsse` and `check_shift_equivariance`,
-  `NaiveForecaster.context_`, a metric or a check whose argument is named
-  `context` (it warns once per run), and a `build` of your own whose scenario
-  has `context_length` instead of `history_length`. A model of your own
-  written `fit(self, context)` needs no change, since TimeGym passes the
+  `context_` on the built-in baselines, a metric or a check whose argument is
+  named `context` (it warns once per run), and a `build` of your own whose
+  scenario has `context_length` instead of `history_length`. A model of your
+  own written `fit(self, context)` needs no change, since TimeGym passes the
   history by position.
 - New cases, reports and scorecard baselines record `history_length` where
   they recorded `context_length`. Reports and baselines saved by 1.13.1 and
@@ -123,9 +124,9 @@
 - `metrics=` is the one name for the numbers a run records for each case:
   `pipeline.run(cases=cases, metrics=["brier", "log_loss"])`, and the same in
   `ForecastRun.from_forecasts`, `timegym.diagnostics.evaluate_forecast` and
-  `Pipeline.test`. They are read back in `case.metrics`, chosen with `metric=`
-  and imported from `timegym.metrics`, as before. New reports list what was
-  asked for under `metadata["metrics"]`.
+  `Pipeline.test`. They are read back in each case's `metrics`, and chosen
+  with `metric=` and imported from `timegym.metrics` as before. New reports
+  list what was asked for under `metadata["metrics"]`.
 - `scores=` still works on each of these calls and warns; it will be removed
   in a later release. Passing both is refused. Reports saved by 1.13.1 and
   earlier list the metrics asked for under `metadata["scores"]`; they still
@@ -216,8 +217,6 @@
   each time it is read.
 - Moved the examples, tutorials and source notebooks that built these tables
   by hand to `result.metrics`, and showed it on the Pipeline and reports page.
-  A run of your own data, which has no scorecard, now points to
-  `result.metrics` for its errors.
 
 - Added `result.compare(baseline, *, metric, by=None, cluster=None,
   alpha=0.05, higher_is_better=False, seed=0)` to a run and to a
@@ -226,17 +225,17 @@
   the same `ReportComparison`. `compare_reports` stays, without a warning, to
   compare several candidates with one baseline at once.
 - Moved the docs, the README, the source notebooks and the tests that compare
-  one candidate to `result.compare`. The scores page shows the method for one
+  one candidate to `result.compare`. The metrics page shows the method for one
   candidate and `compare_reports` for several.
 
 - Added `result.save(path)` and `report.save(path)`, which write the report to
   a JSON file and return `path`, and `TestReport.load(path)`, which reads it
   back. `to_json()` with no path returns the text, as before, and
   `TestReport.from_json(text)` reads text.
-- `report.to_json(path)`, `result.to_json(path)` and `TestReport.read(path)`
-  still work and now warn; they will be removed in a later release. Saved
-  reports load as before. `card.save(path)`, which saves the scorecard's
-  picture, and `card.save_baseline(path)` are unchanged.
+- `report.to_json(path)` and `TestReport.read(path)` still work and now warn;
+  they will be removed in a later release. Saved reports load as before.
+  `card.save(path)`, which saves the scorecard's picture, and
+  `card.save_baseline(path)` are unchanged.
 - Moved the docs, the README, the tutorials, the source notebooks, the tests,
   `examples/reproduce_report.py` and the installed-package check to `save`
   and `load`.
@@ -268,7 +267,7 @@
   in `certain`, since the slope reads them as 0.000001 and 0.999999.
   `interval_level` sets the confidence of the slope's interval, the
   scorecard's word for the same idea, and `Calibration.interval_level`
-  records it. Nothing else changes.
+  records it.
 - Added a section on calibration to the metrics page, a sentence on the scope
   page and in the README, and a section to the metrics notebook with twenty
   weather stations, where a share learned from few cycles says 0% or 100% too
