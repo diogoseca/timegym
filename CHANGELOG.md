@@ -64,6 +64,22 @@
   tutorials, examples, source notebooks, the installed-package check and the
   paper to the word history wherever they meant the past a forecaster sees.
 
+- One class for each built-in baseline, named for the forecast it makes:
+  `LastValueForecaster()`, `SeasonalLastValueForecaster(period)` (seasonal
+  naive: each step gets the last value seen at the same point of the cycle),
+  `MeanForecaster()`, `SeasonalMeanForecaster(period)` and `DriftForecaster()`,
+  all from `timegym`. Only the two seasonal ones take a `period`. Reports and
+  scorecards name each by its class, and each replays from a report.
+- `NaiveForecaster(strategy, period)` still works, makes the same forecasts as
+  before and now warns, naming the class that makes the same forecasts for the
+  strategy given, such as `SeasonalLastValueForecaster(period=12)`; it will be
+  removed in a later release. A pipeline warns once, not once per case. Reports
+  and scorecard baselines that name `NaiveForecaster` still load, compare and
+  replay, and replaying one does not warn. `LastValueForecaster` is still a
+  `NaiveForecaster`, as before.
+- Moved the docs, tutorials, examples, source notebooks and the
+  installed-package check to the new classes.
+
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
   true as often as they say: of the days given a 70% chance of rain, did it

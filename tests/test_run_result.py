@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from timegym import (Case, ForecastRun, ForecastTask, LastValueForecaster, NaiveForecaster, Pipeline,
+from timegym import (Case, ForecastRun, ForecastTask, LastValueForecaster, MeanForecaster, Pipeline,
                      Reference, Scenario, Scorecard, TestReport, cases_from_series)
 from timegym.diagnostics import calibration
 from timegym.scenarios import default_scenarios
@@ -51,7 +51,7 @@ def test_the_runs_scorecard_is_the_old_scorecard_number_for_number():
 
 
 def test_scorecard_settings_go_through_run():
-    pipeline = Pipeline(NaiveForecaster())
+    pipeline = Pipeline(LastValueForecaster())
     card = pipeline.run(["random_walk"], noise_levels=[0.2, 0.4], instances=3, history_length=40, horizon=6,
                         title="Mine", interval_level=0.99).scorecard
     assert card.title == "Mine" and card.interval_level == 0.99
@@ -226,7 +226,7 @@ class _FlatLine:
 
 
 def test_a_scenario_of_your_own_without_lengths_gets_a_row():
-    card = Pipeline(NaiveForecaster("mean")).run([_FlatLine()], instances=4).scorecard
+    card = Pipeline(MeanForecaster()).run([_FlatLine()], instances=4).scorecard
     assert card.table["pattern"].tolist() == ["flat_line"] and np.isnan(card.table["attainable"].iloc[0])
     assert 0 <= card.table["score"].iloc[0] <= 100
     plt.close(card.plot())

@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from timegym import Forecast, NaiveForecaster, Pipeline, Scenario
+from timegym import Forecast, LastValueForecaster, MeanForecaster, Pipeline, Scenario
 from timegym.evaluation import ForecastRun
 from timegym.plotting import _FORECAST, _INK, _MUTED
 
@@ -58,7 +58,7 @@ def test_run_fits_once_per_case_and_plots_retained_outputs_without_refitting():
 
 
 def test_test_schema_and_replay_remain_identical_to_run_report():
-    pipeline = Pipeline(NaiveForecaster("mean"))
+    pipeline = Pipeline(MeanForecaster())
     scenarios = [Scenario("white_noise", history_length=12, horizon=3)]
     run = pipeline.run(scenarios, seeds=[2], keep_data=True)
     report = pipeline.test(scenarios, seeds=[2])
@@ -188,7 +188,7 @@ def test_execution_errors_are_retained_and_annotated():
 
 
 def test_invalid_forecast_contract_is_not_drawn_as_valid_predictions():
-    class SwappedLabels(NaiveForecaster):
+    class SwappedLabels(LastValueForecaster):
         def predict(self, future_index):
             result = super().predict(future_index)
             result.target_names = tuple(reversed(result.target_names))
@@ -203,7 +203,7 @@ def test_invalid_forecast_contract_is_not_drawn_as_valid_predictions():
 
 
 def test_samples_are_not_silently_converted_to_point_or_quantile_outputs():
-    class SampleOnly(NaiveForecaster):
+    class SampleOnly(LastValueForecaster):
         def predict(self, future_index):
             point = super().predict(future_index)
             return Forecast(point.index, samples=np.tile(point.point, (8, 1, 1)), target_names=point.target_names)

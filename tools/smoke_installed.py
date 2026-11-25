@@ -33,7 +33,7 @@ def main():
     sys.meta_path.insert(0, BlockOptional())
     import numpy as np
     import timegym
-    from timegym import (GaussianAR1Forecaster, LastValueForecaster, NaiveForecaster, Pipeline,
+    from timegym import (GaussianAR1Forecaster, LastValueForecaster, Pipeline,
                          Scenario, Scorecard, TestReport)
 
     installed_path = Path(timegym.__file__).resolve()
@@ -45,13 +45,13 @@ def main():
     scenario = Scenario("ar1", history_length=48, horizon=6, n_targets=2,
                         parameters={"correlation": .5})
     case = scenario.generate(seed=17)
-    point = Pipeline(NaiveForecaster()).predict(case.task.history, case.task.future_index)
+    point = Pipeline(LastValueForecaster()).predict(case.task.history, case.task.future_index)
     assert point.point.shape == (6, 2) and point.validate(case.task) == []
     joint = Pipeline(GaussianAR1Forecaster(n_samples=32, seed=11)).predict(
         case.task.history, case.task.future_index)
     assert joint.samples.shape == (32, 6, 2) and joint.validate(case.task) == []
     assert np.isfinite(joint.samples).all()
-    run = Pipeline(NaiveForecaster()).run([scenario], seeds=[0, 1, 2])
+    run = Pipeline(LastValueForecaster()).run([scenario], seeds=[0, 1, 2])
     run.report.assert_passed()
     assert len(run.cases) == 3
     from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
@@ -72,7 +72,7 @@ def main():
         distribution = generated.reference.forecast(n_samples=64, seed=91)
         assert distribution.samples.shape == (64, 3, 2)
         assert distribution.validate(generated.task) == []
-        retained = Pipeline(NaiveForecaster()).run([spec], seeds=[17])
+        retained = Pipeline(LastValueForecaster()).run([spec], seeds=[17])
         rechecked = TestReport.from_json(retained.report.to_json()).replay_case()
         assert rechecked.metadata["replay"]["reproduced"]
         if kind == "garch":

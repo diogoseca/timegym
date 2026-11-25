@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from timegym import PATTERNS, Forecast, NaiveForecaster, Pipeline, Scenario, scenario_grid
+from timegym import PATTERNS, Forecast, Pipeline, Scenario, scenario_grid, LastValueForecaster, MeanForecaster
 from timegym.contracts import _index_shift
 from timegym.grid import NOISE_HIGH, NOISE_LOW, noise_levels
 from timegym.scenarios import scenario_label
@@ -270,7 +270,7 @@ def test_index_shift_counts_whole_steps(index, future, expected):
 # --- Simple models: scores agree with what is predictable ---------------------------------
 
 def test_last_value_nails_the_random_walk_and_misses_the_cycle():
-    card = Pipeline(NaiveForecaster()).scorecard(["seasonal", "random_walk"], instances=10)
+    card = Pipeline(LastValueForecaster()).scorecard(["seasonal", "random_walk"], instances=10)
     table = card.table.set_index(["pattern", "noise"])
     assert table.loc[("random_walk", "Low noise"), "score"] >= 90
     assert table.loc[("seasonal", "Low noise"), "score"] < 40
@@ -282,7 +282,7 @@ def test_last_value_nails_the_random_walk_and_misses_the_cycle():
 
 
 def test_the_historical_mean_forecasts_a_rising_line_too_low():
-    card = Pipeline(NaiveForecaster("mean")).scorecard(["trend", "level"], instances=5)
+    card = Pipeline(MeanForecaster()).scorecard(["trend", "level"], instances=5)
     table = card.table.set_index(["pattern", "noise"])
     assert "Forecasts too low" in table.loc[("trend", "Low noise"), "mistakes"]
     assert table.loc[("level", "High noise"), "score"] >= 90
@@ -297,7 +297,7 @@ def test_verdict_bands_follow_the_printed_number():
 # --- Outputs: image, Markdown, JSON -----------------------------------------------------------
 
 def test_scorecard_draws_saves_and_prints(tmp_path):
-    card = Pipeline(NaiveForecaster()).scorecard(["noise", "trend"], noise_levels=3, instances=2, seed=4)
+    card = Pipeline(LastValueForecaster()).scorecard(["noise", "trend"], noise_levels=3, instances=2, seed=4)
     figure = card.plot()
     assert len(figure.axes) == 3 * (3 + 2)  # header row + two patterns, by text + 3 levels + mistakes
     plt.close(figure)
@@ -311,7 +311,7 @@ def test_scorecard_draws_saves_and_prints(tmp_path):
 
 
 def test_zooming_into_a_scorecard_row_keeps_its_plain_titles():
-    card = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=2)
+    card = Pipeline(LastValueForecaster()).scorecard(["trend"], instances=2)
     forecasts = card.run.plot_forecasts()
     title = forecasts.axes[0].get_title(loc="left")
     assert title == "Straight-line trend · Low noise · instance 1"
@@ -335,7 +335,7 @@ def test_plain_install_brings_plots_and_the_sklearn_adapter():
 
 
 def test_scorecard_text_counts_one_of_a_kind_and_compact_headers_fit():
-    card = Pipeline(NaiveForecaster()).scorecard(["trend"], noise_levels=3, instances=1)
+    card = Pipeline(LastValueForecaster()).scorecard(["trend"], noise_levels=3, instances=1)
     assert "1 kind of series x 3 noise levels, 1 instance each" in card.to_markdown()
     figure = card.plot(compact=True)
     texts = [text.get_text() for ax in figure.axes for text in ax.texts]
@@ -351,7 +351,7 @@ def test_the_built_in_last_value_forecaster_is_scored_by_name():
 
     patterns = ["seasonal", "random_walk"]
     named = Pipeline(LastValueForecaster()).scorecard(patterns, instances=3)
-    naive = Pipeline(NaiveForecaster()).scorecard(patterns, instances=3)
+    naive = Pipeline(LastValueForecaster()).scorecard(patterns, instances=3)
     assert str(named).splitlines()[0] == f"## LastValueForecaster: {named.score:.0f}/100"
     assert repr(named).startswith("Scorecard('LastValueForecaster', ")
     assert named.report.metadata["model"] == "LastValueForecaster"
@@ -363,11 +363,11 @@ def test_the_built_in_last_value_forecaster_is_scored_by_name():
 
 @pytest.fixture(scope="module")
 def last_value_card():
-    return Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=3)
+    return Pipeline(LastValueForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=3)
 
 
 def test_the_table_has_an_interval_and_a_settled_flag_after_the_score():
-    table = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=3).table
+    table = Pipeline(LastValueForecaster()).scorecard(["trend"], instances=3).table
     assert list(table.columns[:9]) == ["pattern", "title", "noise", "noise_sd", "score", "score_low",
                                       "score_high", "verdict", "settled"]
     assert table["settled"].dtype == bool
@@ -381,15 +381,15 @@ def test_the_interval_holds_the_score_and_stays_between_0_and_100(last_value_car
 
 
 def test_the_same_seed_gives_the_same_interval_and_another_seed_can_differ(last_value_card):
-    again = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=3)
-    other = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=4)
+    again = Pipeline(LastValueForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=3)
+    other = Pipeline(LastValueForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=4)
     columns = ["score_low", "score_high"]
     pd.testing.assert_frame_equal(again.table[columns], last_value_card.table[columns])
     assert not np.allclose(other.table[columns], last_value_card.table[columns])
 
 
 def test_a_cell_has_the_same_interval_whichever_other_patterns_are_scored(last_value_card):
-    alone = Pipeline(NaiveForecaster()).scorecard(["random_walk"], instances=10, seed=3).table
+    alone = Pipeline(LastValueForecaster()).scorecard(["random_walk"], instances=10, seed=3).table
     shared = last_value_card.table[last_value_card.table["pattern"] == "random_walk"]
     np.testing.assert_allclose(alone[["score_low", "score_high"]], shared[["score_low", "score_high"]])
 
@@ -524,7 +524,7 @@ def test_a_higher_level_gives_an_interval_that_holds_the_lower_one(last_value_ca
         for (low, high), (wider_low, wider_high) in zip(ends, ends[1:]):
             assert wider_low <= low <= score <= high <= wider_high
         assert ends[-1][1] - ends[-1][0] > ends[0][1] - ends[0][0]
-    wide = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=3,
+    wide = Pipeline(LastValueForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10, seed=3,
                                                    interval_level=0.99).table
     assert (wide["score_low"] <= card.table["score_low"]).all()
     assert (wide["score_high"] >= card.table["score_high"]).all()
@@ -546,7 +546,7 @@ def test_the_interval_does_not_depend_on_the_seed_argument_given_the_same_series
         return run
 
     monkeypatch.setattr(Pipeline, "run", same_series)
-    relabelled = Pipeline(NaiveForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10,
+    relabelled = Pipeline(LastValueForecaster()).scorecard(["noise", "trend", "random_walk"], instances=10,
                                                         seed=99)
     assert relabelled.seed == 99
     columns = ["score", "score_low", "score_high", "settled"]
@@ -598,7 +598,7 @@ def test_failed_output_checks_pull_the_interval_down_and_always_failing_settles_
 
 
 def test_one_instance_has_no_interval_and_no_settled_verdict():
-    card = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=1)
+    card = Pipeline(LastValueForecaster()).scorecard(["trend"], instances=1)
     assert card.table[["score_low", "score_high"]].isna().all().all()
     assert not card.table["settled"].any() and len(card.unsettled) == 2
     assert str(card).endswith("2 of 2 verdicts are not settled at 1 instance. "
@@ -643,11 +643,11 @@ def test_interval_level_must_be_a_number_between_0_and_1(monkeypatch, bad):
     monkeypatch.setattr(Pipeline, "run", never)
     message = f"interval_level must be a number between 0 and 1, such as 0.95; got {bad!r}"
     with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
-        Pipeline(NaiveForecaster()).scorecard(["trend"], instances=3, interval_level=bad)
+        Pipeline(LastValueForecaster()).scorecard(["trend"], instances=3, interval_level=bad)
     with pytest.raises(ValueError, match="interval_level must be a number between 0 and 1"):
-        _scorecard(Pipeline(NaiveForecaster()), ["trend"], instances=3, interval_level=bad)
+        _scorecard(Pipeline(LastValueForecaster()), ["trend"], instances=3, interval_level=bad)
     with pytest.warns(DeprecationWarning), pytest.raises(ValueError, match="interval_level must be"):
-        deprecated_scorecard(Pipeline(NaiveForecaster()), ["trend"], instances=3, interval_level=bad)
+        deprecated_scorecard(Pipeline(LastValueForecaster()), ["trend"], instances=3, interval_level=bad)
 
 
 def test_the_card_keeps_its_interval_level_and_older_constructions_still_work(last_value_card):
@@ -655,10 +655,10 @@ def test_the_card_keeps_its_interval_level_and_older_constructions_still_work(la
     from timegym.scorecard import scorecard as deprecated_scorecard
 
     assert last_value_card.interval_level == 0.95
-    card = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=3, interval_level=np.float32(0.9))
+    card = Pipeline(LastValueForecaster()).scorecard(["trend"], instances=3, interval_level=np.float32(0.9))
     assert type(card.interval_level) is float and card.interval_level == pytest.approx(0.9)
     with pytest.warns(DeprecationWarning):
-        old = deprecated_scorecard(Pipeline(NaiveForecaster()), ["trend"], instances=3, interval_level=0.99)
+        old = deprecated_scorecard(Pipeline(LastValueForecaster()), ["trend"], instances=3, interval_level=0.99)
     assert old.interval_level == 0.99
     fields = last_value_card
     rebuilt = Scorecard(fields.title, fields.table, fields.run, fields.cells, fields.seed, fields.instances)
@@ -683,7 +683,7 @@ def test_the_printed_card_and_the_image_name_the_card_s_level(last_value_card):
         _caption(figure))
     plt.close(figure)
     assert default in str(last_value_card)
-    wide = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=3, interval_level=0.99)
+    wide = Pipeline(LastValueForecaster()).scorecard(["trend"], instances=3, interval_level=0.99)
     text = str(wide)
     assert ("A question mark means the verdict is not settled: the score's 99% interval reaches into "
             "another band.") in text and "95%" not in text
@@ -699,7 +699,7 @@ def test_scoring_an_ordinary_card_raises_no_warning():
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        card = Pipeline(NaiveForecaster()).run(["noise", "trend", "seasonal", "random_walk"],
+        card = Pipeline(LastValueForecaster()).run(["noise", "trend", "seasonal", "random_walk"],
                                                instances=5, interval_level=0.99).scorecard
         str(card)
         plt.close(card.plot())
@@ -727,8 +727,8 @@ def test_fitted_is_the_old_name_of_attainable_by_and_still_works_with_a_warning(
 
     build = PATTERNS["trend"].build
     with pytest.warns(DeprecationWarning, match=r"Pattern\(fitted=...\) is now Pattern\(attainable_by=...\)"):
-        old = Pattern("x", "X", "x", "y", "z", build, fitted=lambda: NaiveForecaster("mean"))
-    assert isinstance(old.attainable_by(), NaiveForecaster)
+        old = Pattern("x", "X", "x", "y", "z", build, fitted=lambda: MeanForecaster())
+    assert isinstance(old.attainable_by(), MeanForecaster)
     with pytest.warns(DeprecationWarning, match=r"Pattern.fitted is now Pattern.attainable_by"):
         fresh = PATTERNS["trend"].fitted
     first, second = fresh(), fresh()
@@ -737,7 +737,7 @@ def test_fitted_is_the_old_name_of_attainable_by_and_still_works_with_a_warning(
     with pytest.warns(DeprecationWarning):
         assert Pattern("x", "X", "x", "y", "z", build).fitted is None
     with pytest.warns(DeprecationWarning), pytest.raises(TypeError, match="not both"):
-        Pattern("x", "X", "x", "y", "z", build, NaiveForecaster("mean"), fitted=NaiveForecaster)
+        Pattern("x", "X", "x", "y", "z", build, MeanForecaster(), fitted=LastValueForecaster)
 
 
 @pytest.mark.parametrize("key, instances, floor", [
@@ -769,7 +769,7 @@ def test_the_stored_table_has_the_20_default_cells_between_80_and_100():
 def test_the_default_card_shows_the_stored_attainable_score_after_settled():
     from timegym.scorecard import _ATTAINABLE
 
-    table = Pipeline(NaiveForecaster()).scorecard(instances=1).table
+    table = Pipeline(LastValueForecaster()).scorecard(instances=1).table
     assert list(table.columns[8:11]) == ["settled", "attainable", "mistakes"]
     expected = [_ATTAINABLE[row.pattern][row.noise_sd] for row in table.itertuples()]
     assert table["attainable"].to_numpy() == pytest.approx(expected)
@@ -779,9 +779,9 @@ def test_a_custom_cell_is_simulated_once_and_agrees_with_a_pipeline_scorecard():
     from timegym.scorecard import _ATTAINABLE_SEED, _attainable_score, _simulated_attainable
 
     _simulated_attainable.cache_clear()
-    first = Pipeline(NaiveForecaster()).scorecard(["trend"], noise_levels=[1.0], instances=1, horizon=6,
+    first = Pipeline(LastValueForecaster()).scorecard(["trend"], noise_levels=[1.0], instances=1, horizon=6,
                                                   attainable=True)
-    again = Pipeline(NaiveForecaster()).scorecard(["trend"], noise_levels=[1.0], instances=1, horizon=6,
+    again = Pipeline(LastValueForecaster()).scorecard(["trend"], noise_levels=[1.0], instances=1, horizon=6,
                                                   attainable=True)
     info = _simulated_attainable.cache_info()
     assert (info.misses, info.hits) == (1, 1)
@@ -797,7 +797,7 @@ def test_a_custom_cell_is_nan_and_not_simulated_unless_asked():
     from timegym.scorecard import _simulated_attainable
 
     before = _simulated_attainable.cache_info()
-    card = Pipeline(NaiveForecaster()).scorecard(["random_walk"], noise_levels=[0.5, 1.0], instances=1)
+    card = Pipeline(LastValueForecaster()).scorecard(["random_walk"], noise_levels=[0.5, 1.0], instances=1)
     assert card.table["attainable"].iloc[0] == pytest.approx(99.8)  # stored: low noise on the default grid
     assert np.isnan(card.table["attainable"].iloc[1])
     assert _simulated_attainable.cache_info() == before
@@ -821,7 +821,7 @@ def test_a_pattern_without_a_fitted_estimator_has_no_attainable_score_or_mark(mo
     import dataclasses
 
     monkeypatch.setitem(PATTERNS, "noise", dataclasses.replace(PATTERNS["noise"], attainable_by=None))
-    card = Pipeline(NaiveForecaster()).scorecard(["noise"], instances=2)
+    card = Pipeline(LastValueForecaster()).scorecard(["noise"], instances=2)
     assert card.table["attainable"].isna().all()
     for compact in (False, True):
         figure = card.plot(compact=compact)
@@ -830,7 +830,7 @@ def test_a_pattern_without_a_fitted_estimator_has_no_attainable_score_or_mark(mo
 
 
 def test_the_picture_marks_the_attainable_score_in_both_modes():
-    card = Pipeline(NaiveForecaster()).scorecard(["noise", "trend"], instances=1)
+    card = Pipeline(LastValueForecaster()).scorecard(["noise", "trend"], instances=1)
     for compact in (False, True):
         figure = card.plot(compact=compact)
         marks = _attainable_marks(figure)
@@ -845,7 +845,7 @@ _COMPARED = ["noise", "trend", "random_walk"]
 
 @pytest.fixture(scope="module")
 def last_value_baseline():
-    return Pipeline(NaiveForecaster()).scorecard(_COMPARED, instances=20, seed=4)
+    return Pipeline(LastValueForecaster()).scorecard(_COMPARED, instances=20, seed=4)
 
 
 class CrashesAboveThree(LastValue):
@@ -912,7 +912,7 @@ def test_a_series_that_crashed_is_stored_as_null(tmp_path):
 
 def test_the_same_model_on_the_same_series_is_unchanged_everywhere(tmp_path, last_value_baseline):
     path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
-    card = Pipeline(NaiveForecaster()).scorecard(_COMPARED, instances=20, seed=4)
+    card = Pipeline(LastValueForecaster()).scorecard(_COMPARED, instances=20, seed=4)
     diff = card.compare(path)
     assert (diff.table["change"] == "unchanged").all()
     assert diff.table["p_value"].isna().all() and diff.worse.empty
@@ -942,7 +942,7 @@ def test_the_printed_comparison_names_a_baseline_saved_with_another_version(tmp_
 def test_computed_noise_levels_that_differ_in_the_last_digit_are_the_same_grid(tmp_path):
     import json
 
-    card = Pipeline(NaiveForecaster()).scorecard(["noise"], noise_levels=3, instances=20, seed=4)
+    card = Pipeline(LastValueForecaster()).scorecard(["noise"], noise_levels=3, instances=20, seed=4)
     path = card.save_baseline(tmp_path / "scorecard-baseline.json")
     record = json.loads(path.read_text(encoding="utf-8"))
     nudged = [sd * (1 + 2e-16) for sd in record["grid"]["noise_sds"]]
@@ -955,7 +955,7 @@ def test_computed_noise_levels_that_differ_in_the_last_digit_are_the_same_grid(t
 
 def test_a_path_and_a_scorecard_give_the_same_comparison(tmp_path, last_value_baseline):
     path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
-    card = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4)
+    card = Pipeline(MeanForecaster()).scorecard(_COMPARED, instances=20, seed=4)
     from_file, from_card = card.compare(path), card.compare(last_value_baseline)
     pd.testing.assert_frame_equal(from_file.table, from_card.table)
     assert from_file.baseline == "scorecard-baseline.json"  # the file's name, not its folder
@@ -964,7 +964,7 @@ def test_a_path_and_a_scorecard_give_the_same_comparison(tmp_path, last_value_ba
 
 def test_each_cell_is_unchanged_changed_no_worse_or_changed_and_worse(last_value_baseline):
     # The mean of the history is better than the last value on pure noise and worse on a random walk.
-    card = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4)
+    card = Pipeline(MeanForecaster()).scorecard(_COMPARED, instances=20, seed=4)
     diff = card.compare(last_value_baseline)
     change = diff.table.set_index(["pattern", "noise"])["change"]
     assert change["noise", "Low noise"] == change["noise", "High noise"] == "changed, no worse"
@@ -1000,7 +1000,7 @@ def test_a_series_that_newly_crashes_is_worse_and_one_that_newly_runs_is_not(las
 def test_holm_counts_only_the_cells_that_changed(tmp_path, last_value_baseline):
     # Distinct sizes, the eight smallest negative: a p-value between 0.05 / 3 and 0.05 (about 0.03).
     differences = np.sqrt(np.arange(2, 22)) * np.where(np.arange(20) < 8, -1.0, 1.0)
-    card = Pipeline(NaiveForecaster()).scorecard(_COMPARED, instances=20, seed=4)
+    card = Pipeline(LastValueForecaster()).scorecard(_COMPARED, instances=20, seed=4)
     one = _with_differences(last_value_baseline.save_baseline(tmp_path / "one.json"), [2], differences)
     diff = card.compare(one)
     p = diff.table.loc[2, "p_value"]
@@ -1020,7 +1020,7 @@ def test_holm_counts_only_the_cells_that_changed(tmp_path, last_value_baseline):
 def test_comparison_results_stay_as_they_were_before_sharing_the_sign_flips(last_value_baseline):
     # Recorded before the sign flips and Holm's correction moved to timegym.diagnostics, which
     # compare_reports shares: the move must not change a single p-value or verdict.
-    diff = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4).compare(
+    diff = Pipeline(MeanForecaster()).scorecard(_COMPARED, instances=20, seed=4).compare(
         last_value_baseline)
     # Within two flips of 9,999: roundoff on another platform may move a flipped mean past a tie.
     assert diff.table["p_value"].tolist() == pytest.approx(
@@ -1039,7 +1039,7 @@ def test_a_p_value_recomputed_by_hand_from_the_stored_numbers(tmp_path, last_val
     import json
 
     path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
-    card = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4)
+    card = Pipeline(MeanForecaster()).scorecard(_COMPARED, instances=20, seed=4)
     diff = card.compare(path)
     index = 4  # random walk, low noise
     old = json.loads(path.read_text(encoding="utf-8"))["cells"][index]["avoidable"]
@@ -1054,17 +1054,17 @@ def test_a_p_value_recomputed_by_hand_from_the_stored_numbers(tmp_path, last_val
 
 
 def test_p_values_repeat_and_do_not_depend_on_the_other_patterns(last_value_baseline):
-    card = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4)
+    card = Pipeline(MeanForecaster()).scorecard(_COMPARED, instances=20, seed=4)
     first, second = card.compare(last_value_baseline), card.compare(last_value_baseline)
     pd.testing.assert_frame_equal(first.table, second.table)
-    alone = Pipeline(NaiveForecaster("mean")).scorecard(["random_walk"], instances=20, seed=4).compare(
-        Pipeline(NaiveForecaster()).scorecard(["random_walk"], instances=20, seed=4))
+    alone = Pipeline(MeanForecaster()).scorecard(["random_walk"], instances=20, seed=4).compare(
+        Pipeline(LastValueForecaster()).scorecard(["random_walk"], instances=20, seed=4))
     shared = first.table[first.table["pattern"] == "random_walk"]
     np.testing.assert_array_equal(alone.table["p_value"], shared["p_value"])
 
 
 def test_assert_no_regression_names_the_worse_cells_with_their_numbers(last_value_baseline):
-    diff = Pipeline(NaiveForecaster("mean")).scorecard(_COMPARED, instances=20, seed=4).compare(
+    diff = Pipeline(MeanForecaster()).scorecard(_COMPARED, instances=20, seed=4).compare(
         last_value_baseline)
     with pytest.raises(AssertionError) as raised:
         diff.assert_no_regression()
@@ -1090,7 +1090,7 @@ def test_a_baseline_on_other_series_is_refused_with_what_differs(tmp_path, last_
                                                                  says):
     path = last_value_baseline.save_baseline(tmp_path / "scorecard-baseline.json")
     arguments = {"patterns": _COMPARED, "instances": 20, "seed": 4, **settings}
-    card = Pipeline(NaiveForecaster()).scorecard(arguments.pop("patterns"), **arguments)
+    card = Pipeline(LastValueForecaster()).scorecard(arguments.pop("patterns"), **arguments)
     for baseline in (path, last_value_baseline):
         with pytest.raises(ValueError, match=f"other series.*{says}"):
             card.compare(baseline)
@@ -1149,7 +1149,7 @@ def test_a_file_that_is_not_a_baseline_or_is_newer_is_refused(tmp_path, last_val
 
 
 def test_fewer_than_20_series_warn_that_only_large_regressions_are_found():
-    small = Pipeline(NaiveForecaster()).scorecard(["trend"], instances=10)
+    small = Pipeline(LastValueForecaster()).scorecard(["trend"], instances=10)
     with pytest.warns(UserWarning, match="10 series per cell finds only large regressions"):
         diff = small.compare(small)
     assert (diff.table["change"] == "unchanged").all()

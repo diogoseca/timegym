@@ -16,7 +16,7 @@ Underscore-prefixed names and modules, including `_internal` and
 | Name | Import path | Stability | Page |
 | --- | --- | --- | --- |
 | `ForecastTask`, `Forecast`, `Reference`, `SimulationReference`, `Case`, `Scenario`, `cases_from_series` | `timegym` | Public | [Tasks and forecasts](api/tasks-and-forecasts.md); [Scenarios and references](api/scenarios.md); [Composed and joint processes](api/processes.md) |
-| `Pipeline`, `NaiveForecaster`, `LastValueForecaster`, `GaussianAR1Forecaster` | `timegym` | Public | [Pipeline and reports](api/pipeline.md); [Models and reductions](api/models.md) |
+| `Pipeline`, `LastValueForecaster`, `SeasonalLastValueForecaster`, `MeanForecaster`, `SeasonalMeanForecaster`, `DriftForecaster`, `GaussianAR1Forecaster` | `timegym` | Public | [Pipeline and reports](api/pipeline.md); [Models and reductions](api/models.md) |
 | `ForecastRun`, `EvaluatedCase`, `TestReport`, `DiagnosticResult`, `CaseResult` | `timegym` | Public | [Pipeline and reports](api/pipeline.md) |
 | `compare_reports` | `timegym` | Public | [Scores and diagnostics](api/diagnostics.md#compare-two-forecasters-on-the-same-cases) |
 | `Scorecard`, `PATTERNS`, `Pattern`, `GridCell`, `scenario_grid` | `timegym` | Public | [Scorecards and the scenario grid](api/scorecard.md) |

@@ -91,7 +91,7 @@ def test_own_scores_on_the_extend_page_land_in_the_report():
 
 def test_own_checks_examples_on_the_scores_page_run():
     import pandas as pd
-    from timegym import LastValueForecaster, NaiveForecaster, Pipeline, cases_from_series
+    from timegym import LastValueForecaster, MeanForecaster, Pipeline, cases_from_series
 
     text = (ROOT / "docs/api/diagnostics.md").read_text(encoding="utf-8")
     section = text[text.index("## Your own output checks"):text.index("## Statistical and metamorphic")]
@@ -99,7 +99,7 @@ def test_own_checks_examples_on_the_scores_page_run():
     days = pd.date_range("2024-01-01", periods=120, freq="D")
     rng = np.random.default_rng(0)
     rain = pd.Series((rng.random(120) < 0.3).astype(float), index=days, name="rain")
-    namespace = {"pipeline": Pipeline(NaiveForecaster("mean")),
+    namespace = {"pipeline": Pipeline(MeanForecaster()),
                  "cases": cases_from_series(rain, origins=[60, 80, 100], horizon=7, name="rain")}
     exec(blocks[0], namespace)  # a chance of rain stays between 0 and 1
     assert namespace["result"].checks[-1] == {"check": "within", "title": "Values between 0 and 1",
@@ -133,7 +133,7 @@ def test_own_checks_on_the_extend_page_fail_and_pass_as_the_comment_says():
 
 
 def test_own_kind_of_series_on_the_scorecard_page_scores_as_the_table_says():
-    from timegym import NaiveForecaster, Pipeline
+    from timegym import MeanForecaster, Pipeline, SeasonalLastValueForecaster
 
     text = (ROOT / "docs/api/scorecard.md").read_text(encoding="utf-8")
     section = text[text.index("## Your own kind of series"):text.index("## Mistakes and checks")]
@@ -142,8 +142,8 @@ def test_own_kind_of_series_on_the_scorecard_page_scores_as_the_table_says():
     exec(block, namespace)
     forecasters = {
         "Seasonal mean": namespace["card"],
-        "Historical mean": Pipeline(NaiveForecaster("mean")).scorecard(patterns=[namespace["rain"]]),
-        "Last cycle repeated": Pipeline(NaiveForecaster("seasonal", period=12)).scorecard(patterns=[namespace["rain"]]),
+        "Historical mean": Pipeline(MeanForecaster()).scorecard(patterns=[namespace["rain"]]),
+        "Last cycle repeated": Pipeline(SeasonalLastValueForecaster(period=12)).scorecard(patterns=[namespace["rain"]]),
     }
     for label, card in forecasters.items():
         (row,) = [line for line in section.splitlines() if line.startswith(f"| {label}")]
@@ -162,7 +162,7 @@ def test_calibration_example_on_the_scores_page_prints_what_the_page_shows():
     import contextlib
     import io
 
-    from timegym import NaiveForecaster, Pipeline
+    from timegym import MeanForecaster, Pipeline
     from timegym.diagnostics import calibration
 
     text = (ROOT / "docs/api/diagnostics.md").read_text(encoding="utf-8")
@@ -185,7 +185,7 @@ def test_calibration_example_on_the_scores_page_prints_what_the_page_shows():
 
     plain = calibration(Pipeline(WithoutAddedSteps()).run(cases=cases, keep_data=True), cluster="station")
     assert plain.certain == 130 and f"{plain.slope:.2f}" == "0.46"  # "says 0 or 1 exactly 130 times"
-    mean = calibration(Pipeline(NaiveForecaster("mean")).run(cases=cases, keep_data=True), cluster="station")
+    mean = calibration(Pipeline(MeanForecaster()).run(cases=cases, keep_data=True), cluster="station")
     used = mean.table[mean.table["forecasts"] > 0]
     assert used["low"].min() == 0.4 and used["high"].max() == 0.6  # "between 40% and 60%"
     assert f"{mean.slope:.2f}" == "-0.14"

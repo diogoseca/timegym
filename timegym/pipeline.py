@@ -16,13 +16,8 @@ import warnings
 import numpy as np
 import pandas as pd
 from .contracts import Case, Forecast, ForecastTask
-from .models import (
-    REDUCTIONS,
-    NaiveForecaster,
-    SklearnForecaster,
-    fresh_model,
-    is_sklearn_regressor,
-)
+from .models import REDUCTIONS, SklearnForecaster, fresh_model, is_sklearn_regressor
+from .models import NaiveForecaster, _naive_without_warning
 from .scenarios import Scenario, MANIFEST_SCHEMA_VERSION, default_scenarios
 from .diagnostics import (
     evaluate_forecast,
@@ -329,6 +324,13 @@ class Pipeline:
                 "fit_transform(history) and inverse_transform(forecast)"
             )
         self.model = model
+        if (
+            model is NaiveForecaster
+        ):  # the class itself: one warning here, none for each model it makes
+            _warn_deprecated(
+                "NaiveForecaster is deprecated and will be removed in a later release: use "
+                "LastValueForecaster, which makes the same forecasts"
+            )
         if model is not None and model_factory is not None:
             raise ValueError("Specify model or model_factory, not both")
         if model_factory is not None and not callable(model_factory):
@@ -362,15 +364,18 @@ class Pipeline:
                 horizon=horizon,
             )
         if self.model is None and self.model_factory is None:
-            return NaiveForecaster()
+            return _naive_without_warning()
         newly_constructed = self.model_factory is not None or inspect.isclass(
             self.model
         )
-        candidate = (
-            self.model_factory()
-            if self.model_factory is not None
-            else (self.model() if inspect.isclass(self.model) else self.model)
-        )
+        if self.model is NaiveForecaster:
+            candidate = _naive_without_warning()
+        else:
+            candidate = (
+                self.model_factory()
+                if self.model_factory is not None
+                else (self.model() if inspect.isclass(self.model) else self.model)
+            )
         if callable(getattr(candidate, "clone_unfitted", None)):
             return candidate if newly_constructed else fresh_model(candidate)
         if is_sklearn_regressor(candidate):

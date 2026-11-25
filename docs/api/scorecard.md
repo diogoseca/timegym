@@ -237,7 +237,7 @@ falls over a 12-step cycle.
 
 ```python
 import numpy as np
-from timegym import NaiveForecaster, Pattern, Pipeline
+from timegym import Pattern, Pipeline, SeasonalMeanForecaster
 
 
 def simulate_rain(rng, history, horizon, noise):
@@ -257,10 +257,10 @@ rain = Pattern(
     predictable="The chance of rain at each point of the cycle.",
     unpredictable="Whether it actually rains.",
     simulate=simulate_rain,
-    attainable_by=NaiveForecaster("seasonal_mean", period=12),
+    attainable_by=SeasonalMeanForecaster(period=12),
 )
 
-model = NaiveForecaster("seasonal_mean", period=12)
+model = SeasonalMeanForecaster(period=12)
 card = Pipeline(model).run(
     ["seasonal", rain],  # a built-in row beside yours
     attainable=True,  # also score each row's own model, fitted to each history
@@ -300,9 +300,9 @@ with the default ten series:
 
 | Forecaster | Low noise | High noise |
 | --- | --- | --- |
-| Seasonal mean, the row's own model, `NaiveForecaster("seasonal_mean", period=12)` | 92 Nails it | 92 Nails it |
-| Historical mean, `NaiveForecaster("mean")` | 82 Good | 95 Nails it |
-| Last cycle repeated, `NaiveForecaster("seasonal", period=12)` | 52 Struggles | 53 Struggles |
+| Seasonal mean, the row's own model, `SeasonalMeanForecaster(period=12)` | 92 Nails it | 92 Nails it |
+| Historical mean, `MeanForecaster()` | 82 Good | 95 Nails it |
+| Last cycle repeated, `SeasonalLastValueForecaster(period=12)` | 52 Struggles | 53 Struggles |
 
 The attainable score is 91 in both columns: the seasonal mean, the share of
 rainy steps at each point of the cycle, learned from ten cycles of history. The

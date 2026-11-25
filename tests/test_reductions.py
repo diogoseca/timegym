@@ -11,7 +11,7 @@ from sklearn.multioutput import MultiOutputRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
 
-from timegym import NaiveForecaster, Pipeline, Scenario, TestReport
+from timegym import DriftForecaster, Pipeline, Scenario, TestReport
 from timegym.models import REDUCTIONS, SklearnForecaster, _lag_windows
 
 
@@ -130,8 +130,8 @@ def test_reduction_is_recorded_in_the_run_metadata_and_configuration(reduction):
 @pytest.mark.parametrize("reduction", REDUCTIONS)
 def test_native_models_ignore_the_reduction_and_still_replay(reduction):
     case = Scenario("trend", history_length=20, horizon=4).generate(seed=5)
-    baseline = Pipeline(NaiveForecaster("drift")).predict(case.task.history, case.task.future_index)
-    pipeline = Pipeline(NaiveForecaster("drift"), reduction=reduction)
+    baseline = Pipeline(DriftForecaster()).predict(case.task.history, case.task.future_index)
+    pipeline = Pipeline(DriftForecaster(), reduction=reduction)
     np.testing.assert_array_equal(pipeline.predict(case.task.history, case.task.future_index).point, baseline.point)
     config = json.loads(json.dumps(pipeline.to_config()))
     assert config["replayable"] is True and Pipeline.from_config(config).reduction == reduction

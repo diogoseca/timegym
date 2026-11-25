@@ -11,10 +11,15 @@ import numpy as np
 from . import models
 from .models import (
     REDUCTIONS,
+    DriftForecaster,
     GaussianAR1Forecaster,
     LastValueForecaster,
+    MeanForecaster,
     NaiveForecaster,
+    SeasonalLastValueForecaster,
+    SeasonalMeanForecaster,
 )
+from .models import _naive_without_warning
 from .target import transform_config, transform_from_config
 from ._internal import _json_safe
 
@@ -30,9 +35,16 @@ __all__ = [
 
 
 _BUILTINS = {
-    "NaiveForecaster": NaiveForecaster,
-    "LastValueForecaster": LastValueForecaster,
-    "GaussianAR1Forecaster": GaussianAR1Forecaster,
+    model.__name__: model
+    for model in (
+        LastValueForecaster,
+        MeanForecaster,
+        SeasonalLastValueForecaster,
+        SeasonalMeanForecaster,
+        DriftForecaster,
+        GaussianAR1Forecaster,
+        NaiveForecaster,
+    )
 }
 PIPELINE_CONFIG_SCHEMA_VERSION = 3
 
@@ -90,11 +102,14 @@ def pipeline_config(pipeline):
         if model_class in _BUILTINS.values():
             # Only exact bundled classes are constructed. Subclasses do not
             # inherit replay permission merely by sharing a class name.
-            template = (
-                model_class()
-                if supplied is None or inspect.isclass(supplied)
-                else supplied
-            )
+            if supplied is not None and not inspect.isclass(supplied):
+                template = supplied
+            else:
+                template = (
+                    _naive_without_warning()
+                    if model_class is NaiveForecaster
+                    else model_class()
+                )
             parameters = template.params()
             model = {
                 "kind": "builtin",
@@ -162,19 +177,25 @@ def pipeline_from_config(config):
     if not isinstance(name, str) or name not in _BUILTINS:
         raise ValueError("Model class is not in the replay allowlist")
     parameters = model["parameters"]
-    defaults = _BUILTINS[name]().params()
     # Configurations written before configurable AR(1) quantiles used the default levels.
     if (
         name == "GaussianAR1Forecaster"
         and isinstance(parameters, dict)
         and "levels" not in parameters
     ):
-        parameters = {**parameters, "levels": defaults["levels"]}
-    if not isinstance(parameters, dict) or set(parameters) != set(defaults):
+        parameters = {**parameters, "levels": GaussianAR1Forecaster().levels}
+    if not isinstance(parameters, dict) or set(parameters) != set(
+        inspect.signature(_BUILTINS[name]).parameters
+    ):
         raise ValueError("Unexpected or missing built-in model constructor parameters")
     window = config["window_length"]
     window = positive_int(window, "window_length")
-    restored = _BUILTINS[name](**parameters)
+    # A report that names NaiveForecaster replays it without the warning its name gives your own code.
+    restored = (
+        _naive_without_warning(**parameters)
+        if name == "NaiveForecaster"
+        else _BUILTINS[name](**parameters)
+    )
     if isinstance(restored, GaussianAR1Forecaster) and restored.seed is None:
         raise ValueError("Exact replay requires a fixed nonnegative integer model seed")
     transform = config.get("target_transform")

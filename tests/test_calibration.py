@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from scipy.optimize import minimize_scalar
 
-from timegym import Forecast, NaiveForecaster, Pipeline, cases_from_series, diagnostics
+from timegym import Forecast, MeanForecaster, Pipeline, cases_from_series, diagnostics
 from timegym.diagnostics import Calibration, calibration
 from timegym.plotting import plot_calibration
 
@@ -179,7 +179,7 @@ def test_cases_without_a_usable_forecast_are_left_out_and_counted(rain_cases):
 
 def test_a_run_of_counts_is_refused_naming_the_case():
     sales = pd.Series(np.arange(60.0) % 5)
-    run = Pipeline(NaiveForecaster("mean")).run(cases=cases_from_series(sales, origins=[40], horizon=5, name="sales"), keep_data=True)
+    run = Pipeline(MeanForecaster()).run(cases=cases_from_series(sales, origins=[40], horizon=5, name="sales"), keep_data=True)
     with pytest.raises(ValueError, match=r"case 0 \(sales\): observed must be 0 or 1; got 2"):
         calibration(run)
 

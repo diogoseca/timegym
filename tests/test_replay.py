@@ -6,11 +6,12 @@ import sys
 
 import pytest
 
-from timegym import GaussianAR1Forecaster, LastValueForecaster, NaiveForecaster, Pipeline, Scenario, TestReport
+from timegym import (DriftForecaster, GaussianAR1Forecaster, LastValueForecaster, MeanForecaster, NaiveForecaster,
+                     Pipeline, Scenario, SeasonalLastValueForecaster, SeasonalMeanForecaster, TestReport)
 from timegym.pipeline import replay_case
 
 
-@pytest.mark.parametrize("model", [None, NaiveForecaster("seasonal", period=3), LastValueForecaster(),
+@pytest.mark.parametrize("model", [None, SeasonalLastValueForecaster(period=3), LastValueForecaster(),
                                    GaussianAR1Forecaster(n_samples=40, seed=37),
                                    GaussianAR1Forecaster(n_samples=40, seed=37, levels=(.2, .8))])
 def test_builtin_configuration_roundtrip_reproduces_exact_outputs(model):
@@ -35,7 +36,7 @@ def test_factory_configuration_is_descriptive_without_invoking_factory():
     calls = []
     def factory():
         calls.append(True)
-        return NaiveForecaster()
+        return LastValueForecaster()
     config = Pipeline(model_factory=factory).to_config()
     assert calls == []
     assert config["replayable"] is False
@@ -82,11 +83,11 @@ def test_untrusted_model_names_and_parameters_cannot_trigger_imports(tmp_path):
 
 
 def test_native_subclasses_do_not_inherit_replay_permission():
-    class CustomNaive(NaiveForecaster):
+    class CustomSeasonal(SeasonalLastValueForecaster):
         pass
     class CustomLastValue(LastValueForecaster):
         pass
-    assert Pipeline(CustomNaive()).to_config()["replayable"] is False
+    assert Pipeline(CustomSeasonal(period=4)).to_config()["replayable"] is False
     assert Pipeline(CustomLastValue()).to_config()["replayable"] is False
 
 
@@ -113,7 +114,7 @@ def test_replay_exposes_source_changes_instead_of_asserting_identical_environmen
 
 
 def test_report_replay_method_and_example_script(tmp_path):
-    report = Pipeline(NaiveForecaster("drift")).test([Scenario("trend")], seeds=[2])
+    report = Pipeline(DriftForecaster()).test([Scenario("trend")], seeds=[2])
     assert report.replay_case().metadata["replay"]["metrics_match"] is True
     saved, output = tmp_path / "report.json", tmp_path / "replayed.json"
     report.to_json(saved)
@@ -139,10 +140,10 @@ def test_configuration_parser_does_not_construct_a_pipeline_and_preserves_subcla
     class SpecializedPipeline(Pipeline):
         pass
 
-    config = Pipeline(NaiveForecaster("drift")).to_config()
+    config = Pipeline(DriftForecaster()).to_config()
     arguments = pipeline_from_config(config)
     assert isinstance(arguments, dict)
-    assert type(arguments["model"]) is NaiveForecaster
+    assert type(arguments["model"]) is DriftForecaster
     restored = SpecializedPipeline.from_config(config)
     assert type(restored) is SpecializedPipeline
     assert restored.to_config() == config
@@ -170,7 +171,8 @@ def test_pipeline_reduction_and_naive_strategy_errors_name_the_supported_options
         NaiveForecaster(strategy="unknown")
 
 
-@pytest.mark.parametrize('model', [NaiveForecaster('seasonal', period=3), LastValueForecaster(),
+@pytest.mark.parametrize('model', [SeasonalLastValueForecaster(period=3), LastValueForecaster(), MeanForecaster(),
+                                    SeasonalMeanForecaster(period=4), DriftForecaster(),
                                     GaussianAR1Forecaster(n_samples=16, seed=13, levels=(.2, .8))])
 def test_builtin_params_cover_constructor_clone_and_replay(model):
     import inspect
@@ -227,7 +229,7 @@ def test_replay_rejects_raw_dicts_instead_of_bypassing_report_validation():
 
 
 def test_reproduced_error_ignores_traceback_paths_but_records_the_difference(tmp_path):
-    report = Pipeline(NaiveForecaster("seasonal", period=50)).test(
+    report = Pipeline(SeasonalLastValueForecaster(period=50)).test(
         [Scenario("ar1", history_length=16, horizon=3)], seeds=[0])
     diagnostic = report.cases[0].diagnostics[0]
     assert diagnostic.status == "ERROR"

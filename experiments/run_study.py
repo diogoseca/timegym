@@ -19,7 +19,7 @@ import pandas as pd
 from timegym.statistics import paired_t_interval as mean_interval
 from timegym.statistics import wilson_interval as rate_interval
 
-from timegym import Forecast, Pipeline, Scenario, NaiveForecaster, GaussianAR1Forecaster
+from timegym import Forecast, Pipeline, Scenario, GaussianAR1Forecaster, LastValueForecaster, SeasonalLastValueForecaster
 from timegym.checks import check_shift_equivariance
 from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
 from timegym.metrics import mse, mae, crps, energy_score, variogram_score
@@ -63,8 +63,8 @@ def source_fingerprints():
 
 
 def capability_models(task):
-    return {"last_value": lambda: NaiveForecaster(),
-            "seasonal_12": lambda: NaiveForecaster("seasonal", task["seasonal_period"]),
+    return {"last_value": lambda: LastValueForecaster(),
+            "seasonal_12": lambda: SeasonalLastValueForecaster(period=task["seasonal_period"]),
             "gaussian_ar1": lambda: GaussianAR1Forecaster(n_samples=task["n_samples"])}
 
 

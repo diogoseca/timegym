@@ -8,8 +8,9 @@ from timegym import (
     CaseResult,
     DiagnosticResult,
     LastValueForecaster,
-    NaiveForecaster,
+    MeanForecaster,
     Pipeline,
+    SeasonalLastValueForecaster,
     TestReport,
     cases_from_series,
     compare_reports,
@@ -234,7 +235,7 @@ def stores(n_stores=24, seed=3):
 def test_on_your_own_data_by_region_with_stores_as_clusters():
     cases = stores()
     last = Pipeline(LastValueForecaster()).test(cases=cases)
-    seasonal_run = Pipeline(NaiveForecaster("seasonal", period=7)).run(cases=cases)
+    seasonal_run = Pipeline(SeasonalLastValueForecaster(period=7)).run(cases=cases)
     diff = compare_reports(seasonal_run, last, metric="mae", by="region", cluster="store")
     assert isinstance(diff, ReportComparison)
     assert diff.table["verdict"].tolist() == ["better"] * 3
@@ -250,10 +251,12 @@ def test_on_your_own_data_by_region_with_stores_as_clusters():
 def test_candidates_are_named_by_their_model_or_their_position():
     cases = stores(n_stores=6)
     last = Pipeline(LastValueForecaster()).test(cases=cases)
-    seasonal = Pipeline(NaiveForecaster("seasonal", period=7)).test(cases=cases)
-    mean = Pipeline(NaiveForecaster("mean")).test(cases=cases)
+    seasonal = Pipeline(SeasonalLastValueForecaster(period=7)).test(cases=cases)
+    fortnight = Pipeline(SeasonalLastValueForecaster(period=14)).run(cases=cases)
+    mean = Pipeline(MeanForecaster()).test(cases=cases)
+    assert compare_reports([seasonal, fortnight], last, metric="mae").table["candidate"].tolist() == [
+        "candidate 1", "candidate 2"]  # both are SeasonalLastValueForecaster
     assert compare_reports([seasonal, mean], last, metric="mae").table["candidate"].tolist() == [
-        "candidate 1", "candidate 2"]  # both are NaiveForecaster
-    assert compare_reports([seasonal, last], last, metric="mae").table["candidate"].tolist() == [
-        "NaiveForecaster", "LastValueForecaster"]
-    assert compare_reports(seasonal, last, metric="mae").table["candidate"].tolist() == ["NaiveForecaster"]
+        "SeasonalLastValueForecaster", "MeanForecaster"]
+    assert compare_reports(seasonal, last, metric="mae").table["candidate"].tolist() == [
+        "SeasonalLastValueForecaster"]

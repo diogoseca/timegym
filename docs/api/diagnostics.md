@@ -421,7 +421,8 @@ your own included; lower is better unless `higher_is_better=True`.
 ```python
 import numpy as np
 import pandas as pd
-from timegym import LastValueForecaster, NaiveForecaster, Pipeline, cases_from_series, compare_reports
+from timegym import (DriftForecaster, LastValueForecaster, MeanForecaster, Pipeline,
+                     SeasonalLastValueForecaster, cases_from_series, compare_reports)
 
 rng = np.random.default_rng(0)
 days = pd.date_range("2024-01-01", periods=140, freq="D")
@@ -433,7 +434,7 @@ for store in range(16):
                                manifest={"store": f"store {store}", "region": ["north", "south"][store % 2]})
 
 baseline = Pipeline(LastValueForecaster()).run(cases=cases)
-candidate = Pipeline(NaiveForecaster("seasonal", period=7)).run(cases=cases)
+candidate = Pipeline(SeasonalLastValueForecaster(period=7)).run(cases=cases)
 diff = compare_reports(candidate, baseline, metric="mae", by="region", cluster="store")
 print(diff)
 diff.assert_no_regression()
@@ -484,8 +485,8 @@ many were tried, so the best of many does not beat the baseline by luck.
 ```python
 candidates = {
     "same weekday last week": candidate,
-    "mean so far": Pipeline(NaiveForecaster("mean")).run(cases=cases),
-    "straight line": Pipeline(NaiveForecaster("drift")).run(cases=cases),
+    "mean so far": Pipeline(MeanForecaster()).run(cases=cases),
+    "straight line": Pipeline(DriftForecaster()).run(cases=cases),
 }
 print(compare_reports(candidates, baseline, metric="mae", cluster="store"))
 ```
@@ -629,7 +630,7 @@ intercept; with every forecast the same, no slope; when the forecasts separate
 the outcomes perfectly, the slope has no finite value. `note` says which, and
 the value is NaN. A slope near 0 next to forecasts that stay near the average
 means they carry no information, not that they are too sure: the share of rainy
-steps so far, `NaiveForecaster("mean")`, forecasts between 40% and 60% on these
+steps so far, `MeanForecaster()`, forecasts between 40% and 60% on these
 cases and has a slope of −0.14.
 
 ## Case-level uncertainty intervals

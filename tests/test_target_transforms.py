@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from scipy import stats
 
-from timegym import Forecast, ForecastTask, GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, TestReport
+from timegym import DriftForecaster, Forecast, ForecastTask, GaussianAR1Forecaster, LastValueForecaster, Pipeline, Scenario, TestReport
 from timegym.diagnostics import evaluate_forecast
 from timegym.mutations import mutate_forecast
 from timegym.target import (BoxCoxTransform, ComposedTransform, DifferenceTransform, LogTransform,
@@ -245,7 +245,7 @@ def test_constructor_and_history_validation():
     for members in ([], "log", None):
         with pytest.raises(ValueError, match="nonempty sequence"):
             ComposedTransform(members)
-    for member in (ComposedTransform([LogTransform()]), NaiveForecaster()):
+    for member in (ComposedTransform([LogTransform()]), LastValueForecaster()):
         with pytest.raises(TypeError, match="members must be"):
             ComposedTransform([LogTransform(), member])
 
@@ -363,7 +363,7 @@ def test_target_transform_is_recorded_and_replayed_from_the_report(tmp_path):
 
 
 def test_schema_two_configurations_still_restore_without_a_transform():
-    config = Pipeline(NaiveForecaster("drift")).to_config()
+    config = Pipeline(DriftForecaster()).to_config()
     assert config["target_transform"] is None
     legacy = {key: value for key, value in config.items() if key != "target_transform"}
     legacy["schema_version"] = 2
@@ -385,10 +385,10 @@ def test_external_target_transforms_are_described_but_not_replayable():
         def inverse_transform(self, forecast):
             return Forecast(index=forecast.index, point=forecast.point + 1., target_names=forecast.target_names)
 
-    pipeline = Pipeline(NaiveForecaster(), target_transform=Shift())
+    pipeline = Pipeline(LastValueForecaster(), target_transform=Shift())
     case = Scenario("trend").generate(seed=0)
     np.testing.assert_allclose(pipeline.predict(case.task.history, case.task.future_index).point,
-                               Pipeline(NaiveForecaster()).predict(case.task.history, case.task.future_index).point)
+                               Pipeline(LastValueForecaster()).predict(case.task.history, case.task.future_index).point)
     config = pipeline.to_config()
     assert config["replayable"] is False and config["target_transform"]["kind"] == "external"
     assert config["target_transform"]["qualname"].endswith("Shift")

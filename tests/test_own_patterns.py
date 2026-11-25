@@ -16,12 +16,13 @@ from timegym import (
     PATTERNS,
     Case,
     ForecastTask,
-    NaiveForecaster,
     Pattern,
     Pipeline,
     Reference,
     Scenario,
     scenario_grid,
+    MeanForecaster,
+    SeasonalMeanForecaster,
 )
 
 
@@ -59,7 +60,7 @@ def built_rain(noise, history_length, horizon):
     return RainScenario(0.45 / (1 + noise) ** 0.5, history_length, horizon)
 
 
-SEASONAL_MEAN = NaiveForecaster("seasonal_mean", period=12)
+SEASONAL_MEAN = SeasonalMeanForecaster(period=12)
 
 
 def rain_pattern(key="rain", attainable_by=SEASONAL_MEAN, simulate=None, build=None, **texts):
@@ -73,7 +74,7 @@ def rain_pattern(key="rain", attainable_by=SEASONAL_MEAN, simulate=None, build=N
 
 @pytest.fixture(scope="module")
 def mean_card():
-    return Pipeline(NaiveForecaster("mean")).scorecard(patterns=["seasonal", rain_pattern()], instances=4)
+    return Pipeline(MeanForecaster()).scorecard(patterns=["seasonal", rain_pattern()], instances=4)
 
 
 def test_pattern_is_exported_from_timegym():
@@ -93,8 +94,8 @@ def test_own_pattern_is_a_row_beside_the_built_in_ones(mean_card):
 
 
 def test_built_in_rows_do_not_change_beside_your_own(mean_card):
-    alone = Pipeline(NaiveForecaster("mean")).scorecard(patterns=["seasonal"], instances=4)
-    after = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[rain_pattern(), "seasonal"], instances=4)
+    alone = Pipeline(MeanForecaster()).scorecard(patterns=["seasonal"], instances=4)
+    after = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern(), "seasonal"], instances=4)
     expected = alone.table.set_index(["pattern", "noise"])["score"]
     for card in (mean_card, after):
         got = card.table.set_index(["pattern", "noise"]).loc["seasonal", "score"]
@@ -103,7 +104,7 @@ def test_built_in_rows_do_not_change_beside_your_own(mean_card):
 
 def test_own_pattern_gets_the_brier_share_as_its_score():
     pattern = rain_pattern()
-    card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[pattern], instances=3)
+    card = Pipeline(MeanForecaster()).scorecard(patterns=[pattern], instances=3)
     # Recompute from the cases: the answer key's variance p(1 - p) against the squared distance to p.
     unavoidable, avoidable = [], []
     for entry in card.run.cases:
@@ -118,7 +119,7 @@ def test_own_pattern_gets_the_brier_share_as_its_score():
 
 
 def test_attainable_is_simulated_only_when_asked_and_with_a_model_of_the_row():
-    pipeline = Pipeline(NaiveForecaster("mean"))
+    pipeline = Pipeline(MeanForecaster())
     asked = pipeline.scorecard(patterns=[rain_pattern()], instances=2, attainable=True)
     assert asked.table["attainable"].between(85, 95).all()  # about 100 / 1.1 from ten cycles of history
     no_model = pipeline.scorecard(patterns=[rain_pattern(attainable_by=None)], instances=2, attainable=True)
@@ -128,17 +129,17 @@ def test_attainable_is_simulated_only_when_asked_and_with_a_model_of_the_row():
 
 
 def test_built_in_rows_keep_their_stored_attainable_score_beside_your_own():
-    card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=["trend", rain_pattern(attainable_by=None)],
+    card = Pipeline(MeanForecaster()).scorecard(patterns=["trend", rain_pattern(attainable_by=None)],
                                                        instances=2)
     trend = card.table[card.table["pattern"] == "trend"]["attainable"]
-    stored = Pipeline(NaiveForecaster("mean")).scorecard(patterns=["trend"], instances=2).table["attainable"]
+    stored = Pipeline(MeanForecaster()).scorecard(patterns=["trend"], instances=2).table["attainable"]
     assert trend.notna().all()
     assert np.array_equal(trend.to_numpy(), stored.to_numpy())
 
 
 def test_a_built_in_pattern_object_counts_as_its_key():
-    by_object = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[PATTERNS["trend"]], instances=2)
-    by_key = Pipeline(NaiveForecaster("mean")).scorecard(patterns=["trend"], instances=2)
+    by_object = Pipeline(MeanForecaster()).scorecard(patterns=[PATTERNS["trend"]], instances=2)
+    by_key = Pipeline(MeanForecaster()).scorecard(patterns=["trend"], instances=2)
     pd.testing.assert_frame_equal(by_object.table, by_key.table)
     assert by_object.cells[0].definition is PATTERNS["trend"]
 
@@ -146,7 +147,7 @@ def test_a_built_in_pattern_object_counts_as_its_key():
 def test_own_pattern_can_reuse_a_built_in_recipe():
     gentle = Pattern("gentle_trend", "Gentle trend", "a slow straight line", "The slope.", "The noise.",
                      build=lambda s, n, h: Scenario("trend", n, h, {"slope": 0.01, "sigma": s}))
-    card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[gentle], instances=2,
+    card = Pipeline(MeanForecaster()).scorecard(patterns=[gentle], instances=2,
                                                        history_length=60, horizon=12)
     assert list(card.table["pattern"]) == ["gentle_trend", "gentle_trend"]
     assert card.cells[0].scenario.history_length == 60
@@ -186,12 +187,12 @@ def test_baseline_and_compare_know_your_row_by_its_key(tmp_path, mean_card):
     path = mean_card.save_baseline(tmp_path / "baseline.json")
     saved = json.loads(path.read_text())
     assert "rain" in json.dumps(saved)
-    again = Pipeline(NaiveForecaster("mean")).scorecard(patterns=["seasonal", rain_pattern()], instances=4)
+    again = Pipeline(MeanForecaster()).scorecard(patterns=["seasonal", rain_pattern()], instances=4)
     with pytest.warns(UserWarning):  # fewer than 20 instances
         comparison = again.compare(path)
     assert (comparison.table["change"] == "unchanged").all()
     assert set(comparison.table["pattern"]) == {"seasonal", "rain"}
-    other_key = Pipeline(NaiveForecaster("mean")).scorecard(patterns=["seasonal", rain_pattern("showers")],
+    other_key = Pipeline(MeanForecaster()).scorecard(patterns=["seasonal", rain_pattern("showers")],
                                                             instances=4)
     with pytest.raises(ValueError):
         other_key.compare(path)
@@ -288,13 +289,13 @@ def test_grid_says_what_your_scenario_is_missing(build, error, message):
 def test_pipeline_scorecard_refuses_before_anything_runs():
     calls = []
 
-    class Counting(NaiveForecaster):
+    class Counting(MeanForecaster):
         def fit(self, history):
             calls.append(1)
             return super().fit(history)
 
     with pytest.raises(ValueError, match="no answer key"):
-        Pipeline(Counting("mean")).scorecard(
+        Pipeline(Counting()).scorecard(
             patterns=["noise", rain_pattern(build=lambda s, n, h: _NoAnswerKey(0.3, n, h))])
     assert calls == []
 
@@ -341,7 +342,7 @@ def test_simulate_takes_several_series_and_a_covariance():
     case = _case(rain_pattern("pair", simulate=pair, attainable_by=None), horizon=4)
     assert list(case.task.history.columns) == ["y0", "y1"]
     assert case.reference.covariance[0, 1] == 0.5
-    card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[rain_pattern("pair", simulate=pair,
+    card = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern("pair", simulate=pair,
                                                                               attainable_by=None)], instances=2)
     assert card.table["score"].between(0, 100).all()
 
@@ -376,21 +377,21 @@ def test_grid_says_what_simulate_returned_wrong(simulate, error, message):
 # --- attainable_by: the row's own model ---------------------------------------------------------
 
 def test_attainable_by_takes_a_model_and_never_fits_the_one_you_passed():
-    model = NaiveForecaster("seasonal_mean", period=12)
-    card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[rain_pattern(attainable_by=model)], instances=2,
+    model = SeasonalMeanForecaster(period=12)
+    card = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern(attainable_by=model)], instances=2,
                                                        attainable=True)
     assert card.table["attainable"].between(85, 95).all()
     assert not hasattr(model, "history_")  # each series fitted a copy
 
 
 @pytest.mark.parametrize("given", [
-    NaiveForecaster("seasonal_mean", period=12),
-    lambda: NaiveForecaster("seasonal_mean", period=12),
+    SeasonalMeanForecaster(period=12),
+    lambda: SeasonalMeanForecaster(period=12),
 ])
 def test_attainable_by_gives_the_same_score_as_a_model_or_a_function(given):
-    card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[rain_pattern(attainable_by=given)], instances=2,
+    card = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern(attainable_by=given)], instances=2,
                                                        attainable=True)
-    reference = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[rain_pattern()], instances=2, attainable=True)
+    reference = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern()], instances=2, attainable=True)
     assert np.array_equal(card.table["attainable"].to_numpy(), reference.table["attainable"].to_numpy())
 
 
@@ -402,7 +403,7 @@ def test_attainable_by_takes_a_class():
         def predict(self, future_index):
             return np.full(len(future_index), 0.5)
 
-    card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[rain_pattern(attainable_by=Half)], instances=2,
+    card = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern(attainable_by=Half)], instances=2,
                                                        attainable=True)
     assert card.table["attainable"].between(50, 99).all()
 
@@ -410,8 +411,8 @@ def test_attainable_by_takes_a_class():
 def test_fitted_still_makes_a_pattern_with_a_warning():
     with pytest.warns(DeprecationWarning, match="attainable_by"):
         old = Pattern("rain", "Rain or no rain", "", "", "", simulate=simulate_rain,
-                      fitted=lambda: NaiveForecaster("seasonal_mean", period=12))
-    card = Pipeline(NaiveForecaster("mean")).scorecard(patterns=[old], instances=2, attainable=True)
+                      fitted=lambda: SeasonalMeanForecaster(period=12))
+    card = Pipeline(MeanForecaster()).scorecard(patterns=[old], instances=2, attainable=True)
     assert card.table["attainable"].between(85, 95).all()
 
 
@@ -420,21 +421,21 @@ def test_fitted_still_makes_a_pattern_with_a_warning():
 def test_seasonal_mean_forecasts_the_mean_at_each_point_of_the_cycle():
     values = [1, 0, 0, 1, 1, 0, 0, 1, 0, 1]  # positions 0..9 on a cycle of 3
     history = pd.DataFrame({"y": values}, index=pd.RangeIndex(10))
-    forecast = NaiveForecaster("seasonal_mean", period=3).fit(history).predict(pd.RangeIndex(10, 16))
+    forecast = SeasonalMeanForecaster(period=3).fit(history).predict(pd.RangeIndex(10, 16))
     # step 10 is at point 1 of the cycle (0, 1, 1), step 11 at point 2 (0, 0, 0), step 12 at point 0 (1, 1, 0, 1)
     assert np.allclose(forecast.point[:, 0], [2 / 3, 0, 3 / 4, 2 / 3, 0, 3 / 4])
 
 
 def test_seasonal_mean_works_on_several_series_and_needs_one_full_cycle():
     history = pd.DataFrame({"a": np.arange(8.0), "b": np.arange(8.0) % 4}, index=pd.RangeIndex(8))
-    forecast = NaiveForecaster("seasonal_mean", period=4).fit(history).predict(pd.RangeIndex(8, 12))
+    forecast = SeasonalMeanForecaster(period=4).fit(history).predict(pd.RangeIndex(8, 12))
     assert np.allclose(forecast.point, [[2, 0], [3, 1], [4, 2], [5, 3]])
     with pytest.raises(ValueError, match="Insufficient history"):
-        NaiveForecaster("seasonal_mean", period=12).fit(history)
-    copy = NaiveForecaster("seasonal_mean", period=4).clone_unfitted()
-    assert (copy.strategy, copy.period) == ("seasonal_mean", 4)
+        SeasonalMeanForecaster(period=12).fit(history)
+    copy = SeasonalMeanForecaster(period=4).clone_unfitted()
+    assert type(copy) is SeasonalMeanForecaster and copy.params() == {"period": 4}
 
 
 def test_seasonal_mean_scores_on_the_seasonal_row():
-    card = Pipeline(NaiveForecaster("seasonal_mean", period=12)).scorecard(["seasonal"], instances=4)
+    card = Pipeline(SeasonalMeanForecaster(period=12)).scorecard(["seasonal"], instances=4)
     assert (card.table["score"] > 80).all()

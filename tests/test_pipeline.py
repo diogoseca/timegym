@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from timegym import Pipeline, Scenario, NaiveForecaster, GaussianAR1Forecaster, Forecast
+from timegym import (Pipeline, Scenario, GaussianAR1Forecaster, Forecast, LastValueForecaster, DriftForecaster,
+                     MeanForecaster, NaiveForecaster, SeasonalLastValueForecaster, SeasonalMeanForecaster)
 from timegym.checks import check_shift_equivariance
 from timegym.mutations import mutate_forecast
 
@@ -30,7 +31,7 @@ def test_sklearn_transformations_and_refit_isolation():
 
 
 def test_native_templates_not_mutated_and_have_no_future_targets():
-    model = NaiveForecaster()
+    model = LastValueForecaster()
     case = Scenario("ar1", n_targets=2).generate()
     forecast = Pipeline(model).predict(case.task.history, case.task.future_index)
     assert not hasattr(model, "history_")
@@ -156,7 +157,7 @@ def test_direct_sklearn_model_supports_current_estimator_tags_and_cloning(mode):
     np.testing.assert_array_equal(model.predict([[0], [1]]), [999, 999])
 
 
-@pytest.mark.parametrize("model", [NaiveForecaster("drift"), GaussianAR1Forecaster(n_samples=8)])
+@pytest.mark.parametrize("model", [DriftForecaster(), GaussianAR1Forecaster(n_samples=8)])
 def test_step_based_models_reject_skipped_future_labels(model):
     history = pd.DataFrame({"y": np.arange(8.0)})
     with pytest.raises(ValueError, match="consecutive future labels"):
@@ -179,7 +180,7 @@ def test_sklearn_reduction_rejects_time_gap():
 ])
 def test_step_based_models_support_regular_time_indexes(history_index, future_index):
     history = pd.DataFrame({"y": np.arange(5.0)}, index=history_index)
-    forecast = Pipeline(NaiveForecaster("drift")).predict(history, future_index)
+    forecast = Pipeline(DriftForecaster()).predict(history, future_index)
     np.testing.assert_allclose(forecast.point, [[5], [6]])
     assert forecast.index.equals(future_index)
 
@@ -195,12 +196,30 @@ def test_series_integer_zero_name_is_preserved():
     assert forecast.target_names == (0,)
 
 
-@pytest.mark.parametrize("strategy", ["last", "mean", "seasonal"])
+@pytest.mark.parametrize("model", [LastValueForecaster(), MeanForecaster(), SeasonalLastValueForecaster(period=1),
+                                   SeasonalMeanForecaster(period=1)])
 @pytest.mark.parametrize("index,future", [(pd.RangeIndex(1), pd.RangeIndex(1, 3)),
                                          (pd.Index([5]), pd.Index([6, 9]))])
-def test_last_baseline_supports_one_observation(strategy, index, future):
-    forecast = Pipeline(NaiveForecaster(strategy)).predict(pd.DataFrame({"y": [3.0]}, index=index), future)
+def test_last_baseline_supports_one_observation(model, index, future):
+    forecast = Pipeline(model).predict(pd.DataFrame({"y": [3.0]}, index=index), future)
     np.testing.assert_array_equal(forecast.point, [[3], [3]])
+
+
+def test_only_the_seasonal_baselines_take_a_period():
+    import inspect
+
+    for model in (LastValueForecaster, MeanForecaster, DriftForecaster):
+        assert list(inspect.signature(model).parameters) == [] and model().params() == {}
+        with pytest.raises(TypeError):
+            model(period=12)
+    for model in (SeasonalLastValueForecaster, SeasonalMeanForecaster):
+        assert list(inspect.signature(model).parameters) == ["period"]
+        assert model(12).params() == model(period=12).params() == {"period": 12}
+        with pytest.raises(TypeError):
+            model()
+        with pytest.raises(ValueError, match="period"):
+            model(period=0)
+    assert isinstance(LastValueForecaster(), NaiveForecaster)  # as it has been since it was added
 
 
 def test_mutation_fixtures_reject_missing_or_ineffective_output_types():
@@ -234,11 +253,11 @@ def test_old_default_test_still_uses_the_public_core_scenario_suite():
     ]
 
 
-@pytest.mark.parametrize("model", [None, NaiveForecaster, NaiveForecaster(), GaussianAR1Forecaster()])
-def test_model_metadata_name_for_native_models(model):
-    pipeline = Pipeline(model)
-    expected = "GaussianAR1Forecaster" if isinstance(model, GaussianAR1Forecaster) else "NaiveForecaster"
-    assert pipeline._model_name() == expected
+@pytest.mark.parametrize("model, expected", [
+    (None, "NaiveForecaster"), (LastValueForecaster, "LastValueForecaster"),
+    (SeasonalMeanForecaster(period=4), "SeasonalMeanForecaster"), (GaussianAR1Forecaster(), "GaussianAR1Forecaster")])
+def test_model_metadata_name_for_native_models(model, expected):
+    assert Pipeline(model)._model_name() == expected
 
 
 def test_model_metadata_name_does_not_invoke_factories_and_identifies_steps():
@@ -346,7 +365,7 @@ def test_the_readme_forecaster_needs_no_numpy_or_target_names_for_several_series
                  Scenario("trend", history_length=12, horizon=3)]
     report = Pipeline(_LastRow()).test(scenarios, instances=2)
     report.assert_passed()
-    reference = Pipeline(NaiveForecaster()).test(scenarios, instances=2)
+    reference = Pipeline(LastValueForecaster()).test(scenarios, instances=2)
     assert ([case.metrics for case in report.cases]
             == [case.metrics for case in reference.cases])
 
@@ -408,7 +427,7 @@ def test_last_value_forecaster_is_naive_last_with_nothing_to_set():
     assert model.params() == {} and type(model.clone_unfitted()) is LastValueForecaster
     case = Scenario("ar1", 40, 5, n_targets=2).generate(seed=6)
     named = model.fit(case.task.history).predict(case.task.future_index)
-    naive = NaiveForecaster("last").fit(case.task.history).predict(case.task.future_index)
+    naive = LastValueForecaster().fit(case.task.history).predict(case.task.future_index)
     np.testing.assert_array_equal(named.point, naive.point)
     assert named.target_names == naive.target_names and named.validate(case.task) == []
     with pytest.raises(TypeError):

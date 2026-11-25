@@ -3,13 +3,23 @@
 from __future__ import annotations
 from collections.abc import Sequence
 from copy import deepcopy
-from ._internal import positive_int, nonnegative_int, _levels, _old_name
+from ._internal import (
+    positive_int,
+    nonnegative_int,
+    _levels,
+    _old_name,
+    _warn_deprecated,
+)
 import numpy as np
 import pandas as pd
 from .contracts import DEFAULT_LEVELS, Forecast
 
 __all__ = [
     "REDUCTIONS",
+    "MeanForecaster",
+    "SeasonalLastValueForecaster",
+    "SeasonalMeanForecaster",
+    "DriftForecaster",
     "NaiveForecaster",
     "LastValueForecaster",
     "GaussianAR1Forecaster",
@@ -105,36 +115,26 @@ def _require_regular_future(history_index, future_index):
 
 
 # %% ../source/06_forecasting_models.ipynb #06_forecasting_model-09
-class NaiveForecaster(_ConfiguredForecaster):
-    """Last value, historical mean, seasonal persistence, seasonal mean or endpoint drift.
+class _Baseline(_ConfiguredForecaster):
+    """What the one-line baselines share: ``fit`` keeps the history and ``predict`` applies the baseline's rule.
 
     A single observation permits any increasing future index after the
     history; its spacing cannot be verified. Longer histories require a
     regular grid.
     """
 
-    def __init__(self, strategy="last", period=1):
-        strategies = ("last", "mean", "seasonal", "seasonal_mean", "drift")
-        if strategy not in strategies:
-            raise ValueError(
-                f"Unknown naive strategy {strategy!r}; choose from {strategies}"
-            )
-        period = positive_int(period, "period")
-        self.strategy, self.period = strategy, period
-
     def params(self) -> dict:
-        """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
-        return dict(strategy=self.strategy, period=self.period)
+        """Return the constructor arguments that ``clone_unfitted`` rebuilds from: none."""
+        return {}
+
+    def _rows_needed(self):
+        """The fewest rows of history the rule can forecast from."""
+        return 1
 
     def fit(self, history):
-        """Keep a copy of the history; raise when it is too short for the strategy."""
+        """Keep a copy of the history; raise when it is too short for the forecast."""
         self.history_ = history.copy(deep=True)
-        minimum = (
-            self.period
-            if self.strategy in ("seasonal", "seasonal_mean")
-            else (2 if self.strategy == "drift" else 1)
-        )
-        if len(history) < minimum:
+        if len(history) < self._rows_needed():
             raise ValueError("Insufficient history")
         return self
 
@@ -151,23 +151,7 @@ class NaiveForecaster(_ConfiguredForecaster):
     def predict(self, future_index):
         """Return a point forecast for labels that continue the history's grid."""
         _require_regular_future(self.history_.index, future_index)
-        y = self.history_.to_numpy(dtype=float)
-        h = len(future_index)
-        if self.strategy == "mean":
-            point = np.tile(y.mean(axis=0), (h, 1))
-        elif self.strategy == "seasonal":
-            point = y[-self.period :][np.arange(h) % self.period]
-        elif self.strategy == "seasonal_mean":
-            # The mean of every past value at the same point of the cycle as each future step.
-            position = np.arange(len(y)) % self.period
-            means = np.stack(
-                [y[position == p].mean(axis=0) for p in range(self.period)]
-            )
-            point = means[(len(y) + np.arange(h)) % self.period]
-        elif self.strategy == "drift":
-            point = y[-1] + np.arange(1, h + 1)[:, None] * (y[-1] - y[0]) / (len(y) - 1)
-        else:
-            point = np.tile(y[-1], (h, 1))
+        point = self._point(self.history_.to_numpy(dtype=float), len(future_index))
         return Forecast(
             index=future_index.copy(),
             point=point,
@@ -175,20 +159,174 @@ class NaiveForecaster(_ConfiguredForecaster):
         )
 
 
+class MeanForecaster(_Baseline):
+    """Forecast every future step with the mean of each series' whole history: the mean method.
+
+    The best of the baselines on noise around a constant level, since the
+    average cancels most of the noise, and far off on a series that trends or
+    wanders.
+    """
+
+    def _point(self, y, h):
+        return np.tile(y.mean(axis=0), (h, 1))
+
+
+class _Seasonal(_Baseline):
+    """A baseline that reads the history one cycle of ``period`` steps at a time."""
+
+    def __init__(self, period):
+        self.period = positive_int(period, "period")
+
+    def params(self) -> dict:
+        """Return the constructor arguments that ``clone_unfitted`` rebuilds from: the period."""
+        return {"period": self.period}
+
+    def _rows_needed(self):
+        return self.period
+
+
+class SeasonalLastValueForecaster(_Seasonal):
+    """Repeat each series' last cycle: each future step gets the last value seen at the same point of the cycle.
+
+    The textbook seasonal naive forecast. ``period`` is the length of the
+    cycle in steps, such as 12 for monthly data with a yearly cycle; the
+    history must hold at least one whole cycle.
+    """
+
+    def _point(self, y, h):
+        return y[-self.period :][np.arange(h) % self.period]
+
+
+class SeasonalMeanForecaster(_Seasonal):
+    """Forecast each future step with the mean of every past value at the same point of the cycle.
+
+    With monthly data and ``period=12``, every future January gets the mean of
+    all past Januaries; for yes/no values, the share of them that happened.
+    The history must hold at least one whole cycle.
+    """
+
+    def _point(self, y, h):
+        # The mean of every past value at the same point of the cycle as each future step.
+        position = np.arange(len(y)) % self.period
+        means = np.stack([y[position == p].mean(axis=0) for p in range(self.period)])
+        return means[(len(y) + np.arange(h)) % self.period]
+
+
+class DriftForecaster(_Baseline):
+    """Extend the straight line through each series' first and last values: the drift method.
+
+    Each step ahead adds the average change per step over the history to the
+    last value, as a random walk with drift would on average. Needs at least
+    two rows of history.
+    """
+
+    def _rows_needed(self):
+        return 2
+
+    def _point(self, y, h):
+        return y[-1] + np.arange(1, h + 1)[:, None] * (y[-1] - y[0]) / (len(y) - 1)
+
+
+# %% ../source/06_forecasting_models.ipynb #models-naive
+class NaiveForecaster(_Baseline):
+    """Last value, historical mean, seasonal persistence, seasonal mean or drift, chosen by ``strategy``.
+
+    Each strategy has a class of its own that makes the same forecasts:
+    ``"last"`` is ``LastValueForecaster()``, ``"mean"`` is ``MeanForecaster()``,
+    ``"seasonal"`` is ``SeasonalLastValueForecaster(period)``,
+    ``"seasonal_mean"`` is ``SeasonalMeanForecaster(period)`` and ``"drift"``
+    is ``DriftForecaster()``. ``NaiveForecaster`` still works and warns, naming
+    the class for the strategy given, and will be removed in a later release.
+    Reports that name it still replay.
+    """
+
+    def __init__(self, strategy="last", period=1):
+        self._configure(strategy, period)
+        _warn_deprecated(
+            f"NaiveForecaster is deprecated and will be removed in a later release: "
+            f"use {self._instead()}, which makes the same forecasts"
+        )
+
+    def _configure(self, strategy, period):
+        if strategy not in _STRATEGY_NAMES:
+            raise ValueError(
+                f"Unknown naive strategy {strategy!r}; choose from {_STRATEGY_NAMES}"
+            )
+        period = positive_int(period, "period")
+        self.strategy, self.period = strategy, period
+
+    def _rule(self):
+        """A model of the class that makes this strategy's forecasts."""
+        if self.strategy in ("seasonal", "seasonal_mean"):
+            return _strategy_class(self.strategy)(self.period)
+        return _strategy_class(self.strategy)()
+
+    def _instead(self):
+        """The call that makes the same forecasts, such as ``SeasonalLastValueForecaster(period=12)``."""
+        settings = ", ".join(
+            f"{key}={value!r}" for key, value in self._rule().params().items()
+        )
+        return f"{_strategy_class(self.strategy).__name__}({settings})"
+
+    def params(self) -> dict:
+        """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
+        return dict(strategy=self.strategy, period=self.period)
+
+    def clone_unfitted(self):
+        """Return an unfitted copy with the same strategy and period, without warning again."""
+        if type(self).__init__ is not NaiveForecaster.__init__:
+            # A subclass with a constructor of its own, such as LastValueForecaster, is rebuilt by it.
+            return super().clone_unfitted()
+        return _naive_without_warning(**self.params(), cls=type(self))
+
+    def _rows_needed(self):
+        return self._rule()._rows_needed()
+
+    def _point(self, y, h):
+        return self._rule()._point(y, h)
+
+
+_STRATEGY_NAMES = ("last", "mean", "seasonal", "seasonal_mean", "drift")
+
+
+def _strategy_class(strategy):
+    """The class that makes the forecasts of one of NaiveForecaster's strategies."""
+    return {
+        "last": LastValueForecaster,
+        "mean": MeanForecaster,
+        "seasonal": SeasonalLastValueForecaster,
+        "seasonal_mean": SeasonalMeanForecaster,
+        "drift": DriftForecaster,
+    }[strategy]
+
+
+def _naive_without_warning(strategy="last", period=1, cls=NaiveForecaster):
+    """``NaiveForecaster(strategy, period)`` without its warning, for the copies TimeGym makes and the reports it replays."""
+    model = cls.__new__(cls)
+    model._configure(strategy, period)
+    return model
+
+
 # %% ../source/06_forecasting_models.ipynb #models-last-value
 class LastValueForecaster(NaiveForecaster):
-    """Repeat each series' last observed value at every future step.
+    """Repeat each series' last observed value at every future step: the naive forecast.
 
-    The same forecasts as ``NaiveForecaster("last")``, with no settings, so
-    reports and scorecards name it ``LastValueForecaster``.
+    The best forecast of a random walk. It has no settings, so reports and
+    scorecards name it ``LastValueForecaster``.
     """
 
     def __init__(self):
-        super().__init__(strategy="last", period=1)
+        self._configure("last", 1)
 
     def params(self) -> dict:
         """No settings: ``clone_unfitted`` rebuilds a plain ``LastValueForecaster()``."""
         return {}
+
+    def _rows_needed(self):
+        return 1
+
+    def _point(self, y, h):
+        return np.tile(y[-1], (h, 1))
 
 
 # %% ../source/06_forecasting_models.ipynb #06_forecasting_model-11

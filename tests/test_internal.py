@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from timegym import GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario
+from timegym import GaussianAR1Forecaster, Pipeline, Scenario, SeasonalLastValueForecaster, SeasonalMeanForecaster
 from timegym._internal import nonnegative_int, positive_int
 from timegym.metrics import energy_score, mase
 from timegym.provenance import diagnostic_settings
@@ -36,7 +36,8 @@ def test_metric_counts_reject_both_boolean_types(value):
 
 
 def test_numpy_integer_settings_are_normalized_across_entry_points():
-    assert type(NaiveForecaster(period=np.int64(3)).period) is int
+    assert type(SeasonalLastValueForecaster(period=np.int64(3)).period) is int
+    assert type(SeasonalMeanForecaster(period=np.int64(3)).period) is int
     assert type(GaussianAR1Forecaster(n_samples=np.int64(3)).n_samples) is int
     assert type(Pipeline(window_length=np.int64(3)).window_length) is int
     settings = diagnostic_settings(n_calibration=np.int64(9), dependence_seed_offset=np.int64(0))

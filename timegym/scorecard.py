@@ -429,9 +429,9 @@ def _model_title(pipeline):
         return getattr(pipeline.model_factory, "__qualname__", "model_factory")
     model = pipeline.model
     if model is None:
-        from timegym.models import NaiveForecaster
+        from timegym.models import _naive_without_warning
 
-        model = NaiveForecaster()
+        model = _naive_without_warning()
     if isinstance(model, type):
         return _class_name(model)
     params = getattr(model, "params", None)

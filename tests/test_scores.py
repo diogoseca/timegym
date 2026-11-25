@@ -11,7 +11,7 @@ from timegym import (
     ForecastRun,
     GaussianAR1Forecaster,
     LastValueForecaster,
-    NaiveForecaster,
+    MeanForecaster,
     Pipeline,
     Scenario,
     cases_from_series,
@@ -174,7 +174,7 @@ def yes_no_cases():
 
 def test_a_report_records_the_scores_asked_for():
     cases = yes_no_cases()
-    report = Pipeline(NaiveForecaster(strategy="mean")).test(
+    report = Pipeline(MeanForecaster()).test(
         cases=cases, scores=["brier", "log_loss", within_10_percent])
     for case in report.cases:
         assert {"brier", "log_loss", "within_10_percent"} <= set(case.metrics)

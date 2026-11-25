@@ -9,7 +9,6 @@ from timegym import (
     ForecastRun,
     GaussianAR1Forecaster,
     LastValueForecaster,
-    NaiveForecaster,
     Pipeline,
     Scenario,
     TestReport,
@@ -343,7 +342,7 @@ def test_replay_runs_within_again_and_lists_your_own_checks():
         """Every value above zero."""
         return bool((predicted > 0).all()) or "some values at or below zero"
 
-    report = Pipeline(NaiveForecaster("last")).test([scenario], seeds=[0, 1],
+    report = Pipeline(LastValueForecaster()).test([scenario], seeds=[0, 1],
                                                      checks={"range": within(-100, 100), "positive": positive})
     replay = report.replay_case(1).metadata["replay"]
     assert replay["reproduced"] and replay["diagnostics_match"]
@@ -352,13 +351,13 @@ def test_replay_runs_within_again_and_lists_your_own_checks():
     replayed = report.replay_case(1)
     assert [d.name for d in replayed.cases[0].diagnostics if d.name.startswith("check_")] == ["check_range"]
 
-    plain = Pipeline(NaiveForecaster("last")).test([scenario], seeds=[0])
+    plain = Pipeline(LastValueForecaster()).test([scenario], seeds=[0])
     assert "checks_not_rerun" not in plain.replay_case(0).metadata["replay"]
 
 
 def test_replay_runs_within_from_its_saved_bounds():
     scenario = Scenario("ar1", history_length=60, horizon=6)
-    report = Pipeline(NaiveForecaster("last")).test([scenario], seeds=[0], checks=[within(-100, 100)])
+    report = Pipeline(LastValueForecaster()).test([scenario], seeds=[0], checks=[within(-100, 100)])
     assert report.replay_case(0).metadata["replay"]["diagnostics_match"]
     payload = report.to_dict()
     payload["metadata"]["checks"][0]["settings"] = {"lower": 100.0, "upper": 200.0}

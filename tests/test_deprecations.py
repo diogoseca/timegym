@@ -1,5 +1,6 @@
 """Names that leave in TimeGym 2.0 still work, warn once at the caller's line and name what to use instead."""
 from pathlib import Path
+import warnings
 
 import matplotlib
 matplotlib.use("Agg")
@@ -8,7 +9,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from timegym import Case, NaiveForecaster, Pipeline, Scenario
+from timegym import (Case, DriftForecaster, LastValueForecaster, MeanForecaster, NaiveForecaster, Pipeline, Scenario,
+                     SeasonalLastValueForecaster, SeasonalMeanForecaster, TestReport)
 from timegym.metrics import crps, empirical_crps
 from timegym.processes import PROCESS_KINDS, generate_process, process_label, resolve_process
 from timegym.joint_processes import generate_joint_process
@@ -137,7 +139,7 @@ def test_empirical_crps_matches_crps():
 def test_scorecard_function_matches_the_pipeline_method():
     from timegym.scorecard import scorecard
 
-    pipeline = Pipeline(NaiveForecaster())
+    pipeline = Pipeline(LastValueForecaster())
     card = deprecated_call("use Pipeline(model).run(...).scorecard", scorecard, pipeline, ["random_walk"], instances=2)
     expected = pipeline.run(["random_walk"], instances=2).scorecard
     pd.testing.assert_frame_equal(card.table, expected.table)
@@ -262,7 +264,7 @@ def test_predict_metrics_and_the_shift_check_take_the_old_keyword():
     from timegym.metrics import mase, rmsse
 
     case = Scenario("random_walk", history_length=30, horizon=4).generate(seed=2)
-    pipeline = Pipeline(NaiveForecaster())
+    pipeline = Pipeline(LastValueForecaster())
     history, future = case.task.history, case.task.future_index
     forecast = renamed_call("use Pipeline.predict(history=...)", pipeline.predict, context=history, future_index=future)
     np.testing.assert_array_equal(forecast.point, pipeline.predict(history, future).point)
@@ -278,7 +280,7 @@ def test_predict_metrics_and_the_shift_check_take_the_old_keyword():
 def test_scorecard_calls_take_the_old_keyword():
     from timegym.scorecard import scorecard
 
-    pipeline = Pipeline(NaiveForecaster())
+    pipeline = Pipeline(LastValueForecaster())
     expected = pipeline.run(["trend"], instances=2, history_length=40).scorecard
     with pytest.warns(DeprecationWarning) as caught:
         method = pipeline.scorecard(["trend"], instances=2, context_length=40)
@@ -290,12 +292,15 @@ def test_scorecard_calls_take_the_old_keyword():
         pd.testing.assert_frame_equal(card.table, expected.table)
 
 
-def test_naive_forecaster_keeps_its_history_and_the_old_attribute_warns():
+def test_the_baselines_keep_their_history_and_the_old_attribute_warns():
     history = pd.DataFrame({"y": [1.0, 2.0, 3.0]})
-    model = NaiveForecaster().fit(history)
+    model = LastValueForecaster().fit(history)
     pd.testing.assert_frame_equal(model.history_, history)
-    pd.testing.assert_frame_equal(renamed_call("use NaiveForecaster.history_", getattr, model, "context_"), history)
-    assert not hasattr(NaiveForecaster(), "context_")
+    pd.testing.assert_frame_equal(renamed_call("use LastValueForecaster.history_", getattr, model, "context_"), history)
+    assert not hasattr(LastValueForecaster(), "context_")
+    with pytest.warns(DeprecationWarning, match="use LastValueForecaster()"):
+        old = NaiveForecaster().fit(history)
+    pd.testing.assert_frame_equal(renamed_call("use NaiveForecaster.history_", getattr, old, "context_"), history)
 
 
 def test_a_score_or_check_that_asks_for_context_gets_the_history_and_warns_once_per_run():
@@ -313,7 +318,7 @@ def test_a_score_or_check_that_asks_for_context_gets_the_history_and_warns_once_
         """Context is finite"""
         return bool(np.isfinite(context).all())
 
-    scenarios, pipeline = [Scenario("ar1", history_length=30, horizon=3)], Pipeline(NaiveForecaster())
+    scenarios, pipeline = [Scenario("ar1", history_length=30, horizon=3)], Pipeline(LastValueForecaster())
     with pytest.warns(DeprecationWarning) as caught:
         run = pipeline.run(scenarios, seeds=[0, 1, 2], scores=[history_rows, context_rows],
                            checks=[history_is_finite, context_is_finite])
@@ -350,7 +355,7 @@ def test_a_build_of_your_own_whose_scenario_says_context_length_still_works():
     with pytest.warns(DeprecationWarning, match=f"a scenario's context_length {LATER}: name it history_length"):
         cells = scenario_grid([pattern], [0.5], history_length=40, horizon=4)
     with pytest.warns(DeprecationWarning, match=f"a scenario's context_length {LATER}"):
-        card = Pipeline(NaiveForecaster()).run([pattern], noise_levels=[0.5], instances=2, history_length=40,
+        card = Pipeline(LastValueForecaster()).run([pattern], noise_levels=[0.5], instances=2, history_length=40,
                                                horizon=4).scorecard
     assert len(cells) == 1 and card.table["instances"].tolist() == [2]
 
@@ -361,11 +366,14 @@ def test_a_report_saved_by_timegym_1_13_loads_replays_and_compares():
 
     old = TestReport.read(FIXTURES / "report-1.13.1.json")
     assert old.cases[0].manifest["context_length"] == 24
-    replayed = old.replay_case(0)
+    assert old.metadata["pipeline_config"]["model"]["class"] == "NaiveForecaster"
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)  # its model is rebuilt without NaiveForecaster's warning
+        replayed = old.replay_case(0)
     assert replayed.metadata["replay"]["manifest_match"] is True
     assert replayed.cases[0].manifest["history_length"] == 24
     scenarios = [Scenario("ar1", history_length=24, horizon=3), Scenario("trend", history_length=16, horizon=2)]
-    new = Pipeline(NaiveForecaster()).run(scenarios, seeds=[0, 1]).report
+    new = Pipeline(LastValueForecaster()).run(scenarios, seeds=[0, 1]).report
     comparison = compare_reports(new, old, metric="mse")
     assert comparison.table["cases"].sum() > 0
     by_length = compare_reports(new, old, metric="mse", by="history_length")
@@ -373,6 +381,82 @@ def test_a_report_saved_by_timegym_1_13_loads_replays_and_compares():
 
 
 def test_a_scorecard_baseline_saved_by_timegym_1_13_still_compares():
-    card = Pipeline(NaiveForecaster()).run(["noise", "trend"], instances=20, seed=4).scorecard
+    card = Pipeline(LastValueForecaster()).run(["noise", "trend"], instances=20, seed=4).scorecard
     comparison = card.compare(FIXTURES / "scorecard-baseline-1.13.1.json")
     assert set(comparison.table["change"]) == {"unchanged"}
+
+
+# One class per built-in forecaster: NaiveForecaster still works, warns once and names the class that does the same.
+
+SAME_FORECASTS = [
+    (("last",), LastValueForecaster(), "LastValueForecaster()"),
+    (("last", 7), LastValueForecaster(), "LastValueForecaster()"),
+    (("mean",), MeanForecaster(), "MeanForecaster()"),
+    (("mean", 12), MeanForecaster(), "MeanForecaster()"),
+    (("seasonal", 12), SeasonalLastValueForecaster(period=12), "SeasonalLastValueForecaster(period=12)"),
+    (("seasonal", 1), SeasonalLastValueForecaster(period=1), "SeasonalLastValueForecaster(period=1)"),
+    (("seasonal_mean", 4), SeasonalMeanForecaster(period=4), "SeasonalMeanForecaster(period=4)"),
+    (("drift",), DriftForecaster(), "DriftForecaster()"),
+]
+
+
+def several_series():
+    """Histories and the dates to forecast: one series and several, a cycle, a trend, a walk and calendar dates."""
+    cases = [Scenario("seasonal", history_length=36, horizon=15).generate(seed=1),
+             Scenario("trend", history_length=30, horizon=5, n_targets=3).generate(seed=2),
+             Scenario("random_walk", history_length=24, horizon=30, n_targets=2).generate(seed=3)]
+    days = pd.date_range("2024-01-01", periods=20, freq="D")
+    rng = np.random.default_rng(4)
+    calendar = pd.DataFrame({"north": rng.poisson(3, 20), "south": rng.poisson(5, 20)}, index=days).astype(float)
+    return [(case.task.history, case.task.future_index) for case in cases] + [
+        (calendar, pd.date_range("2024-01-21", periods=9, freq="D"))]
+
+
+@pytest.mark.parametrize("arguments, model, instead", SAME_FORECASTS)
+def test_naive_forecaster_warns_and_makes_the_forecasts_of_the_class_it_names(arguments, model, instead):
+    old = renamed_call(f"NaiveForecaster {LATER}: use {instead}, which makes the same forecasts", NaiveForecaster,
+                       *arguments)
+    assert old.params() == {"strategy": arguments[0], "period": arguments[1] if len(arguments) > 1 else 1}
+    for history, future in several_series():
+        expected = model.clone_unfitted().fit(history).predict(future)
+        forecast = old.fit(history).predict(future)
+        np.testing.assert_array_equal(forecast.point, expected.point)
+        assert forecast.target_names == expected.target_names and forecast.index.equals(expected.index)
+    for rows in (1, 3):  # a history too short for one is too short for the other
+        short = pd.DataFrame({"y": np.arange(float(rows))})
+        refusals = []
+        for candidate in (old, model.clone_unfitted()):
+            try:
+                candidate.fit(short)
+                refusals.append(None)
+            except ValueError as error:
+                refusals.append(str(error))
+        assert refusals[0] == refusals[1]
+
+
+def test_naive_forecaster_refuses_an_unknown_strategy_before_warning(recwarn):
+    with pytest.raises(ValueError, match="unknown.*last.*mean.*seasonal.*seasonal_mean.*drift"):
+        NaiveForecaster("unknown")
+    assert not [warning for warning in recwarn if warning.category is DeprecationWarning]
+
+
+def test_a_pipeline_of_naive_forecaster_warns_once_and_its_report_still_names_and_replays_it():
+    with pytest.warns(DeprecationWarning) as caught:
+        pipeline = Pipeline(NaiveForecaster("seasonal", period=12))
+        run = pipeline.run(["seasonal", "trend"], instances=3)
+        also = Pipeline(NaiveForecaster).run(["trend"], instances=2)  # the class: one warning, not one per case
+    messages = [str(warning.message) for warning in caught if warning.category is DeprecationWarning]
+    assert len(messages) == 2 and "SeasonalLastValueForecaster(period=12)" in messages[0], messages
+    assert "LastValueForecaster" in messages[1]
+    assert all(Path(warning.filename).resolve() == Path(__file__).resolve() for warning in caught)
+    same = Pipeline(SeasonalLastValueForecaster(period=12)).run(["seasonal", "trend"], instances=3)
+    assert [case.metrics for case in run.report.cases] == [case.metrics for case in same.report.cases]
+    assert run.metadata["model"] == "NaiveForecaster" and same.metadata["model"] == "SeasonalLastValueForecaster"
+    assert run.scorecard.title == "NaiveForecaster(strategy='seasonal', period=12)"
+    assert same.scorecard.title == "SeasonalLastValueForecaster(period=12)"
+    assert also.metadata["pipeline_config"]["replayable"] is True
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        replayed = TestReport.from_json(run.report.to_json()).replay_case(4)
+    assert replayed.metadata["replay"]["reproduced"] is True
+    assert replayed.metadata["model"] == "NaiveForecaster"
