@@ -113,8 +113,6 @@ def _json_safe(value):
 
 
 # %% ../source/12_package.ipynb #shared-deprecation
-
-
 def _warn_deprecated(message: str) -> None:
     """Warn with ``message`` at the first line outside TimeGym: the user's own call, however deep the warning starts."""
     import timegym
