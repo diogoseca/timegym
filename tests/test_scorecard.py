@@ -780,9 +780,9 @@ def test_a_custom_cell_is_simulated_once_and_agrees_with_a_pipeline_scorecard():
 
     _simulated_attainable.cache_clear()
     first = Pipeline(LastValueForecaster()).scorecard(["trend"], noise_levels=[1.0], instances=1, horizon=6,
-                                                  attainable=True)
+                                                  simulate_attainable=True)
     again = Pipeline(LastValueForecaster()).scorecard(["trend"], noise_levels=[1.0], instances=1, horizon=6,
-                                                  attainable=True)
+                                                  simulate_attainable=True)
     info = _simulated_attainable.cache_info()
     assert (info.misses, info.hits) == (1, 1)
     assert again.table["attainable"].iloc[0] == first.table["attainable"].iloc[0]

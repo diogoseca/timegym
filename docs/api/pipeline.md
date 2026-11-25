@@ -53,7 +53,7 @@ column names, so wrong dates or a wrong series order still fail their checks.
 
 `.run(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None,
 noise_levels=None, history_length=None, horizon=None, keep_data=False,
-attainable=False, interval_level=None, metrics=None, checks=None)` forecasts
+simulate_attainable=False, interval_level=None, metrics=None, checks=None)` forecasts
 every case with a fresh model, checks each forecast and measures its errors,
 and returns a `ForecastRun`. It is the one call for testing a model:
 
@@ -89,7 +89,7 @@ The result holds the report and the scorecard. `result.report` is the
 `TestReport`; `result.checks`, `result.assert_passed()`, `result.save(path)`
 and `result.to_json()` read it directly. `result.scorecard` is a
 `Scorecard` ([Scorecards and the scenario grid](scorecard.md)), titled by
-the pipeline's name or, without one, by its model; `attainable` and
+the pipeline's name or, without one, by its model; `simulate_attainable` and
 `interval_level` (0.95 by default) are its settings. A run of your own data
 has no scorecard, because nobody knows the answer key of real data: reading
 `result.scorecard` then raises an error that points to `result.checks` and the

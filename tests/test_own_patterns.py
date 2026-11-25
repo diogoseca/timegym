@@ -120,9 +120,10 @@ def test_own_pattern_gets_the_brier_share_as_its_score():
 
 def test_attainable_is_simulated_only_when_asked_and_with_a_model_of_the_row():
     pipeline = Pipeline(MeanForecaster())
-    asked = pipeline.scorecard(patterns=[rain_pattern()], instances=2, attainable=True)
+    asked = pipeline.scorecard(patterns=[rain_pattern()], instances=2, simulate_attainable=True)
     assert asked.table["attainable"].between(85, 95).all()  # about 100 / 1.1 from ten cycles of history
-    no_model = pipeline.scorecard(patterns=[rain_pattern(attainable_by=None)], instances=2, attainable=True)
+    no_model = pipeline.scorecard(patterns=[rain_pattern(attainable_by=None)], instances=2,
+                                  simulate_attainable=True)
     assert no_model.table["attainable"].isna().all()
     not_asked = pipeline.scorecard(patterns=[rain_pattern()], instances=2)
     assert not_asked.table["attainable"].isna().all()
@@ -379,7 +380,7 @@ def test_grid_says_what_simulate_returned_wrong(simulate, error, message):
 def test_attainable_by_takes_a_model_and_never_fits_the_one_you_passed():
     model = SeasonalMeanForecaster(period=12)
     card = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern(attainable_by=model)], instances=2,
-                                                       attainable=True)
+                                                       simulate_attainable=True)
     assert card.table["attainable"].between(85, 95).all()
     assert not hasattr(model, "history_")  # each series fitted a copy
 
@@ -390,8 +391,9 @@ def test_attainable_by_takes_a_model_and_never_fits_the_one_you_passed():
 ])
 def test_attainable_by_gives_the_same_score_as_a_model_or_a_function(given):
     card = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern(attainable_by=given)], instances=2,
-                                                       attainable=True)
-    reference = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern()], instances=2, attainable=True)
+                                                       simulate_attainable=True)
+    reference = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern()], instances=2,
+                                                     simulate_attainable=True)
     assert np.array_equal(card.table["attainable"].to_numpy(), reference.table["attainable"].to_numpy())
 
 
@@ -404,7 +406,7 @@ def test_attainable_by_takes_a_class():
             return np.full(len(future_index), 0.5)
 
     card = Pipeline(MeanForecaster()).scorecard(patterns=[rain_pattern(attainable_by=Half)], instances=2,
-                                                       attainable=True)
+                                                       simulate_attainable=True)
     assert card.table["attainable"].between(50, 99).all()
 
 
@@ -412,7 +414,7 @@ def test_fitted_still_makes_a_pattern_with_a_warning():
     with pytest.warns(DeprecationWarning, match="attainable_by"):
         old = Pattern("rain", "Rain or no rain", "", "", "", simulate=simulate_rain,
                       fitted=lambda: SeasonalMeanForecaster(period=12))
-    card = Pipeline(MeanForecaster()).scorecard(patterns=[old], instances=2, attainable=True)
+    card = Pipeline(MeanForecaster()).scorecard(patterns=[old], instances=2, simulate_attainable=True)
     assert card.table["attainable"].between(85, 95).all()
 
 

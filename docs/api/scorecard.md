@@ -218,12 +218,14 @@ recomputes them. Any other noise level, history length or horizon gets NaN and
 no triangle, unless you ask for it:
 
 ```python
-card = pipeline.run(noise_levels=3, attainable=True).scorecard
+card = pipeline.run(noise_levels=3, simulate_attainable=True).scorecard
 ```
 
-`attainable=True` simulates each missing value once and keeps it for the
+`simulate_attainable=True` simulates each missing value once and keeps it for the
 session. Each autoregressive or random-walk cell takes about 3 to 5 seconds,
-the others well under a second; nothing is simulated without it.
+the others well under a second; nothing is simulated without it. Its old name
+on `pipeline.scorecard(...)` and `timegym.scorecard.scorecard(...)`,
+`attainable=True`, still works and warns.
 
 ## Your own kind of series
 
@@ -263,7 +265,7 @@ rain = Pattern(
 model = SeasonalMeanForecaster(period=12)
 card = Pipeline(model).run(
     ["seasonal", rain],  # a built-in row beside yours
-    attainable=True,  # also score each row's own model, fitted to each history
+    simulate_attainable=True,  # also score each row's own model, fitted to each history
 ).scorecard
 ```
 
@@ -314,7 +316,7 @@ step's outcome along with the cycle; the card lists that as a mistake ("Cycle
 out of step" at low noise, "Too wiggly" at high).
 
 `attainable_by` takes the row's own model, copied fresh for each series, or a
-class or function that returns one. With it and `attainable=True`, a pattern of
+class or function that returns one. With it and `simulate_attainable=True`, a pattern of
 your own gets an attainable score simulated as for the built-in rows; otherwise
 it is NaN, since only the default grid's values are stored. The table,
 `save_baseline` and `compare` know the row by its key, so keep the key, and the

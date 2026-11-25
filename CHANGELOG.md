@@ -9,7 +9,7 @@
   straight from its report. With no arguments `run()` draws the scorecard's
   ten kinds of series at low and high noise, 10 times each (200 series), and
   it takes the scorecard's settings: `noise_levels`, `history_length`,
-  `horizon`, `attainable` and `interval_level`. Scenarios you built
+  `horizon`, `simulate_attainable` and `interval_level`. Scenarios you built
   give one row each. A run of your own data (`cases=`) has no scorecard,
   since nobody knows its answer key, and reading `result.scorecard` says so
   and points to `result.checks` and the errors in `result.report`.
@@ -233,6 +233,17 @@
 - Moved the docs, the README, the tutorials, the source notebooks, the tests,
   `examples/reproduce_report.py` and the installed-package check to `save`
   and `load`.
+
+- The scorecard's switch that simulates a missing attainable score is now
+  `simulate_attainable=True`, as in
+  `pipeline.run(noise_levels=3, simulate_attainable=True)`. It simulates the
+  score of a row that has none stored, off the default grid or a pattern of
+  your own with `attainable_by`; the default grid shows its stored values
+  either way. `pipeline.scorecard(attainable=True)` and
+  `timegym.scorecard.scorecard(attainable=True)` still work and now warn;
+  they will be removed in a later release.
+- Moved the docs, the examples, the source notebooks and the tests to
+  `simulate_attainable=True`.
 
 - Added `result.calibration(*, bins=10, cluster=None, interval_level=0.95,
   seed=0)` to a run, and `timegym.diagnostics.calibration(run, ...)`, which

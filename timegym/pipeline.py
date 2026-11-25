@@ -535,7 +535,7 @@ class Pipeline:
         history_length=None,
         horizon=None,
         keep_data=False,
-        attainable=False,
+        simulate_attainable=False,
         interval_level=None,
         metrics=None,
         checks=None,
@@ -577,18 +577,18 @@ class Pipeline:
         ``result.cases`` holds them and ``result.plot_forecasts()`` can draw
         them. The scorecard keeps what its picture draws either way.
 
-        ``attainable`` and ``interval_level`` are the scorecard's own settings;
+        ``simulate_attainable`` and ``interval_level`` are the scorecard's own settings;
         its title is the pipeline's ``name``, or the model's when it has none.
         ``interval_level`` says how cautious the interval around each score
         is: 0.95 by default, 0.99 gives a wider one. ``attainable`` in its
         table is what the pattern's own model family, fitted to each history,
         scores on 200 fresh series of the row. The default grid's values are
         stored. Off the default grid (another noise level, ``history_length``
-        or ``horizon``) the column is NaN unless ``attainable=True``, which
+        or ``horizon``) the column is NaN unless ``simulate_attainable=True``, which
         simulates the missing values once per session: about 3 to 5 seconds
         for each autoregressive or random-walk cell and well under a second for
         the others. A pattern of your own has no stored values: with
-        ``Pattern.attainable_by`` and ``attainable=True`` its attainable score
+        ``Pattern.attainable_by`` and ``simulate_attainable=True`` its attainable score
         is simulated in the same way, otherwise it is NaN.
 
         ``metrics`` records more metrics in every case, as in
@@ -623,7 +623,7 @@ class Pipeline:
             history_length=history_length,
             horizon=horizon,
             keep_data=keep_data,
-            attainable=attainable,
+            simulate_attainable=simulate_attainable,
             interval_level=interval_level,
             metrics=metrics,
             checks=checks,
@@ -650,7 +650,7 @@ class Pipeline:
         noise_levels=None,
         history_length=None,
         horizon=None,
-        attainable=False,
+        simulate_attainable=False,
         interval_level=None,
         old_scenarios=False,
         make_card=True,
@@ -691,7 +691,7 @@ class Pipeline:
                 )
                 if value is not None
             ]
-            given += ["attainable"] if attainable else []
+            given += ["simulate_attainable"] if simulate_attainable else []
             if given:
                 raise ValueError(
                     f"{', '.join(given)} {'belongs' if len(given) == 1 else 'belong'} to the "
@@ -781,7 +781,7 @@ class Pipeline:
                     cells,
                     title=name or _model_title(self),
                     seeds=seeds,
-                    attainable=attainable,
+                    simulate_attainable=simulate_attainable,
                     interval_level=interval_level,
                 ),
                 now=not keep_data,
@@ -826,7 +826,9 @@ class Pipeline:
             make_card=False,
         ).report
 
-    @_renamed_keywords(context_length="history_length")
+    @_renamed_keywords(
+        context_length="history_length", attainable="simulate_attainable"
+    )
     def scorecard(
         self,
         patterns=None,
@@ -837,7 +839,7 @@ class Pipeline:
         history_length=120,
         horizon=24,
         title=None,
-        attainable=False,
+        simulate_attainable=False,
         interval_level=0.95,
     ):
         """Score the model on a grid of patterns and noise levels and return a Scorecard; use ``run`` instead.
@@ -848,7 +850,8 @@ class Pipeline:
         in a later release. See ``run`` for the settings and ``Scorecard`` for
         what the card holds. ``title`` heads the card in place of the
         pipeline's name. ``context_length`` is the old name of
-        ``history_length``; it still works and warns.
+        ``history_length``, and ``attainable`` of ``simulate_attainable``; they
+        still work and warn.
         """
         from timegym.scorecard import _scorecard
 
@@ -862,7 +865,7 @@ class Pipeline:
             history_length=history_length,
             horizon=horizon,
             title=title,
-            attainable=attainable,
+            simulate_attainable=simulate_attainable,
             interval_level=interval_level,
         )
 

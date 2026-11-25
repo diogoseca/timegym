@@ -171,7 +171,7 @@ def test_your_own_data_has_no_scorecard():
 
 
 @pytest.mark.parametrize("setting", [{"noise_levels": 3}, {"history_length": 50}, {"horizon": 6},
-                                     {"interval_level": 0.99}, {"attainable": True}])
+                                     {"interval_level": 0.99}, {"simulate_attainable": True}])
 def test_scorecard_settings_are_refused_for_your_own_data(setting):
     name = next(iter(setting))
     with pytest.raises(ValueError, match=f"{name} belongs to the scorecard"):

@@ -292,6 +292,27 @@ def test_scorecard_calls_take_the_old_keyword():
         pd.testing.assert_frame_equal(card.table, expected.table)
 
 
+def test_scorecard_calls_take_attainable_by_its_old_name_and_run_takes_only_the_new_one():
+    from timegym.scorecard import scorecard
+
+    pipeline = Pipeline(LastValueForecaster())
+    settings = dict(noise_levels=[1.0], instances=1, horizon=6)
+    expected = pipeline.run(["trend"], **settings, simulate_attainable=True).scorecard
+    assert np.isfinite(expected.table["attainable"].iloc[0])  # off the default grid, so simulated
+    with pytest.warns(DeprecationWarning) as caught:
+        method = pipeline.scorecard(["trend"], **settings, attainable=True)
+        function = scorecard(pipeline, ["trend"], **settings, attainable=True)
+    renamed = [warning for warning in caught if "(attainable=...)" in str(warning.message)]
+    assert [str(warning.message) for warning in renamed] == [
+        f"Pipeline.scorecard(attainable=...) {LATER}: use Pipeline.scorecard(simulate_attainable=...)",
+        f"scorecard(attainable=...) {LATER}: use scorecard(simulate_attainable=...)"]
+    assert all(Path(warning.filename).resolve() == Path(__file__).resolve() for warning in renamed)
+    for card in (method, function):
+        pd.testing.assert_frame_equal(card.table, expected.table)
+    with pytest.raises(TypeError, match="unexpected keyword argument 'attainable'"):
+        pipeline.run(["trend"], attainable=True)
+
+
 def test_the_baselines_keep_their_history_and_the_old_attribute_warns():
     history = pd.DataFrame({"y": [1.0, 2.0, 3.0]})
     model = LastValueForecaster().fit(history)

@@ -537,7 +537,9 @@ class _AsBuilt:
         return self.scenario
 
 
-def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level=None):
+def _card_from_run(
+    run, cells, *, title, seeds, simulate_attainable=False, interval_level=None
+):
     """Score every cell of ``run`` and return its Scorecard (``ForecastRun.scorecard``).
 
     It runs while the run still holds its series: the card keeps what it draws and compares with,
@@ -580,7 +582,7 @@ def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level
                 "score_high": high,
                 "verdict": verdict(score),
                 "settled": _settled(low, high),
-                "attainable": _attainable(cell, simulate=attainable),
+                "attainable": _attainable(cell, simulate=simulate_attainable),
                 "mistakes": "; ".join(mistakes),
                 "unavoidable_mse": best,
                 "avoidable_mse": avoidable,
@@ -613,7 +615,7 @@ def _scorecard(
     history_length=120,
     horizon=24,
     title=None,
-    attainable=False,
+    simulate_attainable=False,
     interval_level=0.95,
 ):
     """``pipeline.run(patterns, ..., keep_data=True).scorecard``: the card as ``Pipeline.scorecard`` made it.
@@ -628,7 +630,7 @@ def _scorecard(
         seed=seed,
         history_length=history_length,
         horizon=horizon,
-        attainable=attainable,
+        simulate_attainable=simulate_attainable,
         interval_level=interval_level,
         keep_data=True,
     ).scorecard
@@ -637,7 +639,7 @@ def _scorecard(
     return card
 
 
-@_renamed_keywords(context_length="history_length")
+@_renamed_keywords(context_length="history_length", attainable="simulate_attainable")
 def scorecard(
     pipeline,
     patterns=None,
@@ -648,7 +650,7 @@ def scorecard(
     history_length=120,
     horizon=24,
     title=None,
-    attainable=False,
+    simulate_attainable=False,
     interval_level=0.95,
 ):
     """Score ``pipeline`` on the pattern-by-noise grid; deprecated: use ``pipeline.run(...).scorecard``."""
@@ -664,7 +666,7 @@ def scorecard(
         history_length=history_length,
         horizon=horizon,
         title=title,
-        attainable=attainable,
+        simulate_attainable=simulate_attainable,
         interval_level=interval_level,
     )
 
@@ -710,10 +712,10 @@ class Scorecard:
     itself an estimate, good to about a point; a model can land above it on a
     given card. The default grid's values are stored. Other noise levels,
     history lengths and horizons get NaN unless the card was made with
-    ``attainable=True``, which simulates them once per session: about 3 to 5
+    ``simulate_attainable=True``, which simulates them once per session: about 3 to 5
     seconds for each autoregressive or random-walk cell, well under a second
     for the others. A pattern of your own gets one only with
-    ``Pattern.attainable_by`` and ``attainable=True``.
+    ``Pattern.attainable_by`` and ``simulate_attainable=True``.
 
     ``save_baseline(path)`` writes each series' avoidable error to a small
     JSON file, and ``compare(baseline)`` compares a later card on the same
