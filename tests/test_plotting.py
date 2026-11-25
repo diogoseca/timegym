@@ -48,8 +48,8 @@ def test_run_fits_once_per_case_and_plots_retained_outputs_without_refitting():
     assert len(models) == len(run.cases) == 4
     assert all(model.fit_count == model.predict_count == 1 for model in models)
     assert len({id(model) for model in models}) == 4
-    assert run.cases[0].forecast.index.equals(run.cases[0].case.task.future_index)
-    assert run.report.cases[0] is run.cases[0].result
+    assert run.cases[0].forecast.index.equals(run.cases[0].future_index)
+    assert run.report.cases[0].metrics == run.cases[0].metrics
     run.plot_forecasts()
     run.plot_errors()
     run.plot_forecasts()
@@ -176,7 +176,7 @@ def test_execution_errors_are_retained_and_annotated():
 
     run = Pipeline(Broken).run([Scenario("ar1", history_length=12, horizon=3)], seeds=[7], keep_data=True)
     assert run.cases[0].forecast is None
-    assert run.cases[0].result.diagnostics[0].status == "ERROR"
+    assert run.cases[0].diagnostics[0].status == "ERROR"
     axis = run.plot_forecasts().axes[0]
     assert any("intentional failure" in text.get_text() for text in axis.texts)
     assert not any(line.get_label() == "Predictive mean" for line in axis.lines)
@@ -196,7 +196,7 @@ def test_invalid_forecast_contract_is_not_drawn_as_valid_predictions():
 
     run = Pipeline(SwappedLabels()).run([Scenario("ar1", history_length=12, horizon=3, n_targets=2)], seeds=[4], keep_data=True)
     assert run.cases[0].forecast is not None
-    assert any(d.status == "FAIL" for d in run.cases[0].result.diagnostics)
+    assert any(d.status == "FAIL" for d in run.cases[0].diagnostics)
     for axis in run.plot_forecasts().axes:
         assert not any(line.get_label() == "Predictive mean" for line in axis.lines)
         assert any("target_mismatch" in text.get_text() for text in axis.texts)
@@ -231,7 +231,7 @@ def test_unknown_or_partly_missing_metrics_never_disappear_silently():
     run = Pipeline(LastValueForecaster()).run([Scenario("ar1", history_length=12, horizon=3)], seeds=[1, 2], keep_data=True)
     with pytest.raises(ValueError, match="unknown_score"):
         run.plot_errors("unknown_score")
-    del run.cases[1].result.metrics["avoidable_mse"]
+    del run.cases[1].metrics["avoidable_mse"]
     with pytest.raises(ValueError, match="seed 2"):
         run.plot_errors()
     axis = run.plot_errors(missing="annotate").axes[0]

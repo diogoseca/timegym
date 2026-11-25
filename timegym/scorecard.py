@@ -50,11 +50,11 @@ def _case_numbers(entry):
     conditional mean (the answer key). Samples stand in for a missing point
     forecast through their mean.
     """
-    forecast, case = entry.forecast, entry.case
+    forecast, reference = entry.forecast, entry.reference
     if (
         forecast is None
-        or case.reference is None
-        or not all(_case_checks(entry.result).values())
+        or reference is None
+        or not all(_case_checks(entry._result).values())
     ):
         return None
     if forecast.point is not None:
@@ -63,14 +63,9 @@ def _case_numbers(entry):
         point = np.asarray(forecast.samples, dtype=float).mean(axis=0)
     else:
         return None
-    truth = np.asarray(case.reference.mean, dtype=float)
+    truth = np.asarray(reference.mean, dtype=float)
     errors = point - truth
-    return (
-        float(np.mean(case.reference.variance)),
-        float(np.mean(errors**2)),
-        errors,
-        truth,
-    )
+    return float(np.mean(reference.variance)), float(np.mean(errors**2)), errors, truth
 
 
 def _score(best, avoidable):
@@ -387,14 +382,14 @@ def _check_problems(entries):
     """Describe failed output checks in a cell, with date shifts in steps."""
     problems = {}
     for entry in entries:
-        for key, passed in _case_checks(entry.result).items():
+        for key, passed in _case_checks(entry._result).items():
             if passed:
                 continue
-            text = CHECKS[key] if key in CHECKS else _own_checks(entry.result)[key][1]
+            text = CHECKS[key] if key in CHECKS else _own_checks(entry._result)[key][1]
             if key == "runs":
                 text = "Crashes"
             elif key == "dates" and entry.forecast is not None:
-                shift = _index_shift(entry.forecast.index, entry.case.task.future_index)
+                shift = _index_shift(entry.forecast.index, entry.future_index)
                 text = "Wrong dates" + (f": {_describe_shift(shift)}" if shift else "")
             else:
                 text = f"Fails check: {text.lower()}"
@@ -460,7 +455,7 @@ def _instance_pairs(entries):
         if numbers is not None:
             pairs.append(numbers[:2])
             valid.append(True)
-        elif not all(_case_checks(entry.result).values()):
+        elif not all(_case_checks(entry._result).values()):
             pairs.append((0.0, 0.0))
             valid.append(False)
     return pairs, valid
@@ -549,10 +544,7 @@ def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level
     the first draw of each cell and each series' avoidable error.
     """
     interval_level = _interval_level(0.95 if interval_level is None else interval_level)
-    if not any(
-        entry.case is not None and entry.case.reference is not None
-        for entry in run.cases
-    ):
+    if not any(entry.reference is not None for entry in run.cases):
         raise ValueError(
             "none of these series has an answer key, so they cannot be scored against one"
         )
@@ -563,7 +555,7 @@ def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level
     for index, cell in enumerate(cells):
         entries = by_cell[index]
         numbers = [found for found in map(_case_numbers, entries) if found]
-        broken = sum(not all(_case_checks(entry.result).values()) for entry in entries)
+        broken = sum(not all(_case_checks(entry._result).values()) for entry in entries)
         scorable = len(numbers) + broken
         best = float(np.mean([n[0] for n in numbers])) if numbers else np.nan
         avoidable = float(np.mean([n[1] for n in numbers])) if numbers else np.nan
@@ -576,11 +568,7 @@ def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level
         mistakes = _check_problems(entries)
         if numbers and round(score) < 70:  # as the verdict reads it
             mistakes += _mistakes(numbers)
-        observed = [
-            entry.result.metrics["mse"]
-            for entry in entries
-            if "mse" in entry.result.metrics
-        ]
+        observed = [entry.metrics["mse"] for entry in entries if "mse" in entry.metrics]
         rows.append(
             {
                 "pattern": cell.pattern,
@@ -1485,28 +1473,25 @@ def _whisker(ax, row, left, right, y, color, track, transform=None):
 
 def _example(ax, entry, row):
     """Draw instance 1 of a cell: recent history, what happened, answer key, forecast."""
-    case, horizon = entry.case, len(entry.case.task.future_index)
-    history = case.task.history.iloc[-min(len(case.task.history), 4 * horizon) :, 0]
+    future, horizon = entry.future_index, len(entry.future_index)
+    history = entry.history.iloc[-min(len(entry.history), 4 * horizon) :, 0]
     ax.plot(
         history.index, history.to_numpy(), ".", color=_MUTED, markersize=2.2, alpha=0.75
     )
     ax.plot(
-        case.observed.index,
-        case.observed.iloc[:, 0].to_numpy(),
+        entry.observed.index,
+        entry.observed.iloc[:, 0].to_numpy(),
         ".",
         color=_MUTED,
         markersize=2.2,
         alpha=0.75,
     )
-    if case.reference is not None:
+    if entry.reference is not None:
         ax.plot(
-            case.task.future_index,
-            np.asarray(case.reference.mean)[:, 0],
-            color=_INK,
-            linewidth=1.1,
+            future, np.asarray(entry.reference.mean)[:, 0], color=_INK, linewidth=1.1
         )
     ax.axvline(history.index[-1] + 0.5, color=_HAIRLINE, linewidth=0.8, linestyle="--")
-    valid = entry.forecast is not None and all(_case_checks(entry.result).values())
+    valid = entry.forecast is not None and all(_case_checks(entry._result).values())
     point = None
     if valid and entry.forecast.point is not None:
         point = np.asarray(entry.forecast.point, dtype=float)[:, 0]
@@ -1514,12 +1499,7 @@ def _example(ax, entry, row):
         point = np.asarray(entry.forecast.samples, dtype=float).mean(axis=0)[:, 0]
     if point is not None:
         ax.plot(
-            case.task.future_index,
-            point,
-            "x",
-            color=_FORECAST,
-            markersize=2.8,
-            markeredgewidth=0.8,
+            future, point, "x", color=_FORECAST, markersize=2.8, markeredgewidth=0.8
         )
     elif row.mistakes:
         ax.text(

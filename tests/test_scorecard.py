@@ -142,7 +142,7 @@ def test_level_shift_happens_inside_the_history():
 
 def test_one_seed_gives_instance_seeds_seed_plus_index():
     run = Pipeline(LastValueForecaster()).run([Scenario("trend", 20, 3)], seed=5, instances=3)
-    assert [entry.result.seed for entry in run.cases] == [5, 6, 7]
+    assert [entry.manifest["seed"] for entry in run.cases] == [5, 6, 7]
     assert (run.metadata["seed"], run.metadata["instances"]) == (5, 3)
     default = Pipeline(LastValueForecaster()).test([Scenario("trend", 20, 3)])
     explicit = Pipeline(LastValueForecaster()).test([Scenario("trend", 20, 3)], seeds=[0, 1, 2])
@@ -905,7 +905,7 @@ def test_a_series_that_crashed_is_stored_as_null(tmp_path):
     record = __import__("json").loads(card.save_baseline(tmp_path / "b.json").read_text(encoding="utf-8"))
     crashed = [entry.seed_index for entry in card.run.cases
                if entry.scenario_index == 0
-               and any(d.name == "model_execution" for d in entry.result.diagnostics)]
+               and any(d.name == "model_execution" for d in entry.diagnostics)]
     assert crashed and len(crashed) < 20
     assert [i for i, value in enumerate(record["cells"][0]["avoidable"]) if value is None] == crashed
 
@@ -1044,7 +1044,7 @@ def test_a_p_value_recomputed_by_hand_from_the_stored_numbers(tmp_path, last_val
     index = 4  # random walk, low noise
     old = json.loads(path.read_text(encoding="utf-8"))["cells"][index]["avoidable"]
     new = [entry for entry in card.run.cases if entry.scenario_index == index]
-    new = [n for _, n in sorted((entry.seed_index, entry.result.metrics["avoidable_mse"]) for entry in new)]
+    new = [n for _, n in sorted((entry.seed_index, entry.metrics["avoidable_mse"]) for entry in new)]
     d = np.array(new) - np.array(old)
     flips = np.random.default_rng([4, len(d)]).choice([-1.0, 1.0], size=(9999, len(d)))
     p = (1 + np.sum((flips * d).mean(axis=1) >= d.mean())) / 10000

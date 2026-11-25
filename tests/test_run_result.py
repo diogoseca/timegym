@@ -349,3 +349,26 @@ def test_recorded_forecasts_take_a_name_once():
     assert recorded.metadata["name"] == "weather service" and recorded.metadata["model"] == "recorded forecasts"
     with pytest.raises(ValueError, match="not both"):
         ForecastRun.from_forecasts(_own_data(), [np.zeros(12)] * 2, name="a", metadata={"name": "b"})
+
+
+def test_each_entry_reads_its_cases_parts_and_agrees_with_the_report():
+    pipeline = Pipeline(LastValueForecaster())
+    kept = pipeline.run(["trend", "seasonal"], instances=2, keep_data=True)
+    for entry, saved in zip(kept.cases, kept.report.cases):
+        case = entry.case
+        assert entry.history is case.task.history and entry.future_index is case.task.future_index
+        assert entry.observed is case.observed and entry.reference is case.reference
+        assert entry.metrics == saved.metrics and entry.diagnostics == saved.diagnostics
+        assert entry.manifest == saved.manifest == case.manifest
+        assert entry.manifest["seed"] == saved.seed and entry.manifest["kind"] == saved.scenario
+    dropped = pipeline.run(["trend", "seasonal"], instances=2)
+    for entry, saved in zip(dropped.cases, kept.cases):
+        assert entry.case is entry.history is entry.future_index is entry.observed is entry.reference is None
+        assert entry.forecast is None
+        assert entry.metrics == saved.metrics and entry.manifest == saved.manifest
+        assert [d.to_dict() for d in entry.diagnostics] == [d.to_dict() for d in saved.diagnostics]
+    own = pipeline.run(cases=_own_data(), keep_data=True)
+    assert own.cases[0].reference is None and own.cases[0].manifest["origin"] == str(own.cases[0].history.index[-1])
+    # A metric changed on the entry is the report's: they are the same record.
+    kept.cases[0].metrics["mine"] = 1.0
+    assert kept.report.cases[0].metrics["mine"] == 1.0

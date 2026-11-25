@@ -108,7 +108,7 @@ def test_training_never_reads_evaluation_futures(reduction, monkeypatch):
 
     monkeypatch.setattr(Scenario, "generate", mutated_future)
     mutated = pipeline.run([scenario], seeds=[11], keep_data=True)
-    assert not np.allclose(clean.cases[0].case.observed, mutated.cases[0].case.observed)
+    assert not np.allclose(clean.cases[0].observed, mutated.cases[0].observed)
     first, second = fitted
     assert first.reduction == second.reduction == reduction
     for before, after in zip(fitted_parameters(first), fitted_parameters(second), strict=True):
@@ -124,7 +124,7 @@ def test_reduction_is_recorded_in_the_run_metadata_and_configuration(reduction):
     assert run.metadata["reduction"] == config["reduction"] == reduction
     assert run.metadata["pipeline_config"]["reduction"] == reduction
     assert TestReport.from_json(run.report.to_json()).metadata["reduction"] == reduction
-    assert all(d.status != "ERROR" for d in run.cases[0].result.diagnostics)
+    assert all(d.status != "ERROR" for d in run.cases[0].diagnostics)
 
 
 @pytest.mark.parametrize("reduction", REDUCTIONS)

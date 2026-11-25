@@ -82,16 +82,15 @@ def _example(entry, visible):
     """Instance 1 of a cell: recent history, what happened, answer key and forecast."""
     from timegym.reporting import _case_checks
 
-    case = entry.case
-    if entry.forecast is None or entry.forecast.point is None or not all(_case_checks(entry.result).values()):
+    if entry.forecast is None or entry.forecast.point is None or not all(_case_checks(entry._result).values()):
         raise ValueError("The scorecard figure expects a valid point forecast in every example")
-    history = case.task.history.iloc[-visible:, 0]
+    history = entry.history.iloc[-visible:, 0]
     return {
         "history_time": [int(t) for t in history.index],
         "history": history.to_numpy(dtype=float).tolist(),
-        "future_time": [int(t) for t in case.task.future_index],
-        "observed": case.observed.iloc[:, 0].to_numpy(dtype=float).tolist(),
-        "answer_key": np.asarray(case.reference.mean, dtype=float)[:, 0].tolist(),
+        "future_time": [int(t) for t in entry.future_index],
+        "observed": entry.observed.iloc[:, 0].to_numpy(dtype=float).tolist(),
+        "answer_key": np.asarray(entry.reference.mean, dtype=float)[:, 0].tolist(),
         "forecast": np.asarray(entry.forecast.point, dtype=float)[:, 0].tolist(),
         "forecast_origin": float(history.index[-1]) + .5,
     }
@@ -114,8 +113,8 @@ def build_scorecard(root: Path):
     keys = list(dict.fromkeys(table["pattern"]))
     levels = list(dict.fromkeys(table["noise"]))
     sds = list(dict.fromkeys(table["noise_sd"]))
-    horizon = len(card.run.cases[0].case.task.future_index)
-    visible = min(len(card.run.cases[0].case.task.history), 4 * horizon)  # as the package plot
+    horizon = len(card.run.cases[0].future_index)
+    visible = min(len(card.run.cases[0].history), 4 * horizon)  # as the package plot
     first = {}
     for entry in card.run.cases:
         first.setdefault(entry.scenario_index, entry)
@@ -180,7 +179,7 @@ def build_scorecard(root: Path):
         "specification_source": "paper/figure_scorecard.py",
         "scorecard_call": "pipeline.run(keep_data=True).scorecard with package defaults",
         "seed": int(card.seed), "instances": int(card.instances),
-        "history_length": len(card.run.cases[0].case.task.history), "forecast_horizon": horizon,
+        "history_length": len(card.run.cases[0].history), "forecast_horizon": horizon,
         "visible_history": visible, "example_instance": 1,
         "overall_score": float(card.score), "overall_score_shown": f"{card.score:.0f}",
         "good_at": card.good_at, "fails_at": card.fails_at, "noise_sensitive": card.noise_sensitive,
@@ -235,7 +234,7 @@ def build_scorecard(root: Path):
                 "avoidable_mse": float(row.avoidable_mse), "mse": float(row.mse),
                 "instances": int(row.instances), "failed_checks": int(row.failed_checks),
                 "badge_fill": fill, "example": {**panel, "y_limits": [low, high],
-                                                "manifest": first[index].case.manifest},
+                                                "manifest": first[index].manifest},
             })
         # Mistakes named for the row, one note per noise level, as the package plot.
         for line_number, (indent, line) in enumerate(mistakes or [(0, "None found")]):

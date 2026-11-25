@@ -1795,7 +1795,7 @@ def _run_probabilities(run):
     used, skipped = [], 0
     for index, entry in enumerate(entries):
         forecast = entry.forecast
-        if forecast is None or not all(_case_checks(entry.result).values()):
+        if forecast is None or not all(_case_checks(entry._result).values()):
             skipped += 1
             continue
         chances = forecast.point
@@ -1806,7 +1806,7 @@ def _run_probabilities(run):
             continue
         try:
             observed, chances = metrics._probabilities(
-                entry.case.observed.to_numpy(), chances
+                entry.observed.to_numpy(), chances
             )
         except ValueError as exc:
             raise ValueError(f"case {index} ({_case_name(entry)}): {exc}") from None
@@ -1820,8 +1820,8 @@ def _run_probabilities(run):
 
 
 def _case_name(entry):
-    seed = entry.case.manifest.get("seed")
-    return f"{entry.result.scenario}" + ("" if seed is None else f", seed {seed}")
+    seed = entry.manifest.get("seed")
+    return f"{entry._result.scenario}" + ("" if seed is None else f", seed {seed}")
 
 
 def calibration(run, predicted=None, *, bins=10, cluster=None, level=0.95, seed=0):

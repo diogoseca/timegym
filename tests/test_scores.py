@@ -275,7 +275,7 @@ def test_requests_that_cannot_work_are_refused_before_anything_runs(asked, error
 def test_forecasts_made_earlier_get_the_metrics_too():
     cases = yes_no_cases()
     recorded = ForecastRun.from_forecasts(cases, [np.full(7, 0.4)] * 3, metrics=["brier"])
-    assert all(entry.result.metrics["brier"] > 0 for entry in recorded.cases)
+    assert all(entry.metrics["brier"] > 0 for entry in recorded.cases)
     assert recorded.metadata["metrics"][0]["name"] == "brier"
 
 

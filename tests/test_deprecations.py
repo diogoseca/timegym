@@ -330,7 +330,7 @@ def test_a_metric_or_check_that_asks_for_context_gets_the_history_and_warns_once
     ]
     assert all(Path(warning.filename).resolve() == Path(__file__).resolve() for warning in caught)
     for entry in run.cases:
-        assert entry.result.metrics["context_rows"] == entry.result.metrics["history_rows"] == 30.0
+        assert entry.metrics["context_rows"] == entry.metrics["history_rows"] == 30.0
     run.assert_passed()
 
 
@@ -658,7 +658,7 @@ def test_a_report_that_lists_its_metrics_under_scores_still_replays_them():
 def test_every_case_with_an_answer_key_records_avoidable_mse_the_scorecard_number():
     result = Pipeline(LastValueForecaster()).run(["noise", "trend"], instances=3)
     for row in result.scorecard.table.itertuples():
-        cases = [entry.result.metrics for entry in result.cases if entry.scenario_index == row.Index]
+        cases = [entry.metrics for entry in result.cases if entry.scenario_index == row.Index]
         assert all("avoidable_mse" in metrics and "mean_reference_mse" not in metrics.keys() for metrics in cases)
         assert np.mean([metrics["avoidable_mse"] for metrics in cases]) == pytest.approx(row.avoidable_mse, rel=1e-12)
 
@@ -667,7 +667,7 @@ def test_reading_mean_reference_mse_from_a_case_still_works_and_warns():
     import json
     import pickle
 
-    metrics = Pipeline(LastValueForecaster()).run(["trend"], instances=1).cases[0].result.metrics
+    metrics = Pipeline(LastValueForecaster()).run(["trend"], instances=1).cases[0].metrics
     value = metrics["avoidable_mse"]
     message = 'case.metrics["mean_reference_mse"] ' + LATER + ': use case.metrics["avoidable_mse"]'
     assert renamed_call(message, metrics.__getitem__, "mean_reference_mse") == value
@@ -825,3 +825,23 @@ def test_run_has_no_dependence_arguments_and_both_forms_are_refused():
     assert [row["check"] for row in named.checks][-2:] == ["dependence", "range"]
     assert named.metadata["diagnostic_settings"]["check_dependence"] is True
     assert repr(dependence(alpha=0.1)) == "dependence(n_calibration=99, alpha=0.1)"
+
+
+def test_an_entrys_result_still_reads_and_sets_its_record_and_warns():
+    from timegym import EvaluatedCase
+
+    run = Pipeline(LastValueForecaster()).run(["trend"], instances=2)
+    entry = run.cases[0]
+    message = f"entry.result {LATER}: read the case's parts on the entry itself, such as entry.metrics"
+    record = renamed_call(message, lambda: entry.result)
+    assert record is run.report.cases[0]
+    assert (record.metrics, record.diagnostics, record.manifest) == (entry.metrics, entry.diagnostics, entry.manifest)
+    other = run.cases[1]
+    renamed_call(message, setattr, entry, "result", renamed_call(message, lambda: other.result))
+    assert entry.metrics == other.metrics
+    # Making an entry by hand takes the record as before and stays silent.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        made = EvaluatedCase(None, None, record, 0, 0)
+        assert made.metrics is record.metrics and EvaluatedCase(case=None, forecast=None, result=record,
+                                                                scenario_index=0, seed_index=1).seed_index == 1

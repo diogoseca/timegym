@@ -127,7 +127,7 @@ def rain_cases():
 def test_a_run_gives_the_same_numbers_as_its_arrays(rain_cases):
     run = Pipeline(CycleShare()).run(cases=rain_cases, keep_data=True)
     from_run = calibration(run)
-    observed = np.concatenate([entry.case.observed.to_numpy()[:, 0] for entry in run.cases])
+    observed = np.concatenate([entry.observed.to_numpy()[:, 0] for entry in run.cases])
     predicted = np.concatenate([np.asarray(entry.forecast.point)[:, 0] for entry in run.cases])
     labels = np.repeat(np.arange(len(run.cases)), 24)
     from_arrays = calibration(observed, predicted, cluster=labels)

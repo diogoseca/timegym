@@ -29,13 +29,14 @@ def test_public_pipeline_report_round_trip_and_replay_each_new_family(kind, para
     run = pipeline.run([scenario], seeds=[3, 5], keep_data=True)
     assert len(run.cases) == 2
     for entry in run.cases:
-        assert entry.result.scenario == entry.case.manifest["kind"] == kind
+        assert entry.manifest["kind"] == kind
         assert entry.forecast.validate(entry.case.task) == []
-        assert {"mse", "mae", "mase", "avoidable_mse"} <= entry.result.metrics.keys()
-        assert all(np.isfinite(value) for value in entry.result.metrics.values())
-        assert not any(d.status == "ERROR" for d in entry.result.diagnostics)
-        assert scenario.display_name == scenario_label(kind, entry.case.manifest["parameters"])
-        assert entry.case.reference.conditioning["future_observations_used"] is False
+        assert {"mse", "mae", "mase", "avoidable_mse"} <= entry.metrics.keys()
+        assert all(np.isfinite(value) for value in entry.metrics.values())
+        assert not any(d.status == "ERROR" for d in entry.diagnostics)
+        assert scenario.display_name == scenario_label(kind, entry.manifest["parameters"])
+        assert entry.reference.conditioning["future_observations_used"] is False
+    assert [case.scenario for case in run.report.cases] == [kind, kind]
     direct_report = pipeline.test([scenario], seeds=[3, 5])
     assert direct_report.to_dict() == run.report.to_dict()
     encoded = run.report.to_json()
@@ -137,8 +138,8 @@ from timegym import LastValueForecaster, Pipeline, Scenario
 for kind in ("composite", "merton_jump_diffusion", "garch", "markov_switching"):
     run = Pipeline(LastValueForecaster()).run([Scenario(kind, history_length=12, horizon=2)], seeds=[3])
     assert len(run.cases) == 1
-    assert "mse" in run.cases[0].result.metrics
-    assert not any(d.status == "ERROR" for d in run.cases[0].result.diagnostics)
+    assert "mse" in run.cases[0].metrics
+    assert not any(d.status == "ERROR" for d in run.cases[0].diagnostics)
 assert not any(name.split(".")[0] in blocked for name in sys.modules)
 '''
     completed = subprocess.run([sys.executable, "-c", script],

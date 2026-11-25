@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from timegym import (
+    EvaluatedCase,
     Forecast,
     ForecastRun,
     GaussianAR1Forecaster,
@@ -325,11 +326,7 @@ def test_scorecard_names_a_failed_check_of_your_own():
     forecast = forecast_for(case, point=np.full((7, 1), -1.0))
     result = evaluate_forecast(case, forecast, checks=[within(0, None)])
 
-    class Entry:
-        pass
-
-    entry = Entry()
-    entry.result, entry.forecast, entry.case = result, forecast, case
+    entry = EvaluatedCase(case, forecast, result, 0, 0)
     assert _check_problems([entry]) == ["Fails check: values at least 0 (1 of 1)"]
 
 

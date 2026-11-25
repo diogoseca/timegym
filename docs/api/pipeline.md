@@ -95,15 +95,35 @@ has no scorecard, because nobody knows the answer key of real data: reading
 `result.scorecard` then raises an error that points to `result.checks` and the
 errors against what happened in `result.report`.
 
+Each entry of `result.cases` is an `EvaluatedCase` that answers for its case
+directly:
+
+```python
+for entry in result.cases:
+    entry.history          # the past the model saw, one column per series
+    entry.future_index     # the dates it forecast
+    entry.observed         # what happened on them
+    entry.reference        # the answer key (None for your own data)
+    entry.forecast         # what the model returned (None if it crashed)
+    entry.metrics["mae"]   # each metric by name
+    entry.diagnostics      # every finding
+    entry.manifest         # the case's description: its kind, seed, ...
+```
+
+`metrics`, `diagnostics` and `manifest` are the case's entry in the report,
+`result.report.cases`. `entry.case` is the whole `Case`, to hand to another
+call, and `scenario_index` and `seed_index` place it in the run.
+`entry.result`, the old way to the report's entry, still works and warns.
+
 By default the run drops the series, answer keys and forecasts once every
-case is measured, so a large run stays small in memory. The report, the
-scorecard (with its picture) and `result.plot_errors()` work either way.
-`keep_data=True` keeps them: `result.cases` then holds each `EvaluatedCase`,
-with the generated case, the forecast (or `None` on model failure), the result
-and the scenario/seed positions, for `result.plot_forecasts()`,
-`timegym.diagnostics.calibration` and your own reading. Without it each entry
-keeps only its result and positions, and `result.kept_data` is `False`. This
-in-memory object keeps arrays separate from the portable report schema.
+case is measured, so a large run stays small in memory: `history`,
+`future_index`, `observed`, `reference`, `forecast` and `case` are then
+`None`, while `metrics`, `diagnostics` and `manifest` stay, and
+`result.kept_data` is `False`. The report, the scorecard (with its picture)
+and `result.plot_errors()` work either way. `keep_data=True` keeps them for
+`result.plot_forecasts()`, `timegym.diagnostics.calibration` and your own
+reading. This in-memory object keeps arrays separate from the portable report
+schema.
 
 `.test(...)` and `.scorecard(...)` still work, with their old behaviour, and
 warn. `pipeline.test(...)` is `pipeline.run(...).report`, except that with no

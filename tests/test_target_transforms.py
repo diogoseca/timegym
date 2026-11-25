@@ -354,7 +354,7 @@ def test_target_transform_is_recorded_and_replayed_from_the_report(tmp_path):
     run = pipeline.run([scenario], seeds=[2, 7])
     assert run.metadata["target_transform"] == config["target_transform"]
     assert run.metadata["pipeline_config"] == config
-    assert all(d.status != "ERROR" for entry in run.cases for d in entry.result.diagnostics)
+    assert all(d.status != "ERROR" for entry in run.cases for d in entry.diagnostics)
     path = tmp_path / "report.json"
     run.report.to_json(path)
     replayed = TestReport.read(path).replay_case(1)

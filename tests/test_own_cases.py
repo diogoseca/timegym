@@ -124,13 +124,13 @@ def test_run_and_test_take_your_own_cases():
     cases = cases_from_series(rain, [60, 80, 100], 7, name="rain")
     run = Pipeline(LastValueForecaster()).run(cases=cases, keep_data=True)
     assert [(entry.scenario_index, entry.seed_index) for entry in run.cases] == [(0, 0), (0, 1), (0, 2)]
-    assert all(entry.result.scenario == "rain" and entry.result.seed is None for entry in run.cases)
+    assert all(entry.manifest["kind"] == "rain" and entry.manifest["seed"] is None for entry in run.cases)
     for entry in run.cases:
-        expected = np.mean((entry.case.observed.to_numpy() - entry.case.task.history.iloc[-1].to_numpy()) ** 2)
-        assert entry.result.metrics["mse"] == pytest.approx(expected)
-        assert "avoidable_mse" not in entry.result.metrics  # no answer key for real data
+        expected = np.mean((entry.observed.to_numpy() - entry.history.iloc[-1].to_numpy()) ** 2)
+        assert entry.metrics["mse"] == pytest.approx(expected)
+        assert "avoidable_mse" not in entry.metrics  # no answer key for real data
     report = Pipeline(LastValueForecaster()).test(cases=cases)
-    assert [case.metrics for case in report.cases] == [entry.result.metrics for entry in run.cases]
+    assert [case.metrics for case in report.cases] == [entry.metrics for entry in run.cases]
     report.assert_passed()
     loaded = TestReport.from_json(report.to_json())
     assert loaded.cases[0].manifest == cases[0].manifest
@@ -208,7 +208,7 @@ def test_forecasts_made_earlier_are_scored_like_a_run():
     forecasts = [repeat_last(case) for case in cases]
     recorded = ForecastRun.from_forecasts(cases, forecasts, name="repeat last", metadata={"commit": "abc"})
     fitted = Pipeline(LastValueForecaster()).run(cases=cases, keep_data=True)
-    assert [e.result.metrics for e in recorded.cases] == [e.result.metrics for e in fitted.cases]
+    assert [e.metrics for e in recorded.cases] == [e.metrics for e in fitted.cases]
     assert recorded.metadata["name"] == "repeat last" and recorded.metadata["commit"] == "abc"
     assert recorded.metadata["model"] == "recorded forecasts"
     assert "pipeline_config" not in recorded.metadata
@@ -222,9 +222,9 @@ def test_forecasts_made_earlier_are_scored_like_a_run():
 def test_forecasts_made_earlier_accept_plain_arrays_and_gaps():
     cases = cases_from_series(daily_rain(), [60, 80], 5)
     recorded = ForecastRun.from_forecasts(cases, [np.zeros(5), None])
-    assert recorded.cases[0].result.metrics["mse"] > 0
+    assert recorded.cases[0].metrics["mse"] > 0
     assert recorded.cases[1].forecast is None
-    (problem,) = recorded.cases[1].result.diagnostics
+    (problem,) = recorded.cases[1].diagnostics
     assert (problem.name, problem.status) == ("model_execution", "ERROR")
     assert "No forecast was recorded" in problem.message
     with pytest.raises(ValueError, match="Got 1 forecasts for 2 cases"):

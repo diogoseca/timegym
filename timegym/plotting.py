@@ -156,7 +156,7 @@ def _annotate(ax, messages):
 def _diagnostic_problems(entry):
     return [
         f"{diagnostic.status} · {diagnostic.name}: {diagnostic.message}"
-        for diagnostic in entry.result.diagnostics
+        for diagnostic in entry.diagnostics
         if diagnostic.failed
     ]
 
@@ -177,9 +177,9 @@ def _valid_reference(case):
 # %% ../source/11_plotting.ipynb #11_plotting-19
 def _which_case(entry):
     """Name one case of a group: its seed, or where its history ends for your own data."""
-    if entry.result.seed is not None:
-        return f"seed {entry.result.seed}"
-    origin = entry.result.manifest.get("origin")
+    if entry._result.seed is not None:
+        return f"seed {entry._result.seed}"
+    origin = entry.manifest.get("origin")
     return "" if origin is None else f"history ends {origin}"
 
 
@@ -416,8 +416,8 @@ def _draw_case(
     several = len(task.target_names) > 1
     if title is None:
         label = scenario_label(
-            entry.result.scenario,
-            case.manifest.get("parameters"),
+            entry._result.scenario,
+            entry.manifest.get("parameters"),
             target_index=dimension,
         )
         which = _which_case(entry)
@@ -498,7 +498,7 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
     for scenario_index, entries in groups.items():
         targets = list(
             dict.fromkeys(
-                target for entry in entries for target in entry.case.task.target_names
+                target for entry in entries for target in entry.history.columns
             )
         )
         rows.extend((scenario_index, target) for target in targets)
@@ -578,7 +578,7 @@ def plot_errors(
     for scenario_index, entries in groups.items():
         values, unavailable = [], []
         for entry in entries:
-            value = entry.result.metrics.get(metric)
+            value = entry.metrics.get(metric)
             if isinstance(value, (int, float, np.integer, np.floating)) and np.isfinite(
                 value
             ):
@@ -640,7 +640,7 @@ def plot_errors(
             ax.set_ylabel("Cases")
             titled = _run_title(run, scenario_index)
             process = titled or scenario_label(
-                entries[0].result.scenario, entries[0].result.manifest.get("parameters")
+                entries[0]._result.scenario, entries[0].manifest.get("parameters")
             )
             ax.set_title(
                 f"{'' if titled else f'{scenario_index + 1}. '}{process}", loc="left"

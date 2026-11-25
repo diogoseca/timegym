@@ -181,6 +181,21 @@
 - Moved the docs, tutorials, source notebooks, tests and experiment scripts to
   `checks=[dependence()]`.
 
+- Each entry of `result.cases` now reads its case's parts directly:
+  `entry.history`, `entry.future_index`, `entry.observed`, `entry.reference`,
+  `entry.forecast`, `entry.metrics`, `entry.diagnostics` and
+  `entry.manifest`. The last three are the case's entry in the report, the
+  same record as `result.report.cases[i]`, so a case's kind and seed are
+  `entry.manifest["kind"]` and `entry.manifest["seed"]`. In a run that drops
+  its data, the default, the series, the answer key and the forecast are
+  None, and the metrics, diagnostics and manifest stay. `entry.case` is still
+  the whole `Case`, to hand to another call.
+- `entry.result` still works and now warns; it will be removed in a later
+  release. `EvaluatedCase(case, forecast, result, scenario_index,
+  seed_index)` is made as before.
+- Moved the docs, tutorials, examples, source notebooks, tests, the plots,
+  the scorecard and the paper's scorecard figure to the entry's parts.
+
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
   true as often as they say: of the days given a 70% chance of rain, did it

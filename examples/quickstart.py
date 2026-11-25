@@ -8,4 +8,4 @@ result = pipeline.run(
 )
 result.assert_passed()
 print(result.report.summary)
-print(result.cases[0].result.metrics)
+print(result.cases[0].metrics)

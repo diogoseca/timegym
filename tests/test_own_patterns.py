@@ -110,7 +110,7 @@ def test_own_pattern_gets_the_brier_share_as_its_score():
     for entry in card.run.cases:
         if entry.scenario_index != 0:  # the low-noise column
             continue
-        p = entry.case.reference.mean[:, 0]
+        p = entry.reference.mean[:, 0]
         point = entry.forecast.point[:, 0]
         unavoidable.append(np.mean(p * (1 - p)))
         avoidable.append(np.mean((point - p) ** 2))
