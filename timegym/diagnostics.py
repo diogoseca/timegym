@@ -1153,17 +1153,23 @@ def _candidate_reports(candidate):
             _as_report(value, f"candidate[{index}]")
             for index, value in enumerate(candidate)
         ]
-        models = [report.metadata.get("model") for report in reports]
-        if all(isinstance(model, str) and model for model in models) and len(
-            set(models)
-        ) == len(models):
-            return list(zip(models, reports))
+        labels = [_report_label(report) for report in reports]
+        if all(labels) and len(set(labels)) == len(labels):
+            return list(zip(labels, reports))
         return [
             (f"candidate {index}", report) for index, report in enumerate(reports, 1)
         ]
     report = _as_report(candidate, "candidate")
-    model = report.metadata.get("model")
-    return [(model if isinstance(model, str) and model else "candidate", report)]
+    return [(_report_label(report) or "candidate", report)]
+
+
+def _report_label(report):
+    """What a report is called: the name its pipeline was given, else the model its metadata names."""
+    for key in ("name", "model"):
+        value = report.metadata.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None
 
 
 def _same_cases(label, report, baseline):
@@ -1238,8 +1244,9 @@ def compare_reports(
 
     ``candidate`` and ``baseline`` are reports made on the same cases, in the
     same order: ``pipeline.run(...)`` results or their reports, whose case manifests
-    agree. ``candidate`` may also be a list of reports, labelled by the model
-    each report's metadata names, or a dictionary of named reports.
+    agree. ``candidate`` may also be a list of reports, each labelled by its
+    name (``Pipeline(..., name=...)``) or, without one, by its model, or a
+    dictionary of named reports.
     ``metric`` is a score in ``case.metrics``, your own included; lower is
     better unless ``higher_is_better=True``.
 

@@ -51,9 +51,9 @@ def test_the_runs_scorecard_is_the_old_scorecard_number_for_number():
 
 
 def test_scorecard_settings_go_through_run():
-    pipeline = Pipeline(LastValueForecaster())
+    pipeline = Pipeline(LastValueForecaster(), name="Mine")
     card = pipeline.run(["random_walk"], noise_levels=[0.2, 0.4], instances=3, history_length=40, horizon=6,
-                        title="Mine", interval_level=0.99).scorecard
+                        interval_level=0.99).scorecard
     assert card.title == "Mine" and card.interval_level == 0.99
     assert list(card.table["noise_sd"]) == [0.2, 0.4]
     assert card.cells[0].scenario.history_length == 40 and card.cells[0].scenario.horizon == 6
@@ -161,7 +161,7 @@ def test_your_own_data_has_no_scorecard():
 
 
 @pytest.mark.parametrize("setting", [{"noise_levels": 3}, {"history_length": 50}, {"horizon": 6},
-                                     {"title": "Mine"}, {"interval_level": 0.99}, {"attainable": True}])
+                                     {"interval_level": 0.99}, {"attainable": True}])
 def test_scorecard_settings_are_refused_for_your_own_data(setting):
     name = next(iter(setting))
     with pytest.raises(ValueError, match=f"{name} belongs to the scorecard"):
@@ -317,3 +317,35 @@ def test_a_bad_interval_level_is_refused_before_any_forecast():
     with pytest.raises(ValueError, match="interval_level must be a number between 0 and 1"):
         Pipeline(Counted()).run(["trend"], instances=2, interval_level=95)
     assert fits == []
+
+
+def test_a_name_titles_the_card_and_names_the_run_and_run_takes_no_title():
+    named = Pipeline(LastValueForecaster(), name="Repeat the last value")
+    result = named.run(["trend", "seasonal"], instances=2)
+    assert result.metadata["name"] == "Repeat the last value"
+    assert result.metadata["model"] == "LastValueForecaster"  # still the class
+    assert result.scorecard.title == "Repeat the last value"
+    assert str(result.scorecard).startswith("## Repeat the last value: ")
+    unnamed = Pipeline(LastValueForecaster()).run(["trend", "seasonal"], instances=2)
+    assert "name" not in unnamed.metadata and "name" not in unnamed.metadata["pipeline_config"]
+    assert unnamed.scorecard.title == "LastValueForecaster"
+    pd.testing.assert_frame_equal(result.scorecard.table, unnamed.scorecard.table)
+    own = named.run(cases=_own_data())  # a name, unlike the scorecard's settings, goes with your own data too
+    assert own.metadata["name"] == "Repeat the last value"
+    with pytest.raises(TypeError, match="title"):
+        named.run(["trend"], title="Mine")
+
+
+@pytest.mark.parametrize("name", ["", "  ", 3, ["Forest"]])
+def test_a_name_must_be_a_nonempty_string(name):
+    with pytest.raises(TypeError, match="name must be a nonempty string"):
+        Pipeline(LastValueForecaster(), name=name)
+    with pytest.raises(TypeError, match="name must be a nonempty string"):
+        ForecastRun.from_forecasts(_own_data(), [np.zeros(12)] * 2, name=name)
+
+
+def test_recorded_forecasts_take_a_name_once():
+    recorded = ForecastRun.from_forecasts(_own_data(), [np.zeros(12)] * 2, name="weather service")
+    assert recorded.metadata["name"] == "weather service" and recorded.metadata["model"] == "recorded forecasts"
+    with pytest.raises(ValueError, match="not both"):
+        ForecastRun.from_forecasts(_own_data(), [np.zeros(12)] * 2, name="a", metadata={"name": "b"})

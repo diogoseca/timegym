@@ -206,10 +206,11 @@ def test_a_model_that_crashes_on_one_case_does_not_stop_the_run():
 def test_forecasts_made_earlier_are_scored_like_a_run():
     cases = cases_from_series(daily_rain(), [60, 80, 100], 7, name="rain")
     forecasts = [repeat_last(case) for case in cases]
-    recorded = ForecastRun.from_forecasts(cases, forecasts, metadata={"model": "repeat last", "commit": "abc"})
+    recorded = ForecastRun.from_forecasts(cases, forecasts, name="repeat last", metadata={"commit": "abc"})
     fitted = Pipeline(LastValueForecaster()).run(cases=cases, keep_data=True)
     assert [e.result.metrics for e in recorded.cases] == [e.result.metrics for e in fitted.cases]
-    assert recorded.metadata["model"] == "repeat last" and recorded.metadata["commit"] == "abc"
+    assert recorded.metadata["name"] == "repeat last" and recorded.metadata["commit"] == "abc"
+    assert recorded.metadata["model"] == "recorded forecasts"
     assert "pipeline_config" not in recorded.metadata
     assert set(recorded.metadata["diagnostic_settings"]) == {
         "check_dependence", "n_calibration", "alpha", "dependence_seed_offset"}

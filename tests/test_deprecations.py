@@ -569,3 +569,37 @@ def test_a_pipeline_with_no_model_warns_once_when_used_and_still_tests_the_last_
         fresh = Pipeline()
         arguments = {"to_config": (), "predict": ([1.0, 2.0], range(2, 3)), "run": (scenarios, [0])}[use]
         renamed_call("Pipeline() with no model", getattr(fresh, use), *arguments)
+
+
+# The model is named once, with Pipeline(..., name=...) and from_forecasts(..., name=...).
+
+def test_recorded_forecasts_named_in_metadata_still_work_and_warn():
+    from timegym import ForecastRun, compare_reports
+
+    cases = [Scenario("trend", history_length=20, horizon=3).generate(seed=seed) for seed in (0, 1)]
+    forecasts = [np.full(3, case.task.history.iloc[-1, 0]) for case in cases]
+    old = renamed_call(f"ForecastRun.from_forecasts(metadata={{'model': ...}}) {LATER}: use "
+                       "ForecastRun.from_forecasts(cases, forecasts, name=...)", ForecastRun.from_forecasts,
+                       cases, forecasts, metadata={"model": "weather service", "made_on": "2024-05-01"})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        new = ForecastRun.from_forecasts(cases, forecasts, name="weather service", metadata={"made_on": "2024-05-01"})
+        base = Pipeline(LastValueForecaster()).run(cases=cases)
+        labels = [compare_reports([run], base, metric="mse").table["candidate"].tolist() for run in (old, new)]
+    assert old.metadata["model"] == "weather service" and "name" not in old.metadata
+    assert new.metadata["name"] == "weather service" and new.metadata["model"] == "recorded forecasts"
+    assert old.metadata["made_on"] == new.metadata["made_on"] == "2024-05-01"
+    assert [case.metrics for case in old.report.cases] == [case.metrics for case in new.report.cases]
+    assert labels == [["weather service"], ["weather service"]]  # both still label a comparison
+
+
+def test_the_old_scorecard_calls_keep_their_title_which_heads_the_card_over_the_name():
+    from timegym.scorecard import scorecard
+
+    pipeline = Pipeline(LastValueForecaster(), name="Repeat")
+    titled = renamed_call("use pipeline.run(...).scorecard", pipeline.scorecard, ["trend"], instances=2, title="Mine")
+    named = renamed_call("use pipeline.run(...).scorecard", pipeline.scorecard, ["trend"], instances=2)
+    old = deprecated_call("timegym.scorecard.scorecard", scorecard, pipeline, ["trend"], instances=2, title="Old")
+    assert (titled.title, named.title, old.title) == ("Mine", "Repeat", "Old")
+    assert titled.report.metadata["name"] == "Repeat"
+    pd.testing.assert_frame_equal(titled.table, pipeline.run(["trend"], instances=2).scorecard.table)

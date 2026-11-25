@@ -5,7 +5,7 @@ Running a scenario suite and reading, saving and replaying its report:
 with plots in `timegym.plotting` and schema constants in `timegym.provenance` and `timegym.reporting`.
 
 `Pipeline(model, window_length=12, reduction="recursive", *,
-target_transform=None)` takes the model to test first, as one of:
+target_transform=None, name=None)` takes the model to test first, as one of:
 
 - a model: anything with `fit(history)` and `predict(future_index)`, copied
   fresh before every case (through `clone_unfitted()` when it has one), even if
@@ -24,6 +24,14 @@ name a scikit-learn pipeline by its steps, such as "StandardScaler + Ridge".
 `fit_transform(history)` and `inverse_transform(forecast)`. A fresh copy is
 fitted on each history before the model and inverts the forecast the model
 returns, so evaluation sees the original scale.
+
+`name` names the model once for everything a run shows:
+`Pipeline(RandomForestRegressor(), window_length=12, name="Forest")` titles
+the scorecard "Forest", heads `plot_forecasts()` and `plot_errors()`, labels
+the run in `compare_reports` and is `result.metadata["name"]`, while
+`result.metadata["model"]` still names the class. The name is saved with the
+pipeline's configuration, so a replay keeps it. Without a name, the scorecard
+is titled by the model and the plots have no heading.
 
 The older ways still work, with their old behaviour, and warn:
 `.add(estimator, **parameters)` adds one step at a time and makes the same
@@ -45,7 +53,7 @@ column names, so wrong dates or a wrong series order still fail their checks.
 
 `.run(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None,
 noise_levels=None, history_length=None, horizon=None, keep_data=False,
-title=None, attainable=False, interval_level=None, scores=None, checks=None,
+attainable=False, interval_level=None, scores=None, checks=None,
 check_dependence=False, n_calibration=99, alpha=0.05,
 dependence_seed_offset=100_000)` forecasts every case with a fresh model,
 checks and scores each forecast, and returns a `ForecastRun`. It is the one
@@ -82,11 +90,12 @@ raised rather than counted as a model fault.
 The result holds the report and the scorecard. `result.report` is the
 `TestReport`; `result.checks`, `result.assert_passed()` and
 `result.to_json(path=None)` read it directly. `result.scorecard` is a
-`Scorecard` ([Scorecards and the scenario grid](scorecard.md)); `title`,
-`attainable` and `interval_level` (0.95 by default) are its settings. A run
-of your own data has no scorecard, because nobody knows the answer key of
-real data: reading `result.scorecard` then raises an error that points to
-`result.checks` and the errors against what happened in `result.report`.
+`Scorecard` ([Scorecards and the scenario grid](scorecard.md)), titled by
+the pipeline's name or, without one, by its model; `attainable` and
+`interval_level` (0.95 by default) are its settings. A run of your own data
+has no scorecard, because nobody knows the answer key of real data: reading
+`result.scorecard` then raises an error that points to `result.checks` and the
+errors against what happened in `result.report`.
 
 By default the run drops the series, answer keys and forecasts once every
 case is scored, so a large run stays small in memory. The report, the
@@ -114,22 +123,25 @@ plots, in the order given. `cases` cannot be combined with `scenarios`,
 `seeds`, `seed`, `instances` or the scorecard's settings, and the report's
 metadata has no seed. Pass a list, even of one case.
 
-`ForecastRun.from_forecasts(cases, forecasts, *, metadata=None,
+`ForecastRun.from_forecasts(cases, forecasts, *, name=None, metadata=None,
 check_dependence=False, n_calibration=99, alpha=0.05,
 dependence_seed_offset=100_000)` checks and scores forecasts made earlier,
 with no model: `forecasts[i]` belongs to `cases[i]` and can take any form a
 model's `predict` returns. `None` marks a case with no recorded forecast, which
 fails "Runs without errors". The result is a `ForecastRun`, so its report and
-plots work as usual; `metadata` is added to the run's metadata, for example
-`{"model": "weather service", "made_on": "2024-05-01"}`. With the rain `cases`
-from [Your own data](tasks-and-forecasts.md#your-own-data):
+plots work as usual. `name` says what made the forecasts, as
+`Pipeline(..., name=...)` does: it is `run.metadata["name"]`, heads the plots
+and labels the run in `compare_reports`. `metadata` is added to the run's
+metadata, for example `{"made_on": "2024-05-01"}`; naming the forecasts there
+with `{"model": ...}` still works and warns. With the rain `cases` from
+[Your own data](tasks-and-forecasts.md#your-own-data):
 
 ```python
 import numpy as np
 from timegym import ForecastRun
 
 recorded = [np.full(7, case.task.history.iloc[-1, 0]) for case in cases]  # made elsewhere
-run = ForecastRun.from_forecasts(cases, recorded, metadata={"model": "repeat last"})
+run = ForecastRun.from_forecasts(cases, recorded, name="repeat last")
 run.report.assert_passed()
 ```
 
@@ -212,7 +224,8 @@ adequate. A pass is always scoped to a check.
 pipeline configuration writes, which add `target_transform` (`null` or a
 description of the transform). Schema 2 configurations, written without that
 field, remain readable; schema 1 configurations, which used `strategy`, are
-rejected. Scenario manifests use integer version 1,
+rejected. A named pipeline's configuration also holds its `name`; one without
+a name writes none. Scenario manifests use integer version 1,
 named by `timegym.scenarios.MANIFEST_SCHEMA_VERSION`. These are independent
 schemas: the report version is a string, while configuration and
 manifest versions are integers.

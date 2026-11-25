@@ -628,20 +628,25 @@ def _scorecard(
     attainable=False,
     interval_level=0.95,
 ):
-    """``pipeline.run(patterns, ..., keep_data=True).scorecard``: the card as ``Pipeline.scorecard`` made it."""
+    """``pipeline.run(patterns, ..., keep_data=True).scorecard``: the card as ``Pipeline.scorecard`` made it.
+
+    ``title`` heads the card in place of the pipeline's name; ``run`` takes no title.
+    """
     _interval_level(interval_level)  # None was never a level here
-    return pipeline.run(
+    card = pipeline.run(
         patterns,
         noise_levels=noise_levels,
         instances=instances,
         seed=seed,
         history_length=history_length,
         horizon=horizon,
-        title=title,
         attainable=attainable,
         interval_level=interval_level,
         keep_data=True,
     ).scorecard
+    if title is not None:
+        card.title = title
+    return card
 
 
 @_renamed_keywords(context_length="history_length")

@@ -4,6 +4,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from typing import Any
+from ._internal import _warn_deprecated
 from .contracts import Forecast
 from .reporting import CaseResult, TestReport
 from .scenarios import Case
@@ -33,6 +34,22 @@ class EvaluatedCase:
 
 
 # %% ../source/07_pipeline.ipynb #07_pipeline-09
+_RECORDED_MODEL_MOVED = (
+    "ForecastRun.from_forecasts(metadata={'model': ...}) is deprecated and will be removed in a later "
+    "release: use ForecastRun.from_forecasts(cases, forecasts, name=...), which names the forecasts in "
+    "the report, its plots and comparisons"
+)
+
+
+def _checked_name(name):
+    """A model's name as given: None, or a nonempty string."""
+    if name is not None and (not isinstance(name, str) or not name.strip()):
+        raise TypeError(
+            f'name must be a nonempty string, such as name="Ridge"; got {name!r}'
+        )
+    return name
+
+
 @dataclass
 class ForecastRun:
     """What ``Pipeline.run`` returns: every case's scores and checks, and its scorecard.
@@ -50,6 +67,8 @@ class ForecastRun:
     only the scores. ``titles`` optionally names each scenario position in
     plain words for the plots (a run on the scorecard's kinds of series sets
     them to the pattern and noise level); they are not saved in the report.
+    ``metadata["name"]``, when the pipeline or the recorded forecasts were
+    given a name, heads both plots.
     """
 
     cases: list[EvaluatedCase]
@@ -64,6 +83,7 @@ class ForecastRun:
         cases,
         forecasts,
         *,
+        name=None,
         metadata=None,
         scores=None,
         checks=None,
@@ -79,10 +99,15 @@ class ForecastRun:
         or DataFrame, or a ``Forecast``. ``None`` means nothing was recorded,
         and that case fails "Runs without errors". Each forecast gets the output
         checks and scores of ``Pipeline.run``, and the run's report and plots
-        work as usual. ``metadata`` is added to the run's metadata, for example
-        ``{"model": "weather service"}``. ``scores`` records more scores and
-        ``checks`` adds output checks of your own, as in ``Pipeline.run``. No
-        model is kept, so these cases cannot be replayed.
+        work as usual. ``name`` says what made the forecasts, for example
+        ``name="weather service"``: it is ``result.metadata["name"]``, heads
+        the plots and labels the run in ``compare_reports``, as
+        ``Pipeline(..., name=...)`` does. ``metadata`` is added to the run's
+        metadata, for example ``{"made_on": "2024-05-01"}``; naming the
+        forecasts there with ``{"model": ...}`` still works and warns.
+        ``scores`` records more scores and ``checks`` adds output checks of
+        your own, as in ``Pipeline.run``. No model is kept, so these cases
+        cannot be replayed.
         """
         from timegym.diagnostics import (
             _check_requests,
@@ -97,6 +122,13 @@ class ForecastRun:
             raise TypeError("cases must be a list of Case objects, not one Case")
         if metadata is not None and not isinstance(metadata, dict):
             raise TypeError("metadata must be a dictionary or None")
+        name = _checked_name(name)
+        if name is not None and "name" in (metadata or {}):
+            raise ValueError(
+                "Give the name once: name=... or metadata['name'], not both"
+            )
+        if "model" in (metadata or {}):
+            _warn_deprecated(_RECORDED_MODEL_MOVED)
         cases, forecasts = list(cases), list(forecasts)
         if len(forecasts) != len(cases):
             raise ValueError(
@@ -132,6 +164,7 @@ class ForecastRun:
                 "diagnostic_settings": settings,
                 **requested,
                 **(metadata or {}),
+                **({} if name is None else {"name": name}),
             },
         )
 

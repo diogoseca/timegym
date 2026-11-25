@@ -47,7 +47,7 @@ def test_extend_examples_show_what_they_say():
     report = result.report
     assert [(case.scenario, case.seed) for case in report.cases] == [("noisy_line", 0), ("noisy_line", 1), ("noisy_line", 2)]
     assert all("mean_reference_mse" in case.metrics for case in report.cases)
-    assert namespace["run"].metadata["model"] == "weather service"
+    assert namespace["run"].metadata["name"] == "weather service"
     assert result.scorecard.table["pattern"].tolist() == ["noisy_line"]
 
 

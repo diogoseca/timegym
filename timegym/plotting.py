@@ -430,23 +430,49 @@ def _draw_case(
 
 
 # %% ../source/11_plotting.ipynb #11_plotting-21
-def _figure_key(fig):
-    """One key above all panels, in plain words, instead of a legend in each."""
+def _run_name(run):
+    """The name the run's pipeline or recorded forecasts were given, or None."""
+    name = getattr(run, "metadata", {}).get("name")
+    return name if isinstance(name, str) and name else None
+
+
+def _figure_name(fig, name):
+    """A named run's name above every panel."""
+    if name:
+        fig.suptitle(
+            name, x=0.01, ha="left", fontsize=12, fontweight="bold", color=_INK
+        )
+
+
+def _figure_key(fig, name=None):
+    """One key above all panels, in plain words, instead of a legend in each; a run's name heads it."""
     handles = {}
     for ax in fig.axes:
         for handle, label in zip(*ax.get_legend_handles_labels()):
             handles.setdefault(_KEY_NAMES.get(label, label), handle)
-    if handles:
-        fig.legend(
-            list(handles.values()),
-            list(handles),
-            loc="outside upper left",
-            ncols=len(handles),
-            markerscale=1.8,
-            handlelength=1.6,
-            columnspacing=1.8,
-            labelcolor=_MUTED,
-        )
+    if not handles:
+        _figure_name(fig, name)
+        return
+    heading = (
+        {}
+        if not name
+        else {
+            "title": name,
+            "title_fontproperties": {"size": 12, "weight": "bold"},
+            "alignment": "left",
+        }
+    )
+    fig.legend(
+        list(handles.values()),
+        list(handles),
+        loc="outside upper left",
+        ncols=len(handles),
+        markerscale=1.8,
+        handlelength=1.6,
+        columnspacing=1.8,
+        labelcolor=_MUTED,
+        **heading,
+    )
 
 
 def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
@@ -458,7 +484,8 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
     answer key and against what happened. ``history`` is how many past steps
     to show: four times the horizon by default, ``"all"`` for the whole
     history. Bands, when requested, are marginal intervals, never
-    simultaneous path regions.
+    simultaneous path regions. A run whose pipeline has a name, such as
+    ``Pipeline(model, name="Forest")``, shows it above the panels.
     """
     if not isinstance(show_quantiles, bool):
         raise ValueError("show_quantiles must be a boolean")
@@ -517,7 +544,7 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
                     )
         for ax in axes[:-1].flat:  # the time axis is named once, under the last row
             ax.set_xlabel("")
-        _figure_key(fig)
+        _figure_key(fig, _run_name(run))
         return fig
 
 
@@ -532,7 +559,7 @@ def plot_errors(
     Scenario positions remain distinct even when their kind strings match.
     Missing or nonfinite scores raise by default; ``missing='annotate'``
     shows their counts and diagnostic reasons in each panel instead, so they
-    are never silently dropped.
+    are never silently dropped. A named run shows its name above the panels.
     """
     groups = _groups(run)
     if not isinstance(metric, str) or not metric:
@@ -627,6 +654,7 @@ def plot_errors(
                     )
                 _annotate(ax, messages)
         axes[-1, 0].set_xlabel(f"{label}, one score per case")
+        _figure_name(fig, _run_name(run))
         return fig
 
 

@@ -303,3 +303,31 @@ def test_a_list_of_steps_is_described_but_never_rebuilt_from_a_report():
     assert loaded.metadata["pipeline_config"]["replayable"] is False
     with pytest.raises(ValueError, match="not automatically replayable"):
         loaded.replay_case()
+
+
+def test_a_name_is_saved_with_the_configuration_and_replay_keeps_it():
+    pipeline = Pipeline(DriftForecaster(), name="Straight line")
+    config = json.loads(json.dumps(pipeline.to_config()))
+    assert config["name"] == "Straight line" and config["schema_version"] == 3
+    restored = Pipeline.from_config(config)
+    assert restored.name == "Straight line" and restored.to_config() == config
+    run = pipeline.run([Scenario("trend", history_length=20, horizon=3)], seeds=[0, 1])
+    replayed = TestReport.from_json(run.report.to_json()).replay_case(1)
+    assert replayed.metadata["replay"]["reproduced"] is True
+    assert replayed.metadata["name"] == "Straight line"
+    unnamed = Pipeline(DriftForecaster()).to_config()
+    assert "name" not in unnamed and Pipeline.from_config(unnamed).name is None
+
+
+@pytest.mark.parametrize("change", ["empty", "not a string", "schema 2"])
+def test_a_configuration_name_must_be_a_nonempty_string_of_schema_3(change):
+    config = Pipeline(DriftForecaster(), name="Straight line").to_config()
+    if change == "empty":
+        config["name"] = " "
+    elif change == "not a string":
+        config["name"] = ["Straight line"]
+    else:
+        config["schema_version"] = 2
+        del config["target_transform"]
+    with pytest.raises(ValueError, match="name must be a nonempty string|configuration schema"):
+        Pipeline.from_config(config)

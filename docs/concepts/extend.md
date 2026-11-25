@@ -118,7 +118,7 @@ with no forecast.
 from timegym import ForecastRun
 
 made_elsewhere = [np.full(7, case.task.history.iloc[-1, 0]) for case in cases]
-run = ForecastRun.from_forecasts(cases, made_elsewhere, metadata={"model": "weather service"})
+run = ForecastRun.from_forecasts(cases, made_elsewhere, name="weather service")
 run.report.assert_passed()
 ```
 

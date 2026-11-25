@@ -140,6 +140,8 @@ def pipeline_config(pipeline):
     if pipeline.target_transform is not None:
         transform = transform_config(pipeline.target_transform)
         replayable = replayable and transform["kind"] == "builtin"
+    # A named pipeline keeps its name; an unnamed one writes none, so its configuration is as it was.
+    name = getattr(pipeline, "name", None)
     return _json_safe(
         {
             "schema_version": PIPELINE_CONFIG_SCHEMA_VERSION,
@@ -147,6 +149,7 @@ def pipeline_config(pipeline):
             "window_length": pipeline.window_length,
             "reduction": pipeline.reduction,
             "target_transform": transform,
+            **({} if name is None else {"name": name}),
             "replayable": replayable,
         }
     )
@@ -154,7 +157,10 @@ def pipeline_config(pipeline):
 
 # %% ../source/10_reports_and_replay.ipynb #10_reports_and_repla-26
 def pipeline_from_config(config):
-    """Validate configuration and return allowlisted Pipeline constructor arguments."""
+    """Validate configuration and return allowlisted Pipeline constructor arguments.
+
+    A named pipeline's configuration also holds its ``name``, which comes back with the rest.
+    """
     if (
         not isinstance(config, dict)
         or type(config.get("schema_version")) is not int
@@ -164,8 +170,14 @@ def pipeline_from_config(config):
     expected = {"schema_version", "model", "window_length", "reduction", "replayable"}
     if config["schema_version"] == PIPELINE_CONFIG_SCHEMA_VERSION:
         expected.add("target_transform")
-    if set(config) != expected:
+    if set(config) - {"name"} != expected or (
+        "name" in config and config["schema_version"] == 2
+    ):
         raise ValueError("Unsupported or incomplete pipeline configuration schema")
+    if "name" in config and (
+        not isinstance(config["name"], str) or not config["name"].strip()
+    ):
+        raise ValueError("A pipeline configuration's name must be a nonempty string")
     if config["reduction"] not in REDUCTIONS:
         raise ValueError(
             f"Unknown reduction {config['reduction']!r}; choose from {REDUCTIONS}"
@@ -214,6 +226,7 @@ def pipeline_from_config(config):
         "target_transform": (
             None if transform is None else transform_from_config(transform)
         ),
+        **({"name": config["name"]} if "name" in config else {}),
     }
 
 

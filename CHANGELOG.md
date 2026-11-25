@@ -9,7 +9,7 @@
   straight from its report. With no arguments `run()` draws the scorecard's
   ten kinds of series at low and high noise, 10 times each (200 series), and
   it takes the scorecard's settings: `noise_levels`, `history_length`,
-  `horizon`, `title`, `attainable` and `interval_level`. Scenarios you built
+  `horizon`, `attainable` and `interval_level`. Scenarios you built
   give one row each. A run of your own data (`cases=`) has no scorecard,
   since nobody knows its answer key, and reading `result.scorecard` says so
   and points to `result.checks` and the errors in `result.report`.
@@ -102,6 +102,22 @@
   a model in every pipeline. The scripts behind the paper's scorecard figure
   and the follow-up study keep their `.add()` chain, which the figure's title
   and the study's registered protocol name.
+
+- `Pipeline(model, ..., name="Forest")` names the model once for everything a
+  run shows: the scorecard's title, a heading above `plot_forecasts()` and
+  `plot_errors()`, its label in `compare_reports`, and
+  `result.metadata["name"]`, while `result.metadata["model"]` still names the
+  class. `compare_reports([a, b], c, metric="mae")` labels a list of reports by
+  their names, or by their models when they have none; a dictionary of named
+  reports works as before. The name is saved with the pipeline's
+  configuration, so replay keeps it. Without a name, titles, plots and reports
+  stay as they were.
+- `ForecastRun.from_forecasts(cases, forecasts, name="weather service")` names
+  recorded forecasts the same way. Naming them with
+  `metadata={"model": ...}` still works and now warns; it will be removed in a
+  later release. `Pipeline.scorecard(title=...)` and
+  `timegym.scorecard.scorecard(title=...)` keep their `title` while they warn.
+- Moved the docs, examples and source notebooks to `name=`.
 
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come

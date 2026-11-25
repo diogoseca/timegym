@@ -260,3 +260,19 @@ def test_candidates_are_named_by_their_model_or_their_position():
         "SeasonalLastValueForecaster", "MeanForecaster"]
     assert compare_reports(seasonal, last, metric="mae").table["candidate"].tolist() == [
         "SeasonalLastValueForecaster"]
+
+
+def test_a_list_of_candidates_is_labelled_by_their_names():
+    cases = stores(n_stores=6)
+    last = Pipeline(LastValueForecaster()).run(cases=cases)
+    weekly = Pipeline(SeasonalLastValueForecaster(period=7), name="same weekday").run(cases=cases)
+    fortnight = Pipeline(SeasonalLastValueForecaster(period=14), name="a fortnight ago").run(cases=cases)
+    mean = Pipeline(MeanForecaster()).run(cases=cases)
+    assert compare_reports([weekly, fortnight, mean], last, metric="mae").table["candidate"].tolist() == [
+        "same weekday", "a fortnight ago", "MeanForecaster"]  # unnamed: its model
+    assert compare_reports(weekly, last, metric="mae").table["candidate"].tolist() == ["same weekday"]
+    twice = Pipeline(MeanForecaster(), name="same weekday").run(cases=cases)
+    assert compare_reports([weekly, twice], last, metric="mae").table["candidate"].tolist() == [
+        "candidate 1", "candidate 2"]
+    by_hand = compare_reports({"weekly": weekly, "mean": mean}, last, metric="mae")  # a dictionary names them
+    assert by_hand.table["candidate"].tolist() == ["weekly", "mean"]

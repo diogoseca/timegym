@@ -298,3 +298,18 @@ def test_real_data_panel_has_no_seed_and_labels_its_one_error():
     assert axis.get_title(loc="left") == "1. Store sales"
     details = [text.get_text() for text in axis.texts]
     assert any(text.startswith("error vs what happened ") for text in details), details
+
+
+def test_a_named_run_shows_its_name_above_the_panels():
+    scenarios = [Scenario("trend", history_length=24, horizon=4)]
+    named = Pipeline(LastValueForecaster(), name="Repeat").run(scenarios, seeds=[1, 2], keep_data=True)
+    forecasts, errors = named.plot_forecasts(), named.plot_errors()
+    assert forecasts.legends[0].get_title().get_text() == "Repeat"  # heading the key, so the two never overlap
+    assert errors.get_suptitle() == "Repeat"
+    unnamed = Pipeline(LastValueForecaster()).run(scenarios, seeds=[1, 2], keep_data=True)
+    assert unnamed.plot_forecasts().legends[0].get_title().get_text() == ""
+    assert unnamed.plot_errors().get_suptitle() == ""
+    recorded = ForecastRun.from_forecasts([entry.case for entry in named.cases],
+                                          [entry.forecast for entry in named.cases], name="made elsewhere")
+    assert recorded.plot_forecasts().legends[0].get_title().get_text() == "made elsewhere"
+    plt.close("all")

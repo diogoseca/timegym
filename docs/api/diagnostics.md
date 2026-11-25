@@ -414,9 +414,10 @@ cluster=None, alpha=0.05, higher_is_better=False, seed=0)` says whether a
 candidate forecaster is better or worse than a baseline on the same cases, or
 shows no clear difference. Both reports must come from the same cases, in the
 same order: it pairs them by position and refuses two reports whose case
-manifests differ, naming the first difference. Name the model in the report's
-metadata, not in the case manifest. `metric` is any score in `case.metrics`,
-your own included; lower is better unless `higher_is_better=True`.
+manifests differ, naming the first difference. Name the model where you make
+it, with `Pipeline(model, name=...)`, not in the case manifest. `metric` is
+any score in `case.metrics`, your own included; lower is better unless
+`higher_is_better=True`.
 
 ```python
 import numpy as np
@@ -478,16 +479,17 @@ rows. `assert_no_regression()` raises when a row is worse or too few to tell.
 
 ### Many candidates against one baseline
 
-Pass a list of reports, labelled by the model each report's metadata names, or
-a dictionary of named reports. Each candidate's p-value is adjusted for how
-many were tried, so the best of many does not beat the baseline by luck.
+Pass a list of reports, each labelled by the name its pipeline was given or,
+without one, by its model; a dictionary of reports keyed by name works too.
+Each candidate's p-value is adjusted for how many were tried, so the best of
+many does not beat the baseline by luck.
 
 ```python
-candidates = {
-    "same weekday last week": candidate,
-    "mean so far": Pipeline(MeanForecaster()).run(cases=cases),
-    "straight line": Pipeline(DriftForecaster()).run(cases=cases),
-}
+candidates = [
+    Pipeline(SeasonalLastValueForecaster(period=7), name="same weekday last week").run(cases=cases),
+    Pipeline(MeanForecaster(), name="mean so far").run(cases=cases),
+    Pipeline(DriftForecaster(), name="straight line").run(cases=cases),
+]
 print(compare_reports(candidates, baseline, metric="mae", cluster="store"))
 ```
 

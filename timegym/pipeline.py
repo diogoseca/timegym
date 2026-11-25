@@ -36,7 +36,7 @@ from .diagnostics import (
     _score_requests,
 )
 from .reporting import CaseResult, DiagnosticResult, TestReport
-from .evaluation import EvaluatedCase, ForecastRun
+from .evaluation import EvaluatedCase, ForecastRun, _checked_name
 from .provenance import (
     pipeline_config,
     pipeline_from_config,
@@ -337,6 +337,14 @@ class Pipeline:
     ``target_transform`` is refitted on each history before the model and
     inverted on the forecast it returns.
 
+    ``name`` names the model wherever a run shows it: ``Pipeline(model,
+    name="Forest")`` titles the scorecard "Forest", heads the run's plots,
+    labels it in ``compare_reports`` and is ``result.metadata["name"]``,
+    while ``result.metadata["model"]`` still names the class. The name is
+    saved with the pipeline's configuration, so replay keeps it. Without a
+    name the scorecard is titled by the model, such as
+    ``GaussianAR1Forecaster(...)`` or "StandardScaler + Ridge".
+
     ``add()`` and ``model_factory=`` still work and warn, and so does a
     pipeline with no model, which tests the last value as ``NaiveForecaster``.
     """
@@ -349,6 +357,7 @@ class Pipeline:
         *,
         model_factory=None,
         target_transform=None,
+        name=None,
     ):
         if reduction not in REDUCTIONS:
             raise ValueError(
@@ -365,6 +374,7 @@ class Pipeline:
                 "target_transform must be an instance implementing clone_unfitted(), "
                 "fit_transform(history) and inverse_transform(forecast)"
             )
+        name = _checked_name(name)
         if model is not None and model_factory is not None:
             raise ValueError("Specify model or model_factory, not both")
         if model_factory is not None and not callable(model_factory):
@@ -388,6 +398,7 @@ class Pipeline:
         self.window_length = int(window_length)
         self.reduction = reduction
         self.target_transform = target_transform
+        self.name = name
         self.steps = []
         self._warned_no_model = False
 
@@ -523,7 +534,6 @@ class Pipeline:
         history_length=None,
         horizon=None,
         keep_data=False,
-        title=None,
         attainable=False,
         interval_level=None,
         scores=None,
@@ -569,8 +579,8 @@ class Pipeline:
         ``result.cases`` holds them and ``result.plot_forecasts()`` can draw
         them. The scorecard keeps what its picture draws either way.
 
-        ``title``, ``attainable`` and ``interval_level`` are the scorecard's
-        own settings. ``title`` heads it (the model's name by default).
+        ``attainable`` and ``interval_level`` are the scorecard's own settings;
+        its title is the pipeline's ``name``, or the model's when it has none.
         ``interval_level`` says how cautious the interval around each score
         is: 0.95 by default, 0.99 gives a wider one. ``attainable`` in its
         table is what the pattern's own model family, fitted to each history,
@@ -608,7 +618,6 @@ class Pipeline:
             history_length=history_length,
             horizon=horizon,
             keep_data=keep_data,
-            title=title,
             attainable=attainable,
             interval_level=interval_level,
             scores=scores,
@@ -639,7 +648,6 @@ class Pipeline:
         noise_levels=None,
         history_length=None,
         horizon=None,
-        title=None,
         attainable=False,
         interval_level=None,
         old_scenarios=False,
@@ -677,7 +685,6 @@ class Pipeline:
                     ("noise_levels", noise_levels),
                     ("history_length", history_length),
                     ("horizon", horizon),
-                    ("title", title),
                     ("interval_level", interval_level),
                 )
                 if value is not None
@@ -698,9 +705,11 @@ class Pipeline:
             dependence_seed_offset=dependence_seed_offset,
         )
         config = self.to_config()
+        name = getattr(self, "name", None)  # a pipeline pickled before names has none
         metadata = {
             **runtime_provenance(),
             "model": self._model_name(),
+            **({} if name is None else {"name": name}),
             "window_length": self.window_length,
             "reduction": self.reduction,
             "target_transform": config["target_transform"],
@@ -768,7 +777,7 @@ class Pipeline:
                 lambda: _card_from_run(
                     run,
                     cells,
-                    title=title or _model_title(self),
+                    title=name or _model_title(self),
                     seeds=seeds,
                     attainable=attainable,
                     interval_level=interval_level,
@@ -839,14 +848,15 @@ class Pipeline:
         with the same arguments, the patterns first: ``card.run`` keeps every
         series and forecast, as it always did. It warns and will be removed
         in a later release. See ``run`` for the settings and ``Scorecard`` for
-        what the card holds. ``context_length`` is the old name of
+        what the card holds. ``title`` heads the card in place of the
+        pipeline's name. ``context_length`` is the old name of
         ``history_length``; it still works and warns.
         """
-        from timegym.scorecard import _interval_level
+        from timegym.scorecard import _scorecard
 
         _warn_deprecated(_SCORECARD_MOVED)
-        _interval_level(interval_level)  # None was never a level here
-        return self.run(
+        return _scorecard(
+            self,
             patterns,
             noise_levels=noise_levels,
             instances=instances,
@@ -856,8 +866,7 @@ class Pipeline:
             title=title,
             attainable=attainable,
             interval_level=interval_level,
-            keep_data=True,
-        ).scorecard
+        )
 
     def plot_tests(
         self,
