@@ -93,7 +93,7 @@ the pipeline's name or, without one, by its model; `attainable` and
 `interval_level` (0.95 by default) are its settings. A run of your own data
 has no scorecard, because nobody knows the answer key of real data: reading
 `result.scorecard` then raises an error that points to `result.checks` and the
-errors against what happened in `result.report`.
+errors against what happened in `result.metrics`.
 
 Each entry of `result.cases` is an `EvaluatedCase` that answers for its case
 directly:
@@ -114,6 +114,21 @@ for entry in result.cases:
 `result.report.cases`. `entry.case` is the whole `Case`, to hand to another
 call, and `scenario_index` and `seed_index` place it in the run.
 `entry.result`, the old way to the report's entry, still works and warns.
+
+`result.metrics` puts every case's metrics in one table, a pandas DataFrame
+with one row per case, in order. The case's labels come first: its `kind` and
+`seed`, or for cases cut from your own data its `kind` (the name given to
+`cases_from_series`) and `origin`, where its history ends. These are the
+manifest keys that `compare_reports(by=...)` groups by. One column per metric
+follows, in alphabetical order. A case that crashed or failed an output check
+is not scored, so its metrics are NaN. The table reads only the metrics, so it
+works whether or not the run kept its data, and `report.metrics` gives the
+same table on a report, also one read back from its file.
+
+```python
+errors = result.metrics["avoidable_mse"]       # one value per case
+result.metrics.groupby("kind")["mae"].mean()   # the average error of each kind
+```
 
 By default the run drops the series, answer keys and forecasts once every
 case is measured, so a large run stays small in memory: `history`,
@@ -238,6 +253,8 @@ that ran (`runs`, `dates`, `series`, `shape`, `finite`, `quantiles`, and
 asked for with `checks=`, such as `within(0, None)`
 ([your own output checks](diagnostics.md#your-own-output-checks)).
 Metrics are not checks: they have no pass mark.
+`report.metrics` is every case's metrics in one table, one row per case with
+its labels first, as `result.metrics` above.
 `report.assert_passed()` raises for detected FAIL/ERROR outcomes. Its message
 names each failed check first, for example `Forecasts the requested dates:
 failed in 4 of 4 cases`, then lists the underlying diagnostics. Callers must

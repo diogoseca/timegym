@@ -121,10 +121,12 @@ def _checked_name(name):
 class ForecastRun:
     """What ``Pipeline.run`` returns: every case's metrics and checks, and its scorecard.
 
-    ``scorecard`` is the run's Scorecard, ``assert_passed()`` fails on a crash
-    or a malformed forecast, ``to_json(path)`` saves the report, ``checks``
-    counts the output checks, and ``report`` is the JSON-ready TestReport,
-    which holds no histories, observations or forecast arrays.
+    ``scorecard`` is the run's Scorecard, ``metrics`` every case's metrics in
+    one table, ``assert_passed()`` fails on a crash or a malformed forecast,
+    ``to_json(path)`` saves the report, ``checks`` counts the output checks,
+    and ``report`` is the JSON-ready TestReport, which holds no histories,
+    observations or forecast arrays. Each entry of ``cases`` holds one
+    case's parts, such as ``result.cases[0].observed``.
 
     ``kept_data`` says whether each case still holds its series, answer key
     and forecast. ``Pipeline.run`` drops them once every case is scored
@@ -266,6 +268,19 @@ class ForecastRun:
         """Output checks with pass/fail counts, as in ``TestReport.checks``."""
         return self.report.checks
 
+    @property
+    def metrics(self):
+        """Every case's metrics as a table, one row per case: ``TestReport.metrics`` of this run.
+
+        Its kind and seed come first, or for your own data its name and
+        where its history ends, then one column per metric. A case that
+        crashed or failed an output check has NaN metrics. It reads only the
+        metrics, so it works whether or not the run kept its data.
+        """
+        from timegym.reporting import _metrics_table
+
+        return _metrics_table([entry._result for entry in self.cases])
+
     def assert_passed(self):
         """Raise AssertionError when any case crashed or failed an output check, as in ``TestReport``."""
         return self.report.assert_passed()
@@ -328,5 +343,5 @@ _NO_SCORECARD = (
     "This run has no scorecard. A scorecard compares each forecast with the answer key, which "
     "TimeGym knows only for the series it generates: run pipeline.run() on its kinds of series, "
     "your own patterns or scenarios you built. For your own data (cases=) and forecasts made "
-    "elsewhere, read result.checks and the errors against what happened in result.report."
+    "elsewhere, read result.checks and the errors against what happened in result.metrics."
 )

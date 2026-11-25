@@ -9,6 +9,7 @@ from pathlib import Path
 from collections import Counter
 import math
 import numpy as np
+import pandas as pd
 
 __all__ = [
     "REPORT_SCHEMA_VERSION",
@@ -366,6 +367,31 @@ def _own_checks(case):
     return found
 
 
+def _metrics_table(cases):
+    """``TestReport.metrics`` for a list of CaseResults: their labels, then their metrics, NaN where not scored."""
+    names = sorted(
+        {name for case in cases for name in case.metrics}
+    )  # as a saved report keeps them
+    index = pd.RangeIndex(len(cases), name="case")
+    seeds = [case.seed for case in cases]
+    origins = [case.manifest.get("origin") for case in cases]
+    labels = {"kind": [case.scenario for case in cases]}
+    if any(seed is not None for seed in seeds):
+        labels["seed"] = (
+            seeds if None not in seeds else pd.Series(seeds, index=index, dtype=object)
+        )
+    if any(origin is not None for origin in origins):
+        labels["origin"] = origins
+    columns = {label: values for label, values in labels.items() if label not in names}
+    scored = [all(_case_checks(case).values()) for case in cases]
+    for name in names:
+        columns[name] = [
+            case.metrics[name] if ok and name in case.metrics else np.nan
+            for case, ok in zip(cases, scored)
+        ]
+    return pd.DataFrame(columns, index=index)
+
+
 # %% ../source/10_reports_and_replay.ipynb #10_reports_and_repla-15
 @dataclass
 class TestReport:
@@ -409,6 +435,24 @@ class TestReport:
                 any(d.failed for d in case.diagnostics) for case in self.cases
             ),
         }
+
+    @property
+    def metrics(self):
+        """Every case's metrics as a table: one row per case, in order, its labels first.
+
+        ``kind`` is the case's kind, such as ``"ar1"``, or for your own data
+        the name its cases were cut under; ``seed`` is its seed and ``origin``
+        where its history ends, each when the cases have one. These are the
+        manifest keys that ``compare_reports(by=...)`` groups by, so
+        ``report.metrics.groupby("kind")["mae"].mean()`` gives the mean error
+        of each kind. One column per metric follows, in alphabetical order.
+        A case that crashed or failed an output check is not scored, so its
+        metrics are NaN, as in ``compare_reports`` and the scorecard;
+        ``case.metrics`` still holds any it recorded. The row label is the
+        case's position in ``report.cases``. The table is made from the cases
+        each time it is read, so it follows any change to them.
+        """
+        return _metrics_table(self.cases)
 
     def to_dict(self):
         """Revalidate the report and return it with its schema version and summary."""

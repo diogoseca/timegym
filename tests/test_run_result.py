@@ -372,3 +372,53 @@ def test_each_entry_reads_its_cases_parts_and_agrees_with_the_report():
     # A metric changed on the entry is the report's: they are the same record.
     kept.cases[0].metrics["mine"] = 1.0
     assert kept.report.cases[0].metrics["mine"] == 1.0
+
+
+def test_result_metrics_is_one_row_per_case_with_its_labels_then_its_metrics(tmp_path):
+    from timegym.checks import within
+
+    class CrashesOnSeedOne(LastValueForecaster):
+        def fit(self, history):
+            if len(history) == 20 and history.iloc[0, 0] == self.first_of_seed_one:
+                raise RuntimeError("no forecast")
+            return super().fit(history)
+
+    scenarios = [Scenario("ar1", history_length=20, horizon=3), Scenario("trend", history_length=20, horizon=3)]
+    CrashesOnSeedOne.first_of_seed_one = scenarios[0].generate(seed=1).task.history.iloc[0, 0]
+    result = Pipeline(CrashesOnSeedOne()).run(scenarios, instances=3, checks={"small": within(None, 2.0)})
+    table = result.metrics
+    assert list(table.columns) == ["kind", "seed", "avoidable_mse", "mae", "mase", "mse"]
+    assert table.index.name == "case" and list(table.index) == list(range(6))
+    assert table["kind"].tolist() == ["ar1"] * 3 + ["trend"] * 3 and table["seed"].tolist() == [0, 1, 2] * 2
+    for position, entry in enumerate(result.cases):
+        row = table.loc[position]
+        scored = not any(d.failed for d in entry.diagnostics)
+        for name in ("avoidable_mse", "mae", "mase", "mse"):
+            if scored:
+                assert row[name] == entry.metrics[name]
+            else:  # crashed, or failed the check of its own: not scored
+                assert np.isnan(row[name])
+    assert table.loc[1, ["mae", "mse"]].isna().all() and result.cases[1].metrics == {}  # the crash
+    failed = [i for i, entry in enumerate(result.cases) if entry.metrics and any(d.failed for d in entry.diagnostics)]
+    assert failed and table.loc[failed, "mae"].isna().all()  # though each recorded one
+    assert table.groupby("kind")["mae"].mean().index.tolist() == ["ar1", "trend"]
+    # The same table on the report, on a report read back from its file, and with the data kept.
+    pd.testing.assert_frame_equal(table, result.report.metrics)
+    path = tmp_path / "report.json"
+    path.write_text(result.to_json())
+    pd.testing.assert_frame_equal(table, TestReport.from_json(path.read_text()).metrics)
+    kept = Pipeline(CrashesOnSeedOne()).run(scenarios, instances=3, checks={"small": within(None, 2.0)}, keep_data=True)
+    pd.testing.assert_frame_equal(table, kept.metrics)
+    # It is made on each read, so it follows a change to the cases.
+    result.cases[0].metrics["mae"] = 99.0
+    assert result.metrics.loc[0, "mae"] == 99.0 and table.loc[0, "mae"] != 99.0
+
+
+def test_result_metrics_labels_your_own_data_by_its_name_and_origin():
+    result = Pipeline(LastValueForecaster()).run(cases=_own_data())
+    table = result.metrics
+    assert list(table.columns) == ["kind", "origin", "mae", "mase", "mse"]
+    assert table["origin"].tolist() == [entry.manifest["origin"] for entry in result.cases] == ["149", "169"]
+    assert table["mae"].tolist() == [entry.metrics["mae"] for entry in result.cases]
+    empty = TestReport(cases=[])
+    assert empty.metrics.empty and list(empty.metrics.columns) == ["kind"]

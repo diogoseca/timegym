@@ -196,6 +196,22 @@
 - Moved the docs, tutorials, examples, source notebooks, tests, the plots,
   the scorecard and the paper's scorecard figure to the entry's parts.
 
+- Added `result.metrics`, every case's metrics in one pandas table:
+  `result.metrics["mae"]` or `result.metrics.groupby("kind")["mae"].mean()`.
+  It has one row per case, in order, labelled by the case's position. The
+  case's `kind` and `seed` come first, or for cases cut from your own data its
+  `kind` and `origin`, the manifest keys `compare_reports(by=...)` groups by;
+  then one column per metric, in alphabetical order. A case that crashed or
+  failed an output check is not scored, so its metrics are NaN, as in
+  `compare_reports` and the scorecard. It reads only the metrics, so it works
+  in a run that dropped its data, and `report.metrics` gives the same table on
+  a `TestReport`, including one read back from its file. The table is made
+  each time it is read. Nothing else changes.
+- Moved the examples, tutorials and source notebooks that built these tables
+  by hand to `result.metrics`, and showed it on the Pipeline and reports page.
+  A run of your own data, which has no scorecard, now points to
+  `result.metrics` for its errors.
+
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
   true as often as they say: of the days given a 70% chance of rain, did it
