@@ -79,7 +79,8 @@ the exact Kalman-filter prediction given the noisy context, and
 The five core families are listed by `timegym.scenarios.CORE_KINDS`, derived from
 the scenario defaults. `timegym.scenarios.default_scenarios(context_length=120,
 horizon=12, *, n_targets=1, seed=0)` creates fresh specifications for those families.
-`Pipeline.run()` uses that helper.
+The old `Pipeline.test()` drew them when given no scenarios; `Pipeline.run()`
+draws the scorecard's ten kinds instead.
 
 ## Signatures
 

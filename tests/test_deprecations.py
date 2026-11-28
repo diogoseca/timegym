@@ -138,15 +138,16 @@ def test_scorecard_function_matches_the_pipeline_method():
     from timegym.scorecard import scorecard
 
     pipeline = Pipeline(NaiveForecaster())
-    card = deprecated_call("use Pipeline(model).scorecard(...)", scorecard, pipeline, ["random_walk"], instances=2)
-    pd.testing.assert_frame_equal(card.table, pipeline.scorecard(["random_walk"], instances=2).table)
-    assert card.title == pipeline.scorecard(["random_walk"], instances=2).title
+    card = deprecated_call("use Pipeline(model).run(...).scorecard", scorecard, pipeline, ["random_walk"], instances=2)
+    expected = pipeline.run(["random_walk"], instances=2).scorecard
+    pd.testing.assert_frame_equal(card.table, expected.table)
+    assert card.title == expected.title
 
 
 def test_replay_case_function_matches_the_report_method():
     from timegym.pipeline import replay_case
 
-    report = Pipeline().test([Scenario("ar1", context_length=20, horizon=3)], seeds=[0, 1])
+    report = Pipeline().run([Scenario("ar1", context_length=20, horizon=3)], seeds=[0, 1]).report
     replayed = deprecated_call("use report.replay_case(case_index)", replay_case, report, 1)
     expected = report.replay_case(1)
     assert replayed.metadata["replay"] == expected.metadata["replay"]
@@ -163,11 +164,14 @@ def _pixels(figure):
 def test_pipeline_plot_tests_matches_run_plot_forecasts():
     scenarios = [Scenario("white_noise", context_length=10, horizon=3)]
     pipeline = Pipeline()
-    figure = deprecated_call("use Pipeline.run(...).plot_forecasts()", pipeline.plot_tests, scenarios, seeds=[4])
-    np.testing.assert_array_equal(_pixels(figure), _pixels(pipeline.run(scenarios, seeds=[4]).plot_forecasts()))
+    figure = deprecated_call(
+        "use Pipeline.run(..., keep_data=True).plot_forecasts()", pipeline.plot_tests, scenarios, seeds=[4]
+    )
+    expected = pipeline.run(scenarios, seeds=[4], keep_data=True).plot_forecasts()
+    np.testing.assert_array_equal(_pixels(figure), _pixels(expected))
     default = deprecated_call("Pipeline.plot_tests", pipeline.plot_tests, seeds=[0])
     suite = default_scenarios(context_length=240, horizon=80)
-    np.testing.assert_array_equal(_pixels(default), _pixels(pipeline.run(suite, seeds=[0]).plot_forecasts()))
+    np.testing.assert_array_equal(_pixels(default), _pixels(pipeline.run(suite, seeds=[0], keep_data=True).plot_forecasts()))
 
 
 def test_pipeline_plot_errors_matches_run_plot_errors():

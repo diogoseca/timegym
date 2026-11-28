@@ -439,12 +439,13 @@ drift of a random walk. The two noise rows score the same because the
 pipeline is shift and scale equivariant; a model that is not would score
 them differently.
 
-\code{Pipeline(model).scorecard()} runs the scenario grid and returns the
-picture together with a machine-readable report (\code{card.report}) and
-every series and forecast (\code{card.run}), so a forecast plot and an
-error plot describe the same execution without refitting.
-\code{Pipeline.run} does the same for any list of scenarios, and
-\code{Pipeline.test} returns the report alone. Each run takes one seed:
+\code{Pipeline(model).run()} runs the scenario grid and returns the
+scorecard (\code{result.scorecard}) together with a machine-readable report
+(\code{result.report}). With \code{keep\_data=True} it also keeps every
+series and forecast, so a forecast plot and an error plot describe the same
+execution without refitting. The same call takes any list of scenarios, or
+cases cut from real data, which have no answer key and so no scorecard.
+Each run takes one seed:
 instance $i$ of every kind of series uses \code{seed + i}, so the noise
 levels are a paired comparison, and \code{seed=None} draws a fresh seed
 and records it.

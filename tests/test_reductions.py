@@ -97,7 +97,7 @@ def test_training_never_reads_evaluation_futures(reduction, monkeypatch):
     monkeypatch.setattr(SklearnForecaster, "fit", recording_fit)
     scenario = Scenario("ar1", context_length=40, horizon=6, n_targets=2)
     pipeline = Pipeline(window_length=5, reduction=reduction).add(StandardScaler()).add(Ridge())
-    clean = pipeline.run([scenario], seeds=[11])
+    clean = pipeline.run([scenario], seeds=[11], keep_data=True)
 
     original_generate = Scenario.generate
 
@@ -107,7 +107,7 @@ def test_training_never_reads_evaluation_futures(reduction, monkeypatch):
         return case
 
     monkeypatch.setattr(Scenario, "generate", mutated_future)
-    mutated = pipeline.run([scenario], seeds=[11])
+    mutated = pipeline.run([scenario], seeds=[11], keep_data=True)
     assert not np.allclose(clean.cases[0].case.observed, mutated.cases[0].case.observed)
     first, second = fitted
     assert first.reduction == second.reduction == reduction
@@ -119,7 +119,7 @@ def test_training_never_reads_evaluation_futures(reduction, monkeypatch):
 @pytest.mark.parametrize("reduction", REDUCTIONS)
 def test_reduction_is_recorded_in_the_run_metadata_and_configuration(reduction):
     pipeline = Pipeline(window_length=4, reduction=reduction).add(Ridge())
-    run = pipeline.run([Scenario("ar1", context_length=30, horizon=3)], seeds=[0])
+    run = pipeline.run([Scenario("ar1", context_length=30, horizon=3)], seeds=[0], keep_data=True)
     config = pipeline.to_config()
     assert run.metadata["reduction"] == config["reduction"] == reduction
     assert run.metadata["pipeline_config"]["reduction"] == reduction

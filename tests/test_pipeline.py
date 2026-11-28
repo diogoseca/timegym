@@ -222,13 +222,14 @@ def test_metamorphic_tolerances_must_be_declared_valid_values():
         check_shift_equivariance(Pipeline(), case.task.context, case.task.future_index, atol=-1)
 
 
-def test_default_run_uses_the_public_core_scenario_suite():
+def test_old_default_test_still_uses_the_public_core_scenario_suite():
     from timegym.scenarios import CORE_KINDS, default_scenarios
 
     specifications = default_scenarios()
     assert tuple(scenario.kind for scenario in specifications) == CORE_KINDS
-    run = Pipeline().run(seeds=[0])
-    assert [entry.case.manifest for entry in run.cases] == [
+    with pytest.deprecated_call():
+        report = Pipeline().test(seeds=[0])
+    assert [case.manifest for case in report.cases] == [
         scenario.generate().manifest for scenario in specifications
     ]
 

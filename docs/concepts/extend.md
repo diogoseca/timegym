@@ -10,13 +10,13 @@ script.
 | Model | an object with `fit(context)` and `predict(future_index)` | [Pipeline and reports](../api/pipeline.md) |
 | scikit-learn regressor | `Pipeline(Ridge(), window_length=12)` | [Models and reductions](../api/models.md) |
 | Target transform | an object with `clone_unfitted()`, `fit_transform(context)` and `inverse_transform(forecast)` | [Data preparation](../api/data-preparation.md#reversible-target-transforms) |
-| Data | `cases_from_series(series, origins, horizon)` or `Case(...)`, then `pipeline.test(cases=...)` | [Tasks and forecasts](../api/tasks-and-forecasts.md#your-own-data) |
+| Data | `cases_from_series(series, origins, horizon)` or `Case(...)`, then `pipeline.run(cases=...)` | [Tasks and forecasts](../api/tasks-and-forecasts.md#your-own-data) |
 | Forecasts made elsewhere | `ForecastRun.from_forecasts(cases, forecasts)` | [Pipeline and reports](../api/pipeline.md) |
 | Score | a function whose argument names say what it needs, passed with `scores=` | [Scores and diagnostics](../api/diagnostics.md#your-own-scores) |
 | Output check | `within(lower, upper)`, or a function that returns True or a message, passed with `checks=` | [Scores and diagnostics](../api/diagnostics.md#your-own-output-checks) |
 | Answer key from a curve you know | `Reference.from_function(curve, dates, covariance=...)` | [Scenarios and references](../api/scenarios.md) |
 | Kind of series, with its answer key | an object with `kind` and `generate(seed)` that returns a `Case` | this page |
-| Kind of series on the scorecard | a `Pattern` whose `simulate(rng, history, horizon, noise)` returns a series with its true mean and variance, passed in `patterns=` | [Scorecards](../api/scorecard.md#your-own-kind-of-series) |
+| Kind of series on the scorecard | a `Pattern` whose `simulate(rng, history, horizon, noise)` returns a series with its true mean and variance, passed to `pipeline.run([...])` | [Scorecards](../api/scorecard.md#your-own-kind-of-series) |
 
 ## Your model
 
@@ -41,7 +41,8 @@ class RepeatLast:
         return np.tile(self.last, (len(future_index), 1))
 
 
-report = Pipeline(RepeatLast()).test()
+result = Pipeline(RepeatLast()).run()
+result.scorecard.plot()   # what it gets right and wrong, kind by kind
 ```
 
 [Write and test a custom model](../../tutorials/02_custom_model.ipynb) adds
@@ -57,7 +58,7 @@ history of each case only.
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 
-report = Pipeline(window_length=12).add(StandardScaler()).add(Ridge()).test()
+result = Pipeline(window_length=12).add(StandardScaler()).add(Ridge()).run()
 ```
 
 ## A target transform
@@ -84,14 +85,14 @@ class PerHundred:
                        quantiles=back(forecast.quantiles), samples=back(forecast.samples))
 
 
-report = Pipeline(RepeatLast(), target_transform=PerHundred()).test()
+result = Pipeline(RepeatLast(), target_transform=PerHundred()).run()
 ```
 
 ## Your own data
 
 Cut a series into cases that end their history at different times, then test
 any model on them. There is no answer key for your own data, so each forecast is
-scored against what happened.
+scored against what happened, and the run has no scorecard.
 
 ```python
 from timegym import LastValueForecaster, cases_from_series
@@ -99,7 +100,7 @@ from timegym import LastValueForecaster, cases_from_series
 days = pd.date_range("2024-01-01", periods=120, freq="D")
 rain = pd.Series(np.random.default_rng(0).gamma(2.0, 2.0, 120), index=days, name="rain_mm")
 cases = cases_from_series(rain, origins=[60, 80, 100], horizon=7, name="rain")
-report = Pipeline(LastValueForecaster()).test(cases=cases)
+result = Pipeline(LastValueForecaster()).run(cases=cases)
 ```
 
 To prepare readings taken at irregular times, see
@@ -138,9 +139,9 @@ def within_10_percent(observed, predicted):
     return float(np.mean(np.abs(predicted - observed) <= 0.1 * np.abs(observed)))
 
 
-report = Pipeline(LastValueForecaster()).test(cases=cases, scores=["rmse", within_10_percent])
+result = Pipeline(LastValueForecaster()).run(cases=cases, scores=["rmse", within_10_percent])
 rainy = cases_from_series((rain > 4).astype(float), origins=[60, 80, 100], horizon=7, name="rainy day")
-report = Pipeline(LastValueForecaster()).test(
+result = Pipeline(LastValueForecaster()).run(
     cases=rainy, scores={"brier": "brier", "log_loss": partial(log_loss, eps=1e-6)})
 ```
 
@@ -169,7 +170,7 @@ def below_record(predicted, context):
     return bool(np.all(predicted <= record)) or f"forecasts {predicted.max():.1f} mm, above the record {record:.1f} mm"
 
 
-checked = Pipeline(GaussianAR1Forecaster()).test(cases=cases, checks=[within(0, None), below_record])
+checked = Pipeline(GaussianAR1Forecaster()).run(cases=cases, checks=[within(0, None), below_record])
 checked.checks[-2:]  # some sample paths dip below 0 mm, so within fails; the point forecast stays below the record
 ```
 
@@ -194,7 +195,7 @@ key = Reference.from_function(lambda index: (2.0 + 0.1 * index.to_numpy())[:, No
 
 ## A kind of series, with its answer key
 
-`pipeline.test` accepts any object with a `kind` and a `generate(seed)` method
+`pipeline.run` accepts any object with a `kind` and a `generate(seed)` method
 that returns a `Case`, next to TimeGym's own scenarios. Put `kind` and `seed` in
 the manifest, so the report can name each case.
 
@@ -219,11 +220,12 @@ class NoisyLine:
                     {"kind": self.kind, "seed": seed})
 
 
-report = Pipeline(RepeatLast()).test([NoisyLine()], seeds=[0, 1, 2])
+result = Pipeline(RepeatLast()).run([NoisyLine()], seeds=[0, 1, 2])
 ```
 
 With an answer key, the report has the error against it
-(`mean_reference_mse`), which separates a weak model from an unlucky one.
+(`mean_reference_mse`), which separates a weak model from an unlucky one, and
+`result.scorecard` has a row for the new kind of series.
 Replay rebuilds only TimeGym's own scenarios, so keep this code with the
 report. To put a kind of series on the scorecard, give a `Pattern` a function
 that simulates one series and returns its true mean and variance, or a `build`

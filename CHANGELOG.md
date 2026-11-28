@@ -2,6 +2,34 @@
 
 ## 1.14.1 — 2026-11-24
 
+- Made `Pipeline.run` the one call for testing a model. Its result now
+  carries the scorecard: `result = pipeline.run()`, then
+  `result.scorecard.plot()` or `print(result.scorecard)`, with
+  `result.assert_passed()`, `result.to_json(path)` and `result.checks` read
+  straight from its report. With no arguments `run()` draws the scorecard's
+  ten kinds of series at low and high noise, 10 times each (200 series), and
+  it takes the scorecard's settings: `noise_levels`, `context_length`,
+  `horizon`, `title`, `attainable` and `interval_level`. Scenarios you built
+  give one row each. A run of your own data (`cases=`) has no scorecard,
+  since nobody knows its answer key, and reading `result.scorecard` says so
+  and points to `result.checks` and the errors in `result.report`.
+- `run()` now drops the series and forecasts once each one is scored, so a
+  large run stays small in memory. The report, the scorecard with its
+  picture, `save_baseline`, `compare` and `plot_errors()` work as before;
+  `keep_data=True` keeps every series and forecast for `plot_forecasts()`,
+  `calibration` and your own reading, and `result.kept_data` says which.
+  Code that read `result.cases[i].case` or `.forecast` needs `keep_data=True`.
+  With nothing to forecast named, `run()` used to draw the five kinds of
+  `default_scenarios()` 3 times each; it now draws the scorecard's series, and
+  with scenarios named it draws each 10 times instead of 3.
+- `Pipeline.test(...)` and `Pipeline.scorecard(...)` still work as before and
+  now warn: use `pipeline.run(...)` and `pipeline.run(...).scorecard`. They
+  will be removed in a later release. `timegym.scorecard.scorecard` warns the
+  same way, and the scorecard's closing line now says
+  `Run pipeline.run(instances=30) to narrow them.`
+- Moved the docs, tutorials, source notebooks, examples, the paper's sentence
+  on the scorecard call and the installed-package check to the new call.
+
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
   true as often as they say: of the days given a 70% chance of rain, did it

@@ -1097,7 +1097,7 @@ def _as_report(value, what):
     report = value if isinstance(value, TestReport) else getattr(value, "report", None)
     if not isinstance(report, TestReport):
         raise TypeError(
-            f"{what} must be a TestReport, such as pipeline.test(...) or run.report; "
+            f"{what} must be a TestReport, such as pipeline.run(...) or its .report; "
             f"got {type(value).__name__}"
         )
     return report
@@ -1200,7 +1200,7 @@ def compare_reports(
     """Compare forecasters on the same cases, one score at a time; returns a ReportComparison.
 
     ``candidate`` and ``baseline`` are reports made on the same cases, in the
-    same order: ``pipeline.test(...)`` results, or runs, whose case manifests
+    same order: ``pipeline.run(...)`` results or their reports, whose case manifests
     agree. ``candidate`` may also be a list of reports, labelled by the model
     each report's metadata names, or a dictionary of named reports.
     ``metric`` is a score in ``case.metrics``, your own included; lower is
@@ -1615,6 +1615,12 @@ def _run_probabilities(run):
         raise TypeError(
             "calibration takes a ForecastRun, such as pipeline.run(...), or the outcomes and the "
             f"chances as arrays: calibration(observed, predicted); got {type(run).__name__}"
+        )
+    if getattr(run, "kept_data", True) is False:
+        raise ValueError(
+            "calibration reads every forecast and what happened, and this run dropped them "
+            "once they were scored. Run it again with keep_data=True, for example "
+            "pipeline.run(..., keep_data=True)."
         )
     used, skipped = [], 0
     for index, entry in enumerate(entries):

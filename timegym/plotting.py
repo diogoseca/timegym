@@ -178,7 +178,7 @@ def _which_case(entry):
     """Name one case of a group: its seed, or where its history ends for your own data."""
     if entry.result.seed is not None:
         return f"seed {entry.result.seed}"
-    origin = entry.case.manifest.get("origin")
+    origin = entry.result.manifest.get("origin")
     return "" if origin is None else f"history ends {origin}"
 
 
@@ -608,7 +608,7 @@ def plot_errors(
             ax.set_ylabel("Cases")
             titled = _run_title(run, scenario_index)
             process = titled or scenario_label(
-                entries[0].result.scenario, entries[0].case.manifest.get("parameters")
+                entries[0].result.scenario, entries[0].result.manifest.get("parameters")
             )
             ax.set_title(
                 f"{'' if titled else f'{scenario_index + 1}. '}{process}", loc="left"

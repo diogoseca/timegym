@@ -51,7 +51,7 @@ suite = [
         "regime_jump_sigma": [0., .10], "output": "log_return",
     }),
 ]
-run = Pipeline().run(suite, seeds=[11, 22, 33])
+run = Pipeline().run(suite, seeds=[11, 22, 33], keep_data=True)
 run.plot_forecasts()
 ```
 

@@ -122,6 +122,46 @@ class Pattern:
             return None
         return lambda: _fresh_attainable(self.attainable_by)
 
+    def __reduce__(self):
+        # A built-in row pickles by its key, so a run that holds its scorecard pickles too; the
+        # rows' build functions are lambdas. Your own pattern pickles if its functions do.
+        if PATTERNS.get(self.key) is self:
+            return (_built_in_pattern, (self.key,))
+        return (
+            _pattern_from_fields,
+            (
+                self.key,
+                self.title,
+                self.aka,
+                self.predictable,
+                self.unpredictable,
+                self.build,
+                self.attainable_by,
+                self.simulate,
+            ),
+        )
+
+
+def _built_in_pattern(key):
+    """One of ``PATTERNS`` by its key: what a pickled built-in row reads back as."""
+    return PATTERNS[key]
+
+
+def _pattern_from_fields(
+    key, title, aka, predictable, unpredictable, build, attainable_by, simulate
+):
+    """A pattern of your own read back from a pickle."""
+    return Pattern(
+        key,
+        title,
+        aka,
+        predictable,
+        unpredictable,
+        build,
+        attainable_by,
+        simulate=simulate,
+    )
+
 
 def _fresh_attainable(model):
     """A fresh model from ``attainable_by``: a copy of a model object, or a new one from a class or function."""

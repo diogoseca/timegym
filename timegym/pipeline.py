@@ -5,6 +5,7 @@ from ._internal import positive_int, nonnegative_int, _deprecated
 import dataclasses
 import inspect
 import secrets
+import warnings
 import numpy as np
 import pandas as pd
 from .contracts import Case, Forecast, ForecastTask
@@ -249,6 +250,33 @@ def _evaluate_ready_made(cases, make_forecast, settings, scores=None, checks=Non
     return results
 
 
+_TEST_MOVED = (
+    "pipeline.test(...) is deprecated and will be removed in a later release: use "
+    "pipeline.run(...), which returns the same report as result.report, with result.assert_passed(), "
+    "result.to_json() and result.scorecard. Name the series you test: with none, run() draws the "
+    "scorecard's ten kinds of series, test() the five of default_scenarios()."
+)
+_SCORECARD_MOVED = (
+    "pipeline.scorecard(...) is deprecated and will be removed in a later release: use "
+    "pipeline.run(...).scorecard, which takes the same settings, with the patterns first. "
+    "Add keep_data=True to keep every series and forecast for result.plot_forecasts()."
+)
+
+
+def _old_settings(settings):
+    """The diagnostic settings the old plot helpers passed through, with their old defaults."""
+    allowed = {
+        "check_dependence": False,
+        "n_calibration": 99,
+        "alpha": 0.05,
+        "dependence_seed_offset": 100_000,
+    }
+    unknown = set(settings) - set(allowed)
+    if unknown:
+        raise TypeError(f"unexpected keyword arguments: {', '.join(sorted(unknown))}")
+    return {**allowed, **settings}
+
+
 class Pipeline:
     """Evaluate fresh model instances on independent, seeded scenarios.
 
@@ -409,6 +437,13 @@ class Pipeline:
         seed=0,
         instances=None,
         cases=None,
+        noise_levels=None,
+        context_length=None,
+        horizon=None,
+        keep_data=False,
+        title=None,
+        attainable=False,
+        interval_level=None,
         scores=None,
         checks=None,
         check_dependence=False,
@@ -416,36 +451,161 @@ class Pipeline:
         alpha=0.05,
         dependence_seed_offset=100_000,
     ):
-        """Evaluate once per case and retain the data, forecast, and diagnostics.
+        """Forecast every case with a fresh model, check and score each forecast, and return a ForecastRun.
 
-        Each scenario is drawn ``instances`` times (default 3). Instance ``i``
-        uses seed ``seed + i`` in every scenario, so scenarios are compared on
-        the same random draws. ``seed=None`` picks a fresh base seed and
-        records it in ``run.metadata["seed"]``. An explicit ``seeds`` list
-        replaces both. ``run.report`` is the usual serializable
-        ``TestReport``; ``run.plot_forecasts()`` and ``run.plot_errors()``
-        inspect these exact outputs without additional fitting.
+        What to forecast, as the first argument:
+
+        - nothing: the scorecard's ten kinds of series (``timegym.PATTERNS``) at
+          low and high noise, 120 steps of history and 24 to forecast;
+        - keys of ``timegym.PATTERNS`` such as ``["trend", "seasonal"]``, and
+          ``Pattern`` objects of your own beside them: those rows of the
+          scorecard. ``noise_levels``, ``context_length`` and ``horizon`` set
+          its columns and lengths, as in ``scenario_grid``;
+        - ``Scenario`` objects, or anything with ``generate(seed)`` and
+          ``kind``: each as it was built, one row of the scorecard each.
+
+        Each is drawn ``instances`` times (10 by default). Draw ``i`` uses seed
+        ``seed + i`` in every row, so rows are compared on the same random
+        draws. ``seed=None`` picks a fresh base seed and records it in
+        ``result.metadata["seed"]``. An explicit ``seeds`` list replaces both.
 
         ``cases`` takes ready-made cases instead, such as your own data cut
         with ``timegym.cases_from_series``: each is forecast as given and
-        nothing is generated, so it cannot be combined with scenarios,
-        ``seeds``, ``seed`` or ``instances``. A case's manifest needs no
-        ``kind`` or ``seed``; without them it is labelled ``case`` and has no
-        seed. Cases with the same ``kind`` share a row of the plots.
+        nothing is generated, so it cannot be combined with what to forecast,
+        ``seeds``, ``seed``, ``instances`` or the scorecard's settings. A
+        case's manifest needs no ``kind`` or ``seed``; without them it is
+        labelled ``case`` and has no seed. Cases with the same ``kind`` share a
+        row of the plots. Real data has no answer key, so such a run has no
+        scorecard.
+
+        The result holds every case's scores and output checks:
+        ``result.scorecard`` (a ``Scorecard``: ``result.scorecard.plot()``,
+        ``print(result.scorecard)``), ``result.assert_passed()``,
+        ``result.to_json(path)``, ``result.checks``, ``result.report`` and
+        ``result.plot_errors()``. The series, answer keys and forecasts are
+        dropped once every case is scored, unless ``keep_data=True``: then
+        ``result.cases`` holds them and ``result.plot_forecasts()`` can draw
+        them. The scorecard keeps what its picture draws either way.
+
+        ``title``, ``attainable`` and ``interval_level`` are the scorecard's
+        own settings. ``title`` heads it (the model's name by default).
+        ``interval_level`` says how cautious the interval around each score
+        is: 0.95 by default, 0.99 gives a wider one. ``attainable`` in its
+        table is what the pattern's own model family, fitted to each history,
+        scores on 200 fresh series of the row. The default grid's values are
+        stored. Off the default grid (another noise level, ``context_length``
+        or ``horizon``) the column is NaN unless ``attainable=True``, which
+        simulates the missing values once per session: about 3 to 5 seconds
+        for each autoregressive or random-walk cell and well under a second for
+        the others. A pattern of your own has no stored values: with
+        ``Pattern.attainable_by`` and ``attainable=True`` its attainable score
+        is simulated in the same way, otherwise it is NaN.
 
         ``scores`` records more scores in every case, as in
         ``timegym.diagnostics.evaluate_forecast``: names of functions in
         ``timegym.metrics`` such as ``"brier"``, your own functions, or a
-        dictionary from name to function. ``run.metadata["scores"]`` lists
+        dictionary from name to function. ``result.metadata["scores"]`` lists
         them, and says which replay can compute again.
 
         ``checks`` adds output checks of your own to every case, as in
         ``evaluate_forecast``: functions such as ``timegym.checks.within(0,
         None)``, or a dictionary from name to function. They appear in
-        ``report.checks`` and ``assert_passed`` like the built-in checks.
-        ``run.metadata["checks"]`` lists them with their titles, and says which
-        replay can run again.
+        ``result.checks`` and ``assert_passed`` like the built-in checks.
+        ``result.metadata["checks"]`` lists them with their titles, and says
+        which replay can run again.
         """
+        if not isinstance(keep_data, bool):
+            raise TypeError("keep_data must be True or False")
+        return self._run(
+            scenarios,
+            seeds,
+            seed=seed,
+            instances=instances,
+            cases=cases,
+            noise_levels=noise_levels,
+            context_length=context_length,
+            horizon=horizon,
+            keep_data=keep_data,
+            title=title,
+            attainable=attainable,
+            interval_level=interval_level,
+            scores=scores,
+            checks=checks,
+            check_dependence=check_dependence,
+            n_calibration=n_calibration,
+            alpha=alpha,
+            dependence_seed_offset=dependence_seed_offset,
+            default_instances=10,
+        )
+
+    def _run(
+        self,
+        scenarios,
+        seeds,
+        *,
+        seed,
+        instances,
+        cases,
+        keep_data,
+        scores,
+        checks,
+        check_dependence,
+        n_calibration,
+        alpha,
+        dependence_seed_offset,
+        default_instances,
+        noise_levels=None,
+        context_length=None,
+        horizon=None,
+        title=None,
+        attainable=False,
+        interval_level=None,
+        old_scenarios=False,
+        make_card=True,
+    ):
+        """``run`` with its defaults spelled out.
+
+        ``old_scenarios`` keeps the five kinds ``test`` drew when given none, and
+        ``make_card=False`` skips the scorecard for callers that only want the report.
+        """
+        from timegym.scorecard import (
+            _card_from_run,
+            _interval_level,
+            _model_title,
+            _run_rows,
+        )
+
+        if interval_level is not None:
+            _interval_level(interval_level)  # refused before any series is drawn
+        if cases is not None:
+            if (
+                scenarios is not None
+                or seeds is not None
+                or seed != 0
+                or instances is not None
+            ):
+                raise ValueError(
+                    "Pass either cases=[...] or scenarios with seeds, seed or "
+                    "instances, not both"
+                )
+            given = [
+                name
+                for name, value in (
+                    ("noise_levels", noise_levels),
+                    ("context_length", context_length),
+                    ("horizon", horizon),
+                    ("title", title),
+                    ("interval_level", interval_level),
+                )
+                if value is not None
+            ]
+            given += ["attainable"] if attainable else []
+            if given:
+                raise ValueError(
+                    f"{', '.join(given)} {'belongs' if len(given) == 1 else 'belong'} to the "
+                    "scorecard, and cases=[...] have none: "
+                    "nobody knows the answer key of real data"
+                )
         if self.steps:
             SklearnForecaster(self.steps, self.window_length)
         settings = diagnostic_settings(
@@ -471,16 +631,6 @@ class Pipeline:
         if checks is not None:
             metadata["checks"] = _describe_checks(checks)
         if cases is not None:
-            if (
-                scenarios is not None
-                or seeds is not None
-                or seed != 0
-                or instances is not None
-            ):
-                raise ValueError(
-                    "Pass either cases=[...] or scenarios with seeds, seed or "
-                    "instances, not both"
-                )
             results = _evaluate_ready_made(
                 cases,
                 lambda position, case: self.predict(
@@ -490,15 +640,17 @@ class Pipeline:
                 scores,
                 checks,
             )
-            return ForecastRun(cases=results, metadata=metadata)
-        seeds, seeding = _instance_seeds(seeds, seed, instances, 3)
-        if scenarios is None:
+            run = ForecastRun(cases=results, metadata=metadata)
+            return run if keep_data else run._drop_data()
+        seeds, seeding = _instance_seeds(seeds, seed, instances, default_instances)
+        if old_scenarios and scenarios is None:
             scenarios = default_scenarios()
-        scenarios = list(scenarios)
-        if not scenarios or not seeds:
+        cells, grid = _run_rows(scenarios, noise_levels, context_length, horizon)
+        if not seeds:
             raise ValueError("Provide at least one scenario and one seed")
         results = []
-        for scenario_index, scenario in enumerate(scenarios):
+        for scenario_index, cell in enumerate(cells):
+            scenario = cell.scenario
             for seed_index, case_seed in enumerate(seeds):
                 case = scenario.generate(seed=case_seed)
                 forecast, result = _evaluate_case(
@@ -520,7 +672,24 @@ class Pipeline:
                         seed_index=seed_index,
                     )
                 )
-        return ForecastRun(cases=results, metadata={**metadata, **(seeding or {})})
+        run = ForecastRun(
+            cases=results,
+            metadata={**metadata, **(seeding or {})},
+            titles=[f"{cell.title} · {cell.noise}" for cell in cells] if grid else [],
+        )
+        if make_card:
+            run._set_scorecard(
+                lambda: _card_from_run(
+                    run,
+                    cells,
+                    title=title or _model_title(self),
+                    seeds=seeds,
+                    attainable=attainable,
+                    interval_level=interval_level,
+                ),
+                now=not keep_data,
+            )
+        return run if keep_data else run._drop_data()
 
     def test(
         self,
@@ -537,24 +706,31 @@ class Pipeline:
         alpha=0.05,
         dependence_seed_offset=100_000,
     ):
-        """Evaluate each scenario on each instance and return a TestReport.
+        """Evaluate each scenario on each instance and return a TestReport; use ``run`` instead.
 
-        Seeds work as in ``run``: instance ``i`` uses ``seed + i``. ``cases``
-        takes ready-made cases instead, ``scores`` records more scores, and
-        ``checks`` adds output checks of your own, as in ``run``.
+        ``pipeline.test(...)`` is ``pipeline.run(...).report`` with the old
+        defaults: with no scenarios it draws ``default_scenarios()``, the five
+        core kinds, 3 times each. It warns and will be removed in a later
+        release; ``run`` returns the same report as ``result.report``, with
+        ``result.assert_passed()``, ``result.to_json()`` and the scorecard.
         """
-        return self.run(
+        warnings.warn(_TEST_MOVED, DeprecationWarning, stacklevel=2)
+        return self._run(
             scenarios,
-            seeds=seeds,
+            seeds,
             seed=seed,
             instances=instances,
             cases=cases,
+            keep_data=False,
             scores=scores,
             checks=checks,
             check_dependence=check_dependence,
             n_calibration=n_calibration,
             alpha=alpha,
             dependence_seed_offset=dependence_seed_offset,
+            default_instances=3,
+            old_scenarios=True,
+            make_card=False,
         ).report
 
     def scorecard(
@@ -570,36 +746,19 @@ class Pipeline:
         attainable=False,
         interval_level=0.95,
     ):
-        """Score the model on a grid of patterns and noise levels; returns a Scorecard.
+        """Score the model on a grid of patterns and noise levels and return a Scorecard; use ``run`` instead.
 
-        Rows are patterns from ``timegym.PATTERNS`` (all ten by default), or
-        ``Pattern`` objects of your own beside their keys, as in
-        ``scenario_grid``, and columns are noise levels from low to high. Each cell is drawn
-        ``instances`` times with seeds ``seed + i``, the same draws in every
-        cell. A cell's score is ``100 * unavoidable / (unavoidable + avoidable)``
-        mean squared error, pooled over its instances; instances that crash or
-        fail an output check score zero. ``score_low`` to ``score_high`` in the
-        table is the interval around the score: with other series of the same
-        kind the score would come out a little different, and the interval shows
-        by how much. ``interval_level`` says how cautious it is (0.95 by default;
-        0.99 gives a wider interval). With ten series it is wide, so raise
-        ``instances`` to tighten it. ``seed=None`` picks a fresh seed, kept on the
-        result.
-
-        ``attainable`` in the table is what the pattern's own model family,
-        fitted to each history, scores on 200 fresh series of the row. The
-        default grid's values are stored. Off the default grid (another noise
-        level, ``context_length`` or ``horizon``) the column is NaN unless
-        ``attainable=True``, which simulates the missing values once per
-        session: about 3 to 5 seconds for each autoregressive or random-walk
-        cell and well under a second for the others. A pattern of your own
-        has no stored values: with ``Pattern.attainable_by`` and ``attainable=True``
-        its attainable score is simulated in the same way, otherwise it is NaN.
+        ``pipeline.scorecard(...)`` is ``pipeline.run(..., keep_data=True).scorecard``
+        with the same arguments, the patterns first: ``card.run`` keeps every
+        series and forecast, as it always did. It warns and will be removed
+        in a later release. See ``run`` for the settings and ``Scorecard`` for
+        what the card holds.
         """
-        from timegym.scorecard import _scorecard
+        from timegym.scorecard import _interval_level
 
-        return _scorecard(
-            self,
+        warnings.warn(_SCORECARD_MOVED, DeprecationWarning, stacklevel=2)
+        _interval_level(interval_level)  # None was never a level here
+        return self.run(
             patterns,
             noise_levels=noise_levels,
             instances=instances,
@@ -609,7 +768,8 @@ class Pipeline:
             title=title,
             attainable=attainable,
             interval_level=interval_level,
-        )
+            keep_data=True,
+        ).scorecard
 
     def plot_tests(
         self,
@@ -631,16 +791,22 @@ class Pipeline:
         plot methods.
         """
         _deprecated(
-            "Pipeline.plot_tests", "use Pipeline.run(...).plot_forecasts() instead"
+            "Pipeline.plot_tests",
+            "use Pipeline.run(..., keep_data=True).plot_forecasts() instead",
         )
         if scenarios is None:
             scenarios = default_scenarios(context_length=240, horizon=80)
-        return self.run(
+        return self._run(
             scenarios,
-            seeds=seeds,
+            seeds,
             seed=seed,
             instances=instances,
-            **diagnostic_settings,
+            cases=None,
+            keep_data=True,
+            scores=None,
+            checks=None,
+            default_instances=3,
+            **_old_settings(diagnostic_settings),
         ).plot_forecasts(
             show_quantiles=show_quantiles, figsize=figsize, history=history
         )
@@ -668,12 +834,18 @@ class Pipeline:
         )
         if seeds is None and instances is None:
             instances = 20
-        return self.run(
+        return self._run(
             scenarios,
-            seeds=seeds,
+            seeds,
             seed=seed,
             instances=instances,
-            **diagnostic_settings,
+            cases=None,
+            keep_data=True,
+            scores=None,
+            checks=None,
+            default_instances=3,
+            old_scenarios=True,
+            **_old_settings(diagnostic_settings),
         ).plot_errors(metric=metric, bins=bins, missing=missing, figsize=figsize)
 
 
@@ -774,9 +946,19 @@ def _replay_case(report: TestReport, case_index=0):
     checks, not_rerun = (
         (None, []) if requested_checks is None else _rebuild_checks(requested_checks)
     )
-    regenerated = pipeline.test(
-        [scenario], seeds=[manifest["seed"]], scores=scores, checks=checks, **settings
-    )
+    regenerated = pipeline._run(
+        [scenario],
+        [manifest["seed"]],
+        seed=0,
+        instances=None,
+        cases=None,
+        keep_data=False,
+        scores=scores,
+        checks=checks,
+        default_instances=3,
+        make_card=False,
+        **settings,
+    ).report
     actual = regenerated.cases[0].to_dict()
     left_out = {"metric_" + name for name in not_recomputed} | {
         "check_" + name for name in not_rerun

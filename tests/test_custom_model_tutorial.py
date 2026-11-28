@@ -81,7 +81,7 @@ def test_pipeline_refits_tutorial_model_without_fitting_template(model_class):
     template = model_class(window_length=3, k=3)
     pipeline = Pipeline(template)
     scenario = Scenario("seasonal", context_length=40, horizon=4)
-    report = pipeline.test([scenario], seeds=[7, 19])
+    report = pipeline.run([scenario], seeds=[7, 19]).report
     assert not hasattr(template, "context_")
     assert all(any(d.name == "forecast_contract" and d.status == "PASS"
                    for d in result.diagnostics) for result in report.cases)

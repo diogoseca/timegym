@@ -125,7 +125,7 @@ def rain_cases():
 
 
 def test_a_run_gives_the_same_numbers_as_its_arrays(rain_cases):
-    run = Pipeline(CycleShare()).run(cases=rain_cases)
+    run = Pipeline(CycleShare()).run(cases=rain_cases, keep_data=True)
     from_run = calibration(run)
     observed = np.concatenate([entry.case.observed.to_numpy()[:, 0] for entry in run.cases])
     predicted = np.concatenate([np.asarray(entry.forecast.point)[:, 0] for entry in run.cases])
@@ -138,7 +138,7 @@ def test_a_run_gives_the_same_numbers_as_its_arrays(rain_cases):
 
 
 def test_cluster_names_a_manifest_key_of_the_run(rain_cases):
-    run = Pipeline(CycleShare()).run(cases=rain_cases)
+    run = Pipeline(CycleShare()).run(cases=rain_cases, keep_data=True)
     cal = calibration(run, cluster="station")
     assert cal.clusters == 6 and cal.cluster == "station"
     assert "in 6 clusters by station" in str(cal)
@@ -153,7 +153,7 @@ def test_samples_stand_in_for_a_missing_point_forecast(rain_cases):
             paths = (np.random.default_rng(0).random((400, len(share))) < share).astype(float)
             return Forecast(future_index, samples=paths[:, :, None], target_names=["rain"])
 
-    cal = calibration(Pipeline(SharePaths()).run(cases=rain_cases))
+    cal = calibration(Pipeline(SharePaths()).run(cases=rain_cases, keep_data=True))
     assert cal.forecasts == 18 * 24 and cal.skipped == 0
     assert 0.5 < cal.slope < 1.5
 
@@ -165,7 +165,7 @@ def test_cases_without_a_usable_forecast_are_left_out_and_counted(rain_cases):
                 raise RuntimeError("no forecast for this origin")
             return super().fit(context)
 
-    cal = calibration(Pipeline(SometimesFails()).run(cases=rain_cases))
+    cal = calibration(Pipeline(SometimesFails()).run(cases=rain_cases, keep_data=True))
     assert cal.skipped == 6 and cal.cases == 12 and cal.forecasts == 12 * 24
     assert "(6 cases left out: no usable forecast)" in str(cal)
 
@@ -174,12 +174,12 @@ def test_cases_without_a_usable_forecast_are_left_out_and_counted(rain_cases):
             raise RuntimeError("never")
 
     with pytest.raises(ValueError, match="none of the run's 18 cases has a forecast to read"):
-        calibration(Pipeline(AlwaysFails()).run(cases=rain_cases))
+        calibration(Pipeline(AlwaysFails()).run(cases=rain_cases, keep_data=True))
 
 
 def test_a_run_of_counts_is_refused_naming_the_case():
     sales = pd.Series(np.arange(60.0) % 5)
-    run = Pipeline(NaiveForecaster("mean")).run(cases=cases_from_series(sales, origins=[40], horizon=5, name="sales"))
+    run = Pipeline(NaiveForecaster("mean")).run(cases=cases_from_series(sales, origins=[40], horizon=5, name="sales"), keep_data=True)
     with pytest.raises(ValueError, match=r"case 0 \(sales\): observed must be 0 or 1; got 2"):
         calibration(run)
 

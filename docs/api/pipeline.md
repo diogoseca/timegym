@@ -26,17 +26,67 @@ or a `Series` for a single series. A list or array has no dates, so its rows are
 taken as the requested steps in order. A DataFrame keeps its own index and
 column names, so wrong dates or a wrong series order still fail their checks.
 
-`.test(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None,
+`.run(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None,
+noise_levels=None, context_length=None, horizon=None, keep_data=False,
+title=None, attainable=False, interval_level=None, scores=None, checks=None,
 check_dependence=False, n_calibration=99, alpha=0.05,
-dependence_seed_offset=100_000)` evaluates cases and returns a TestReport. One
-`seed` drives the whole test: each scenario is run `instances` times (3 by
+dependence_seed_offset=100_000)` forecasts every case with a fresh model,
+checks and scores each forecast, and returns a `ForecastRun`. It is the one
+call for testing a model:
+
+```python
+from timegym import LastValueForecaster, Pipeline
+
+result = Pipeline(LastValueForecaster()).run()
+result.scorecard.plot()     # the scorecard picture
+print(result.scorecard)     # the same as a table
+result.assert_passed()      # raises if a forecast failed an output check
+result.to_json("report.json")
+```
+
+What to forecast goes first. With nothing, `run()` draws the scorecard's ten
+kinds of series at low and high noise, 120 steps of history and 24 to
+forecast, 10 times each: 200 series. Keys of `PATTERNS` such as
+`["trend", "seasonal"]`, and `Pattern` objects of your own beside them, give
+those rows of the scorecard; `noise_levels`, `context_length` and `horizon`
+set its columns and lengths. `Scenario` objects, or anything with
+`generate(seed)` and `kind`, are drawn as they were built, one row each.
+Kinds of series and scenarios you built cannot be mixed in one run.
+
+One `seed` drives the whole run: each row is drawn `instances` times (10 by
 default) with seeds `seed, seed + 1, ...`, so the default equals
-`seeds=[0, 1, 2]`. `seed=None` draws a fresh seed and records it, with the
-instance count, in `report.metadata`. An explicit `seeds` list is used as given
-and cannot be combined with `seed` or `instances`. Test seeds override a
+`seeds=list(range(10))`. `seed=None` draws a fresh seed and records it, with
+the instance count, in `result.metadata`. An explicit `seeds` list is used as
+given and cannot be combined with `seed` or `instances`. Run seeds override a
 Scenario's default seed. Model/evaluation exceptions are recorded with
 traceback evidence. Invalid scenario configuration is a caller error and is
 raised rather than counted as a model fault.
+
+The result holds the report and the scorecard. `result.report` is the
+`TestReport`; `result.checks`, `result.assert_passed()` and
+`result.to_json(path=None)` read it directly. `result.scorecard` is a
+`Scorecard` ([Scorecards and the scenario grid](scorecard.md)); `title`,
+`attainable` and `interval_level` (0.95 by default) are its settings. A run
+of your own data has no scorecard, because nobody knows the answer key of
+real data: reading `result.scorecard` then raises an error that points to
+`result.checks` and the errors against what happened in `result.report`.
+
+By default the run drops the series, answer keys and forecasts once every
+case is scored, so a large run stays small in memory. The report, the
+scorecard (with its picture) and `result.plot_errors()` work either way.
+`keep_data=True` keeps them: `result.cases` then holds each `EvaluatedCase`,
+with the generated case, the forecast (or `None` on model failure), the result
+and the scenario/seed positions, for `result.plot_forecasts()`,
+`timegym.diagnostics.calibration` and your own reading. Without it each entry
+keeps only its result and positions, and `result.kept_data` is `False`. This
+in-memory object keeps arrays separate from the portable report schema.
+
+`.test(...)` and `.scorecard(...)` still work, with their old behaviour, and
+warn. `pipeline.test(...)` is `pipeline.run(...).report`, except that with no
+scenarios it draws the five kinds of `default_scenarios()`, 3 times each.
+`pipeline.scorecard(patterns, ...)` is
+`pipeline.run(patterns, ..., keep_data=True).scorecard`. Both will be removed
+in a later release.
 
 `cases=[...]` tests ready-made `Case` objects instead of drawing them, for
 example cases cut from your own data with
@@ -44,8 +94,8 @@ example cases cut from your own data with
 fresh model, fitted on its history only, and the same output checks and
 scores as a drawn case. Cases that share a manifest `kind` share a row of the
 plots, in the order given. `cases` cannot be combined with `scenarios`,
-`seeds`, `seed` or `instances`, and the report's metadata has no seed. Pass a
-list, even of one case.
+`seeds`, `seed`, `instances` or the scorecard's settings, and the report's
+metadata has no seed. Pass a list, even of one case.
 
 `ForecastRun.from_forecasts(cases, forecasts, *, metadata=None,
 check_dependence=False, n_calibration=99, alpha=0.05,
@@ -66,19 +116,8 @@ run = ForecastRun.from_forecasts(cases, recorded, metadata={"model": "repeat las
 run.report.assert_passed()
 ```
 
-`.scorecard(patterns=None, *, noise_levels=2, instances=10, seed=0,
-context_length=120, horizon=24, title=None, attainable=False, interval_level=0.95)` runs the scenario grid and returns
-a `Scorecard`; see [Scorecards and the scenario grid](scorecard.md). `patterns`
-takes keys of `PATTERNS` and `Pattern` objects of your own, side by side
-([Your own kind of series](scorecard.md#your-own-kind-of-series)).
-
-`.run(scenarios=None, seeds=None, *, seed=0, instances=None, cases=None, ...)` accepts the
-same seeding, ready-made cases and diagnostic settings and returns a `ForecastRun`. Its `.report` is the usual `TestReport`; `.cases`
-retains each `EvaluatedCase`, including the generated case, forecast (or `None`
-on model failure), result, and scenario/seed positions. This in-memory inspection
-object keeps arrays separate from the portable report schema.
-
-`run.plot_forecasts(*, show_quantiles=False, figsize=None, history=None)` draws
+`run.plot_forecasts(*, show_quantiles=False, figsize=None, history=None)` needs
+a run made with `keep_data=True`. It draws
 scenario/target rows and seed columns in the scorecard's look: gray dots are
 observations, the black line is the answer key, blue crosses are the forecast,
 and one key above the panels names them. `history` is how many past steps each
@@ -90,8 +129,9 @@ the answer key and its error against what happened.
 figsize=None)` shows one score per whole case, with a black line at each row's
 median; `missing="annotate"` explicitly permits unavailable scores and labels
 their counts and reasons. `run.titles` optionally names each scenario position in plain
-words for both plots; a scorecard's run sets them to the pattern and noise
-level, so `card.run.plot_forecasts()` zooms into its rows. Neither method refits models. Matplotlib is installed with
+words for both plots; a run of kinds of series sets them to the kind and noise
+level, so `pipeline.run(["trend"], keep_data=True).plot_forecasts()` zooms
+into those rows of the scorecard. Neither method refits models. Matplotlib is installed with
 TimeGym and imported only when a plot is drawn.
 
 `.to_config()` describes the configured model and `.from_config(config)` can
