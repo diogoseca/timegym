@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.14.1 — 2026-11-24
+## Unreleased
 
 - Made `Pipeline.run` the one call for testing a model. Its result now
   carries the scorecard: `result = pipeline.run()`, then
@@ -55,11 +55,11 @@
   own written `fit(self, context)` needs no change, since TimeGym passes the
   history by position.
 - New cases, reports and scorecard baselines record `history_length` where
-  they recorded `context_length`. Reports and baselines saved by 1.13.1 and
+  they recorded `context_length`. Reports and baselines saved by 1.14.1 and
   earlier still load, compare with new ones and replay. Code that reads
   `case.manifest["context_length"]` from a new case needs
   `case.manifest["history_length"]`: that is the one change that does not
-  warn. Scorecard baselines are now format version 2, so TimeGym 1.13.1
+  warn. Scorecard baselines are now format version 2, so TimeGym 1.14.1
   refuses a new baseline and asks to be upgraded instead of failing on the
   missing key; the report format is unchanged.
 - Moved the docs, the glossary (History, where it said Context), the README,
@@ -128,7 +128,7 @@
   with `metric=` and imported from `timegym.metrics` as before. New reports
   list what was asked for under `metadata["metrics"]`.
 - `scores=` still works on each of these calls and warns; it will be removed
-  in a later release. Passing both is refused. Reports saved by 1.13.1 and
+  in a later release. Passing both is refused. Reports saved by 1.14.1 and
   earlier list the metrics asked for under `metadata["scores"]`; they still
   load, compare and replay them.
 - In the docs and docstrings, a score is now only the scorecard's number from
@@ -148,7 +148,7 @@
 - Its old name still works and warns: `case.metrics["mean_reference_mse"]`
   (also with `.get` and `in`) and `metric="mean_reference_mse"` in
   `plot_errors` and `compare_reports`. It will be removed in a later release.
-  Reports saved by 1.13.1 and earlier load with the new name, in each case's
+  Reports saved by 1.14.1 and earlier load with the new name, in each case's
   metrics and in the `point_accuracy` evidence, so they compare and replay
   with new ones. The function `timegym.metrics.mean_reference_mse`, which
   computes it, keeps its name.
@@ -178,7 +178,7 @@
   equally good check, since it only keeps the check's draws apart from the
   case's.
 - Reports record the check's settings under `diagnostic_settings` as before,
-  so reports saved with either form, or by 1.13.1 and earlier, compare and
+  so reports saved with either form, or by 1.14.1 and earlier, compare and
   replay the same way.
 - Moved the docs, tutorials, source notebooks, tests and experiment scripts to
   `checks=[dependence()]`.
@@ -252,11 +252,28 @@
   `simulate_attainable=True`.
 
 - Added `result.calibration(*, bins=10, cluster=None, interval_level=0.95,
-  seed=0)` to a run, and `timegym.diagnostics.calibration(run, ...)`, which
-  ask whether forecasts of a yes/no outcome come true as often as they say:
-  of the days given a 70% chance of rain, did it rain on about 70%? It reads
-  a run's point forecasts, or the mean of the sample paths, or arrays with
-  `calibration(observed, predicted)`, and returns
+  seed=0)` to a run: `result.calibration()` is
+  `timegym.diagnostics.calibration(result)`, read off the result like the
+  scorecard, on a run that keeps its data (`keep_data=True`). The confidence
+  of the slope's interval is now `interval_level=` in
+  `timegym.diagnostics.calibration` too, the scorecard's word for the same
+  idea, where 1.14.1 said `level=`, and the `Calibration` it returns records
+  it as `interval_level`, where 1.14.1 called it `level`.
+- Moved the docs, the README and the source notebooks to
+  `result.calibration()`.
+
+- Every deprecation warning now says that the old name "will be removed in a
+  later release". The older ones, such as those for `get_stock`,
+  `generate_process` and `Pipeline.plot_tests`, said "in TimeGym 2.0"; a
+  warnings filter that matched those words needs the new ones.
+
+## 1.14.1 — 2026-11-24
+
+- Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
+  level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
+  true as often as they say: of the days given a 70% chance of rain, did it
+  rain on about 70%? It reads a run's point forecasts, or the mean of the
+  sample paths, or arrays with `calibration(observed, predicted)`, and returns
   a `Calibration`: a `table` of bins of equal width with the number of
   forecasts, their mean and the share that happened; the calibration `slope`
   (1 is calibrated, below 1 too confident, above 1 too timid) with a bootstrap
@@ -264,21 +281,14 @@
   `cluster=`; the calibration `intercept` (0 is right on average); and
   `plot()`, a reliability diagram drawn by the new
   `timegym.plotting.plot_calibration`. Forecasts of exactly 0 or 1 are counted
-  in `certain`, since the slope reads them as 0.000001 and 0.999999.
-  `interval_level` sets the confidence of the slope's interval, the
-  scorecard's word for the same idea, and `Calibration.interval_level`
-  records it.
-- Added a section on calibration to the metrics page, a sentence on the scope
-  page and in the README, and a section to the metrics notebook with twenty
+  in `certain`, since the slope reads them as 0.000001 and 0.999999. Nothing
+  else changes.
+- Added a section on calibration to the scores page, a sentence on the scope
+  page and in the README, and a section to the scores notebook with twenty
   weather stations, where a share learned from few cycles says 0% or 100% too
   often and adding one rainy and one dry step to each count fixes it.
 - Added a sentence to the Pipeline page saying that `scorecard(patterns=...)`
   takes your own `Pattern` objects beside the keys of `PATTERNS`.
-
-- Every deprecation warning now says that the old name "will be removed in a
-  later release". The older ones, such as those for `get_stock`,
-  `generate_process` and `Pipeline.plot_tests`, said "in TimeGym 2.0"; a
-  warnings filter that matched those words needs the new ones.
 
 ## 1.13.1 — 2026-11-24
 
