@@ -180,7 +180,7 @@ def _old_name(owner: str, old: str, new: str) -> None:
 def _current_manifest(manifest: dict) -> dict:
     """A case manifest with the keys that older versions of TimeGym saved, under their current names.
 
-    TimeGym 1.13.1 and earlier saved ``history_length`` as ``context_length``. Reading both under the
+    TimeGym 1.14.1 and earlier saved ``history_length`` as ``context_length``. Reading both under the
     new name lets a report or a replay compare an old case with a new one as the same case.
     """
     if "context_length" in manifest and "history_length" not in manifest:

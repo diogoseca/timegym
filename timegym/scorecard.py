@@ -962,7 +962,7 @@ def _seed_words(card):
 # %% ../source/13_scorecard.ipynb #scorecard-compare
 # A baseline file names its format and version, so a file of another kind, or one written by a
 # newer TimeGym in a format this version cannot read, is refused instead of misread. Version 1,
-# written by TimeGym 1.13.1 and earlier, named the grid's history_length context_length; it is
+# written by TimeGym 1.14.1 and earlier, named the grid's history_length context_length; it is
 # still read.
 _BASELINE_FORMAT, _BASELINE_VERSION = "timegym-scorecard-baseline", 2
 

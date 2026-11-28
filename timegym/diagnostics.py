@@ -1305,7 +1305,7 @@ def _same_cases(label, report, baseline):
             "compare reports made on the same cases, in the same order"
         )
     for index, (case, base) in enumerate(zip(report.cases, baseline.cases)):
-        # A report saved by TimeGym 1.13.1 or earlier names the history length context_length.
+        # A report saved by TimeGym 1.14.1 or earlier names the history length context_length.
         here, there = _current_manifest(case.manifest), _current_manifest(base.manifest)
         if here == there:
             continue

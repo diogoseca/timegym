@@ -999,7 +999,7 @@ def _replay_case(report: TestReport, case_index=0):
         raise ValueError("case_index is outside the saved report")
     original = payload["cases"][case_index]
     saved_metadata = payload["metadata"]
-    # A case saved by TimeGym 1.13.1 or earlier says context_length; read it as history_length.
+    # A case saved by TimeGym 1.14.1 or earlier says context_length; read it as history_length.
     manifest = _current_manifest(original["manifest"])
     constructor_keys = (
         "kind",
@@ -1042,7 +1042,7 @@ def _replay_case(report: TestReport, case_index=0):
         raise ValueError("Case identity and scenario manifest disagree")
     scenario = Scenario(**{key: manifest[key] for key in constructor_keys})
     # Metrics asked for by name from timegym.metrics are computed again; your own are left out of the comparison.
-    # A report saved by TimeGym 1.13.1 or earlier lists them under "scores".
+    # A report saved by TimeGym 1.14.1 or earlier lists them under "scores".
     requested = saved_metadata.get("metrics", saved_metadata.get("scores"))
     metrics, not_recomputed = (
         (None, []) if requested is None else _rebuild_metrics(requested)

@@ -54,7 +54,7 @@ forecaster can remove, under the name the scorecard's table gives the same
 number. Its old name still reads it, and warns: `case.metrics["mean_reference_mse"]`
 and `metric="mean_reference_mse"` in `plot_errors`, `result.compare` and
 `compare_reports`.
-Reports saved by TimeGym 1.13.1 and earlier load with the new name, so they
+Reports saved by TimeGym 1.14.1 and earlier load with the new name, so they
 compare with new ones.
 
 ### Uncertainty metrics
@@ -160,7 +160,7 @@ is an `ERROR` whose message names the exception. Each appears as
 `timegym.metrics`, with plain settings, and leaves the others out of the
 comparison, listing them in `metadata["replay"]["not_recomputed"]`. Nothing is
 recorded unless you ask, so reports saved earlier replay exactly as before; one
-saved by TimeGym 1.13.1 or earlier lists its metrics under `"scores"`, and replays
+saved by TimeGym 1.14.1 or earlier lists its metrics under `"scores"`, and replays
 them the same way. `scores=`, the old name of `metrics=`, still works and warns.
 
 ## Your own output checks

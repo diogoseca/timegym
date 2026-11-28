@@ -232,7 +232,7 @@ def _report_fields(value, expected, path):
 
 
 def _renamed_metrics(values):
-    """Saved metrics under the names they have now: TimeGym 1.13.1 saved ``avoidable_mse`` as ``mean_reference_mse``."""
+    """Saved metrics under the names they have now: TimeGym 1.14.1 and earlier saved ``avoidable_mse`` as ``mean_reference_mse``."""
     if not isinstance(values, dict):
         return values  # CaseResult refuses it
     renamed = {}
@@ -550,7 +550,7 @@ class TestReport:
         saved summary inconsistent with the diagnostics are rejected. Metadata
         and evidence remain JSON data. The returned report owns copied values.
         A metric saved under an old name, such as ``mean_reference_mse`` by
-        TimeGym 1.13.1, loads under its name now, ``avoidable_mse``, so old and
+        TimeGym 1.14.1, loads under its name now, ``avoidable_mse``, so old and
         new reports compare and replay.
         """
         payload = _report_json_value(payload)
