@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.14.1 — 2026-11-24
 
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come
