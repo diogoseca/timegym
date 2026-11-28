@@ -1,7 +1,7 @@
 """Draw the README's figures: python tools/readme_figures.py [folder]
 
 Saves the scorecard of the built-in LastValueForecaster as docs/images/scorecard.png
-and runs the README's "More things to do with a scorecard" examples, saving each
+and runs the README's "Look closer at one row" examples, saving each
 figure as docs/images/readme-*.png (or into the folder given). Rerun it whenever
 the plots change style.
 """

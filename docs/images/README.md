@@ -25,7 +25,7 @@ python tools/readme_figures.py
 ## README figures
 
 `readme-trend-forecasts.png` and `readme-trend-errors.png` show the output of
-the README's "More things to do with a scorecard". Redraw both after a
+the README's "Look closer at one row". Redraw both after a
 plotting change with
 [`tools/readme_figures.py`](../../tools/readme_figures.py):
 
