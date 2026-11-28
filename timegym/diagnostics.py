@@ -9,6 +9,7 @@ from ._internal import (
     _renamed_keywords,
     _warn_deprecated,
     _current_manifest,
+    _old_name,
 )
 import inspect
 import math
@@ -1827,6 +1828,7 @@ def _case_name(entry):
     return f"{entry._result.scenario}" + ("" if seed is None else f", seed {seed}")
 
 
+@_renamed_keywords(level="interval_level")
 def calibration(
     run, predicted=None, *, bins=10, cluster=None, interval_level=0.95, seed=0
 ):
@@ -1853,6 +1855,7 @@ def calibration(
     move together; ``cluster`` names a manifest key whose cases are
     resampled together, such as ``cluster="series"``. With arrays each value
     is resampled on its own, or ``cluster`` gives one label per value.
+    ``level``, the old name of ``interval_level``, still works and warns.
     """
     bins = positive_int(bins, "bins")
     if bins < 2:
@@ -1978,6 +1981,7 @@ def calibration(
     )
 
 
+@_renamed_keywords(level="interval_level")
 @dataclass(repr=False)
 class Calibration:
     """How often yes/no forecasts came true, by forecast, with the calibration slope and intercept.
@@ -1993,7 +1997,8 @@ class Calibration:
     (None for arrays), ``clusters`` the clusters resampled, ``skipped`` the
     cases left out, and ``certain`` the forecasts of exactly 0 or 1, which
     weigh heavily on the slope when wrong. ``note`` says why a number is
-    NaN. ``plot()`` draws the table as a reliability diagram.
+    NaN. ``plot()`` draws the table as a reliability diagram. ``level`` is
+    the old name of ``interval_level``; it still works and warns.
     """
 
     table: pd.DataFrame
@@ -2009,6 +2014,18 @@ class Calibration:
     certain: int
     seed: int
     note: str | None = None
+
+    @property
+    def level(self) -> float:
+        """The old name of ``interval_level``; it still works and warns."""
+        _old_name("Calibration", "level", "interval_level")
+        return self.interval_level
+
+    @level.setter
+    def level(self, value) -> None:
+        """Set ``interval_level`` by its old name, with a warning."""
+        _old_name("Calibration", "level", "interval_level")
+        self.interval_level = value
 
     def plot(self, *, figsize=None):
         """Draw ``timegym.plotting.plot_calibration``: how often it happened against the forecast."""

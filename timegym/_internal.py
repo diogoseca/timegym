@@ -134,16 +134,18 @@ def _deprecated(name: str, instead: str) -> None:
     )
 
 
-def _renamed_keywords(**renames):
+def _renamed_keywords(*, shown_as=None, **renames):
     """Let a function, or a class's constructor, keep taking keyword arguments under their old names.
 
     ``@_renamed_keywords(context="history")`` turns ``f(context=x)`` into ``f(history=x)`` and warns
     at the caller's line; passing both names is refused. The signature shown is the new one.
+    The warning names the call as ``shown_as`` when given, such as ``"fit"`` for a method that
+    the public classes inherit from a private one, and by the function's own name otherwise.
     """
 
     def decorate(target):
         function = target.__init__ if isinstance(target, type) else target
-        where = target.__qualname__
+        where = shown_as or target.__qualname__
 
         @functools.wraps(function)
         def accept_old_names(*args, **kwargs):

@@ -266,6 +266,34 @@ def test_predict_metrics_and_the_shift_check_take_the_old_keyword():
     assert old.status == check_shift_equivariance(pipeline, history, future).status
 
 
+def test_the_built_in_models_and_target_transforms_take_the_old_keyword():
+    from sklearn.linear_model import Ridge
+    from timegym import GaussianAR1Forecaster
+    from timegym.models import SklearnForecaster
+    from timegym.target import BoxCoxTransform, ComposedTransform, DifferenceTransform, LogTransform
+
+    case = Scenario("random_walk", history_length=30, horizon=4).generate(seed=2)
+    history, future = case.task.history, case.task.future_index
+    models = [(LastValueForecaster, "fit"), (lambda: SeasonalLastValueForecaster(period=4), "fit"),
+              (MeanForecaster, "fit"), (lambda: SeasonalMeanForecaster(period=4), "fit"), (DriftForecaster, "fit"),
+              (lambda: GaussianAR1Forecaster(seed=0), "GaussianAR1Forecaster.fit"),
+              (lambda: SklearnForecaster([Ridge()], window_length=4), "SklearnForecaster.fit")]
+    for make, name in models:
+        message = f"{name}(context=...) {LATER}: use {name}(history=...)"
+        with pytest.warns(DeprecationWarning) as caught:
+            old = make().fit(context=history).predict(future)
+        assert [str(warning.message) for warning in caught] == [message]
+        assert Path(caught[0].filename).resolve() == Path(__file__).resolve()
+        np.testing.assert_array_equal(old.point, make().fit(history).predict(future).point)
+    positive = history - history.min() + 1
+    for make in (LogTransform, BoxCoxTransform, DifferenceTransform,
+                 lambda: ComposedTransform([LogTransform(), DifferenceTransform()])):
+        name = f"{type(make()).__name__}.fit_transform"
+        old = renamed_call(f"{name}(context=...) {LATER}: use {name}(history=...)", make().fit_transform,
+                           context=positive)
+        pd.testing.assert_frame_equal(old, make().fit_transform(positive))
+
+
 def test_scorecard_calls_take_the_old_keyword():
     from timegym.scorecard import scorecard
 
@@ -842,6 +870,42 @@ def test_run_has_no_dependence_arguments_and_both_forms_are_refused():
     assert [row["check"] for row in named.checks][-2:] == ["dependence", "range"]
     assert named.metadata["diagnostic_settings"]["check_dependence"] is True
     assert repr(dependence(alpha=0.1)) == "dependence(n_calibration=99, alpha=0.1)"
+
+
+def test_calibration_still_takes_level_and_its_result_still_reads_it_as_timegym_1_14_1_did():
+    import dataclasses
+    from timegym import cases_from_series
+    from timegym.diagnostics import Calibration, calibration
+
+    rng = np.random.default_rng(0)
+    predicted = rng.uniform(0.05, 0.95, 400)
+    observed = (rng.random(400) < predicted).astype(float)
+    expected = calibration(observed, predicted, interval_level=0.8, seed=1)
+    old = renamed_call(f"calibration(level=...) {LATER}: use calibration(interval_level=...)",
+                       calibration, observed, predicted, level=0.8, seed=1)
+    assert str(old) == str(expected) and old.slope_interval == expected.slope_interval
+    with pytest.raises(TypeError, match="give interval_level only"):
+        calibration(observed, predicted, level=0.8, interval_level=0.8)
+    # The result's field kept its old name too: it reads, sets and builds with a warning.
+    message = f"Calibration.level {LATER}: use Calibration.interval_level"
+    assert renamed_call(message, getattr, expected, "level") == 0.8
+    renamed_call(message, setattr, old, "level", 0.9)
+    assert old.interval_level == 0.9
+    fields = {field.name: getattr(expected, field.name) for field in dataclasses.fields(Calibration)}
+    level = fields.pop("interval_level")
+    made = renamed_call(f"Calibration(level=...) {LATER}: use Calibration(interval_level=...)",
+                        Calibration, **fields, level=level)
+    assert str(made) == str(expected)
+    # A run's calibration() takes it as well, though only interval_level is shown.
+    rain = pd.Series((rng.random(120) < 0.4).astype(float), name="rain")
+    run = Pipeline(MeanForecaster()).run(cases=cases_from_series(rain, origins=[60, 80, 100], horizon=10,
+                                                                 name="rain"), keep_data=True)
+    on_run = renamed_call(f"ForecastRun.calibration(level=...) {LATER}: "
+                          "use ForecastRun.calibration(interval_level=...)", run.calibration, level=0.8)
+    assert str(on_run) == str(run.calibration(interval_level=0.8))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        assert calibration(observed, predicted).interval_level == 0.95  # the new name is silent
 
 
 def test_an_entrys_result_still_reads_and_sets_its_record_and_warns():

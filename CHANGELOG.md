@@ -48,7 +48,8 @@
   `generate_joint_process`, `resolve_process` and
   `timegym.scorecard.scorecard`), `scenario.context_length`,
   `ForecastTask(context=...)`, `task.context`, `context=` in
-  `Pipeline.predict`, `mase`, `rmsse` and `check_shift_equivariance`,
+  `Pipeline.predict`, `mase`, `rmsse`, `check_shift_equivariance`, `fit` of
+  the built-in models and `fit_transform` of the built-in target transforms,
   `context_` on the built-in baselines, a metric or a check whose argument is
   named `context` (it warns once per run), and a `build` of your own whose
   scenario has `context_length` instead of `history_length`. A model of your
@@ -259,6 +260,11 @@
   `timegym.diagnostics.calibration` too, the scorecard's word for the same
   idea, where 1.14.1 said `level=`, and the `Calibration` it returns records
   it as `interval_level`, where 1.14.1 called it `level`.
+- `calibration(..., level=0.95)`, `Calibration.level` and
+  `Calibration(..., level=...)`, as 1.14.1 wrote them, still work and now
+  warn; they will be removed in a later release. Passing both `level=` and
+  `interval_level=` is refused. `result.calibration(level=...)` works and
+  warns the same way.
 - Moved the docs, the README and the source notebooks to
   `result.calibration()`.
 

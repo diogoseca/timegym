@@ -9,6 +9,7 @@ from ._internal import (
     nonnegative_int,
     _levels,
     _old_name,
+    _renamed_keywords,
     _warn_deprecated,
 )
 import numpy as np
@@ -132,6 +133,7 @@ class _Baseline(_ConfiguredForecaster):
         """The fewest rows of history the rule can forecast from."""
         return 1
 
+    @_renamed_keywords(context="history", shown_as="fit")
     def fit(self, history):
         """Keep a copy of the history; raise when it is too short for the forecast."""
         self.history_ = history.copy(deep=True)
@@ -354,6 +356,7 @@ class GaussianAR1Forecaster(_ConfiguredForecaster):
         """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return dict(n_samples=self.n_samples, seed=self.seed, levels=self.levels)
 
+    @_renamed_keywords(context="history")
     def fit(self, history):
         """Fit each target's intercept and AR(1) coefficient, and the shared innovation covariance.
 
@@ -491,6 +494,7 @@ class SklearnForecaster(_ConfiguredForecaster):
             steps[-1] = MultiOutputRegressor(steps[-1])
         return SkPipeline([(f"step_{i}", step) for i, step in enumerate(steps)])
 
+    @_renamed_keywords(context="history")
     def fit(self, history):
         """Fit fresh copies of the steps on lag windows of the history.
 

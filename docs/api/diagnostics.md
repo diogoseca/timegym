@@ -576,7 +576,9 @@ seed=0)` checks that on a run of such forecasts (made with `keep_data=True`,
 since it reads every forecast and what happened). The function
 `timegym.diagnostics.calibration` does the same on a run,
 `calibration(result, ...)`, and on arrays of outcomes (0 or 1) and chances,
-`calibration(observed, predicted, ...)`. It returns a `Calibration`:
+`calibration(observed, predicted, ...)`. `level=`, the old name of
+`interval_level=`, still works and warns, and so does `Calibration.level`.
+It returns a `Calibration`:
 
 - `table`: one row per bin of equal width, from `low` to `high`, with the
   number of `forecasts` in it, their `mean_forecast` and the share that

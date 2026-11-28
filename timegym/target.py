@@ -9,7 +9,7 @@ from ._internal import positive_int, _deprecated
 import dataclasses
 from collections.abc import Sequence
 from scipy import optimize, special, stats
-from ._internal import _real_array
+from ._internal import _real_array, _renamed_keywords
 from .contracts import Forecast
 
 __all__ = [
@@ -320,6 +320,7 @@ class LogTransform(_TargetTransform):
     else exp of the 0.5 quantile, else exp of the point read as a median.
     """
 
+    @_renamed_keywords(context="history")
     def fit_transform(self, history: pd.DataFrame) -> pd.DataFrame:
         """Record the target names and return the log of a strictly positive history."""
         values = _positive_values(history, "LogTransform")
@@ -355,6 +356,7 @@ class BoxCoxTransform(_TargetTransform):
     has no Box-Cox preimage, and inverting it raises.
     """
 
+    @_renamed_keywords(context="history")
     def fit_transform(self, history: pd.DataFrame) -> pd.DataFrame:
         """Fit one lambda per target on this history and return the transformed history."""
         values = _positive_values(history, "BoxCoxTransform")
@@ -411,6 +413,7 @@ class DifferenceTransform(_TargetTransform):
         """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return {"order": self.order, "lag": self.lag}
 
+    @_renamed_keywords(context="history")
     def fit_transform(self, history: pd.DataFrame) -> pd.DataFrame:
         """Keep the history tail needed for inversion and return the differenced history."""
         _history_values(history)
@@ -509,6 +512,7 @@ class ComposedTransform(_TargetTransform):
         """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return {"transforms": self.transforms}
 
+    @_renamed_keywords(context="history")
     def fit_transform(self, history: pd.DataFrame) -> pd.DataFrame:
         """Fit and apply each member in order, each on the previous member's output."""
         _history_values(history)

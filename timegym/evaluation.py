@@ -320,6 +320,7 @@ class ForecastRun:
             seed=seed,
         )
 
+    @_renamed_keywords(level="interval_level")
     def calibration(self, *, bins=10, cluster=None, interval_level=0.95, seed=0):
         """How often this run's yes/no forecasts came true, and the calibration slope; returns a Calibration.
 
