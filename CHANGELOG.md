@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.14.1 — 2026-11-24
 
 - Made `Pipeline.run` the one call for testing a model. Its result now
   carries the scorecard: `result = pipeline.run()`, then

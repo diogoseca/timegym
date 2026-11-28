@@ -18,8 +18,8 @@
 from timegym import LastValueForecaster, Pipeline
 
 pipeline = Pipeline(LastValueForecaster())   # put your own forecaster here
-result = pipeline.run()
-result.scorecard.save("scorecard.png")
+card = pipeline.scorecard()
+card
 ```
 
 [![The scorecard of the last-value forecaster: a score per kind of series and noise level, with example forecasts](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/scorecard.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/scorecard.png)
@@ -30,10 +30,10 @@ the same for forecasters. It generates time series whose future it already
 knows the odds of: noise, trends, seasons, sudden shifts, cycles, levels pulled
 back to their mean, random walks, each at low and at high noise. It hands your
 forecaster the past, asks for the future, and scores the answer against the
-truth. One picture shows what your algorithm nails, where it struggles and
+truth. One scorecard shows what your algorithm nails, where it struggles and
 where it fails.
 
-## Sixty seconds
+## Install
 
 ```bash
 pip install timegym
@@ -43,48 +43,190 @@ pip install timegym
 Python 3.11–3.15 (`>=3.11,<3.16`), following pandas support.
 <!-- END PYTHON SUPPORT -->
 
-Wrap your forecaster in a `Pipeline`, call `run()` and look at the scorecard
-on its result, as the code at the top of this page does. The built-in
-`LastValueForecaster`, which repeats the last value it saw, stands in for yours
-there.
+## The example, step by step
 
-Each scorecard row is a kind of series and each column a noise level. The left
-column says what can and cannot be predicted for that kind of series, and the
-right column names the mistakes the model made there. A score of 100 means the
-forecasts were as close as those of a forecaster that knows exactly how the
-series was made; 50 means the model's avoidable error is as large as the noise
-nobody could avoid. The bands read "Nails it" from 90, "Good" from 70,
-"Struggles" from 40 and "Fails" below that. The last-value forecaster scores
-51: it nails the random walk and fails trends and seasons. The short line beside
-each score is its 95% interval on a 0 to 100 scale, and a question mark means
-that interval reaches into another band; `pipeline.run(instances=30)`
-narrows it, and `interval_level=0.99` asks for a wider, more cautious one. The
-small triangle above that line is what the right kind of model, fitted to the
-same history, would score: the distance from the score up to the triangle is
-what your model loses beyond estimating the parameters. In a notebook,
-`result.scorecard` on its own shows the picture.
-
-### Scorecard, report and cases
-
-A scorecard is a test on TimeGym's ten kinds of series, drawn as one picture.
-"Test" is what TimeGym does; the report is the record it hands back. One call,
-`run()`, does the work, and its result gives three views of it:
-
-| You read | You get | Use it to |
-| --- | --- | --- |
-| `result.scorecard` | A `Scorecard`: the picture and its table | See what the model is good and bad at |
-| `result.report` | A `TestReport`: every case's metrics and output checks | Save them as JSON, fail a CI build |
-| `result.cases` | Every case: its series, forecast, metrics and checks | Plot the forecasts behind the scores, with `keep_data=True` |
-
-`pipeline.run(scenarios)` tests series you choose, and `pipeline.run(cases=...)`
-your own data, which has no scorecard because nobody knows its answer key.
-
-### More things to do with a scorecard
-
-Print it as Markdown, for a pull request or a log:
+### 1. Wrap your forecaster in a `Pipeline`
 
 ```python
-print(result.scorecard)
+from timegym import LastValueForecaster, Pipeline
+
+pipeline = Pipeline(LastValueForecaster())
+```
+
+The pipeline holds your forecaster and runs it on TimeGym's series: it hands
+over the history of each one, asks for the next steps, checks the answer and
+scores it.
+
+### 2. Pick the forecaster
+
+`LastValueForecaster` is built in. It repeats the last value it saw at every
+future step: the simplest forecast there is, and the one any real model should
+beat.
+
+Other built-in forecasters go in the same place:
+
+```python
+from timegym import GaussianAR1Forecaster, NaiveForecaster
+
+NaiveForecaster("mean")                  # the average of the history
+NaiveForecaster("drift")                 # the trend from first to last value
+NaiveForecaster("seasonal", period=12)   # repeat the last 12 values
+GaussianAR1Forecaster()                  # mean reversion, with a range
+```
+
+A scikit-learn regressor plugs in directly; the pipeline feeds it the last
+`window_length` values:
+
+```python
+from sklearn.linear_model import Ridge
+
+ridge = Pipeline(Ridge(), window_length=12)
+```
+
+Your own forecaster is any object with two methods. `fit(context)` gets the
+series so far. `predict(future_index)` gets the dates to forecast, the steps
+right after the context, and returns one value per date: a `Forecast`, or
+simply a list or NumPy array. This one repeats the last value it saw:
+
+```python
+from timegym import Forecast
+
+class RepeatLast:
+    def fit(self, context):            # the series so far, one column per series
+        self.last = context.iloc[-1]   # the last row seen
+        return self
+
+    def predict(self, future_index):   # the dates to forecast
+        return Forecast(future_index, [self.last] * len(future_index))
+
+mine = Pipeline(RepeatLast())
+```
+
+It makes the same forecasts as `LastValueForecaster`, so it gets the same
+scorecard. [Write and test a custom model](https://diogoseca.github.io/timegym/tutorials/02_custom_model/)
+adds several series, quantiles and a nearest-analogues forecaster.
+
+### 3. Ask for the scorecard
+
+```python
+card = pipeline.scorecard()
+card
+```
+
+In a notebook, `card` on its own shows the picture at the top of this page.
+`scorecard()` draws ten series of each kind at each noise level, forecasts
+each one and scores the forecasts. Outside a notebook, save the picture with
+`card.save("scorecard.png")`; [What you can do with a scorecard](#what-you-can-do-with-a-scorecard)
+lists the rest.
+
+## Reading the scorecard
+
+### Rows and columns
+
+Each row is a kind of series and each column a noise level. The left column
+says what can and cannot be predicted for that kind of series. The right
+column names the mistakes the model made there.
+
+### The score
+
+Each cell gets a score from 0 to 100. It compares two errors: the noise nobody
+could avoid, and your model's avoidable error, which is how far its forecast is
+from the answer key (the expected value of each future step, which TimeGym
+knows because it made the series):
+
+```text
+score = 100 × unavoidable error / (unavoidable error + avoidable error)
+```
+
+- **100** is the top. The forecast matched the answer key exactly, as a
+  forecaster that knows how the series was made would. No forecast can do
+  better.
+- **50** means the avoidable error is as large as the noise nobody could avoid.
+- **Near 0** means the avoidable error dwarfs the noise: the forecast is far
+  from the answer key.
+
+The score falls into one of four bands:
+
+| Score | Band |
+| --- | --- |
+| 90 and up | Nails it |
+| 70 to 89 | Good |
+| 40 to 69 | Struggles |
+| Below 40 | Fails |
+
+The score at the top of the card is the average of the cell scores.
+
+### What the last-value forecaster scored
+
+The last-value forecaster scores 51. It nails the random walk at low noise
+(99): when every step adds a shock that never fades, the last value is the
+best forecast anyone can make. It fails trends and seasons (10 and 3 at low
+noise), because repeating the last value cannot follow a line or a cycle.
+
+### How sure each score is
+
+The short line beside each score is its 95% interval: with other series of the
+same kind the score would come out a little different, and the line shows by
+how much. A question mark after the band means the line reaches into another
+band, so ten series were not enough to settle it.
+
+Draw more series per cell for a shorter line, or ask for a more cautious one:
+
+```python
+pipeline.scorecard(instances=30)          # 30 series per cell, not 10
+pipeline.scorecard(interval_level=0.99)   # a 99% interval: a longer line
+```
+
+### The triangle
+
+The small triangle above the line is what the right kind of model for that row
+scores when it is fitted to the same history: a straight line for the trend, a
+repeating cycle for the seasons, and so on. Even that model loses a few points
+to estimating its settings from a short history, so the triangle sits a little
+below 100. The distance from your score up to the triangle is what your model
+loses on top of that.
+
+## Scorecard, test and report
+
+A scorecard is a test on TimeGym's ten kinds of series, drawn as one picture.
+"Test" is what TimeGym does; the report is the record it hands back. Three
+calls give you three views of the same work:
+
+| You call | You get | Use it to |
+| --- | --- | --- |
+| `pipeline.scorecard()` | A `Scorecard`: the picture and its table | See what the model is good and bad at |
+| `pipeline.test(scenarios)` | A `TestReport`: every case's scores and output checks | Test series you choose, save them as JSON, fail a CI build |
+| `pipeline.run(scenarios)` | A `ForecastRun`: the report plus every series and forecast | Plot the forecasts behind the scores |
+
+A scorecard carries the other two: `card.report` and `card.run`.
+
+## What you can do with a scorecard
+
+- Show it in a notebook: `card` on its own.
+- Save it as a PNG, SVG or PDF image, for a report or a slide.
+- Print it as Markdown, for a pull request or a log.
+- Take its numbers as a table, and save them as CSV or JSON.
+- Save every case's scores and output checks as JSON.
+- Plot the forecasts behind a score.
+- Fail a CI build when a forecast is malformed or the model gets worse.
+
+### Save it as an image
+
+The file extension picks the format:
+
+```python
+card.save("scorecard.png")
+card.save("scorecard.svg")
+card.save("scores.png", compact=True)   # only the colored scores
+```
+
+`card.plot()` returns the matplotlib figure, to restyle it or place it in a
+figure of your own.
+
+### Print it as Markdown
+
+```python
+print(card)
 ```
 
 ```text
@@ -97,19 +239,39 @@ print(result.scorecard)
 | Random walk: shocks never fade | 99 Nails it | 87 Good? | none found |
 …
 
-14 of 20 verdicts are not settled at 10 instances. Run pipeline.run(instances=30) to narrow them.
+14 of 20 verdicts are not settled at 10 instances. Run scorecard(instances=30) to narrow them.
 ```
 
-Zoom in on one row, keeping its series and forecasts to plot them:
+### Take the numbers as a table
+
+`card.table` is a pandas DataFrame with one row per kind of series and noise
+level: the score, the two ends of its interval, the band, the triangle's score,
+the mistakes and the errors behind the score.
 
 ```python
-trend = pipeline.run(["trend"], instances=3, keep_data=True)   # one row, both noise levels
+card.table.to_csv("scorecard.csv", index=False)
+card.table.to_json("scorecard.json", orient="records", indent=1)
+```
+
+`card.report` holds every case's scores and output checks, enough to replay one
+case on another machine:
+
+```python
+card.report.to_json("report.json")
+```
+
+### Look closer at one row
+
+Score one row on its own:
+
+```python
+trend = pipeline.scorecard(["trend"], instances=3)   # one row, both noise levels
 ```
 
 Plot every draw behind that row, with the answer key and the forecast:
 
 ```python
-trend.plot_forecasts()
+trend.run.plot_forecasts()
 ```
 
 [![The three draws of the trend row at each noise level, with the answer key and the last-value forecast](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-forecasts.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-forecasts.png)
@@ -117,20 +279,21 @@ trend.plot_forecasts()
 See how the error spreads over 20 draws per noise level:
 
 ```python
-pipeline.run(["trend"], instances=20).plot_errors(metric="mse")
+pipeline.scorecard(["trend"], instances=20).run.plot_errors(metric="mse")
 ```
 
 [![Histograms of the error against what happened, 20 draws at low and at high noise](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-errors.png)](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/readme-trend-errors.png)
 
 `mse` is the error against what actually happened. The default,
-`avoidable_mse`, is the error against the answer key: the part your model
+`mean_reference_mse`, is the error against the answer key: the part your model
 could have avoided.
 
-For CI and for later:
+### Use it in CI
+
+Fail a CI build when a forecast is malformed or the model crashes:
 
 ```python
-result.assert_passed()       # fail a CI build on a malformed forecast or a crash
-result.save("report.json")   # every case, enough to replay one on another machine
+card.report.assert_passed()
 ```
 
 To catch a change that makes the model worse, save the scorecard of the version
@@ -138,28 +301,33 @@ you trust and compare each later version with it on the same series. A paired
 test says, cell by cell, whether the new version is further from the answer key:
 
 ```python
-pipeline.run(instances=30).scorecard.save_baseline("scorecard-baseline.json")  # once
-diff = pipeline.run(instances=30).scorecard.compare("scorecard-baseline.json")
-diff.assert_no_regression()          # fail a CI build on a cell that got worse
+# once, on the version you trust
+pipeline.scorecard(instances=30).save_baseline("scorecard-baseline.json")
+
+# on every later version
+diff = pipeline.scorecard(instances=30).compare("scorecard-baseline.json")
+diff.assert_no_regression()   # fail a CI build on a cell that got worse
 ```
 
-On your own data, which has no answer key, `result.compare(baseline, metric="mae")`
-pairs two runs case by case and says whether `result` is better, worse, or shows
+### Beyond the scorecard
+
+On your own data, which has no answer key, `timegym.compare_reports` pairs two
+reports case by case and says whether the candidate is better, worse, or shows
 no clear difference, by group if you ask
-([Metrics and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/#compare-two-forecasters-on-the-same-cases)).
+([Scores and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/#compare-two-forecasters-on-the-same-cases)).
 Checks of your own join the built-in ones with `checks=`, such as
 `within(0, None)` for rainfall or sales, which can't go below zero
 ([Your own output checks](https://diogoseca.github.io/timegym/docs/api/diagnostics/#your-own-output-checks)).
-For yes/no outcomes, `result.calibration()` says whether a
+For yes/no outcomes, `timegym.diagnostics.calibration(run)` says whether a
 forecast of 70% came true about 70% of the time
 ([Are the chances honest?](https://diogoseca.github.io/timegym/docs/api/diagnostics/#are-the-chances-honest)).
 A kind of series you can simulate, with its answer key, becomes a scorecard
 row of your own: pass a `Pattern` in `patterns=` beside the built-in keys
 ([Your own kind of series](https://diogoseca.github.io/timegym/docs/api/scorecard/#your-own-kind-of-series)).
 
-The [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) shows the rest: the
-scorecard as a DataFrame (`result.scorecard.table`), how many draws to use and what `seed=None` does, and
-`run()` on series you choose. [Scorecards and the scenario grid](https://diogoseca.github.io/timegym/docs/api/scorecard/)
+The [Quick start](https://diogoseca.github.io/timegym/tutorials/01_quick_start/) shows the rest:
+how many draws to use, what `seed=None` does, and `pipeline.test` on series you
+choose. [Scorecards and the scenario grid](https://diogoseca.github.io/timegym/docs/api/scorecard/)
 lists every attribute.
 
 ## Why not just backtest?
@@ -176,39 +344,6 @@ checks the dates, the series and the shape first, and fails the forecast with
 the reason before it scores anything.
 
 [![A forecast with the right values on the wrong dates: the same error, a different diagnosis](https://raw.githubusercontent.com/diogoseca/timegym/main/docs/images/alignment-demo.png)](https://diogoseca.github.io/timegym/tutorials/03_faults_repairs_and_replay/)
-
-## Bring your own model
-
-A forecaster is any object with two methods. `fit(history)` gets the series so
-far. `predict(future_index)` gets the dates to forecast, the steps right after
-the history, and returns one value per date: a `Forecast`, or simply a list
-or NumPy array. This one repeats the last value it saw:
-
-```python
-from timegym import Forecast, Pipeline
-
-class RepeatLast:
-    def fit(self, history):            # the series so far, one column per series
-        self.last = history.iloc[-1]   # the last row seen
-        return self
-
-    def predict(self, future_index):   # the dates to forecast
-        return Forecast(future_index, [self.last] * len(future_index))
-
-result = Pipeline(RepeatLast()).run()
-```
-
-It scores 51, like the built-in `LastValueForecaster`.
-[Write and test a custom model](https://diogoseca.github.io/timegym/tutorials/02_custom_model/)
-adds several series, quantiles and a nearest-analogues forecaster.
-
-scikit-learn regressors plug in directly, fed the last `window_length` values:
-
-```python
-from sklearn.linear_model import Ridge
-
-result = Pipeline(Ridge(), window_length=12).run()
-```
 
 ## What TimeGym checks
 
@@ -231,7 +366,7 @@ scored, so a bug cannot pass as a slightly worse error.
 
 **3. Does it do what you declared?** Optional checks for specific properties: a model that claims to shift its forecast when the data shift can be tested for it, and sample paths can be tested for the right correlation between series.
 
-Each check returns one of five verdicts (`PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`) and the numbers that led to it. Metrics are always `INCONCLUSIVE`: TimeGym tells you how far off you are and leaves the pass mark to you. [How TimeGym decides](https://diogoseca.github.io/timegym/docs/concepts/how-timegym-decides/) explains each verdict, and [Metrics and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/) each metric.
+Each check returns one of five verdicts (`PASS`, `FAIL`, `INCONCLUSIVE`, `UNSUPPORTED`, `ERROR`) and the numbers that led to it. Scores are always `INCONCLUSIVE`: TimeGym tells you how far off you are and leaves the pass mark to you. [How TimeGym decides](https://diogoseca.github.io/timegym/docs/concepts/how-timegym-decides/) explains each verdict, and [Scores and diagnostics](https://diogoseca.github.io/timegym/docs/api/diagnostics/) each score.
 
 ## Scenarios
 
@@ -295,7 +430,7 @@ cause of a bug, repair a model, detect data leakage in general, or work out an
 answer key for data you bring yourself: real data is scored against what
 happened, and the checks that need a key say `UNSUPPORTED`. To score your own
 data, cut a series into cases with `cases_from_series` and pass them to
-`pipeline.run(cases=...)`; forecasts made elsewhere are scored with
+`pipeline.test(cases=...)`; forecasts made elsewhere are scored with
 `ForecastRun.from_forecasts`. Panels, hierarchies and missing observations are
 out of scope for now; [Data preparation](docs/api/data-preparation.md#irregular-readings)
 shows how to put readings taken at irregular times on a regular grid without
@@ -321,13 +456,13 @@ Zenodo, cite that release's DOI.
   author = {Seca, Diogo},
   title = {{TimeGym: verification and diagnosis for forecasting pipelines}},
   year = {2026},
-  version = {1.13.1},
+  version = {1.14.1},
   url = {https://github.com/diogoseca/timegym},
 }
 ```
 
 Seca, D. (2026). *TimeGym: verification and diagnosis for forecasting pipelines*
-(Version 1.13.1) [Computer software]. https://github.com/diogoseca/timegym
+(Version 1.14.1) [Computer software]. https://github.com/diogoseca/timegym
 
 The 2021 preprint (arXiv version 1, the original prototype):
 
