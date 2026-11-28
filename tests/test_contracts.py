@@ -103,21 +103,21 @@ def test_mean_helper_does_not_treat_median_as_expectation():
 
 
 def test_datetime_task_and_index_alignment():
-    context_index = pd.date_range("2024-01-01", periods=3, tz="UTC")
+    history_index = pd.date_range("2024-01-01", periods=3, tz="UTC")
     future_index = pd.date_range("2024-01-04", periods=2, tz="UTC")
-    forecast_task = ForecastTask(pd.DataFrame({"y": [1, 2, 3]}, index=context_index), future_index)
+    forecast_task = ForecastTask(pd.DataFrame({"y": [1, 2, 3]}, index=history_index), future_index)
     assert Forecast(future_index, point=np.zeros((2, 1))).validate(forecast_task) == []
     wrong = Forecast(pd.date_range("2024-01-05", periods=2, tz="UTC"), point=np.zeros((2, 1)))
     assert "index_mismatch" in codes(wrong, forecast_task)
 
 
 @pytest.mark.parametrize("values", [[1, np.nan], [1, np.inf], ["a", "b"]])
-def test_invalid_context_rejected(values):
+def test_invalid_history_rejected(values):
     with pytest.raises(ValueError):
         ForecastTask(pd.DataFrame({"y": values}), pd.RangeIndex(2, 4))
 
 
-def test_context_and_future_must_be_nonempty_ordered_and_disjoint():
+def test_history_and_future_must_be_nonempty_ordered_and_disjoint():
     with pytest.raises(ValueError):
         ForecastTask(pd.DataFrame({"y": []}), pd.RangeIndex(2, 4))
     with pytest.raises(ValueError, match="after"):
@@ -159,13 +159,13 @@ def test_complex_forecasts_are_diagnosed_without_lossy_conversion(representation
 
 @pytest.mark.filterwarnings("error")
 @pytest.mark.parametrize("dtype", [complex, object])
-def test_complex_levels_and_context_are_rejected_without_conversion(dtype):
+def test_complex_levels_and_history_are_rejected_without_conversion(dtype):
     levels = np.array([np.complex128(0.1 + 0.2j), 0.5, 0.9], dtype=dtype)
     prediction = Forecast(pd.RangeIndex(2), quantiles=np.zeros((2, 1, 3)), levels=levels)
     assert "invalid_levels" in codes(prediction)
-    context = pd.DataFrame({"y": np.array([np.complex128(1 + 2j), 3.0], dtype=dtype)})
+    history = pd.DataFrame({"y": np.array([np.complex128(1 + 2j), 3.0], dtype=dtype)})
     with pytest.raises(ValueError, match="real"):
-        ForecastTask(context, pd.RangeIndex(2, 4))
+        ForecastTask(history, pd.RangeIndex(2, 4))
 
 
 @pytest.mark.filterwarnings("error")

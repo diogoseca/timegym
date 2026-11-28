@@ -134,7 +134,7 @@ def test_exact_non_gaussian_sampler_calibrates_and_detects_collapsed_variance():
 
 
 def test_non_gaussian_reference_evidence_is_explicit_without_changing_point_scores():
-    baseline = Scenario("white_noise", context_length=12, horizon=2,
+    baseline = Scenario("white_noise", history_length=12, horizon=2,
                         n_targets=2).generate(seed=6)
     reference = bimodal_reference()
     case = Case(baseline.task, baseline.observed, reference, baseline.manifest)
@@ -143,7 +143,7 @@ def test_non_gaussian_reference_evidence_is_explicit_without_changing_point_scor
     assert point.status == "INCONCLUSIVE"
     assert point.evidence["reference"]["kind"] == "analytic_moments_simulation"
     assert point.evidence["reference"]["quantiles_kind"] == "monte_carlo"
-    assert result.metrics["mean_reference_mse"] == 0
+    assert result.metrics["avoidable_mse"] == 0
     assert not any(d.status == "ERROR" for d in result.diagnostics)
     old_result = evaluate_forecast(baseline, baseline.reference.forecast(n_samples=32, seed=5))
     old_point = next(d for d in old_result.diagnostics if d.name == "point_accuracy")

@@ -324,7 +324,7 @@ class _Scenario:
         self.level, self.floor = level, floor
 
     def generate(self, seed):
-        task = type("Task", (), {"context": pd.DataFrame({"y": np.arange(120.0) + self.level + seed})})()
+        task = type("Task", (), {"history": pd.DataFrame({"y": np.arange(120.0) + self.level + seed})})()
         reference = type("Ref", (), {"variance": np.full((24, 1), self.floor)})()
         return type("Case", (), {"task": task, "observed": pd.DataFrame({"y": np.full(24, -1.0)}),
                                  "reference": reference})()

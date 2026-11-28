@@ -1,10 +1,10 @@
-# Scores and diagnostics
+# Metrics and diagnostics
 
-**In short.** Scores measure how far a forecast is, both from what actually
-happened (`mse`, `mae`, `mase`) and from the answer key (`mean_reference_mse`);
-lower is better. Every report records these; more scores, such as `brier` and
+**In short.** Metrics measure how far a forecast is, both from what actually
+happened (`mse`, `mae`, `mase`) and from the answer key (`avoidable_mse`);
+lower is better. Every report records these; more metrics, such as `brier` and
 `log_loss` for yes/no outcomes, or functions of your own, are recorded when you
-ask for them with `scores=`. Output checks of your own, such as a range the
+ask for them with `metrics=`. Output checks of your own, such as a range the
 values must stay in, are added with `checks=`. For forecasts of a yes/no outcome,
 `calibration` says whether a forecast of 70% came true about 70% of the time. A diagnostic is one check's result: a verdict (`PASS`, `FAIL`,
 `INCONCLUSIVE`, `UNSUPPORTED` or `ERROR`), a message, and the numbers it rests
@@ -12,45 +12,54 @@ on, called its evidence. Accuracy diagnostics are always `INCONCLUSIVE`,
 because TimeGym sets no pass mark for accuracy; that threshold is yours.
 [How TimeGym decides](../concepts/how-timegym-decides.md) explains the verdicts.
 
-## Scores
+## Metrics
 
-All scores are losses, so lower is better. Each takes finite arrays and raises
+All metrics are losses, so lower is better. Each takes finite arrays and raises
 `ValueError` for empty, nonfinite or misshapen input: `predicted` matches the
 shape of `observed`, quantiles add a trailing level axis, and samples add a
 leading sample axis. `UndefinedMetricError`, a `ValueError` subclass, marks a
-score that is undefined for otherwise valid data.
+metric that is undefined for otherwise valid data.
 
-### Point scores
+### Point metrics
 
-A point score is minimized in expectation by one functional of the predictive
+A point metric is minimized in expectation by one functional of the predictive
 distribution, so it has to match what the point denotes
 ([Gneiting 2011](https://doi.org/10.1016/j.ijforecast.2009.12.015)).
 `Forecast.point` denotes a predictive mean.
 
-| Function | What it computes | What it scores | Evaluator records it |
+| Function | What it computes | What it measures | Evaluator records it |
 | --- | --- | --- | --- |
 | `mse(observed, predicted)` | Mean squared error over all coordinates | The mean: squared error is minimized in expectation by the predictive mean | With a point output |
 | `mae(observed, predicted)` | Mean absolute error over all coordinates | The median: absolute error is minimized in expectation by the predictive median | With a point output |
-| `mase(observed, predicted, context, seasonality=1)` | Absolute error divided, per target, by the mean absolute `seasonality`-step change of that target in the context (time is axis zero), then averaged | The median, as for `mae`, because each target's scale is fixed by the context | With a point output, always with `seasonality=1` |
-| `rmse(observed, predicted)` | Square root of `mse`, in the data's units | The mean, as for `mse` | When asked for with `scores=` |
-| `rmsse(observed, predicted, context, seasonality=1)` | Each target's RMSE divided by the root mean squared `seasonality`-step change of that target in the context, then averaged over targets: the scaled error of the M5 competition ([Makridakis, Spiliotis and Assimakopoulos 2022](https://doi.org/10.1016/j.ijforecast.2021.11.013)) | The mean, as for `mse` | When asked for with `scores=` |
-| `mean_reference_mse(reference_mean, predicted)` | Mean squared distance from a supplied conditional mean | The conditional mean itself: with a valid conditional mean it is the conditional excess squared-error risk, not realized loss against a future observation | With a point output and a case reference |
+| `mase(observed, predicted, history, seasonality=1)` | Absolute error divided, per target, by the mean absolute `seasonality`-step change of that target in the history (time is axis zero), then averaged | The median, as for `mae`, because each target's scale is fixed by the history | With a point output, always with `seasonality=1` |
+| `rmse(observed, predicted)` | Square root of `mse`, in the data's units | The mean, as for `mse` | When asked for with `metrics=` |
+| `rmsse(observed, predicted, history, seasonality=1)` | Each target's RMSE divided by the root mean squared `seasonality`-step change of that target in the history, then averaged over targets: the scaled error of the M5 competition ([Makridakis, Spiliotis and Assimakopoulos 2022](https://doi.org/10.1016/j.ijforecast.2021.11.013)) | The mean, as for `mse` | When asked for with `metrics=` |
+| `mean_reference_mse(reference_mean, predicted)` | Mean squared distance from a supplied conditional mean | The conditional mean itself: with a valid conditional mean it is the conditional excess squared-error risk, not realized loss against a future observation | With a point output and a case reference, as `avoidable_mse` |
 
 `mase` and `rmsse` raise `UndefinedMetricError` when a target's naive-error
-scale is zero, as for a constant target, or when the context is no longer than
+scale is zero, as for a constant target, or when the history is no longer than
 `seasonality`; they add no epsilon to the denominator and do not drop constant
 targets. MAPE and sMAPE are left out on purpose: they are undefined when an
 actual value is zero and favour forecasts that are too low
 ([Hyndman and Koehler 2006](https://doi.org/10.1016/j.ijforecast.2006.03.001));
 `mase` and `rmsse` meet the same need.
 `evaluate_forecast` always calls `mase` with `seasonality=1`, so the evaluator
-scales each target by its lag-1 naive in-context MAE whatever the scenario's
+scales each target by its lag-1 naive MAE over the history whatever the scenario's
 seasonal period; `point_accuracy` evidence records `mase_seasonality: 1`.
 `mean_reference_mse` is not a reference for other losses.
 
-### Uncertainty scores
+Each case with an answer key records the distance from it as `avoidable_mse`:
+the part of the error the model could have avoided, beside the noise no
+forecaster can remove, under the name the scorecard's table gives the same
+number. Its old name still reads it, and warns: `case.metrics["mean_reference_mse"]`
+and `metric="mean_reference_mse"` in `plot_errors`, `result.compare` and
+`compare_reports`.
+Reports saved by TimeGym 1.14.1 and earlier load with the new name, so they
+compare with new ones.
 
-Calibration and sharpness are the two properties these scores reward.
+### Uncertainty metrics
+
+Calibration and sharpness are the two properties these metrics reward.
 Calibration is the statistical consistency between the predictive distribution
 and the observations; sharpness is the concentration of the predictive
 distribution, a property of the forecast alone. The aim is to maximize sharpness
@@ -60,11 +69,11 @@ A proper scoring rule rewards both at once: its expected value is lowest when th
 forecast is the distribution the observation is drawn from
 ([Gneiting and Katzfuss 2014](https://doi.org/10.1146/annurev-statistics-062713-085831)).
 
-| Function | What it computes | What it scores | Evaluator records it |
+| Function | What it computes | What it measures | Evaluator records it |
 | --- | --- | --- | --- |
 | `pinball(observed, quantiles, levels)` | Mean quantile (pinball) loss over coordinates and levels, without the optional factor of two; levels must increase strictly in (0, 1) and quantiles must not cross | The quantile at each level: pinball loss at level α is minimized in expectation by the α-quantile | With a quantile output |
-| `interval_score(observed, quantiles, levels)` | For the band from the lowest to the highest level, which must be symmetric (such as 0.1 and 0.9, a central band of 1 − α = 80%): its width plus 2/α times the distance by which the outcome falls outside it, averaged over coordinates ([Winkler 1972](https://doi.org/10.1080/01621459.1972.10481224); [Gneiting and Raftery 2007](https://doi.org/10.1198/016214506000001437)) | The band's two quantiles, as a proper score for a central interval: narrow bands that still hold the outcome score best | When asked for with `scores=` |
-| `weighted_interval_score(observed, quantiles, levels)` | The median's absolute error times 1/2 plus each symmetric pair's interval score times α/2, divided by the number of pairs plus 1/2 ([Bracher et al. 2021](https://doi.org/10.1371/journal.pcbi.1008618)); levels must be 0.5 plus pairs symmetric around it. It equals twice `pinball` over the same levels | Every quantile at once, as a proper score that approximates CRPS | When asked for with `scores=` |
+| `interval_score(observed, quantiles, levels)` | For the band from the lowest to the highest level, which must be symmetric (such as 0.1 and 0.9, a central band of 1 − α = 80%): its width plus 2/α times the distance by which the outcome falls outside it, averaged over coordinates ([Winkler 1972](https://doi.org/10.1080/01621459.1972.10481224); [Gneiting and Raftery 2007](https://doi.org/10.1198/016214506000001437)) | The band's two quantiles, as a proper score for a central interval: narrow bands that still hold the outcome do best | When asked for with `metrics=` |
+| `weighted_interval_score(observed, quantiles, levels)` | The median's absolute error times 1/2 plus each symmetric pair's interval score times α/2, divided by the number of pairs plus 1/2 ([Bracher et al. 2021](https://doi.org/10.1371/journal.pcbi.1008618)); levels must be 0.5 plus pairs symmetric around it. It equals twice `pinball` over the same levels | Every quantile at once, as a proper score that approximates CRPS | When asked for with `metrics=` |
 | `crps(observed, samples)` | Mean marginal CRPS of the finite empirical ensemble: the expected absolute error of a draw minus half the expected absolute difference between two draws, diagonal pairs included | Each coordinate's whole marginal distribution, as a proper scoring rule; it is unchanged when samples are permuted independently per coordinate, so it cannot see dependence | With a sample output |
 | `energy_score(observed, samples, chunk_size=128)` | Energy score of the whole flattened horizon-target vector with the Euclidean norm, not divided by the number of coordinates; diagonal pairs included | The whole joint distribution, as a proper scoring rule for multivariate forecasts; with one coordinate it equals CRPS | With a sample output |
 | `variogram_score(observed, samples, exponent=0.5)` | Mean squared difference between the realized and the expected `abs(x_i - x_j) ** exponent` over all distinct coordinate pairs, equally weighted; `exponent` lies in (0, 2) | Pairwise dependence between coordinates; it ignores a shift shared by all coordinates and is not strictly proper over unrestricted joint distributions | With a sample output; undefined for one coordinate |
@@ -87,10 +96,10 @@ A forecast of a yes/no outcome, such as rain tomorrow, a customer leaving this
 month or a machine failing within a day, is a probability, and the outcome is
 1 or 0. Put the probability in `Forecast.point`, the predictive mean.
 
-| Function | What it computes | What it scores | Evaluator records it |
+| Function | What it computes | What it measures | Evaluator records it |
 | --- | --- | --- | --- |
-| `brier(observed, predicted)` | Mean squared distance between the probability and the 0/1 outcome ([Brier 1950](https://doi.org/10.1175/1520-0493(1950)078%3C0001:VOFEIT%3E2.0.CO;2)): `mse`, after checking that outcomes are 0 or 1 and forecasts lie in [0, 1] | The probability, as a proper score | When asked for with `scores=` |
-| `log_loss(observed, predicted, *, eps=None)` | Mean of minus the natural log of the probability given to what happened ([Good 1952](https://doi.org/10.1111/j.2517-6161.1952.tb00104.x)) | The probability, as a strictly proper score that punishes confident mistakes hard | When asked for with `scores=` |
+| `brier(observed, predicted)` | Mean squared distance between the probability and the 0/1 outcome ([Brier 1950](https://doi.org/10.1175/1520-0493(1950)078%3C0001:VOFEIT%3E2.0.CO;2)): `mse`, after checking that outcomes are 0 or 1 and forecasts lie in [0, 1] | The probability, as a proper score | When asked for with `metrics=` |
+| `log_loss(observed, predicted, *, eps=None)` | Mean of minus the natural log of the probability given to what happened ([Good 1952](https://doi.org/10.1111/j.2517-6161.1952.tb00104.x)) | The probability, as a strictly proper score that punishes confident mistakes hard | When asked for with `metrics=` |
 
 Both raise `ValueError` naming the first outcome that is not 0 or 1, or the
 first forecast outside [0, 1]. A forecast of exactly 0 or 1 that turned out
@@ -104,13 +113,13 @@ Whether a forecaster's chances are honest, so that its forecasts of 70% come
 true about 70% of the time, is a question for many forecasts at once:
 [`calibration`](#are-the-chances-honest).
 
-### Your own scores
+### Your own metrics
 
-`evaluate_forecast`, `Pipeline.test`, `Pipeline.run` and
-`ForecastRun.from_forecasts` take `scores=`: a list of names of functions in
+`evaluate_forecast`, `Pipeline.run`, `ForecastRun.from_forecasts` and
+`Pipeline.test` take `metrics=`: a list of names of functions in
 `timegym.metrics` and functions of your own, or a dictionary from the name to
 record to a function. Each value is stored in `case.metrics` under its name,
-beside the scores every report records, so `plot_errors(name)`, the saved JSON
+beside the metrics every report records, so `plot_errors(name)`, the saved JSON
 and comparisons can use it.
 
 ```python
@@ -125,31 +134,34 @@ def within_10_percent(observed, predicted):
     return float(np.mean(np.abs(predicted - observed) <= 0.1 * np.abs(observed)))
 
 
-scores = ["rmse", within_10_percent]                                  # by name, or your own
-scores = {"log_loss": partial(log_loss, eps=1e-6), "close": within_10_percent}  # with settings
+metrics = ["rmse", within_10_percent]                                  # by name, or your own
+metrics = {"log_loss": partial(log_loss, eps=1e-6), "close": within_10_percent}  # with settings
 ```
 
-A score says what it needs by its argument names: `observed` (what happened),
-`predicted` (the point forecast), `quantiles`, `levels`, `samples` and `context`
-(the history), each a NumPy array shaped as above, time on the first axis of
-`observed` and `context`. An argument with a default is passed only when the
-forecast has it; any other argument must have a default, or the request is
-refused before anything runs. A request is also refused when its name is
-already recorded in every report, such as `"mse"`, or asked for twice: record a
-score again with other settings under a new name, such as
-`{"mase_12": partial(mase, seasonality=12)}`. A function needs a name of its
-own, so give a `lambda` or a `partial` one with a dictionary.
+A metric says what it needs by its argument names: `observed` (what happened),
+`predicted` (the point forecast), `quantiles`, `levels`, `samples` and `history`
+(the past the model saw), each a NumPy array shaped as above, time on the first
+axis of `observed` and `history`. An argument with a default is passed only when
+the forecast has it; any other argument must have a default, or the request is
+refused before anything runs. An argument named `context`, the old name of
+`history`, still gets the history and warns once per run. A request is also
+refused when its name is already recorded in every report, such as `"mse"`, or
+asked for twice: record a metric again with other settings under a new name,
+such as `{"mase_12": partial(mase, seasonality=12)}`. A function needs a name
+of its own, so give a `lambda` or a `partial` one with a dictionary.
 
-For each case, a score whose required input the forecast lacks is
+For each case, a metric whose required input the forecast lacks is
 `UNSUPPORTED`, one that raises `UndefinedMetricError` is `INCONCLUSIVE`, and one
 that raises anything else, or returns something other than one finite number,
 is an `ERROR` whose message names the exception. Each appears as
 `metric_<name>`. The report's metadata lists what was asked for under
-`"scores"`: each score's `name`, `function`, keyword `settings` and whether it is
-`replayable`. Replay computes again the scores that come from
+`"metrics"`: each metric's `name`, `function`, keyword `settings` and whether it is
+`replayable`. Replay computes again the metrics that come from
 `timegym.metrics`, with plain settings, and leaves the others out of the
 comparison, listing them in `metadata["replay"]["not_recomputed"]`. Nothing is
-recorded unless you ask, so reports saved earlier replay exactly as before.
+recorded unless you ask, so reports saved earlier replay exactly as before; one
+saved by TimeGym 1.14.1 or earlier lists its metrics under `"scores"`, and replays
+them the same way. `scores=`, the old name of `metrics=`, still works and warns.
 
 ## Your own output checks
 
@@ -187,9 +199,32 @@ values and the most extreme one, such as `quantiles: 7 values below 0 (lowest
 `ERROR`, so a typo can't switch the check off. Its name in a report is
 `within`; to use two, name them with a dictionary.
 
+`timegym.checks.dependence(n_calibration=99, alpha=0.05)` asks for the
+covariance check below on every case: whether the sample paths of several
+series, or of many steps, move together as the answer key says.
+
+```python
+from timegym.checks import dependence
+
+result = pipeline.run(["seasonal"], checks=[dependence()])
+result.checks            # now also "Joint spread matches the answer key"
+```
+
+It needs sample paths and an answer key with a covariance; without them its
+finding is `UNSUPPORTED`. Its row in `result.checks` is `dependence` and its
+finding in each case is `reference_covariance`. A report records
+`n_calibration` and `alpha` under `metadata["diagnostic_settings"]`, so replay
+runs the same check. Each case's calibration draws are seeded 100,000 after the
+case's own seed, so they never reuse the case's draws; `evaluate_forecast`
+takes that seed as `dependence_seed`. The old way to ask for it,
+`check_dependence=True` with `n_calibration=`, `alpha=` and
+`dependence_seed_offset=` on `Pipeline.run`, `ForecastRun.from_forecasts`,
+`evaluate_forecast` and `Pipeline.test`, still works and warns; given beside
+`dependence()`, it is refused.
+
 A check of your own is a function that asks for its inputs by argument name,
-as a score does (`observed`, `predicted`, `quantiles`, `levels`, `samples`,
-`context`), and may also ask for `target_names`, the names of the series in
+as a metric does (`observed`, `predicted`, `quantiles`, `levels`, `samples`,
+`history`), and may also ask for `target_names`, the names of the series in
 order. It returns `True` when the forecast passes, or a message saying what is
 wrong. Its title, shown in `report.checks` and in the error of
 `assert_passed`, is the first line of its docstring without a final full stop,
@@ -218,7 +253,7 @@ a function has no name of its own (give a `lambda` one with a dictionary),
 takes the name of a built-in check such as `runs`, is asked for twice, or needs
 an argument TimeGym cannot give. Each finding keeps the check's title in its
 evidence, so a saved report lists and counts the checks without your code. The
-report's metadata lists what was asked for under `"checks"`, as for scores.
+report's metadata lists what was asked for under `"checks"`, as for metrics.
 Replay runs `within` checks again and leaves your own functions out of the
 comparison, listing them in `metadata["replay"]["checks_not_rerun"]`. Without
 `checks=`, reports are exactly as before.
@@ -234,9 +269,10 @@ no multiple-comparison adjustment is silently applied. Too few samples or
 insufficient p-value resolution yield `INCONCLUSIVE`. Fewer than two coordinates
 or a deterministic reference yield `UNSUPPORTED`. Both this check and
 `evaluate_forecast` require explicit nonnegative integer dependence seeds.
-Invalid seeds, calibration counts, alpha, or dependence flags are caller errors
-and raise before evaluation, including when dependence checking is disabled.
-Point, quantile, and sample accuracy diagnostics include their available scores
+Invalid seeds are caller errors and raise before evaluation, including when
+the dependence check is not asked for; `dependence()` refuses invalid
+calibration counts and alpha when it is made.
+Point, quantile, and sample accuracy diagnostics include their available metrics
 in evidence, with reference capabilities when a simulation reference supplies them.
 
 `timegym.diagnostics.rank_alarm(observed, calibration, *, alpha=0.05)` asks
@@ -273,7 +309,7 @@ result = rank_alarm(observed, calibration, alpha=0.05)
 result.p_value, result.status, result.threshold
 ```
 
-`timegym.checks.check_shift_equivariance(pipeline, context, future_index, *,
+`timegym.checks.check_shift_equivariance(pipeline, history, future_index, *,
 shift=10.0, atol=1e-8, rtol=1e-7)` tests
 f(y+c)=f(y)+c. Use it only when this property is part of the model's intended
 contract; many legitimate models are not location equivariant.
@@ -346,9 +382,9 @@ diagnostic, so it has no row.
 ### `point_accuracy`
 
 - **Emitted by:** `evaluate_forecast`
-- **Evidence keys:** `INCONCLUSIVE`: the computed `mse`, `mae`, `mase` and `mean_reference_mse`, `mase_seasonality`, `reference`. `UNSUPPORTED`: none
+- **Evidence keys:** `INCONCLUSIVE`: the computed `mse`, `mae`, `mase` and `avoidable_mse`, `mase_seasonality`, `reference`. `UNSUPPORTED`: none
 - **Threshold or tolerance:** None: descriptive
-- **What a FAIL or ERROR usually means:** Never `FAIL` or `ERROR`; a score that cannot be recorded appears as `metric_<name>`. `UNSUPPORTED`: no point output.
+- **What a FAIL or ERROR usually means:** Never `FAIL` or `ERROR`; a metric that cannot be recorded appears as `metric_<name>`. `UNSUPPORTED`: no point output.
 
 ### `quantile_accuracy`
 
@@ -366,10 +402,10 @@ diagnostic, so it has no row.
 
 ### `metric_<name>`
 
-- **Emitted by:** `evaluate_forecast`, only when a score cannot be recorded; `<name>` is `mse`, `mae`, `mase`, `mean_reference_mse`, `pinball`, `interval_width`, `crps`, `energy_score`, `variogram_score`, or the name of a score asked for with `scores=`
-- **Evidence keys:** `INCONCLUSIVE`: `reason` (`undefined_metric`). `ERROR`: exception evidence. `UNSUPPORTED`: `needs`, the inputs the requested score needs
+- **Emitted by:** `evaluate_forecast`, only when a metric cannot be recorded; `<name>` is `mse`, `mae`, `mase`, `avoidable_mse`, `pinball`, `interval_width`, `crps`, `energy_score`, `variogram_score`, or the name of a metric asked for with `metrics=`
+- **Evidence keys:** `INCONCLUSIVE`: `reason` (`undefined_metric`). `ERROR`: exception evidence. `UNSUPPORTED`: `needs`, the inputs the requested metric needs
 - **Threshold or tolerance:** None: descriptive
-- **What a FAIL or ERROR usually means:** `ERROR`: the calculation raised or returned a nonfinite value, such as an overflowing interval width, or a requested score raised, such as `brier` on outcomes that are not 0 or 1; the score is missing from `metrics`. `INCONCLUSIVE`: the score is undefined for valid data, such as `mase` on a constant target, `variogram_score` with one coordinate or `log_loss` on a confident mistake without `eps`. `UNSUPPORTED`: a requested score needs an output the forecast lacks, such as samples.
+- **What a FAIL or ERROR usually means:** `ERROR`: the calculation raised or returned a nonfinite value, such as an overflowing interval width, or a requested metric raised, such as `brier` on outcomes that are not 0 or 1; the metric is missing from `metrics`. `INCONCLUSIVE`: the metric is undefined for valid data, such as `mase` on a constant target, `variogram_score` with one coordinate or `log_loss` on a confident mistake without `eps`. `UNSUPPORTED`: a requested metric needs an output the forecast lacks, such as samples.
 
 ### `check_<name>`
 
@@ -387,7 +423,7 @@ diagnostic, so it has no row.
 
 ### `reference_covariance`
 
-- **Emitted by:** `covariance_dependence_check`; `evaluate_forecast`, `Pipeline.test` and `Pipeline.run` with `check_dependence=True`, where an exception becomes the `ERROR`
+- **Emitted by:** `covariance_dependence_check`; `evaluate_forecast`, `Pipeline.test` and `Pipeline.run` with `dependence()` (`timegym.checks.dependence`) in `checks=`, where an exception becomes the `ERROR`
 - **Evidence keys:** `statistic`, `statistic_name`, `p_value`, `alpha`, `n_calibration`, `critical_value`, `minimum_p_value`, `n_samples`, `n_coordinates`, `seed`, `null`, `multiplicity`; `reference`, and `covariance_target` for a Monte Carlo covariance target. Early `UNSUPPORTED` and `INCONCLUSIVE` results record fewer keys; `ERROR` records exception evidence
 - **Threshold or tolerance:** `FAIL` when the Monte Carlo rank p-value is at most `alpha` (defaults `alpha=0.05`, `n_calibration=99`). `INCONCLUSIVE` below 20 samples or when `1 / (n_calibration + 1)` exceeds `alpha`
 - **What a FAIL or ERROR usually means:** `FAIL`: the ensemble covariance differs from the reference law, through a variance or dependence error or samples that are not independent draws. `ERROR`: the comparison raised, for example on invalid reference calibration draws.
@@ -404,23 +440,25 @@ diagnostic, so it has no row.
 - **Emitted by:** `Pipeline.run` and `Pipeline.test`
 - **Evidence keys:** Exception evidence
 - **Threshold or tolerance:** None: any exception
-- **What a FAIL or ERROR usually means:** The model or its target transform raised while fitting or predicting, or `predict` returned something other than a `Forecast`; nothing was scored for that case.
+- **What a FAIL or ERROR usually means:** The model or its target transform raised while fitting or predicting, or `predict` returned something other than a `Forecast`; no metric was recorded for that case.
 
 ## Compare two forecasters on the same cases
 
-`timegym.compare_reports(candidate, baseline, *, metric, by=None,
-cluster=None, alpha=0.05, higher_is_better=False, seed=0)` says whether a
-candidate forecaster is better or worse than a baseline on the same cases, or
-shows no clear difference. Both reports must come from the same cases, in the
-same order: it pairs them by position and refuses two reports whose case
-manifests differ, naming the first difference. Name the model in the report's
-metadata, not in the case manifest. `metric` is any score in `case.metrics`,
-your own included; lower is better unless `higher_is_better=True`.
+`result.compare(baseline, *, metric, by=None, cluster=None, alpha=0.05,
+higher_is_better=False, seed=0)` says whether the forecaster behind `result`,
+a run or a report, is better or worse than a baseline on the same cases, or
+shows no clear difference. `baseline` is a run or a report too. Both must come
+from the same cases, in the same order: it pairs them by position and refuses two reports whose case
+manifests differ, naming the first difference. Name the model where you make
+it, with `Pipeline(model, name=...)`, not in the case manifest. `metric` is
+any metric in `case.metrics`, your own included; lower is better unless
+`higher_is_better=True`.
 
 ```python
 import numpy as np
 import pandas as pd
-from timegym import LastValueForecaster, NaiveForecaster, Pipeline, cases_from_series, compare_reports
+from timegym import (DriftForecaster, LastValueForecaster, MeanForecaster, Pipeline,
+                     SeasonalLastValueForecaster, cases_from_series)
 
 rng = np.random.default_rng(0)
 days = pd.date_range("2024-01-01", periods=140, freq="D")
@@ -432,8 +470,8 @@ for store in range(16):
                                manifest={"store": f"store {store}", "region": ["north", "south"][store % 2]})
 
 baseline = Pipeline(LastValueForecaster()).run(cases=cases)
-candidate = Pipeline(NaiveForecaster("seasonal", period=7)).run(cases=cases)
-diff = compare_reports(candidate, baseline, metric="mae", by="region", cluster="store")
+candidate = Pipeline(SeasonalLastValueForecaster(period=7)).run(cases=cases)
+diff = candidate.compare(baseline, metric="mae", by="region", cluster="store")
 print(diff)
 diff.assert_no_regression()
 ```
@@ -469,23 +507,29 @@ rows. `assert_no_regression()` raises when a row is worse or too few to tell.
   check in the candidate makes its row `"worse"`. A case the candidate scores
   and the baseline did not is counted in `newly_passing` and left out of the
   test.
-- **Roundoff.** Two scores of a case that differ by no more than `1e-9`, or
-  `1e-8` times the largest score in the row, count as the same, as in a
-  scorecard's comparison. Two reports with the same scores show no clear
+- **Roundoff.** Two values of a metric for one case that differ by no more than
+  `1e-9`, or `1e-8` times the largest value in the row, count as the same, as in
+  a scorecard's comparison. Two reports with the same values show no clear
   difference, with a p-value of 1.
 
 ### Many candidates against one baseline
 
-Pass a list of reports, labelled by the model each report's metadata names, or
-a dictionary of named reports. Each candidate's p-value is adjusted for how
-many were tried, so the best of many does not beat the baseline by luck.
+`timegym.compare_reports(candidates, baseline, *, metric, ...)` takes the
+same settings and compares several candidates with one baseline at once; with
+one candidate it is `candidate.compare(baseline, ...)`. Pass it a list of
+reports, each labelled by the name its pipeline was given or, without one, by
+its model; a dictionary of reports keyed by name works too. Each candidate's
+p-value is adjusted for how many were tried, so the best of many does not
+beat the baseline by luck.
 
 ```python
-candidates = {
-    "same weekday last week": candidate,
-    "mean so far": Pipeline(NaiveForecaster("mean")).run(cases=cases),
-    "straight line": Pipeline(NaiveForecaster("drift")).run(cases=cases),
-}
+from timegym import compare_reports
+
+candidates = [
+    Pipeline(SeasonalLastValueForecaster(period=7), name="same weekday last week").run(cases=cases),
+    Pipeline(MeanForecaster(), name="mean so far").run(cases=cases),
+    Pipeline(DriftForecaster(), name="straight line").run(cases=cases),
+]
 print(compare_reports(candidates, baseline, metric="mae", cluster="store"))
 ```
 
@@ -498,7 +542,7 @@ mae against the baseline (lower is better; alpha 0.05; cases in one store move t
 
 ### How the test works
 
-For each pair of scores, the difference is candidate minus baseline. If the
+For each pair of values, the difference is candidate minus baseline. If the
 two forecasters were alike, each difference, or each cluster's sum of
 differences, would be as likely to be positive as negative. The test flips
 their signs at random 9,999 times, seeded from `seed` and the number of
@@ -527,11 +571,14 @@ new version is worse.
 ## Are the chances honest?
 
 When a forecast of a yes/no outcome says 70%, it should happen about 70% of
-the time. `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
-level=0.95, seed=0)` checks that on a run of such forecasts (made with `keep_data=True`, since it
-reads every forecast and what happened), and
-`calibration(observed, predicted, ...)` on arrays of outcomes (0 or 1) and
-chances. It returns a `Calibration`:
+the time. `result.calibration(*, bins=10, cluster=None, interval_level=0.95,
+seed=0)` checks that on a run of such forecasts (made with `keep_data=True`,
+since it reads every forecast and what happened). The function
+`timegym.diagnostics.calibration` does the same on a run,
+`calibration(result, ...)`, and on arrays of outcomes (0 or 1) and chances,
+`calibration(observed, predicted, ...)`. `level=`, the old name of
+`interval_level=`, still works and warns, and so does `Calibration.level`.
+It returns a `Calibration`:
 
 - `table`: one row per bin of equal width, from `low` to `high`, with the
   number of `forecasts` in it, their `mean_forecast` and the share that
@@ -540,7 +587,7 @@ chances. It returns a `Calibration`:
   forecast ([Cox 1958](https://doi.org/10.1093/biomet/45.3-4.562)): 1 is
   calibrated; below 1 the forecasts swing further from the average than what
   happened supports (too confident), above 1 not far enough (too timid).
-  `slope_interval` is its bootstrap interval at `level`.
+  `slope_interval` is its bootstrap interval at `interval_level`.
 - `intercept`, from the same regression with the slope held at 1: 0 is right
   on average, below 0 the forecasts are too high, above 0 too low
   ([Van Calster et al. 2019](https://doi.org/10.1186/s12916-019-1466-7)).
@@ -557,7 +604,6 @@ cycle, after adding one rainy and one dry step to each count:
 import numpy as np
 import pandas as pd
 from timegym import Pipeline, cases_from_series
-from timegym.diagnostics import calibration
 
 rng = np.random.default_rng(5)
 chance = 0.5 + 0.37 * np.sin(2 * np.pi * np.arange(240) / 12)  # rises and falls over 12 steps
@@ -571,8 +617,8 @@ for station in range(20):
 class ShareAtThisPointOfTheCycle:
     """The share of rainy steps so far at this point of the cycle, after adding one rainy and one dry step."""
 
-    def fit(self, context):
-        values = context.to_numpy()[:, 0]
+    def fit(self, history):
+        values = history.to_numpy()[:, 0]
         self.length_ = len(values)
         self.share_ = np.array([(values[phase::12].sum() + 1) / (len(values[phase::12]) + 2)
                                 for phase in range(12)])
@@ -582,7 +628,8 @@ class ShareAtThisPointOfTheCycle:
         return self.share_[np.arange(self.length_, self.length_ + len(future_index)) % 12]
 
 
-cal = calibration(Pipeline(ShareAtThisPointOfTheCycle()).run(cases=cases, keep_data=True), cluster="station")
+result = Pipeline(ShareAtThisPointOfTheCycle()).run(cases=cases, keep_data=True)
+cal = result.calibration(cluster="station")
 print(cal)
 ```
 
@@ -628,7 +675,7 @@ intercept; with every forecast the same, no slope; when the forecasts separate
 the outcomes perfectly, the slope has no finite value. `note` says which, and
 the value is NaN. A slope near 0 next to forecasts that stay near the average
 means they carry no information, not that they are too sure: the share of rainy
-steps so far, `NaiveForecaster("mean")`, forecasts between 40% and 60% on these
+steps so far, `MeanForecaster()`, forecasts between 40% and 60% on these
 cases and has a slope of −0.14.
 
 ## Case-level uncertainty intervals
@@ -638,7 +685,7 @@ observations and returns `count`, `n`, `rate`, and the Wilson `ci95` bounds.
 `timegym.statistics.paired_t_interval(values)` accepts at least two finite
 case-level differences and returns `mean`, `n`, and Student t `ci95` bounds.
 Cases must be independent; horizons and targets within a case are not replications.
-The t interval is for continuous score differences, not differences in alarm rates.
+The t interval is for continuous differences in a metric, not differences in alarm rates.
 
 ## Signatures
 
@@ -693,6 +740,8 @@ The t interval is for continuous score differences, not differences in alarm rat
 ::: timegym.checks.check_shift_equivariance
 
 ::: timegym.checks.within
+
+::: timegym.checks.dependence
 
 ::: timegym.statistics.wilson_interval
 

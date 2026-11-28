@@ -24,7 +24,7 @@ every case of every family.
 | Forecast contract | Partial oracle | `forecast_contract`, `contract_<code>`, `check_<name>` | On every case, before scoring; checks asked for with `checks=` on every case that meets the contract |
 | Reference score | Simplified data with known results | `point_accuracy`, `quantile_accuracy`, `sample_scores`, `metric_<name>`, `interval_coverage` | On every case that meets its contract; descriptive, never `PASS` or `FAIL` |
 | Declared relation | Known properties | `shift_equivariance` | When called with `check_shift_equivariance`, for a model that declares the property |
-| Statistical check | Statistical metamorphic test | `reference_covariance` | With `check_dependence=True`, or called with `covariance_dependence_check` |
+| Statistical check | Statistical metamorphic test | `reference_covariance` | With `checks=[dependence()]`, or called with `covariance_dependence_check` |
 
 The [diagnostics catalogue](../api/diagnostics.md#diagnostics-catalogue) gives
 each diagnostic's statuses, tolerance and evidence. The statistical check ranks
@@ -75,7 +75,7 @@ composed and financial families in
   `covariance_dependence_check` calls in tutorials 09 and 12, on reference
   ensembles with and without a cross-target fault. No tutorial runs the check on
   a fitted model's samples, or against a jump, volatility or regime fault in one
-  target. Tutorials 02 and 07 pass `check_dependence=True` on real data, which
+  target. Tutorials 02 and 07 pass `checks=[dependence()]` on real data, which
   has no reference, so the check returns `UNSUPPORTED`. Regime switching with
   jumps has an approximate reference, so tutorial 12 shows the check
   returning `UNSUPPORTED` there too.

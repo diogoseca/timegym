@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from timegym.contracts import Case, Forecast, ForecastTask, Reference
+from timegym.checks import dependence
 from timegym.diagnostics import evaluate_forecast
 
 
@@ -104,10 +105,10 @@ def test_function_reference_scores_truth_without_exposing_it_to_the_model():
     manifest = {"kind": "user_curve", "seed": 12}
     known = evaluate_forecast(Case(task, observed, supplied, manifest), forecast)
     unknown = evaluate_forecast(Case(task, observed, None, manifest), forecast,
-                                check_dependence=True)
-    assert known.metrics["mean_reference_mse"] == 0
+                                checks=[dependence()])
+    assert known.metrics["avoidable_mse"] == 0
     assert known.metrics["mse"] == unknown.metrics["mse"] == 0.25
-    assert "mean_reference_mse" not in unknown.metrics
+    assert "avoidable_mse" not in unknown.metrics
     assert any(d.name == "reference_covariance" and d.status == "UNSUPPORTED"
                for d in unknown.diagnostics)
     assert not any(d.status in {"FAIL", "ERROR"} for d in known.diagnostics)

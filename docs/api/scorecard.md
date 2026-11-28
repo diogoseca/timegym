@@ -22,7 +22,7 @@ card.save("scorecard.png") # or .svg / .pdf
 `PATTERNS` is ten kinds of series, in plain words. Each `Pattern` carries a
 `title`, an `aka` (the textbook name), and two sentences: `predictable`, what a
 forecaster that knew the process could get right, and `unpredictable`, what no
-forecaster can get right by design. `build(noise, context_length, horizon)`
+forecaster can get right by design. `build(noise, history_length, horizon)`
 returns the row's `Scenario`, and `attainable_by` holds a model of the
 generator's own family (see [What a fitted model could score](#what-a-fitted-model-could-score)).
 
@@ -50,7 +50,7 @@ The noise is the standard deviation of an error added to each observation. For
 the AR and random-walk rows it is measurement noise on top of the hidden
 process, so the answer key comes from an exact Kalman filter.
 
-`scenario_grid(patterns=None, noise_levels=2, *, context_length=120,
+`scenario_grid(patterns=None, noise_levels=2, *, history_length=120,
 horizon=24)` returns one `GridCell(pattern, title, noise, noise_sd, scenario,
 definition)` per pattern and noise level, rows first. Each `scenario` is an
 ordinary `Scenario` that can also be passed to `Pipeline.run` or
@@ -197,7 +197,7 @@ table.assign(lost_on_top=table["attainable"] - table["score"])[
 ```
 
 Each `Pattern` carries the model as `attainable_by`, copied fresh for each
-series. It is an ordinary model with `fit(context)` and `predict(future_index)`,
+series. It is an ordinary model with `fit(history)` and `predict(future_index)`,
 so it can be scored like any other:
 
 ```python
@@ -218,12 +218,14 @@ recomputes them. Any other noise level, history length or horizon gets NaN and
 no triangle, unless you ask for it:
 
 ```python
-card = pipeline.run(noise_levels=3, attainable=True).scorecard
+card = pipeline.run(noise_levels=3, simulate_attainable=True).scorecard
 ```
 
-`attainable=True` simulates each missing value once and keeps it for the
+`simulate_attainable=True` simulates each missing value once and keeps it for the
 session. Each autoregressive or random-walk cell takes about 3 to 5 seconds,
-the others well under a second; nothing is simulated without it.
+the others well under a second; nothing is simulated without it. Its old name
+on `pipeline.scorecard(...)` and `timegym.scorecard.scorecard(...)`,
+`attainable=True`, still works and warns.
 
 ## Your own kind of series
 
@@ -237,7 +239,7 @@ falls over a 12-step cycle.
 
 ```python
 import numpy as np
-from timegym import NaiveForecaster, Pattern, Pipeline
+from timegym import Pattern, Pipeline, SeasonalMeanForecaster
 
 
 def simulate_rain(rng, history, horizon, noise):
@@ -257,13 +259,13 @@ rain = Pattern(
     predictable="The chance of rain at each point of the cycle.",
     unpredictable="Whether it actually rains.",
     simulate=simulate_rain,
-    attainable_by=NaiveForecaster("seasonal_mean", period=12),
+    attainable_by=SeasonalMeanForecaster(period=12),
 )
 
-model = NaiveForecaster("seasonal_mean", period=12)
+model = SeasonalMeanForecaster(period=12)
 card = Pipeline(model).run(
     ["seasonal", rain],  # a built-in row beside yours
-    attainable=True,  # also score each row's own model, fitted to each history
+    simulate_attainable=True,  # also score each row's own model, fitted to each history
 ).scorecard
 ```
 
@@ -283,9 +285,9 @@ yours. The function returns a dict:
 TimeGym cuts the history from the future and builds the case and its answer
 key. Before anything runs, the grid draws one series per cell and says what is
 missing or has the wrong length. A kind of series that needs more, such as
-dates or inputs known in advance, can give `build(noise, context_length,
+dates or inputs known in advance, can give `build(noise, history_length,
 horizon)` instead, returning an object with `generate(seed)`, `kind`,
-`context_length` and `horizon`, as `Scenario` has, whose cases carry an answer
+`history_length` and `horizon`, as `Scenario` has, whose cases carry an answer
 key. A Pattern takes `simulate` or `build`, not both.
 
 `noise` is there to use or ignore. The rain row turns higher noise into a
@@ -300,9 +302,9 @@ with the default ten series:
 
 | Forecaster | Low noise | High noise |
 | --- | --- | --- |
-| Seasonal mean, the row's own model, `NaiveForecaster("seasonal_mean", period=12)` | 92 Nails it | 92 Nails it |
-| Historical mean, `NaiveForecaster("mean")` | 82 Good | 95 Nails it |
-| Last cycle repeated, `NaiveForecaster("seasonal", period=12)` | 52 Struggles | 53 Struggles |
+| Seasonal mean, the row's own model, `SeasonalMeanForecaster(period=12)` | 92 Nails it | 92 Nails it |
+| Historical mean, `MeanForecaster()` | 82 Good | 95 Nails it |
+| Last cycle repeated, `SeasonalLastValueForecaster(period=12)` | 52 Struggles | 53 Struggles |
 
 The attainable score is 91 in both columns: the seasonal mean, the share of
 rainy steps at each point of the cycle, learned from ten cycles of history. The
@@ -314,7 +316,7 @@ step's outcome along with the cycle; the card lists that as a mistake ("Cycle
 out of step" at low noise, "Too wiggly" at high).
 
 `attainable_by` takes the row's own model, copied fresh for each series, or a
-class or function that returns one. With it and `attainable=True`, a pattern of
+class or function that returns one. With it and `simulate_attainable=True`, a pattern of
 your own gets an attainable score simulated as for the built-in rows; otherwise
 it is NaN, since only the default grid's values are stored. The table,
 `save_baseline` and `compare` know the row by its key, so keep the key, and the
@@ -345,7 +347,7 @@ in plain words with how many cases passed and failed:
 | `shape` | Right number of steps and series |
 | `finite` | No missing or infinite values |
 | `quantiles` | Quantiles in order |
-| `dependence` | Joint spread matches the answer key (only with `check_dependence=True`) |
+| `dependence` | Joint spread matches the answer key (only with `checks=[dependence()]`) |
 
 `report.assert_passed()` raises with one line per failed check, for example
 `Forecasts the requested dates: failed in 4 of 4 cases`, followed by the
@@ -462,12 +464,12 @@ differences are not shifted upward: symmetric about zero, or below it. It
 also assumes that the series' differences are independent.
 
 The same sign flips and Holm's correction compare any two reports in
-[`compare_reports`](diagnostics.md#compare-two-forecasters-on-the-same-cases),
+[`result.compare`](diagnostics.md#compare-two-forecasters-on-the-same-cases),
 which asks the two-sided question, better or worse, on your own data too.
 
 `ScorecardComparison.table` has one row per cell: `pattern`, `title`,
 `noise`, `noise_sd`, `change`, `baseline_score`, `score`,
-`baseline_avoidable` and `avoidable` (each card's mean avoidable error over
+`baseline_avoidable_mse` and `avoidable_mse` (each card's mean avoidable error over
 the series it scored), `p_value` (before Holm's correction; NaN where no
 series moved beyond roundoff), and `newly_failing` and `newly_passing`, the
 numbers of series that crash or fail an output check now but did not in the

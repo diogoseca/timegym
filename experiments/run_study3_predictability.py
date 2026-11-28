@@ -41,7 +41,7 @@ def _finite(value):
 
 def series_inputs(case):
     """The context (120 values), the realized future (24 values) and the exact floor of a one-target case."""
-    context = np.asarray(case.task.context, dtype=float)
+    context = np.asarray(case.task.history, dtype=float)
     observed = np.asarray(case.observed, dtype=float)
     if context.shape != (CONTEXT, 1) or observed.shape != (HORIZON, 1):
         raise ValueError(f"Expected one target, {CONTEXT} context values and {HORIZON} future values")
@@ -124,7 +124,7 @@ def registered_inputs(protocol):
         raise ValueError("Part 5 needs the 20 default scorecard cells and 200 series per cell")
     for cell in cells:
         scenario = cell.scenario
-        if (scenario.context_length, scenario.horizon, scenario.n_targets) != (CONTEXT, HORIZON, 1):
+        if (scenario.history_length, scenario.horizon, scenario.n_targets) != (CONTEXT, HORIZON, 1):
             raise ValueError(f"{cell.pattern}: expected context 120, horizon 24 and one target")
     if part["permutation_entropy"]["word_length"] != 3:
         raise ValueError("The registered word length is 3")

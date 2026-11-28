@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from ._internal import _json_safe, nonnegative_int
+from ._internal import _json_safe, nonnegative_int, _warn_deprecated
 from enum import Enum
 import json
 from pathlib import Path
 from collections import Counter
 import math
 import numpy as np
+import pandas as pd
 
 __all__ = [
     "REPORT_SCHEMA_VERSION",
@@ -43,7 +44,7 @@ class DiagnosticCategory(str, Enum):
     """The kind of evidence a diagnostic records; members equal their string values.
 
     ``correctness`` is a forecast contract, ``evaluation`` the evaluator's own
-    inputs, ``capability`` and ``uncertainty`` descriptive scores,
+    inputs, ``capability`` and ``uncertainty`` descriptive metrics,
     ``distribution`` a statistical check against a reference law,
     ``metamorphic`` a declared relation and ``execution`` a model exception.
     """
@@ -104,13 +105,59 @@ class DiagnosticResult:
 
 
 # %% ../source/10_reports_and_replay.ipynb #10_reports_and_repla-13
+# Metrics a report recorded under another name before, and the name each has now.
+_RENAMED_METRICS = {"mean_reference_mse": "avoidable_mse"}
+
+
+def _metric_name(metric):
+    """The name ``metric`` is recorded under now: an old name, such as ``"mean_reference_mse"``, warns."""
+    if isinstance(metric, str) and metric in _RENAMED_METRICS:
+        new = _RENAMED_METRICS[metric]
+        _warn_deprecated(
+            f'metric="{metric}" is deprecated and will be removed in a later release: '
+            f'use metric="{new}"'
+        )
+        return new
+    return metric
+
+
+class _CaseMetrics(dict):
+    """A case's metrics: a plain dictionary in which a metric's old name still reads it, and warns."""
+
+    def _key(self, key):
+        if (
+            isinstance(key, str)
+            and key in _RENAMED_METRICS
+            and not dict.__contains__(self, key)
+        ):
+            new = _RENAMED_METRICS[key]
+            _warn_deprecated(
+                f'case.metrics["{key}"] is deprecated and will be removed in a later release: '
+                f'use case.metrics["{new}"]'
+            )
+            return new
+        return key
+
+    def __getitem__(self, key):
+        return dict.__getitem__(self, self._key(key))
+
+    def __contains__(self, key):
+        return dict.__contains__(self, self._key(key))
+
+    def get(self, key, default=None):
+        return dict.get(self, self._key(key), default)
+
+
 @dataclass
 class CaseResult:
-    """The diagnostics and scores recorded for one case.
+    """The diagnostics and metrics recorded for one case.
 
     ``scenario`` labels the case and ``seed`` is its generator seed.
-    ``metrics`` maps score names to finite numbers, and ``manifest`` is the
-    case manifest that replay rebuilds a generated scenario from.
+    ``metrics`` maps metric names to finite numbers, and ``manifest`` is the
+    case manifest that replay rebuilds a generated scenario from. A case with
+    an answer key has ``avoidable_mse``, the squared distance from the
+    forecast to it; reading it under its old name, ``"mean_reference_mse"``,
+    still works and warns.
     """
 
     scenario: str
@@ -144,7 +191,7 @@ class CaseResult:
                 )
             ):
                 raise ValueError(f"case.metrics.{name} must be a finite number")
-        self.metrics = _json_safe(self.metrics)
+        self.metrics = _CaseMetrics(_json_safe(self.metrics))
         self.manifest = _json_safe(self.manifest)
 
     def to_dict(self):
@@ -182,6 +229,32 @@ def _report_fields(value, expected, path):
         raise ValueError(
             f"{path} must contain exactly these fields: {', '.join(sorted(expected))}"
         )
+
+
+def _renamed_metrics(values):
+    """Saved metrics under the names they have now: TimeGym 1.14.1 and earlier saved ``avoidable_mse`` as ``mean_reference_mse``."""
+    if not isinstance(values, dict):
+        return values  # CaseResult refuses it
+    renamed = {}
+    for name, value in values.items():
+        new = _RENAMED_METRICS.get(name, name)
+        renamed[name if new in values else new] = value
+    return renamed
+
+
+def _renamed_diagnostic(item):
+    """A saved finding with today's metric names, in its name (``metric_<name>``) and in ``point_accuracy``'s evidence."""
+    item = dict(item)
+    name = item["name"]
+    if (
+        isinstance(name, str)
+        and name.startswith("metric_")
+        and name[len("metric_") :] in _RENAMED_METRICS
+    ):
+        item["name"] = "metric_" + _RENAMED_METRICS[name[len("metric_") :]]
+    if name == "point_accuracy":
+        item["evidence"] = _renamed_metrics(item["evidence"])
+    return item
 
 
 def _report_text(value, path, *, allow_empty=False):
@@ -294,10 +367,79 @@ def _own_checks(case):
     return found
 
 
+def _scenario_labels(cases, metadata):
+    """Each case's labels from ``metadata["scenario_labels"]``, or None when the report has none that fit its cases.
+
+    A run records one dictionary of labels per scenario it drew, in order, such as
+    ``{"pattern": "trend", "noise": "Low noise"}``, and draws every scenario on the same seeds: its
+    cases come scenario by scenario, each scenario's on those seeds in order, and of one kind.
+    """
+    entries = metadata.get("scenario_labels") if isinstance(metadata, dict) else None
+    if (
+        not isinstance(entries, list)
+        or not entries
+        or not cases
+        or len(cases) % len(entries)
+        or not all(
+            isinstance(entry, dict)
+            and entry
+            and all(isinstance(value, str) for value in entry.values())
+            for entry in entries
+        )
+        or len({frozenset(entry) for entry in entries}) != 1
+    ):
+        return None
+    each = len(cases) // len(entries)
+    blocks = [cases[start : start + each] for start in range(0, len(cases), each)]
+    if any(
+        [case.seed for case in block] != [case.seed for case in blocks[0]]
+        or len({case.scenario for case in block}) != 1
+        for block in blocks
+    ):
+        return None  # not the cases the run made, in its order
+    return [entries[position // each] for position in range(len(cases))]
+
+
+def _metrics_table(cases, metadata=None):
+    """``TestReport.metrics`` for a list of CaseResults: their labels, then their metrics, NaN where not scored."""
+    names = sorted(
+        {name for case in cases for name in case.metrics}
+    )  # as a saved report keeps them
+    index = pd.RangeIndex(len(cases), name="case")
+    seeds = [case.seed for case in cases]
+    origins = [case.manifest.get("origin") for case in cases]
+    scenarios = _scenario_labels(cases, metadata)
+    if (
+        scenarios is None
+    ):  # your own data, or a report saved before runs recorded their scenarios
+        labels = {"kind": [case.scenario for case in cases]}
+    else:
+        # A saved report sorts each entry's keys, so the scorecard's order is set here.
+        first = ("pattern", "noise", "scenario")
+        keys = [key for key in first if key in scenarios[0]] + sorted(
+            set(scenarios[0]) - set(first)
+        )
+        labels = {key: [entry[key] for entry in scenarios] for key in keys}
+    if any(seed is not None for seed in seeds):
+        labels["seed"] = (
+            seeds if None not in seeds else pd.Series(seeds, index=index, dtype=object)
+        )
+    if any(origin is not None for origin in origins):
+        labels["origin"] = origins
+    columns = {label: values for label, values in labels.items() if label not in names}
+    scored = [all(_case_checks(case).values()) for case in cases]
+    for name in names:
+        columns[name] = [
+            case.metrics[name] if ok and name in case.metrics else np.nan
+            for case, ok in zip(cases, scored)
+        ]
+    return pd.DataFrame(columns, index=index)
+
+
 # %% ../source/10_reports_and_replay.ipynb #10_reports_and_repla-15
 @dataclass
 class TestReport:
-    """Diagnostics and scores for every case of one run, with run metadata.
+    """Diagnostics and metrics for every case of one run, with run metadata.
 
     A PASS is scoped to a check; unsupported checks do not establish success.
     """
@@ -338,6 +480,31 @@ class TestReport:
             ),
         }
 
+    @property
+    def metrics(self):
+        """Every case's metrics as a table: one row per case, in order, its labels first.
+
+        The labels tell the scenarios apart. A run on the scorecard's kinds
+        of series labels each case by its row and column on the scorecard,
+        ``pattern`` and ``noise``, so
+        ``report.metrics.groupby(["pattern", "noise"])["mae"].mean()`` gives
+        one value per cell. A run of scenarios you built labels each by
+        ``scenario``, the name of its row on the scorecard: its kind, such as
+        ``"ar1"``, then ``"ar1 (2)"`` for a second scenario of that kind.
+        Both add the case's ``seed``. The run records these labels in
+        ``metadata["scenario_labels"]``, so a report read back from its file
+        has them too. Cases of your own data are labelled by ``kind``, the
+        name they were cut under, and ``origin``, where their history ends; a
+        report saved before runs recorded their labels gets ``kind`` and
+        ``seed``. One column per metric follows, in alphabetical order.
+        A case that crashed or failed an output check is not scored, so its
+        metrics are NaN, as in ``compare`` and the scorecard;
+        ``case.metrics`` still holds any it recorded. The row label is the
+        case's position in ``report.cases``. The table is made from the cases
+        each time it is read, so it follows any change to them.
+        """
+        return _metrics_table(self.cases, self.metadata)
+
     def to_dict(self):
         """Revalidate the report and return it with its schema version and summary."""
         self.__post_init__()
@@ -349,13 +516,31 @@ class TestReport:
         }
 
     def to_json(self, path=None):
-        """Return the report as indented JSON, also writing it to ``path`` when given."""
+        """Return the report as indented JSON text; ``save(path)`` writes it to a file.
+
+        ``to_json(path)``, the old way to write the file, still writes it,
+        returns the text and warns.
+        """
         serialized = json.dumps(
             self.to_dict(), indent=2, sort_keys=True, allow_nan=False
         )
         if path is not None:
+            _warn_deprecated(
+                "report.to_json(path) is deprecated and will be removed in a later release: "
+                "use report.save(path)"
+            )
             Path(path).write_text(serialized + "\n", encoding="utf-8")
         return serialized
+
+    def save(self, path):
+        """Write the report to a JSON file at ``path`` and return ``path``; ``TestReport.load(path)`` reads it back.
+
+        The file holds every case's metrics, findings and manifest and the
+        run's metadata, as ``to_json()`` gives them: enough to replay a case
+        with ``replay_case``, and no series or forecasts.
+        """
+        Path(path).write_text(self.to_json() + "\n", encoding="utf-8")
+        return path
 
     @classmethod
     def from_dict(cls, payload):
@@ -364,6 +549,9 @@ class TestReport:
         Unknown fields/statuses, malformed records, nonfinite metrics, and a
         saved summary inconsistent with the diagnostics are rejected. Metadata
         and evidence remain JSON data. The returned report owns copied values.
+        A metric saved under an old name, such as ``mean_reference_mse`` by
+        TimeGym 1.14.1, loads under its name now, ``avoidable_mse``, so old and
+        new reports compare and replay.
         """
         payload = _report_json_value(payload)
         _report_fields(
@@ -395,13 +583,13 @@ class TestReport:
                     {"name", "status", "category", "message", "evidence"},
                     diagnostic_path,
                 )
-                diagnostics.append(DiagnosticResult(**item))
+                diagnostics.append(DiagnosticResult(**_renamed_diagnostic(item)))
             cases.append(
                 CaseResult(
                     record["scenario"],
                     record["seed"],
                     diagnostics,
-                    record["metrics"],
+                    _renamed_metrics(record["metrics"]),
                     record["manifest"],
                 )
             )
@@ -419,12 +607,12 @@ class TestReport:
     def from_json(cls, text):
         """Parse JSON text/bytes, rejecting duplicate keys and nonfinite numbers.
 
-        This method never interprets a string as a path. Use ``read(path)``
+        This method never interprets a string as a path. Use ``load(path)``
         for a saved report. Loading data does not execute replay or model code.
         """
         if not isinstance(text, (str, bytes, bytearray)):
             raise TypeError(
-                "from_json expects JSON text or bytes; use read(path) for a file"
+                "from_json expects JSON text or bytes; use TestReport.load(path) for a file"
             )
 
         def unique_object(pairs):
@@ -447,9 +635,18 @@ class TestReport:
         return cls.from_dict(payload)
 
     @classmethod
-    def read(cls, path):
-        """Read and validate a report file; paths are explicit, never guessed."""
+    def load(cls, path):
+        """Read and validate the report file at ``path``, as ``save`` wrote it; paths are explicit, never guessed."""
         return cls.from_json(Path(path).read_bytes())
+
+    @classmethod
+    def read(cls, path):
+        """Read a report file by the old name of ``load``, with a warning."""
+        _warn_deprecated(
+            "TestReport.read(path) is deprecated and will be removed in a later release: "
+            "use TestReport.load(path)"
+        )
+        return cls.load(path)
 
     @property
     def checks(self):
@@ -457,7 +654,7 @@ class TestReport:
 
         Returns one dictionary per check that ran on at least one case, in the
         order of ``CHECKS`` and then the checks asked for with ``checks=``:
-        ``{"check", "title", "passed", "failed"}``. Scores are not checks:
+        ``{"check", "title", "passed", "failed"}``. Metrics are not checks:
         they have no pass mark.
         """
         counts, titles = {key: [0, 0] for key in CHECKS}, dict(CHECKS)
@@ -476,7 +673,7 @@ class TestReport:
         """Raise when an output check failed or the model raised; otherwise return self.
 
         The error names each failed check in plain words, then lists every
-        failing case. Scores never fail this gate: TimeGym sets no accuracy
+        failing case. Metrics never fail this gate: TimeGym sets no accuracy
         pass mark, so INCONCLUSIVE and UNSUPPORTED results do not raise.
         """
         failures = [
@@ -495,6 +692,41 @@ class TestReport:
                 "TimeGym detected failures:\n" + "\n".join(failed + failures)
             )
         return self
+
+    def compare(
+        self,
+        baseline,
+        *,
+        metric,
+        by=None,
+        cluster=None,
+        alpha=0.05,
+        higher_is_better=False,
+        seed=0,
+    ):
+        """Compare this report with ``baseline`` on the same cases, one metric at a time; returns a ReportComparison.
+
+        ``report.compare(baseline, metric="mae")`` is
+        ``compare_reports(report, baseline, metric="mae")``: the same paired
+        test, the same table and the same arguments. ``baseline`` is a report,
+        or a run, made on the same cases in the same order; ``by`` gives one
+        row per value of a manifest key, ``cluster`` names a manifest key whose
+        cases move together, and lower is better unless
+        ``higher_is_better=True``. To set several candidates against one
+        baseline at once, use ``compare_reports([a, b], baseline, ...)``.
+        """
+        from timegym.diagnostics import compare_reports
+
+        return compare_reports(
+            self,
+            baseline,
+            metric=metric,
+            by=by,
+            cluster=cluster,
+            alpha=alpha,
+            higher_is_better=higher_is_better,
+            seed=seed,
+        )
 
     def replay_case(self, case_index=0):
         """Re-evaluate one case when its built-in model configuration is replayable."""

@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from scipy.optimize import minimize_scalar
 
-from timegym import Forecast, NaiveForecaster, Pipeline, cases_from_series, diagnostics
+from timegym import Forecast, MeanForecaster, Pipeline, cases_from_series, diagnostics
 from timegym.diagnostics import Calibration, calibration
 from timegym.plotting import plot_calibration
 
@@ -72,14 +72,16 @@ def test_slope_and_intercept_are_the_maximum_likelihood_fits():
     assert cal.intercept < 0  # forecasts too high
 
 
-def test_interval_depends_on_seed_and_level_only_as_it_should():
+def test_interval_depends_on_seed_and_interval_level_only_as_it_should():
     observed, predicted = honest(n=800)
     first, again = calibration(observed, predicted, seed=4), calibration(observed, predicted, seed=4)
     assert first.slope_interval == again.slope_interval
     other = calibration(observed, predicted, seed=5)
     assert other.slope == first.slope and other.slope_interval != first.slope_interval
-    narrow = calibration(observed, predicted, level=0.5, seed=4)
+    narrow = calibration(observed, predicted, interval_level=0.5, seed=4)
     assert first.slope_interval[0] < narrow.slope_interval[0] < narrow.slope_interval[1] < first.slope_interval[1]
+    assert (first.interval_level, narrow.interval_level) == (0.95, 0.5)
+    assert "(50% interval " in str(narrow) and "(95% interval " in str(first)
 
 
 def test_clusters_resample_together_and_widen_the_interval_when_they_share_luck():
@@ -102,8 +104,8 @@ def test_clusters_resample_together_and_widen_the_interval_when_they_share_luck(
 class CycleShare:
     """The share of rainy steps so far at the same point of the 12-step cycle, with one of each added."""
 
-    def fit(self, context):
-        values = context.to_numpy()[:, 0]
+    def fit(self, history):
+        values = history.to_numpy()[:, 0]
         self.length_ = len(values)
         self.share_ = np.array([(values[k::12].sum() + 1) / (len(values[k::12]) + 2) for k in range(12)])
         return self
@@ -126,8 +128,9 @@ def rain_cases():
 
 def test_a_run_gives_the_same_numbers_as_its_arrays(rain_cases):
     run = Pipeline(CycleShare()).run(cases=rain_cases, keep_data=True)
-    from_run = calibration(run)
-    observed = np.concatenate([entry.case.observed.to_numpy()[:, 0] for entry in run.cases])
+    from_run = run.calibration()
+    assert str(from_run) == str(calibration(run))  # the method is the function on the run
+    observed = np.concatenate([entry.observed.to_numpy()[:, 0] for entry in run.cases])
     predicted = np.concatenate([np.asarray(entry.forecast.point)[:, 0] for entry in run.cases])
     labels = np.repeat(np.arange(len(run.cases)), 24)
     from_arrays = calibration(observed, predicted, cluster=labels)
@@ -139,11 +142,11 @@ def test_a_run_gives_the_same_numbers_as_its_arrays(rain_cases):
 
 def test_cluster_names_a_manifest_key_of_the_run(rain_cases):
     run = Pipeline(CycleShare()).run(cases=rain_cases, keep_data=True)
-    cal = calibration(run, cluster="station")
+    cal = run.calibration(cluster="station")
     assert cal.clusters == 6 and cal.cluster == "station"
     assert "in 6 clusters by station" in str(cal)
     with pytest.raises(ValueError, match="has no manifest key 'region'"):
-        calibration(run, cluster="region")
+        run.calibration(cluster="region")
 
 
 def test_samples_stand_in_for_a_missing_point_forecast(rain_cases):
@@ -153,35 +156,35 @@ def test_samples_stand_in_for_a_missing_point_forecast(rain_cases):
             paths = (np.random.default_rng(0).random((400, len(share))) < share).astype(float)
             return Forecast(future_index, samples=paths[:, :, None], target_names=["rain"])
 
-    cal = calibration(Pipeline(SharePaths()).run(cases=rain_cases, keep_data=True))
+    cal = Pipeline(SharePaths()).run(cases=rain_cases, keep_data=True).calibration()
     assert cal.forecasts == 18 * 24 and cal.skipped == 0
     assert 0.5 < cal.slope < 1.5
 
 
 def test_cases_without_a_usable_forecast_are_left_out_and_counted(rain_cases):
     class SometimesFails(CycleShare):
-        def fit(self, context):
-            if len(context) == 168:
+        def fit(self, history):
+            if len(history) == 168:
                 raise RuntimeError("no forecast for this origin")
-            return super().fit(context)
+            return super().fit(history)
 
-    cal = calibration(Pipeline(SometimesFails()).run(cases=rain_cases, keep_data=True))
+    cal = Pipeline(SometimesFails()).run(cases=rain_cases, keep_data=True).calibration()
     assert cal.skipped == 6 and cal.cases == 12 and cal.forecasts == 12 * 24
     assert "(6 cases left out: no usable forecast)" in str(cal)
 
     class AlwaysFails(CycleShare):
-        def fit(self, context):
+        def fit(self, history):
             raise RuntimeError("never")
 
     with pytest.raises(ValueError, match="none of the run's 18 cases has a forecast to read"):
-        calibration(Pipeline(AlwaysFails()).run(cases=rain_cases, keep_data=True))
+        Pipeline(AlwaysFails()).run(cases=rain_cases, keep_data=True).calibration()
 
 
 def test_a_run_of_counts_is_refused_naming_the_case():
     sales = pd.Series(np.arange(60.0) % 5)
-    run = Pipeline(NaiveForecaster("mean")).run(cases=cases_from_series(sales, origins=[40], horizon=5, name="sales"), keep_data=True)
+    run = Pipeline(MeanForecaster()).run(cases=cases_from_series(sales, origins=[40], horizon=5, name="sales"), keep_data=True)
     with pytest.raises(ValueError, match=r"case 0 \(sales\): observed must be 0 or 1; got 2"):
-        calibration(run)
+        run.calibration()
 
 
 # --- Refusals and numbers that do not exist ---------------------------------------------------
@@ -200,8 +203,8 @@ def test_refuses_what_is_not_yes_no_forecasts(arguments, error, message):
 @pytest.mark.parametrize("keywords, error, message", [
     ({"bins": 1}, ValueError, "bins must be at least 2"),
     ({"bins": 2.5}, (TypeError, ValueError), "bins"),
-    ({"level": 1}, ValueError, "level must be a number between 0 and 1"),
-    ({"level": True}, ValueError, "level must be a number between 0 and 1"),
+    ({"interval_level": 1}, ValueError, "interval_level must be a number between 0 and 1"),
+    ({"interval_level": True}, ValueError, "interval_level must be a number between 0 and 1"),
     ({"seed": -1}, (TypeError, ValueError), "seed"),
     ({"cluster": "station"}, TypeError, "with arrays, cluster gives one label per value"),
     ({"cluster": [1, 2]}, ValueError, "cluster must give one label per value: 4 values, 2 labels"),

@@ -8,8 +8,9 @@ from timegym import (
     CaseResult,
     DiagnosticResult,
     LastValueForecaster,
-    NaiveForecaster,
+    MeanForecaster,
     Pipeline,
+    SeasonalLastValueForecaster,
     TestReport,
     cases_from_series,
     compare_reports,
@@ -18,7 +19,7 @@ from timegym.diagnostics import ReportComparison, _holm, _holm_adjusted, _paired
 
 
 def report(values, manifests=None, *, metric="mae", model=None, crashed=()):
-    """A report with one score per case; ``None`` leaves a case unscored, ``crashed`` makes it crash."""
+    """A report with one metric value per case; ``None`` leaves a case without it, ``crashed`` makes it crash."""
     cases = []
     for index, value in enumerate(values):
         diagnostics, metrics = [], {}
@@ -38,13 +39,13 @@ def noisy(n, seed=0, shift=0.0):
 def test_better_worse_and_no_clear_difference():
     base = noisy(40)
     gain = np.random.default_rng(1).uniform(0.2, 0.6, 40)  # every case improves
-    better = compare_reports(report(base - gain), report(base), metric="mae")
+    better = report(base - gain).compare(report(base), metric="mae")
     assert better.table["verdict"].tolist() == ["better"] and len(better.better) == 1
     assert better.table.loc[0, "p_value"] == pytest.approx(1 / 10_000)  # only the observed signs
-    worse = compare_reports(report(base + gain), report(base), metric="mae")
+    worse = report(base + gain).compare(report(base), metric="mae")
     assert worse.table["verdict"].tolist() == ["worse"] and len(worse.worse) == 1
     mixed = np.random.default_rng(2).normal(0.0, 0.3, 40)
-    unclear = compare_reports(report(base + mixed), report(base), metric="mae")
+    unclear = report(base + mixed).compare(report(base), metric="mae")
     assert unclear.table["verdict"].tolist() == ["no clear difference"]
     assert unclear.table.loc[0, "p_value"] > 0.05
     row = better.table.iloc[0]
@@ -56,15 +57,15 @@ def test_better_worse_and_no_clear_difference():
 def test_higher_is_better_reads_the_same_numbers_the_other_way():
     base = noisy(40)
     up = base + np.random.default_rng(1).uniform(0.2, 0.6, 40)
-    assert compare_reports(report(up), report(base), metric="mae").table["verdict"][0] == "worse"
-    assert compare_reports(report(up), report(base), metric="mae",
-                           higher_is_better=True).table["verdict"][0] == "better"
+    assert report(up).compare(report(base), metric="mae").table["verdict"][0] == "worse"
+    assert report(up).compare(report(base), metric="mae",
+                              higher_is_better=True).table["verdict"][0] == "better"
 
 
 def test_a_p_value_recomputed_by_hand():
     base = noisy(30)
     d = np.random.default_rng(5).normal(0.15, 0.5, 30)
-    diff = compare_reports(report(base + d), report(base), metric="mae", seed=7)
+    diff = report(base + d).compare(report(base), metric="mae", seed=7)
     d = (base + d) - base
     flips = np.random.default_rng([7, 30]).choice([-1.0, 1.0], size=(9_999, 30))
     p = (1 + np.sum(np.abs(flips @ d) >= abs(d.sum()) - 1e-9)) / 10_000
@@ -78,9 +79,9 @@ def test_cases_of_one_cluster_flip_together():
     base = noisy(40)
     shift = np.where(stores % 2 == 0, -1.0, -0.2)  # all better, by store-sized amounts
     candidate = report(base + shift + np.random.default_rng(3).normal(0, 0.01, 40), manifests)
-    alone = compare_reports(candidate, report(base, manifests), metric="mae")
+    alone = candidate.compare(report(base, manifests), metric="mae")
     assert alone.table["verdict"][0] == "better"  # 40 cases treated as independent
-    together = compare_reports(candidate, report(base, manifests), metric="mae", cluster="store")
+    together = candidate.compare(report(base, manifests), metric="mae", cluster="store")
     row = together.table.iloc[0]
     assert row["verdict"] == "too few to tell" and np.isnan(row["p_value"])
     assert (row["cases"], row["clusters"]) == (40, 4)
@@ -91,13 +92,13 @@ def test_six_clusters_can_reach_five_percent_and_five_cannot():
     for clusters, verdict in [(5, "too few to tell"), (6, "worse")]:
         manifests = [{"site": c} for c in range(clusters) for _ in range(3)]
         base = noisy(3 * clusters)
-        diff = compare_reports(report(base + 1.0, manifests), report(base, manifests),
-                               metric="mae", cluster="site")
+        diff = report(base + 1.0, manifests).compare(report(base, manifests),
+                                                     metric="mae", cluster="site")
         assert diff.table["verdict"][0] == verdict
     # Six clusters all worse: the observed signs and their mirror image are 2 of 64 patterns.
     assert diff.table["p_value"][0] == pytest.approx(2 / 64, abs=0.006)
-    loose = compare_reports(report(base + 1.0, manifests), report(base, manifests),
-                            metric="mae", cluster="site", alpha=0.2)
+    loose = report(base + 1.0, manifests).compare(report(base, manifests),
+                                                  metric="mae", cluster="site", alpha=0.2)
     assert loose.units_needed == 4
 
 
@@ -106,8 +107,8 @@ def test_groups_get_holms_correction():
     manifests = [{"region": g, "i": i} for i, g in enumerate(groups)]
     base = noisy(90)
     shift = np.r_[np.full(30, -0.5), np.random.default_rng(4).normal(0, 0.3, 60)]
-    diff = compare_reports(report(base + shift, manifests), report(base, manifests),
-                           metric="mae", by="region")
+    diff = report(base + shift, manifests).compare(report(base, manifests),
+                                                   metric="mae", by="region")
     assert diff.table["group"].tolist() == ["north", "south", "east"]
     assert diff.table["verdict"].tolist()[0] == "better"
     # The strong group: only the observed signs reach it, so 1 / 10,000, times three groups.
@@ -150,31 +151,31 @@ def test_each_candidate_gets_a_p_value_adjusted_for_all_of_them():
     together = compare_reports({"strong": report(strong), "weak": report(weak)}, report(base), metric="mae")
     assert together.table["candidate"].tolist() == ["strong", "weak"]
     assert together.table["verdict"].tolist() == ["better", "no clear difference"]
-    weak_alone = compare_reports(report(weak), report(base), metric="mae")
+    weak_alone = report(weak).compare(report(base), metric="mae")
     assert together.table["p_value"][1] >= weak_alone.table["p_value"][0]
 
 
 def test_a_case_that_newly_crashes_is_worse_and_one_that_newly_runs_is_not():
     base = noisy(30)
-    crashing = compare_reports(report(base, crashed={3}), report(base), metric="mae")
+    crashing = report(base, crashed={3}).compare(report(base), metric="mae")
     row = crashing.table.iloc[0]
     assert (row["verdict"], row["newly_failing"], row["cases"]) == ("worse", 1, 29)
     assert "1 case now crashes or fails an output check" in str(crashing)
     with pytest.raises(AssertionError, match="worse than the baseline in 1 of 1 rows"):
         crashing.assert_no_regression()
-    back = compare_reports(report(base), report(base, crashed={3}), metric="mae")
+    back = report(base).compare(report(base, crashed={3}), metric="mae")
     row = back.table.iloc[0]
     assert (row["verdict"], row["newly_passing"], row["newly_failing"]) == ("no clear difference", 1, 0)
     back.assert_no_regression()
-    unscored = compare_reports(report([None] + list(base[1:])), report(base), metric="mae")
+    unscored = report([None] + list(base[1:])).compare(report(base), metric="mae")
     assert unscored.table.loc[0, "newly_failing"] == 0 and unscored.table.loc[0, "cases"] == 29
 
 
 def test_the_same_scores_and_roundoff_are_no_difference():
     base = noisy(30)
-    same = compare_reports(report(base), report(base), metric="mae")
+    same = report(base).compare(report(base), metric="mae")
     assert same.table.loc[0, "verdict"] == "no clear difference" and same.table.loc[0, "p_value"] == 1.0
-    roundoff = compare_reports(report(base * (1 + 1e-12)), report(base), metric="mae")
+    roundoff = report(base * (1 + 1e-12)).compare(report(base), metric="mae")
     assert roundoff.table.loc[0, "verdict"] == "no clear difference"
     same.assert_no_regression()
 
@@ -182,7 +183,7 @@ def test_the_same_scores_and_roundoff_are_no_difference():
 def test_too_few_to_tell_fails_the_regression_gate():
     manifests = [{"site": c} for c in range(3) for _ in range(5)]
     base = noisy(15)
-    diff = compare_reports(report(base - 1, manifests), report(base, manifests), metric="mae", cluster="site")
+    diff = report(base - 1, manifests).compare(report(base, manifests), metric="mae", cluster="site")
     assert len(diff.too_few) == 1 and diff.better.empty
     with pytest.raises(AssertionError, match="at least 6 must differ"):
         diff.assert_no_regression()
@@ -197,23 +198,23 @@ def test_too_few_to_tell_fails_the_regression_gate():
 def test_reports_on_other_cases_are_refused(change, message):
     base = report(noisy(10))
     with pytest.raises(ValueError, match=message):
-        compare_reports(change(base), base, metric="mae")
+        change(base).compare(base, metric="mae")
 
 
 def test_bad_requests_are_refused():
     base = report(noisy(10), [{"store": "a", "targets": ["y"]} for _ in range(10)])
-    with pytest.raises(ValueError, match="no case has a score 'rmse'; the reports have mae"):
-        compare_reports(base, base, metric="rmse")
+    with pytest.raises(ValueError, match="no case has a metric 'rmse'; the reports have mae"):
+        base.compare(base, metric="rmse")
     with pytest.raises(ValueError, match="case 0 has no manifest key 'region'"):
-        compare_reports(base, base, metric="mae", by="region")
+        base.compare(base, metric="mae", by="region")
     with pytest.raises(ValueError, match="one plain value per case"):
-        compare_reports(base, base, metric="mae", cluster="targets")
+        base.compare(base, metric="mae", cluster="targets")
     with pytest.raises(ValueError, match="alpha"):
-        compare_reports(base, base, metric="mae", alpha=1.5)
+        base.compare(base, metric="mae", alpha=1.5)
     with pytest.raises(TypeError, match="candidate must be a TestReport"):
         compare_reports("report.json", base, metric="mae")
-    with pytest.raises(TypeError, match="metric must be the name of a score"):
-        compare_reports(base, base, metric=None)
+    with pytest.raises(TypeError, match="metric must be the name of a metric"):
+        base.compare(base, metric=None)
     with pytest.raises(ValueError, match="at least one report"):
         compare_reports([], base, metric="mae")
 
@@ -234,26 +235,59 @@ def stores(n_stores=24, seed=3):
 def test_on_your_own_data_by_region_with_stores_as_clusters():
     cases = stores()
     last = Pipeline(LastValueForecaster()).test(cases=cases)
-    seasonal_run = Pipeline(NaiveForecaster("seasonal", period=7)).run(cases=cases)
-    diff = compare_reports(seasonal_run, last, metric="mae", by="region", cluster="store")
+    seasonal_run = Pipeline(SeasonalLastValueForecaster(period=7)).run(cases=cases)
+    diff = seasonal_run.compare(last, metric="mae", by="region", cluster="store")
     assert isinstance(diff, ReportComparison)
     assert diff.table["verdict"].tolist() == ["better"] * 3
     assert diff.table["clusters"].tolist() == [8, 8, 8] and diff.table["cases"].tolist() == [32, 32, 32]
     text = str(diff)
     assert text.startswith("mae against the baseline (lower is better; alpha 0.05; cases in one store move together)")
     assert "region north  better" in text
-    again = compare_reports(seasonal_run, last, metric="mae", by="region", cluster="store")
+    again = seasonal_run.compare(last, metric="mae", by="region", cluster="store")
     pd.testing.assert_frame_equal(diff.table, again.table)
     repr(diff)
+
+
+def test_compare_on_a_run_or_a_report_is_compare_reports_with_it_as_the_candidate():
+    cases = stores()
+    last = Pipeline(LastValueForecaster()).test(cases=cases)
+    seasonal_run = Pipeline(SeasonalLastValueForecaster(period=7)).run(cases=cases)
+    settings = dict(metric="mae", by="region", cluster="store", alpha=0.1, higher_is_better=True, seed=3)
+    for candidate in (seasonal_run, seasonal_run.report):
+        method = candidate.compare(last, **settings)
+        function = compare_reports(candidate, last, **settings)
+        pd.testing.assert_frame_equal(method.table, function.table)
+        assert str(method) == str(function)
+    assert last.compare(seasonal_run, metric="mae").table["verdict"].tolist() == ["worse"]
+    with pytest.raises(TypeError, match="metric"):
+        last.compare(seasonal_run)
 
 
 def test_candidates_are_named_by_their_model_or_their_position():
     cases = stores(n_stores=6)
     last = Pipeline(LastValueForecaster()).test(cases=cases)
-    seasonal = Pipeline(NaiveForecaster("seasonal", period=7)).test(cases=cases)
-    mean = Pipeline(NaiveForecaster("mean")).test(cases=cases)
+    seasonal = Pipeline(SeasonalLastValueForecaster(period=7)).test(cases=cases)
+    fortnight = Pipeline(SeasonalLastValueForecaster(period=14)).run(cases=cases)
+    mean = Pipeline(MeanForecaster()).test(cases=cases)
+    assert compare_reports([seasonal, fortnight], last, metric="mae").table["candidate"].tolist() == [
+        "candidate 1", "candidate 2"]  # both are SeasonalLastValueForecaster
     assert compare_reports([seasonal, mean], last, metric="mae").table["candidate"].tolist() == [
-        "candidate 1", "candidate 2"]  # both are NaiveForecaster
-    assert compare_reports([seasonal, last], last, metric="mae").table["candidate"].tolist() == [
-        "NaiveForecaster", "LastValueForecaster"]
-    assert compare_reports(seasonal, last, metric="mae").table["candidate"].tolist() == ["NaiveForecaster"]
+        "SeasonalLastValueForecaster", "MeanForecaster"]
+    assert seasonal.compare(last, metric="mae").table["candidate"].tolist() == [
+        "SeasonalLastValueForecaster"]
+
+
+def test_a_list_of_candidates_is_labelled_by_their_names():
+    cases = stores(n_stores=6)
+    last = Pipeline(LastValueForecaster()).run(cases=cases)
+    weekly = Pipeline(SeasonalLastValueForecaster(period=7), name="same weekday").run(cases=cases)
+    fortnight = Pipeline(SeasonalLastValueForecaster(period=14), name="a fortnight ago").run(cases=cases)
+    mean = Pipeline(MeanForecaster()).run(cases=cases)
+    assert compare_reports([weekly, fortnight, mean], last, metric="mae").table["candidate"].tolist() == [
+        "same weekday", "a fortnight ago", "MeanForecaster"]  # unnamed: its model
+    assert weekly.compare(last, metric="mae").table["candidate"].tolist() == ["same weekday"]
+    twice = Pipeline(MeanForecaster(), name="same weekday").run(cases=cases)
+    assert compare_reports([weekly, twice], last, metric="mae").table["candidate"].tolist() == [
+        "candidate 1", "candidate 2"]
+    by_hand = compare_reports({"weekly": weekly, "mean": mean}, last, metric="mae")  # a dictionary names them
+    assert by_hand.table["candidate"].tolist() == ["weekly", "mean"]

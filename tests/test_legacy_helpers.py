@@ -11,8 +11,8 @@ from timegym.features import add_lagged_target, add_time_features, add_tsfel_fea
 from timegym.smoothing import exponential_moving_average
 from timegym.target import differencing, fractional_differencing, fractional_weights, multioutput_target
 
-# These helpers are deprecated until TimeGym 2.0; tests/test_deprecations.py checks their warnings.
-pytestmark = pytest.mark.filterwarnings(r"ignore:.* is deprecated and will be removed in TimeGym 2\.0:DeprecationWarning")
+# These helpers are deprecated; tests/test_deprecations.py checks their warnings.
+pytestmark = pytest.mark.filterwarnings(r"ignore:.* is deprecated and will be removed in a later release:DeprecationWarning")
 
 
 def test_cycles_do_not_collapse_last_label_onto_first():
@@ -131,8 +131,8 @@ def test_target_and_feature_helpers_preserve_direction():
 
 
 def test_synthetic_defaults_are_fresh_explicit_scenario_specifications():
-    first = default_scenarios(context_length=8, horizon=3, n_targets=2, seed=3)
-    second = default_scenarios(context_length=8, horizon=3, n_targets=2, seed=3)
+    first = default_scenarios(history_length=8, horizon=3, n_targets=2, seed=3)
+    second = default_scenarios(history_length=8, horizon=3, n_targets=2, seed=3)
     assert [scenario.kind for scenario in first] == ["white_noise", "trend", "seasonal", "ar1", "random_walk"]
     assert all(a is not b for a, b in zip(first, second))
     assert all(scenario.generate().reference.mean.shape == (3, 2) for scenario in first)

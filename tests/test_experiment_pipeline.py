@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from experiments import run_addendum, run_followup, run_study, run_supplement
-from experiments.common import close_statistics, interval_cell, protect_output, sha256
+from experiments.common import answer_key_error, close_statistics, interval_cell, protect_output, sha256
 from experiments.render_results import capability_summary, render_tex as pilot_tex
 from experiments.render_addendum import check_addendum_conclusions, load_addendum, validate_addendum
 from experiments.render_followup import check_followup_conclusions, load_followup, validate_followup
@@ -185,6 +185,12 @@ def test_capability_summary_scores_a_synthetic_record():
     assert rows[0]['unavoidable_mse'] == 0.25 and math.isclose(rows[0]['score'], 50.0)
     assert rows[1]['unavoidable_mse'] == 4.0 and math.isclose(rows[1]['score'], 50.0)
     assert list(rows[0])[-2:] == ['unavoidable_mse', 'score']
+
+
+def test_the_distance_from_the_answer_key_is_read_under_either_name():
+    # The frozen records name it mean_reference_mse; TimeGym's reports name it avoidable_mse.
+    assert answer_key_error({'mean_reference_mse': 0.5}) == answer_key_error({'avoidable_mse': 0.5}) == 0.5
+    assert answer_key_error({'clean_mean_reference_mse': 0.25, 'mean_difference': 0.1}, 'clean_') == 0.25
 
 
 def test_capability_unavoidable_reads_the_reference_variance():
@@ -375,7 +381,7 @@ def test_followup_repair_scorecard_and_trend_summaries_agree_with_frozen_records
     followup, _ = load_followup()
     supplement, _ = records('results-v2')
     repair = followup['repair_mechanism']
-    by = {(row['branch'], row['seed']): row['mean_reference_mse'] for row in supplement['model']['records']
+    by = {(row['branch'], row['seed']): answer_key_error(row) for row in supplement['model']['records']
           if row['condition'] == repair['condition']}
     seeds = {seed for _, seed in by}
     assert sum(by[repair['fault'], seed] < by['clean', seed] for seed in seeds) == repair['faulty_closer_to_answer_key'] == 53
@@ -552,7 +558,7 @@ def test_addendum_paired_check_recomputes_from_frozen_records():
     conditions = [c['id'] for c in supplement_manifest['protocol']['model_study']['conditions']]
     model = supplement['model']['records']
     assert _same_up_to_roundoff(run_addendum.paired_answer_key(spec, conditions, model), stored)
-    distance = {(r['condition'], r['branch'], r['seed']): r['mean_reference_mse'] for r in model}
+    distance = {(r['condition'], r['branch'], r['seed']): answer_key_error(r) for r in model}
     generator = np.random.default_rng(spec['test']['seed'])
     flagged = {}
     for analysis, count in zip(stored['analyses'], spec['evaluation_seed_counts']):

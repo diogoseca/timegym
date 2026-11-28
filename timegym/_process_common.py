@@ -4,7 +4,7 @@ from __future__ import annotations
 from copy import deepcopy
 import numpy as np
 import pandas as pd
-from ._internal import positive_int, nonnegative_int, _real_array
+from ._internal import positive_int, nonnegative_int, _real_array, _renamed_keywords
 from .contracts import (
     Case,
     ForecastTask,
@@ -255,7 +255,8 @@ def _state_parameters(p, state):
 
 
 # %% ../source/14_controlled_processes.ipynb #controlled-fn-resolve-process
-def resolve_process(kind, parameters, context_length, horizon, n_targets, seed):
+@_renamed_keywords(context_length="history_length")
+def resolve_process(kind, parameters, history_length, horizon, n_targets, seed):
     """Resolve explicit dependence laws; scalar target parameters broadcast.
 
     Jump arrivals share one Poisson clock. Markov targets share one hidden
@@ -264,7 +265,7 @@ def resolve_process(kind, parameters, context_length, horizon, n_targets, seed):
     """
     if kind not in PROCESS_KINDS:
         raise ValueError(f"Unknown controlled process {kind!r}")
-    positive_int(context_length, "context_length")
+    positive_int(history_length, "history_length")
     positive_int(horizon, "horizon")
     d = positive_int(n_targets, "n_targets")
     nonnegative_int(seed, "seed")
@@ -463,11 +464,11 @@ def resolve_process(kind, parameters, context_length, horizon, n_targets, seed):
         if (
             has_atoms
             and p["output"] != "log_return"
-            and context_length > 1
+            and history_length > 1
             and not _common_deterministic_return(scalar_parameters)
         ):
             raise ValueError(
-                "Discrete Markov emissions require output=log_return when conditioning on returns; reconstructing discrete returns from price/log_price loses exact support. A length-one level context or identical deterministic regimes is supported"
+                "Discrete Markov emissions require output=log_return when conditioning on returns; reconstructing discrete returns from price/log_price loses exact support. A length-one level history or identical deterministic regimes is supported"
             )
     return _scalar_parameters(p) if d == 1 else p
 
@@ -585,7 +586,7 @@ def _assemble_case(
     manifest = dict(
         schema_version=MANIFEST_SCHEMA_VERSION,
         kind=kind,
-        context_length=length,
+        history_length=length,
         horizon=horizon,
         n_targets=n_targets,
         target_names=list(names),
@@ -598,11 +599,11 @@ def _assemble_case(
     return Case(task, observed, reference, manifest)
 
 
-def _build_case(builder, kind, parameters, context_length, horizon, n_targets, seed):
+def _build_case(builder, kind, parameters, history_length, horizon, n_targets, seed):
     with np.errstate(over="ignore", invalid="ignore"):
-        result = builder(parameters, context_length, horizon, n_targets, seed)
+        result = builder(parameters, history_length, horizon, n_targets, seed)
     return _assemble_case(
-        kind, parameters, context_length, horizon, n_targets, seed, *result
+        kind, parameters, history_length, horizon, n_targets, seed, *result
     )
 
 

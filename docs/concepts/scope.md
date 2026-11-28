@@ -42,13 +42,13 @@ a report, because they cannot be drawn again: keep your data with the report.
 Several cases cut from one series are several looks at one history, not
 independent tests.
 
-To compare two forecasters on the same cases, pass both reports to
-[`compare_reports`](../api/diagnostics.md#compare-two-forecasters-on-the-same-cases).
+To compare two forecasters on the same cases, call
+[`result.compare(baseline, metric=...)`](../api/diagnostics.md#compare-two-forecasters-on-the-same-cases).
 It says whether the difference is larger than chance would explain, by group
 if you ask, and counts cases cut from one series as one piece of evidence when
 you name that series with `cluster=`.
 For forecasts of a yes/no outcome,
-[`calibration`](../api/diagnostics.md#are-the-chances-honest) says whether a
+[`result.calibration()`](../api/diagnostics.md#are-the-chances-honest) says whether a
 forecast of 70% came true about 70% of the time.
 
 ## The model never sees the future
@@ -59,7 +59,7 @@ afterwards, against what happened and against the answer key. So inside a
 TimeGym test there is no data leakage: a model cannot use future values, even
 by accident.
 
-In code: `Pipeline.predict(context, future_index)` fits the model on a copy of
+In code: `Pipeline.predict(history, future_index)` fits the model on a copy of
 the history and then asks for a forecast with a copy of the future dates. A
 target transform is fitted on that history alone. `Pipeline.run`
 forecasts this way, for the scorecard as for your own data.
@@ -133,8 +133,8 @@ The score needs some noise. On a series with no noise at all, nobody is forced
 to make any error, so the score is 100 for a forecast that matches the answer
 key exactly and 0 for every other forecast, however close: an extra error of
 `1e-30` scores 0. That number says nothing about how good a forecast is, so do
-not read it. Compare the extra error itself instead (`avoidable_mse` in
-`card.table`, `mean_reference_mse` in a report). The scorecard's own grid
+not read it. Compare the extra error itself instead (`avoidable_mse`, in
+`card.table` and in each case of a report). The scorecard's own grid
 always has noise, so this only comes up with series you define yourself.
 
 Chaotic series are the usual example. They are deterministic: their future is

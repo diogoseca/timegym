@@ -5,16 +5,15 @@ import pandas as pd
 import pytest
 
 from timegym import (
+    EvaluatedCase,
     Forecast,
     ForecastRun,
     GaussianAR1Forecaster,
     LastValueForecaster,
-    NaiveForecaster,
     Pipeline,
     Scenario,
     TestReport,
     cases_from_series,
-    compare_reports,
 )
 from timegym.checks import within
 from timegym.diagnostics import _describe_checks, evaluate_forecast
@@ -174,13 +173,13 @@ def test_a_check_gets_what_its_argument_names_ask_for():
     case = one_case()
     seen = {}
 
-    def everything(observed, predicted, context, target_names, quantiles=None, samples=None, levels=None):
-        seen.update(observed=observed.shape, predicted=predicted.shape, context=context.shape,
+    def everything(observed, predicted, history, target_names, quantiles=None, samples=None, levels=None):
+        seen.update(observed=observed.shape, predicted=predicted.shape, history=history.shape,
                     target_names=target_names, quantiles=quantiles, samples=samples, levels=levels)
         return True
 
     evaluate_forecast(case, forecast_for(case, point=np.ones((7, 1))), checks=[everything])
-    assert seen == {"observed": (7, 1), "predicted": (7, 1), "context": (60, 1), "target_names": ("rain_mm",),
+    assert seen == {"observed": (7, 1), "predicted": (7, 1), "history": (60, 1), "target_names": ("rain_mm",),
                     "quantiles": None, "samples": None, "levels": None}
 
 
@@ -315,7 +314,7 @@ def test_a_case_failing_your_check_counts_as_newly_failing_in_a_comparison():
     cases = rain_cases()
     baseline = Pipeline(LastValueForecaster()).test(cases=cases, checks=[within(0, None)])
     candidate = Pipeline(GaussianAR1Forecaster()).test(cases=cases, checks=[within(0, None)])
-    table = compare_reports(candidate, baseline, metric="mae").table
+    table = candidate.compare(baseline, metric="mae").table
     assert table.loc[0, "newly_failing"] == len(cases)
 
 
@@ -326,24 +325,20 @@ def test_scorecard_names_a_failed_check_of_your_own():
     forecast = forecast_for(case, point=np.full((7, 1), -1.0))
     result = evaluate_forecast(case, forecast, checks=[within(0, None)])
 
-    class Entry:
-        pass
-
-    entry = Entry()
-    entry.result, entry.forecast, entry.case = result, forecast, case
+    entry = EvaluatedCase(case, forecast, result, 0, 0)
     assert _check_problems([entry]) == ["Fails check: values at least 0 (1 of 1)"]
 
 
 # ---------------------------------------------------------------- replay
 
 def test_replay_runs_within_again_and_lists_your_own_checks():
-    scenario = Scenario("ar1", context_length=60, horizon=6)
+    scenario = Scenario("ar1", history_length=60, horizon=6)
 
     def positive(predicted):
         """Every value above zero."""
         return bool((predicted > 0).all()) or "some values at or below zero"
 
-    report = Pipeline(NaiveForecaster("last")).test([scenario], seeds=[0, 1],
+    report = Pipeline(LastValueForecaster()).test([scenario], seeds=[0, 1],
                                                      checks={"range": within(-100, 100), "positive": positive})
     replay = report.replay_case(1).metadata["replay"]
     assert replay["reproduced"] and replay["diagnostics_match"]
@@ -352,13 +347,13 @@ def test_replay_runs_within_again_and_lists_your_own_checks():
     replayed = report.replay_case(1)
     assert [d.name for d in replayed.cases[0].diagnostics if d.name.startswith("check_")] == ["check_range"]
 
-    plain = Pipeline(NaiveForecaster("last")).test([scenario], seeds=[0])
+    plain = Pipeline(LastValueForecaster()).test([scenario], seeds=[0])
     assert "checks_not_rerun" not in plain.replay_case(0).metadata["replay"]
 
 
 def test_replay_runs_within_from_its_saved_bounds():
-    scenario = Scenario("ar1", context_length=60, horizon=6)
-    report = Pipeline(NaiveForecaster("last")).test([scenario], seeds=[0], checks=[within(-100, 100)])
+    scenario = Scenario("ar1", history_length=60, horizon=6)
+    report = Pipeline(LastValueForecaster()).test([scenario], seeds=[0], checks=[within(-100, 100)])
     assert report.replay_case(0).metadata["replay"]["diagnostics_match"]
     payload = report.to_dict()
     payload["metadata"]["checks"][0]["settings"] = {"lower": 100.0, "upper": 200.0}

@@ -25,9 +25,9 @@ def main(argv=None):
                         help="also require matching source, dependencies and Python version")
     args = parser.parse_args(argv)
     try:
-        replayed = TestReport.read(args.report).replay_case(args.case_index)
+        replayed = TestReport.load(args.report).replay_case(args.case_index)
         if args.output is not None:
-            replayed.to_json(args.output)
+            replayed.save(args.output)
     except (OSError, ValueError, TypeError, ImportError, OverflowError) as exc:
         parser.exit(2, f"Replay failed: {exc}\n")
     comparison = replayed.metadata["replay"]

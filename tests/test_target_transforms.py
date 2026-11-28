@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from scipy import stats
 
-from timegym import Forecast, ForecastTask, GaussianAR1Forecaster, NaiveForecaster, Pipeline, Scenario, TestReport
+from timegym import DriftForecaster, Forecast, ForecastTask, GaussianAR1Forecaster, LastValueForecaster, Pipeline, Scenario, TestReport
 from timegym.diagnostics import evaluate_forecast
 from timegym.mutations import mutate_forecast
 from timegym.target import (BoxCoxTransform, ComposedTransform, DifferenceTransform, LogTransform,
@@ -29,7 +29,7 @@ def split(full):
 
 
 def forward(transform, full):
-    """Apply a transform fitted on the context to the whole series, as an independent oracle."""
+    """Apply a transform fitted on the history to the whole series, as an independent oracle."""
     if isinstance(transform, ComposedTransform):
         for member in transform.transforms:
             full = forward(member, full)
@@ -62,9 +62,9 @@ TRANSFORMS = [LogTransform(), BoxCoxTransform(), DifferenceTransform(), Differen
 @pytest.mark.parametrize("targets", [1, 2])
 def test_identity_round_trip_recovers_the_original_future(transform, targets):
     full = positive_series(targets=targets)
-    context, future = split(full)
+    history, future = split(full)
     transform = transform.clone_unfitted()
-    transformed = transform.fit_transform(context)
+    transformed = transform.fit_transform(history)
     oracle = forward(transform, full)
     pd.testing.assert_frame_equal(transformed, oracle.iloc[:len(transformed)], check_exact=False, rtol=1e-12)
     restored = transform.inverse_transform(exact_forecast(oracle.iloc[-HORIZON:]))
@@ -91,10 +91,10 @@ def test_differencing_inverts_known_series_exactly():
 
 def test_two_composed_first_differences_equal_one_second_difference():
     full = positive_series()
-    context, _ = split(full)
+    history, _ = split(full)
     composed = ComposedTransform([DifferenceTransform(), DifferenceTransform()])
     second = DifferenceTransform(order=2)
-    pd.testing.assert_frame_equal(composed.fit_transform(context), second.fit_transform(context))
+    pd.testing.assert_frame_equal(composed.fit_transform(history), second.fit_transform(history))
     increments = np.random.default_rng(3).normal(size=(50, HORIZON, 1))
     forecast = Forecast(index=pd.RangeIndex(54, 60), point=increments.mean(axis=0), samples=increments,
                         quantiles=np.quantile(increments, [.2, .8], axis=0).transpose(1, 2, 0), levels=(.2, .8),
@@ -104,25 +104,25 @@ def test_two_composed_first_differences_equal_one_second_difference():
 
 @pytest.mark.parametrize("transform", [LogTransform(), BoxCoxTransform()], ids=["log", "box_cox"])
 def test_monotone_inverses_keep_quantiles_ordered_and_elementwise(transform):
-    context, future = split(positive_series(targets=2))
+    history, future = split(positive_series(targets=2))
     model = GaussianAR1Forecaster(n_samples=200, seed=4, levels=(.05, .25, .5, .75, .95))
-    transformed = transform.fit_transform(context)
+    transformed = transform.fit_transform(history)
     forecast = model.fit(transformed).predict(future.index)
     restored = transform.inverse_transform(forecast)
     assert np.all(np.diff(restored.quantiles, axis=-1) > 0)
     reference = transform.clone_unfitted()
-    reference.fit_transform(context)
+    reference.fit_transform(history)
     for level in range(5):
         single = Forecast(index=future.index, quantiles=forecast.quantiles[..., [level]], levels=(.5,),
                           target_names=forecast.target_names)
         np.testing.assert_allclose(restored.quantiles[..., level], reference.inverse_transform(single).quantiles[..., 0])
-    assert restored.validate(ForecastTask(context, future.index)) == []
+    assert restored.validate(ForecastTask(history, future.index)) == []
 
 
 def test_differencing_recomputes_ordered_quantiles_from_integrated_samples():
-    context, future = split(positive_series())
+    history, future = split(positive_series())
     transform = DifferenceTransform(lag=12)
-    forecast = GaussianAR1Forecaster(n_samples=300, seed=1).fit(transform.fit_transform(context)).predict(future.index)
+    forecast = GaussianAR1Forecaster(n_samples=300, seed=1).fit(transform.fit_transform(history)).predict(future.index)
     restored = transform.inverse_transform(forecast)
     np.testing.assert_array_equal(restored.quantiles,
                                   np.moveaxis(np.quantile(restored.samples, forecast.levels, axis=0), 0, -1))
@@ -131,9 +131,9 @@ def test_differencing_recomputes_ordered_quantiles_from_integrated_samples():
 
 
 def test_the_point_of_a_nonlinear_inverse_is_never_the_inverted_mean():
-    context, future = split(positive_series())
+    history, future = split(positive_series())
     transform = LogTransform()
-    transform.fit_transform(context)
+    transform.fit_transform(history)
     draws = np.random.default_rng(7).normal(4., .5, size=(4000, HORIZON, 1))
     quantiles = np.moveaxis(np.quantile(draws, [.1, .5, .9], axis=0), 0, -1)
     full = Forecast(index=future.index, point=draws.mean(axis=0), quantiles=quantiles, levels=(.1, .5, .9),
@@ -153,19 +153,19 @@ def test_the_point_of_a_nonlinear_inverse_is_never_the_inverted_mean():
 
 @pytest.mark.parametrize("transform,name", [(LogTransform(), "LogTransform"), (BoxCoxTransform(), "BoxCoxTransform")])
 @pytest.mark.parametrize("bad", [0., -2.5])
-def test_nonpositive_contexts_are_rejected_precisely(transform, name, bad):
-    context = pd.DataFrame({"a": [1., 2., 3., 4., 5.], "b": [1., 2., 3., bad, bad]}, index=pd.RangeIndex(10, 15))
-    with pytest.raises(ValueError, match=rf"{name} requires strictly positive context values; target 'b' "
+def test_nonpositive_histories_are_rejected_precisely(transform, name, bad):
+    history = pd.DataFrame({"a": [1., 2., 3., 4., 5.], "b": [1., 2., 3., bad, bad]}, index=pd.RangeIndex(10, 15))
+    with pytest.raises(ValueError, match=rf"{name} requires strictly positive history values; target 'b' "
                                          r"has 2 nonpositive value\(s\), the first at index 13"):
-        transform.fit_transform(context)
+        transform.fit_transform(history)
 
 
-def test_box_cox_lambda_is_fitted_on_the_context_only():
+def test_box_cox_lambda_is_fitted_on_the_history_only():
     full = positive_series(length=80, targets=2)
-    context, _ = split(full)
+    history, _ = split(full)
     transform = BoxCoxTransform()
-    transform.fit_transform(context)
-    expected = [stats.boxcox_normmax(context.iloc[:, d].to_numpy(), method="mle") for d in range(2)]
+    transform.fit_transform(history)
+    expected = [stats.boxcox_normmax(history.iloc[:, d].to_numpy(), method="mle") for d in range(2)]
     assert all(-1 < value < 2 for value in expected)
     np.testing.assert_allclose(transform.lambdas_, expected, rtol=0, atol=1e-4)
     shifted = transform.clone_unfitted()
@@ -175,8 +175,8 @@ def test_box_cox_lambda_is_fitted_on_the_context_only():
 
 
 def test_box_cox_lambda_stays_within_reciprocal_and_square():
-    prices = Scenario("merton_jump_diffusion", context_length=50, horizon=4,
-                      parameters={"output": "price"}).generate(seed=2).task.context
+    prices = Scenario("merton_jump_diffusion", history_length=50, horizon=4,
+                      parameters={"output": "price"}).generate(seed=2).task.history
     assert stats.boxcox_normmax(prices.iloc[:, 0].to_numpy(), method="mle") < -5
     transform = BoxCoxTransform()
     transform.fit_transform(prices)
@@ -187,12 +187,12 @@ def test_box_cox_lambda_stays_within_reciprocal_and_square():
     np.testing.assert_allclose(transform.lambdas_, [2.], atol=1e-4)
 
 
-def test_box_cox_rejects_constant_contexts_and_values_without_a_preimage():
+def test_box_cox_rejects_constant_histories_and_values_without_a_preimage():
     with pytest.raises(ValueError, match="not identified for target 'y'.*constant"):
         BoxCoxTransform().fit_transform(pd.DataFrame({"y": np.full(10, 3.)}))
-    context, future = split(positive_series())
+    history, future = split(positive_series())
     transform = BoxCoxTransform()
-    transform.fit_transform(context)
+    transform.fit_transform(history)
     lam = transform.lambdas_[0]
     impossible = np.full((HORIZON, 1), -2. / lam)
     with pytest.raises(ValueError, match=r"undefined for 6 forecast value\(s\)"):
@@ -200,28 +200,28 @@ def test_box_cox_rejects_constant_contexts_and_values_without_a_preimage():
 
 
 def test_differencing_without_samples_keeps_points_and_omits_unknowable_quantiles():
-    context, future = split(positive_series())
+    history, future = split(positive_series())
     transform = DifferenceTransform()
-    transform.fit_transform(context)
+    transform.fit_transform(history)
     increments = np.full((HORIZON, 1), .5)
     quantiles = increments[..., None] + np.array([-1., 0., 1.])
     restored = transform.inverse_transform(Forecast(index=future.index, point=increments, quantiles=quantiles,
                                                     levels=(.1, .5, .9), target_names=("y0",)))
-    np.testing.assert_allclose(restored.point[:, 0], context.iloc[-1, 0] + .5 * np.arange(1, HORIZON + 1))
+    np.testing.assert_allclose(restored.point[:, 0], history.iloc[-1, 0] + .5 * np.arange(1, HORIZON + 1))
     assert restored.quantiles is None and restored.levels == ()
-    assert restored.validate(ForecastTask(context, future.index)) == []
+    assert restored.validate(ForecastTask(history, future.index)) == []
     with pytest.raises(ValueError, match="Quantiles of differences do not determine quantiles of levels"):
         transform.inverse_transform(Forecast(index=future.index, quantiles=quantiles, levels=(.1, .5, .9),
                                              target_names=("y0",)))
 
 
 def test_inversion_requires_a_fit_and_a_valid_matching_forecast():
-    context, future = split(positive_series())
+    history, future = split(positive_series())
     forecast = Forecast(index=future.index, point=np.ones((HORIZON, 1)), target_names=("y0",))
     with pytest.raises(ValueError, match="fit_transform"):
         DifferenceTransform().inverse_transform(forecast)
     transform = LogTransform()
-    transform.fit_transform(context)
+    transform.fit_transform(history)
     with pytest.raises(TypeError, match="Forecast"):
         transform.inverse_transform(forecast.point)
     crossing = Forecast(index=future.index, quantiles=np.ones((HORIZON, 1, 2)) * [[[1., 0.]]], levels=(.1, .9),
@@ -232,11 +232,11 @@ def test_inversion_requires_a_fit_and_a_valid_matching_forecast():
         transform.inverse_transform(Forecast(index=future.index, point=np.ones((HORIZON, 1)), target_names=("x",)))
 
 
-def test_constructor_and_context_validation():
+def test_constructor_and_history_validation():
     for order, lag in [(0, 1), (1, 0), (1.5, 1), (True, 1)]:
         with pytest.raises(ValueError, match="order|lag"):
             DifferenceTransform(order=order, lag=lag)
-    with pytest.raises(ValueError, match="needs more than 12 context rows"):
+    with pytest.raises(ValueError, match="needs more than 12 rows of history"):
         DifferenceTransform(lag=12).fit_transform(pd.DataFrame({"y": np.arange(12.)}))
     with pytest.raises(TypeError, match="DataFrame"):
         LogTransform().fit_transform(pd.Series([1., 2.]))
@@ -245,7 +245,7 @@ def test_constructor_and_context_validation():
     for members in ([], "log", None):
         with pytest.raises(ValueError, match="nonempty sequence"):
             ComposedTransform(members)
-    for member in (ComposedTransform([LogTransform()]), NaiveForecaster()):
+    for member in (ComposedTransform([LogTransform()]), LastValueForecaster()):
         with pytest.raises(TypeError, match="members must be"):
             ComposedTransform([LogTransform(), member])
 
@@ -254,8 +254,8 @@ def test_composed_members_are_copied_unfitted_and_never_aliased():
     shared = DifferenceTransform()
     composed = ComposedTransform([shared, shared])
     assert composed.transforms[0] is not composed.transforms[1] and shared not in composed.transforms
-    context, _ = split(positive_series())
-    composed.fit_transform(context)
+    history, _ = split(positive_series())
+    composed.fit_transform(history)
     assert not hasattr(shared, "tails_")
     assert composed.transforms[0].tails_[0].tolist() != composed.transforms[1].tails_[0].tolist()
     clone = composed.clone_unfitted()
@@ -293,28 +293,28 @@ def test_transform_descriptions_are_allowlisted_and_never_imported():
             transform_from_config(config)
 
 
-def recorded_fit_contexts():
-    contexts = []
+def recorded_fit_histories():
+    histories = []
 
     class Recorder(GaussianAR1Forecaster):
-        def fit(self, context):
-            contexts.append(context.copy())
-            return super().fit(context)
+        def fit(self, history):
+            histories.append(history.copy())
+            return super().fit(history)
 
-    return contexts, Recorder
+    return histories, Recorder
 
 
-def test_pipeline_fits_the_model_on_the_transformed_context_and_inverts_its_forecast():
-    case = Scenario("merton_jump_diffusion", context_length=80, horizon=8,
+def test_pipeline_fits_the_model_on_the_transformed_history_and_inverts_its_forecast():
+    case = Scenario("merton_jump_diffusion", history_length=80, horizon=8,
                     parameters={"output": "price", "jump_rate": 2.}).generate(seed=3)
     transform = ComposedTransform([LogTransform(), DifferenceTransform()])
-    contexts, Recorder = recorded_fit_contexts()
-    pipeline = Pipeline(model_factory=lambda: Recorder(n_samples=64, seed=9), target_transform=transform)
-    forecast = pipeline.predict(case.task.context, case.task.future_index)
+    histories, Recorder = recorded_fit_histories()
+    pipeline = Pipeline(lambda: Recorder(n_samples=64, seed=9), target_transform=transform)
+    forecast = pipeline.predict(case.task.history, case.task.future_index)
 
     manual = transform.clone_unfitted()
-    transformed = manual.fit_transform(case.task.context)
-    pd.testing.assert_frame_equal(contexts[0], transformed)
+    transformed = manual.fit_transform(case.task.history)
+    pd.testing.assert_frame_equal(histories[0], transformed)
     expected = manual.inverse_transform(GaussianAR1Forecaster(n_samples=64, seed=9).fit(transformed)
                                         .predict(case.task.future_index))
     for name in ("point", "quantiles", "samples"):
@@ -330,10 +330,10 @@ def test_contract_violations_reach_the_evaluator_uninverted():
         def predict(self, future_index):
             return mutate_forecast(super().predict(future_index), "quantile_crossing")
 
-    scenario = Scenario("merton_jump_diffusion", context_length=60, horizon=5, parameters={"output": "price"})
-    pipeline = Pipeline(model_factory=lambda: Crossing(n_samples=32, seed=2), target_transform=DifferenceTransform())
+    scenario = Scenario("merton_jump_diffusion", history_length=60, horizon=5, parameters={"output": "price"})
+    pipeline = Pipeline(lambda: Crossing(n_samples=32, seed=2), target_transform=DifferenceTransform())
     case = scenario.generate(seed=1)
-    raw = pipeline.predict(case.task.context, case.task.future_index)
+    raw = pipeline.predict(case.task.history, case.task.future_index)
     assert np.any(np.diff(raw.quantiles, axis=-1) < 0)
     report = pipeline.test([scenario], seeds=[1])
     statuses = {d.name: d.status for d in report.cases[0].diagnostics}
@@ -350,20 +350,20 @@ def test_target_transform_is_recorded_and_replayed_from_the_report(tmp_path):
     restored = Pipeline.from_config(config)
     assert type(restored.target_transform) is ComposedTransform and restored.to_config() == config
 
-    scenario = Scenario("merton_jump_diffusion", context_length=50, horizon=4, parameters={"output": "price"})
+    scenario = Scenario("merton_jump_diffusion", history_length=50, horizon=4, parameters={"output": "price"})
     run = pipeline.run([scenario], seeds=[2, 7])
     assert run.metadata["target_transform"] == config["target_transform"]
     assert run.metadata["pipeline_config"] == config
-    assert all(d.status != "ERROR" for entry in run.cases for d in entry.result.diagnostics)
+    assert all(d.status != "ERROR" for entry in run.cases for d in entry.diagnostics)
     path = tmp_path / "report.json"
-    run.report.to_json(path)
-    replayed = TestReport.read(path).replay_case(1)
+    run.report.save(path)
+    replayed = TestReport.load(path).replay_case(1)
     assert replayed.metadata["replay"]["reproduced"]
     assert replayed.cases[0].to_dict() == run.report.cases[1].to_dict()
 
 
 def test_schema_two_configurations_still_restore_without_a_transform():
-    config = Pipeline(NaiveForecaster("drift")).to_config()
+    config = Pipeline(DriftForecaster()).to_config()
     assert config["target_transform"] is None
     legacy = {key: value for key, value in config.items() if key != "target_transform"}
     legacy["schema_version"] = 2
@@ -379,16 +379,16 @@ def test_external_target_transforms_are_described_but_not_replayable():
         def clone_unfitted(self):
             return Shift()
 
-        def fit_transform(self, context):
-            return context - 1.
+        def fit_transform(self, history):
+            return history - 1.
 
         def inverse_transform(self, forecast):
             return Forecast(index=forecast.index, point=forecast.point + 1., target_names=forecast.target_names)
 
-    pipeline = Pipeline(NaiveForecaster(), target_transform=Shift())
+    pipeline = Pipeline(LastValueForecaster(), target_transform=Shift())
     case = Scenario("trend").generate(seed=0)
-    np.testing.assert_allclose(pipeline.predict(case.task.context, case.task.future_index).point,
-                               Pipeline(NaiveForecaster()).predict(case.task.context, case.task.future_index).point)
+    np.testing.assert_allclose(pipeline.predict(case.task.history, case.task.future_index).point,
+                               Pipeline(LastValueForecaster()).predict(case.task.history, case.task.future_index).point)
     config = pipeline.to_config()
     assert config["replayable"] is False and config["target_transform"]["kind"] == "external"
     assert config["target_transform"]["qualname"].endswith("Shift")
@@ -399,11 +399,11 @@ def test_external_target_transforms_are_described_but_not_replayable():
 def test_pipeline_rejects_target_transforms_without_the_protocol():
     for invalid in (LogTransform, object(), "log"):
         with pytest.raises(TypeError, match="target_transform must be an instance"):
-            Pipeline(target_transform=invalid)
+            Pipeline(LastValueForecaster(), target_transform=invalid)
 
     class Shared(LogTransform):
         def clone_unfitted(self):
             return self
 
     with pytest.raises(ValueError, match="new target transform instance"):
-        Pipeline(target_transform=Shared()).predict(pd.DataFrame({"y": [1., 2., 3.]}), pd.RangeIndex(3, 5))
+        Pipeline(LastValueForecaster(), target_transform=Shared()).predict(pd.DataFrame({"y": [1., 2., 3.]}), pd.RangeIndex(3, 5))

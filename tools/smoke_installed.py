@@ -33,7 +33,7 @@ def main():
     sys.meta_path.insert(0, BlockOptional())
     import numpy as np
     import timegym
-    from timegym import (GaussianAR1Forecaster, LastValueForecaster, NaiveForecaster, Pipeline,
+    from timegym import (GaussianAR1Forecaster, LastValueForecaster, Pipeline,
                          Scenario, Scorecard, TestReport)
 
     installed_path = Path(timegym.__file__).resolve()
@@ -42,16 +42,16 @@ def main():
         raise AssertionError("The smoke check imported the checkout instead of an installed wheel")
     if not installed_path.is_relative_to(Path(sys.prefix).resolve()):
         raise AssertionError("TimeGym must be installed into the checking interpreter's environment")
-    scenario = Scenario("ar1", context_length=48, horizon=6, n_targets=2,
+    scenario = Scenario("ar1", history_length=48, horizon=6, n_targets=2,
                         parameters={"correlation": .5})
     case = scenario.generate(seed=17)
-    point = Pipeline(NaiveForecaster()).predict(case.task.context, case.task.future_index)
+    point = Pipeline(LastValueForecaster()).predict(case.task.history, case.task.future_index)
     assert point.point.shape == (6, 2) and point.validate(case.task) == []
     joint = Pipeline(GaussianAR1Forecaster(n_samples=32, seed=11)).predict(
-        case.task.context, case.task.future_index)
+        case.task.history, case.task.future_index)
     assert joint.samples.shape == (32, 6, 2) and joint.validate(case.task) == []
     assert np.isfinite(joint.samples).all()
-    run = Pipeline(NaiveForecaster()).run([scenario], seeds=[0, 1, 2])
+    run = Pipeline(LastValueForecaster()).run([scenario], seeds=[0, 1, 2])
     run.report.assert_passed()
     assert len(run.cases) == 3
     from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
@@ -61,18 +61,18 @@ def main():
     assert "index_mismatch" in fault_codes and shifted.metrics == {}
     with TemporaryDirectory(prefix="timegym-wheel-report-") as temporary:
         report_path = args.report or Path(temporary) / "report.json"
-        run.report.to_json(report_path)
-        replay = TestReport.read(report_path).replay_case(0)
+        run.report.save(report_path)
+        replay = TestReport.load(report_path).replay_case(0)
         assert replay.metadata["replay"]["reproduced"]
     joint_processes = []
     for kind in ("composite", "merton_jump_diffusion", "garch", "markov_switching"):
-        spec = Scenario(kind, context_length=24, horizon=3, n_targets=2,
+        spec = Scenario(kind, history_length=24, horizon=3, n_targets=2,
                         parameters={"correlation": .6})
         generated = spec.generate(seed=17)
         distribution = generated.reference.forecast(n_samples=64, seed=91)
         assert distribution.samples.shape == (64, 3, 2)
         assert distribution.validate(generated.task) == []
-        retained = Pipeline(NaiveForecaster()).run([spec], seeds=[17])
+        retained = Pipeline(LastValueForecaster()).run([spec], seeds=[17])
         rechecked = TestReport.from_json(retained.report.to_json()).replay_case()
         assert rechecked.metadata["replay"]["reproduced"]
         if kind == "garch":

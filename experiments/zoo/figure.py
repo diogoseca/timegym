@@ -47,7 +47,9 @@ def load(directory, model_ids=MODEL_IDS):
                 raise ValueError(f"{model_id} {key}: the table's score differs from the baseline's")
             low, high = _number(row["score_low"]), _number(row["score_high"])
             cells[key] = (score, low, high)
-        found[model_id] = {"grid": record["grid"], "cells": cells, "title": record["title"]}
+        # Baselines saved by TimeGym 1.13.1 and earlier name the grid's history_length context_length.
+        grid = {("history_length" if key == "context_length" else key): value for key, value in record["grid"].items()}
+        found[model_id] = {"grid": grid, "cells": cells, "title": record["title"]}
     if not found:
         raise FileNotFoundError(f"No zoo baselines in {directory}")
     grids = {json.dumps(item["grid"], sort_keys=True) for item in found.values()}

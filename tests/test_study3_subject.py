@@ -121,7 +121,7 @@ def test_reference_agrees_with_the_clean_ridge_subject_on_the_pilot_seeds():
     conditions = json.loads((common.ROOT / "experiments/protocol-v2.json").read_text())["model_study"]["conditions"]
     for c, seed in PILOT_SEEDS:
         case = scenario_from_condition(conditions[c]).generate(seed=seed)
-        context, future = case.task.context, case.task.future_index
+        context, future = case.task.history, case.task.future_index
         clean = Pipeline(learners.build("ridge")).predict(context, future)
         assert clean.validate(case.task) == []
         np.testing.assert_allclose(clean.point, reference_forecast(context, future).point, atol=1e-8, rtol=1e-7)

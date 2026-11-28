@@ -46,17 +46,17 @@ def test_extend_examples_show_what_they_say():
     result = namespace["result"]  # the last example: a kind of series with its answer key
     report = result.report
     assert [(case.scenario, case.seed) for case in report.cases] == [("noisy_line", 0), ("noisy_line", 1), ("noisy_line", 2)]
-    assert all("mean_reference_mse" in case.metrics for case in report.cases)
-    assert namespace["run"].metadata["model"] == "weather service"
+    assert all("avoidable_mse" in case.metrics for case in report.cases)
+    assert namespace["run"].metadata["name"] == "weather service"
     assert result.scorecard.table["pattern"].tolist() == ["noisy_line"]
 
 
-def test_own_scores_example_on_the_scores_page_runs():
+def test_own_metrics_example_on_the_metrics_page_runs():
     namespace = {}
     exec(python_blocks("docs/api/diagnostics.md")[0], namespace)  # the later block needs your own data
     close = namespace["within_10_percent"]
     assert close(observed=np.array([10.0, 20.0]), predicted=np.array([10.5, 25.0])) == 0.5
-    assert set(namespace["scores"]) == {"log_loss", "close"}
+    assert set(namespace["metrics"]) == {"log_loss", "close"}
 
 
 def test_comparison_examples_on_the_scores_page_print_what_the_page_shows():
@@ -75,7 +75,7 @@ def test_comparison_examples_on_the_scores_page_print_what_the_page_shows():
     assert printed.getvalue() == "".join(shown)
 
 
-def test_own_scores_on_the_extend_page_land_in_the_report():
+def test_own_metrics_on_the_extend_page_land_in_the_report():
     import matplotlib
 
     matplotlib.use("Agg")
@@ -86,12 +86,12 @@ def test_own_scores_on_the_extend_page_land_in_the_report():
             namespace["scored"] = namespace["result"]
     scored = namespace["scored"]
     assert all({"brier", "log_loss"} <= set(case.metrics) for case in scored.report.cases)
-    assert scored.metadata["scores"][0]["name"] == "brier"
+    assert scored.metadata["metrics"][0]["name"] == "brier"
 
 
 def test_own_checks_examples_on_the_scores_page_run():
     import pandas as pd
-    from timegym import LastValueForecaster, NaiveForecaster, Pipeline, cases_from_series
+    from timegym import GaussianAR1Forecaster, LastValueForecaster, MeanForecaster, Pipeline, cases_from_series
 
     text = (ROOT / "docs/api/diagnostics.md").read_text(encoding="utf-8")
     section = text[text.index("## Your own output checks"):text.index("## Statistical and metamorphic")]
@@ -99,22 +99,26 @@ def test_own_checks_examples_on_the_scores_page_run():
     days = pd.date_range("2024-01-01", periods=120, freq="D")
     rng = np.random.default_rng(0)
     rain = pd.Series((rng.random(120) < 0.3).astype(float), index=days, name="rain")
-    namespace = {"pipeline": Pipeline(NaiveForecaster("mean")),
+    namespace = {"pipeline": Pipeline(MeanForecaster()),
                  "cases": cases_from_series(rain, origins=[60, 80, 100], horizon=7, name="rain")}
     exec(blocks[0], namespace)  # a chance of rain stays between 0 and 1
     assert namespace["result"].checks[-1] == {"check": "within", "title": "Values between 0 and 1",
                                               "passed": 3, "failed": 0}
     exec(blocks[1], namespace)
+    namespace["pipeline"] = Pipeline(GaussianAR1Forecaster(n_samples=40, seed=3))  # the check needs sample paths
+    exec(blocks[2], namespace)
+    (row,) = [row for row in namespace["result"].checks if row["check"] == "dependence"]
+    assert row["title"] == "Joint spread matches the answer key" and row["passed"] + row["failed"] == 20
     north, south = rng.poisson(3, 120), rng.poisson(2, 120)
     sales = pd.DataFrame({"north": north, "south": south, "total": north + south}, index=days).astype(float)
     namespace.update(pipeline=Pipeline(LastValueForecaster()),
                      cases=cases_from_series(sales, origins=[60, 80, 100], horizon=7, name="coats"))
-    exec(blocks[2], namespace)
+    exec(blocks[3], namespace)
     assert namespace["result"].checks[-2:] == [
         {"check": "within", "title": "Values at least 0", "passed": 3, "failed": 0},
         {"check": "totals_add_up", "title": "Store totals add up", "passed": 3, "failed": 0},
     ]
-    assert len(blocks) == 3
+    assert len(blocks) == 4
 
 
 def test_own_checks_on_the_extend_page_fail_and_pass_as_the_comment_says():
@@ -133,7 +137,7 @@ def test_own_checks_on_the_extend_page_fail_and_pass_as_the_comment_says():
 
 
 def test_own_kind_of_series_on_the_scorecard_page_scores_as_the_table_says():
-    from timegym import NaiveForecaster, Pipeline
+    from timegym import MeanForecaster, Pipeline, SeasonalLastValueForecaster
 
     text = (ROOT / "docs/api/scorecard.md").read_text(encoding="utf-8")
     section = text[text.index("## Your own kind of series"):text.index("## Mistakes and checks")]
@@ -142,8 +146,8 @@ def test_own_kind_of_series_on_the_scorecard_page_scores_as_the_table_says():
     exec(block, namespace)
     forecasters = {
         "Seasonal mean": namespace["card"],
-        "Historical mean": Pipeline(NaiveForecaster("mean")).scorecard(patterns=[namespace["rain"]]),
-        "Last cycle repeated": Pipeline(NaiveForecaster("seasonal", period=12)).scorecard(patterns=[namespace["rain"]]),
+        "Historical mean": Pipeline(MeanForecaster()).scorecard(patterns=[namespace["rain"]]),
+        "Last cycle repeated": Pipeline(SeasonalLastValueForecaster(period=12)).scorecard(patterns=[namespace["rain"]]),
     }
     for label, card in forecasters.items():
         (row,) = [line for line in section.splitlines() if line.startswith(f"| {label}")]
@@ -162,8 +166,7 @@ def test_calibration_example_on_the_scores_page_prints_what_the_page_shows():
     import contextlib
     import io
 
-    from timegym import NaiveForecaster, Pipeline
-    from timegym.diagnostics import calibration
+    from timegym import MeanForecaster, Pipeline
 
     text = (ROOT / "docs/api/diagnostics.md").read_text(encoding="utf-8")
     section = text[text.index("## Are the chances honest?"):text.index("## Case-level uncertainty intervals")]
@@ -177,15 +180,15 @@ def test_calibration_example_on_the_scores_page_prints_what_the_page_shows():
     cases = namespace["cases"]
 
     class WithoutAddedSteps(namespace["ShareAtThisPointOfTheCycle"]):
-        def fit(self, context):
-            values = context.to_numpy()[:, 0]
+        def fit(self, history):
+            values = history.to_numpy()[:, 0]
             self.length_ = len(values)
             self.share_ = np.array([values[phase::12].mean() for phase in range(12)])
             return self
 
-    plain = calibration(Pipeline(WithoutAddedSteps()).run(cases=cases, keep_data=True), cluster="station")
+    plain = Pipeline(WithoutAddedSteps()).run(cases=cases, keep_data=True).calibration(cluster="station")
     assert plain.certain == 130 and f"{plain.slope:.2f}" == "0.46"  # "says 0 or 1 exactly 130 times"
-    mean = calibration(Pipeline(NaiveForecaster("mean")).run(cases=cases, keep_data=True), cluster="station")
+    mean = Pipeline(MeanForecaster()).run(cases=cases, keep_data=True).calibration(cluster="station")
     used = mean.table[mean.table["forecasts"] > 0]
     assert used["low"].min() == 0.4 and used["high"].max() == 0.6  # "between 40% and 60%"
     assert f"{mean.slope:.2f}" == "-0.14"

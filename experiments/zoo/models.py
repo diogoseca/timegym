@@ -14,6 +14,8 @@ scorecard.
 """
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -176,13 +178,20 @@ def training_stream(protocol, model_id):
     return study3_learners.SeedStream([tag, model_index(model_id)])
 
 
+def registered_naive(*arguments):
+    """NaiveForecaster as protocol 3.0 registered it."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)  # kept: the saved zoo scorecards are titled by its name
+        return NaiveForecaster(*arguments)
+
+
 def build(model_id, protocol):
     """The registered configuration of one Part 6 model."""
     registered_ids(protocol)
     if model_id == "last_value":
-        return NaiveForecaster()
+        return registered_naive()
     if model_id == "seasonal_naive":
-        return NaiveForecaster("seasonal", SEASON_LENGTH)
+        return registered_naive("seasonal", SEASON_LENGTH)
     if model_id in STATSFORECAST:
         return StatsForecastModel(STATSFORECAST[model_id])
     if model_id == "hgb_lags":

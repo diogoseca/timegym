@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from timegym import (Case, ForecastRun, ForecastTask, LastValueForecaster, NaiveForecaster, Pipeline,
+from timegym import (Case, ForecastRun, ForecastTask, LastValueForecaster, MeanForecaster, Pipeline,
                      Reference, Scenario, Scorecard, TestReport, cases_from_series)
 from timegym.diagnostics import calibration
 from timegym.scenarios import default_scenarios
@@ -51,12 +51,12 @@ def test_the_runs_scorecard_is_the_old_scorecard_number_for_number():
 
 
 def test_scorecard_settings_go_through_run():
-    pipeline = Pipeline(NaiveForecaster())
-    card = pipeline.run(["random_walk"], noise_levels=[0.2, 0.4], instances=3, context_length=40, horizon=6,
-                        title="Mine", interval_level=0.99).scorecard
+    pipeline = Pipeline(LastValueForecaster(), name="Mine")
+    card = pipeline.run(["random_walk"], noise_levels=[0.2, 0.4], instances=3, history_length=40, horizon=6,
+                        interval_level=0.99).scorecard
     assert card.title == "Mine" and card.interval_level == 0.99
     assert list(card.table["noise_sd"]) == [0.2, 0.4]
-    assert card.cells[0].scenario.context_length == 40 and card.cells[0].scenario.horizon == 6
+    assert card.cells[0].scenario.history_length == 40 and card.cells[0].scenario.horizon == 6
     assert pipeline.run("random_walk", instances=2).scorecard.table["pattern"].tolist() == ["random_walk"] * 2
 
 
@@ -94,6 +94,8 @@ def test_reading_forecasts_of_a_dropped_run_names_the_switch():
     with pytest.raises(ValueError, match=r"plot_forecasts\(\).*keep_data=True"):
         result.plot_forecasts()
     with pytest.raises(ValueError, match="calibration.*keep_data=True"):
+        result.calibration()
+    with pytest.raises(ValueError, match="calibration.*keep_data=True"):
         calibration(result)
     kept = Pipeline(LastValueForecaster()).run(["trend"], instances=2, keep_data=True)
     plt.close(kept.plot_forecasts())
@@ -107,7 +109,7 @@ def test_the_result_answers_for_its_report():
     assert json.loads(result.to_json()) == json.loads(result.report.to_json())
 
     class Broken:
-        def fit(self, context):
+        def fit(self, history):
             return self
 
         def predict(self, future_index):
@@ -117,17 +119,25 @@ def test_the_result_answers_for_its_report():
         Pipeline(Broken()).run(["trend"], instances=1).assert_passed()
 
 
-def test_to_json_writes_the_report(tmp_path):
+def test_save_writes_the_report_and_load_reads_it_back(tmp_path):
     result = Pipeline(LastValueForecaster()).run(["trend"], instances=2)
     path = tmp_path / "report.json"
-    text = result.to_json(path)
-    assert path.read_text(encoding="utf-8") == text + "\n"
-    assert TestReport.read(path).to_dict() == result.report.to_dict()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        assert result.save(path) == path
+        assert path.read_text(encoding="utf-8") == result.to_json() + "\n"
+        loaded = TestReport.load(path)
+        assert loaded.to_dict() == result.report.to_dict()
+        assert loaded.save(tmp_path / "again.json") == tmp_path / "again.json"
+        assert (tmp_path / "again.json").read_text(encoding="utf-8") == path.read_text(encoding="utf-8")
+        pd.testing.assert_frame_equal(loaded.metrics, result.metrics)
+    with pytest.raises(TypeError, match=r"use TestReport\.load\(path\) for a file"):
+        TestReport.from_json(path)
 
 
 def test_scenarios_you_built_give_one_row_each():
-    scenarios = [Scenario("trend", context_length=30, horizon=5), Scenario("ar1", context_length=30, horizon=5),
-                 Scenario("trend", context_length=30, horizon=5, parameters={"slope": 0.5})]
+    scenarios = [Scenario("trend", history_length=30, horizon=5), Scenario("ar1", history_length=30, horizon=5),
+                 Scenario("trend", history_length=30, horizon=5, parameters={"slope": 0.5})]
     result = Pipeline(LastValueForecaster()).run(scenarios, instances=3)
     card = result.scorecard
     assert card.table["pattern"].tolist() == ["trend", "ar1", "trend (2)"]
@@ -160,34 +170,34 @@ def test_your_own_data_has_no_scorecard():
     plt.close(kept.plot_forecasts())
 
 
-@pytest.mark.parametrize("setting", [{"noise_levels": 3}, {"context_length": 50}, {"horizon": 6},
-                                     {"title": "Mine"}, {"interval_level": 0.99}, {"attainable": True}])
+@pytest.mark.parametrize("setting", [{"noise_levels": 3}, {"history_length": 50}, {"horizon": 6},
+                                     {"interval_level": 0.99}, {"simulate_attainable": True}])
 def test_scorecard_settings_are_refused_for_your_own_data(setting):
     name = next(iter(setting))
     with pytest.raises(ValueError, match=f"{name} belongs to the scorecard"):
-        Pipeline().run(cases=_own_data(), **setting)
+        Pipeline(LastValueForecaster()).run(cases=_own_data(), **setting)
 
 
 def test_cases_still_refuse_scenarios_and_seeds():
     with pytest.raises(ValueError, match="not both"):
-        Pipeline().run(["trend"], cases=_own_data())
+        Pipeline(LastValueForecaster()).run(["trend"], cases=_own_data())
     with pytest.raises(ValueError, match="not both"):
-        Pipeline().run(cases=_own_data(), instances=2)
+        Pipeline(LastValueForecaster()).run(cases=_own_data(), instances=2)
 
 
 def test_scorecard_settings_for_kinds_of_series_are_refused_for_scenarios_you_built():
     with pytest.raises(ValueError, match="horizon set the scorecard's kinds of series"):
-        Pipeline().run([Scenario("trend")], horizon=6)
+        Pipeline(LastValueForecaster()).run([Scenario("trend")], horizon=6)
 
 
 def test_kinds_of_series_and_scenarios_do_not_mix():
     with pytest.raises(TypeError, match="not both in one run"):
-        Pipeline().run(["trend", Scenario("ar1")])
+        Pipeline(LastValueForecaster()).run(["trend", Scenario("ar1")])
 
 
 def test_keep_data_must_be_a_boolean():
     with pytest.raises(TypeError, match="keep_data must be True or False"):
-        Pipeline().run(["trend"], keep_data="yes")
+        Pipeline(LastValueForecaster()).run(["trend"], keep_data="yes")
 
 
 def test_explicit_seeds_name_the_card_seed_only_when_they_count_up():
@@ -226,7 +236,7 @@ class _FlatLine:
 
 
 def test_a_scenario_of_your_own_without_lengths_gets_a_row():
-    card = Pipeline(NaiveForecaster("mean")).run([_FlatLine()], instances=4).scorecard
+    card = Pipeline(MeanForecaster()).run([_FlatLine()], instances=4).scorecard
     assert card.table["pattern"].tolist() == ["flat_line"] and np.isnan(card.table["attainable"].iloc[0])
     assert 0 <= card.table["score"].iloc[0] <= 100
     plt.close(card.plot())
@@ -249,7 +259,7 @@ def test_a_run_with_its_scorecard_pickles():
         again = pickle.loads(pickle.dumps(result))
         assert str(again.scorecard) == str(result.scorecard)
         plt.close(again.scorecard.plot())
-    built = Pipeline(LastValueForecaster()).run([Scenario("trend", context_length=30, horizon=5)], instances=2)
+    built = Pipeline(LastValueForecaster()).run([Scenario("trend", history_length=30, horizon=5)], instances=2)
     assert str(pickle.loads(pickle.dumps(built)).scorecard) == str(built.scorecard)
 
 
@@ -290,7 +300,7 @@ def test_test_still_takes_ready_made_cases():
         warnings.simplefilter("ignore", DeprecationWarning)
         report = Pipeline(LastValueForecaster()).test(cases=_own_data())
         with pytest.raises(ValueError, match="not both"):
-            Pipeline().test(["trend"], cases=_own_data())
+            Pipeline(LastValueForecaster()).test(["trend"], cases=_own_data())
     assert len(report.cases) == 2
 
 
@@ -310,10 +320,145 @@ def test_a_bad_interval_level_is_refused_before_any_forecast():
     fits = []
 
     class Counted(LastValueForecaster):
-        def fit(self, context):
+        def fit(self, history):
             fits.append(1)
-            return super().fit(context)
+            return super().fit(history)
 
     with pytest.raises(ValueError, match="interval_level must be a number between 0 and 1"):
         Pipeline(Counted()).run(["trend"], instances=2, interval_level=95)
     assert fits == []
+
+
+def test_a_name_titles_the_card_and_names_the_run_and_run_takes_no_title():
+    named = Pipeline(LastValueForecaster(), name="Repeat the last value")
+    result = named.run(["trend", "seasonal"], instances=2)
+    assert result.metadata["name"] == "Repeat the last value"
+    assert result.metadata["model"] == "LastValueForecaster"  # still the class
+    assert result.scorecard.title == "Repeat the last value"
+    assert str(result.scorecard).startswith("## Repeat the last value: ")
+    unnamed = Pipeline(LastValueForecaster()).run(["trend", "seasonal"], instances=2)
+    assert "name" not in unnamed.metadata and "name" not in unnamed.metadata["pipeline_config"]
+    assert unnamed.scorecard.title == "LastValueForecaster"
+    pd.testing.assert_frame_equal(result.scorecard.table, unnamed.scorecard.table)
+    own = named.run(cases=_own_data())  # a name, unlike the scorecard's settings, goes with your own data too
+    assert own.metadata["name"] == "Repeat the last value"
+    with pytest.raises(TypeError, match="title"):
+        named.run(["trend"], title="Mine")
+
+
+@pytest.mark.parametrize("name", ["", "  ", 3, ["Forest"]])
+def test_a_name_must_be_a_nonempty_string(name):
+    with pytest.raises(TypeError, match="name must be a nonempty string"):
+        Pipeline(LastValueForecaster(), name=name)
+    with pytest.raises(TypeError, match="name must be a nonempty string"):
+        ForecastRun.from_forecasts(_own_data(), [np.zeros(12)] * 2, name=name)
+
+
+def test_recorded_forecasts_take_a_name_once():
+    recorded = ForecastRun.from_forecasts(_own_data(), [np.zeros(12)] * 2, name="weather service")
+    assert recorded.metadata["name"] == "weather service" and recorded.metadata["model"] == "recorded forecasts"
+    with pytest.raises(ValueError, match="not both"):
+        ForecastRun.from_forecasts(_own_data(), [np.zeros(12)] * 2, name="a", metadata={"name": "b"})
+
+
+def test_each_entry_reads_its_cases_parts_and_agrees_with_the_report():
+    pipeline = Pipeline(LastValueForecaster())
+    kept = pipeline.run(["trend", "seasonal"], instances=2, keep_data=True)
+    for entry, saved in zip(kept.cases, kept.report.cases):
+        case = entry.case
+        assert entry.history is case.task.history and entry.future_index is case.task.future_index
+        assert entry.observed is case.observed and entry.reference is case.reference
+        assert entry.metrics == saved.metrics and entry.diagnostics == saved.diagnostics
+        assert entry.manifest == saved.manifest == case.manifest
+        assert entry.manifest["seed"] == saved.seed and entry.manifest["kind"] == saved.scenario
+    dropped = pipeline.run(["trend", "seasonal"], instances=2)
+    for entry, saved in zip(dropped.cases, kept.cases):
+        assert entry.case is entry.history is entry.future_index is entry.observed is entry.reference is None
+        assert entry.forecast is None
+        assert entry.metrics == saved.metrics and entry.manifest == saved.manifest
+        assert [d.to_dict() for d in entry.diagnostics] == [d.to_dict() for d in saved.diagnostics]
+    own = pipeline.run(cases=_own_data(), keep_data=True)
+    assert own.cases[0].reference is None and own.cases[0].manifest["origin"] == str(own.cases[0].history.index[-1])
+    # A metric changed on the entry is the report's: they are the same record.
+    kept.cases[0].metrics["mine"] = 1.0
+    assert kept.report.cases[0].metrics["mine"] == 1.0
+
+
+def test_result_metrics_is_one_row_per_case_with_its_labels_then_its_metrics(tmp_path):
+    from timegym.checks import within
+
+    class CrashesOnSeedOne(LastValueForecaster):
+        def fit(self, history):
+            if len(history) == 20 and history.iloc[0, 0] == self.first_of_seed_one:
+                raise RuntimeError("no forecast")
+            return super().fit(history)
+
+    scenarios = [Scenario("ar1", history_length=20, horizon=3), Scenario("trend", history_length=20, horizon=3)]
+    CrashesOnSeedOne.first_of_seed_one = scenarios[0].generate(seed=1).task.history.iloc[0, 0]
+    result = Pipeline(CrashesOnSeedOne()).run(scenarios, instances=3, checks={"small": within(None, 2.0)})
+    table = result.metrics
+    assert list(table.columns) == ["scenario", "seed", "avoidable_mse", "mae", "mase", "mse"]
+    assert table.index.name == "case" and list(table.index) == list(range(6))
+    assert table["scenario"].tolist() == ["ar1"] * 3 + ["trend"] * 3 and table["seed"].tolist() == [0, 1, 2] * 2
+    for position, entry in enumerate(result.cases):
+        row = table.loc[position]
+        scored = not any(d.failed for d in entry.diagnostics)
+        for name in ("avoidable_mse", "mae", "mase", "mse"):
+            if scored:
+                assert row[name] == entry.metrics[name]
+            else:  # crashed, or failed the check of its own: not scored
+                assert np.isnan(row[name])
+    assert table.loc[1, ["mae", "mse"]].isna().all() and result.cases[1].metrics == {}  # the crash
+    failed = [i for i, entry in enumerate(result.cases) if entry.metrics and any(d.failed for d in entry.diagnostics)]
+    assert failed and table.loc[failed, "mae"].isna().all()  # though each recorded one
+    assert table.groupby("scenario")["mae"].mean().index.tolist() == ["ar1", "trend"]
+    # The same table on the report, on a report read back from its file, and with the data kept.
+    pd.testing.assert_frame_equal(table, result.report.metrics)
+    path = tmp_path / "report.json"
+    path.write_text(result.to_json())
+    pd.testing.assert_frame_equal(table, TestReport.from_json(path.read_text()).metrics)
+    kept = Pipeline(CrashesOnSeedOne()).run(scenarios, instances=3, checks={"small": within(None, 2.0)}, keep_data=True)
+    pd.testing.assert_frame_equal(table, kept.metrics)
+    # It is made on each read, so it follows a change to the cases.
+    result.cases[0].metrics["mae"] = 99.0
+    assert result.metrics.loc[0, "mae"] == 99.0 and table.loc[0, "mae"] != 99.0
+
+
+def test_result_metrics_labels_the_scorecards_cells_so_noise_levels_stay_apart(tmp_path):
+    result = Pipeline(LastValueForecaster()).run(["trend", "seasonal"], instances=2)
+    table = result.metrics
+    assert list(table.columns[:3]) == ["pattern", "noise", "seed"]
+    assert table["pattern"].tolist() == ["trend"] * 4 + ["seasonal"] * 4
+    assert table["noise"].tolist() == ["Low noise", "Low noise", "High noise", "High noise"] * 2
+    cells = table.groupby(["pattern", "noise"], sort=False)["avoidable_mse"].mean()
+    card = result.scorecard.table
+    assert list(cells.index) == list(zip(card["pattern"], card["noise"]))  # one row per cell of the scorecard
+    np.testing.assert_allclose(cells.to_numpy(), card["avoidable_mse"].to_numpy())
+    result.save(tmp_path / "report.json")
+    pd.testing.assert_frame_equal(TestReport.load(tmp_path / "report.json").metrics, table)
+
+
+def test_result_metrics_tells_two_scenarios_of_one_kind_apart_by_their_scorecard_rows():
+    scenarios = [Scenario("ar1", history_length=40, horizon=5),
+                 Scenario("ar1", history_length=40, horizon=5, parameters={"phi": 0.2})]
+    result = Pipeline(LastValueForecaster()).run(scenarios, seeds=[3, 4], keep_data=True)
+    assert result.metrics["scenario"].tolist() == ["ar1", "ar1", "ar1 (2)", "ar1 (2)"]
+    assert result.scorecard.table["pattern"].tolist() == ["ar1", "ar1 (2)"]
+    assert result.metrics["seed"].tolist() == [3, 4, 3, 4]
+    pd.testing.assert_frame_equal(TestReport.from_json(result.to_json()).metrics, result.metrics)
+    # Without the labels the run records, or with cases that are not the run's own, a report has kind and seed.
+    report = result.report
+    unlabelled = {key: value for key, value in report.metadata.items() if key != "scenario_labels"}
+    assert list(TestReport(report.cases, unlabelled).metrics.columns[:2]) == ["kind", "seed"]
+    assert list(TestReport(report.cases[1:3], report.metadata).metrics.columns[:2]) == ["kind", "seed"]
+    assert list(TestReport(report.cases[:2], report.metadata).metrics.columns[:2]) == ["kind", "seed"]
+
+
+def test_result_metrics_labels_your_own_data_by_its_name_and_origin():
+    result = Pipeline(LastValueForecaster()).run(cases=_own_data())
+    table = result.metrics
+    assert list(table.columns) == ["kind", "origin", "mae", "mase", "mse"]
+    assert table["origin"].tolist() == [entry.manifest["origin"] for entry in result.cases] == ["149", "169"]
+    assert table["mae"].tolist() == [entry.metrics["mae"] for entry in result.cases]
+    empty = TestReport(cases=[])
+    assert empty.metrics.empty and list(empty.metrics.columns) == ["kind"]

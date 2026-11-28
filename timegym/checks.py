@@ -3,33 +3,39 @@
 import numbers
 import numpy as np
 from .contracts import ForecastTask
-from .reporting import DiagnosticResult
+from .reporting import CHECKS, DiagnosticResult
 from .diagnostics import exception_evidence
+from .provenance import diagnostic_settings
+from ._internal import _renamed_keywords
 
-__all__ = ["check_shift_equivariance", "within"]
+__all__ = ["check_shift_equivariance", "within", "dependence"]
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-41
 
 
 # %% ../source/09_scores_and_diagnostics.ipynb #09_scores_and_diagno-43
+@_renamed_keywords(context="history")
 def check_shift_equivariance(
-    pipeline, context, future_index, *, shift=10.0, atol=1e-8, rtol=1e-7
+    pipeline, history, future_index, *, shift=10.0, atol=1e-8, rtol=1e-7
 ):
     """Check f(y+c)=f(y)+c for a model declaring location equivariance.
 
-    This property is not universal: regularization, clipping or absolute features
-    may intentionally violate it. Callers choose whether it applies to their model.
+    The pipeline forecasts ``future_index`` from ``history`` and from the
+    history shifted by ``shift``. This property is not universal:
+    regularization, clipping or absolute features may intentionally violate
+    it. Callers choose whether it applies to their model. The old keyword
+    ``context=`` still works and warns.
     """
     if not np.isfinite(shift) or shift == 0:
         raise ValueError("shift must be finite and nonzero")
     if not np.isfinite(atol) or not np.isfinite(rtol) or atol < 0 or rtol < 0:
         raise ValueError("atol and rtol must be finite and nonnegative")
     try:
-        original = pipeline.predict(context, future_index)
-        shifted = pipeline.predict(context + shift, future_index)
+        original = pipeline.predict(history, future_index)
+        shifted = pipeline.predict(history + shift, future_index)
         violations = original.validate(
-            ForecastTask(context, future_index)
-        ) + shifted.validate(ForecastTask(context + shift, future_index))
+            ForecastTask(history, future_index)
+        ) + shifted.validate(ForecastTask(history + shift, future_index))
         if violations:
             return DiagnosticResult(
                 "shift_equivariance",
@@ -56,7 +62,7 @@ def check_shift_equivariance(
             "shift_equivariance",
             "PASS" if passed else "FAIL",
             "metamorphic",
-            "Declared location-equivariance relation tested on paired contexts.",
+            "Declared location-equivariance relation tested on paired histories.",
             {"shift": shift, "max_absolute_error": error, "atol": atol, "rtol": rtol},
         )
     except Exception as exc:
@@ -232,3 +238,46 @@ def within(lower=None, upper=None):
     1"; to use two, name them with a dictionary. Replay runs it again.
     """
     return _Within(lower, upper)
+
+
+# %% ../source/09_scores_and_diagnostics.ipynb #dependence
+class _Dependence:
+    """The dependence check made by ``dependence``: a run reads its settings and runs it on every case."""
+
+    __name__ = "dependence"
+
+    def __init__(self, n_calibration, alpha):
+        settings = diagnostic_settings(
+            check_dependence=True, n_calibration=n_calibration, alpha=alpha
+        )
+        self.n_calibration, self.alpha = settings["n_calibration"], settings["alpha"]
+        self.__doc__ = CHECKS["dependence"]
+        # Read by the evaluator; a report records them under metadata["diagnostic_settings"].
+        self._dependence_settings = {
+            "n_calibration": self.n_calibration,
+            "alpha": self.alpha,
+        }
+
+    def __repr__(self):
+        return f"dependence(n_calibration={self.n_calibration}, alpha={self.alpha})"
+
+
+def dependence(n_calibration=99, alpha=0.05):
+    """Check that sample paths move together as the answer key says; pass it in ``checks=``.
+
+    ``pipeline.run(scenarios, checks=[dependence()])`` runs
+    ``timegym.diagnostics.covariance_dependence_check`` on every case: it
+    compares the covariance of the forecast's sample paths, over every step
+    and series, with the answer key's, against ``n_calibration`` sets of
+    samples drawn from the answer key itself, and fails when its p-value is
+    at most ``alpha``. A case without sample paths, or without an answer key
+    with a covariance, gets UNSUPPORTED. The finding in each case is
+    ``reference_covariance`` and its row in ``result.checks`` is
+    "dependence". A report records ``n_calibration`` and ``alpha`` under
+    ``metadata["diagnostic_settings"]``, and replay runs the check again.
+    Each case's calibration draws are seeded 100,000 after the case's own
+    seed; ``evaluate_forecast`` takes the seed as ``dependence_seed``. It
+    replaces ``check_dependence=True``, ``n_calibration=`` and ``alpha=``,
+    which still work and warn.
+    """
+    return _Dependence(n_calibration, alpha)

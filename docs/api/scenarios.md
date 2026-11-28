@@ -7,7 +7,7 @@ the expected value and the spread of every future step, given that past. Your
 model never sees the future or the answer key; only the scorer does.
 [Synthetic scenarios](../stress-cases.md) describes each recipe in plain terms.
 
-`Scenario(kind, context_length=120, horizon=12, parameters=<factory>, n_targets=1,
+`Scenario(kind, history_length=120, horizon=12, parameters=<factory>, n_targets=1,
 seed=0).generate(seed=None)` returns a `Case(task, observed, reference, manifest)`.
 Core kinds: `white_noise`, `trend`, `seasonal`, `ar1`, `random_walk`. Additional
 joint-capable kinds: `composite`, `merton_jump_diffusion`, `garch`,
@@ -58,7 +58,7 @@ an explicitly privileged reference forecast for diagnostic calibration.
 default marginal levels for the Gaussian AR(1) model.
 
 The five core families have exact known-parameter Gaussian reference laws. For AR(1), |phi| < 1 and the
-context starts in its stationary distribution. A random walk starts at its
+history starts in its stationary distribution. A random walk starts at its
 configured intercept at index zero. Future innovations are integrated out.
 
 `ar2` is a stationary AR(2), `Y[t] - mean = phi1*(Y[t-1] - mean) +
@@ -72,12 +72,12 @@ kind but not one of `CORE_KINDS`, so the default suite is unchanged.
 standard deviation of measurement noise added to each observation of the
 hidden process. The noise is drawn after the process shocks, so changing it
 keeps the hidden path. With `noise` set (and always for `ar2`) the reference is
-the exact Kalman-filter prediction given the noisy context, and
+the exact Kalman-filter prediction given the noisy history, and
 `reference.conditioning["reference_method"]` is `"kalman_filter"`. Without
 `noise`, `ar1` and `random_walk` keep their analytic references and manifests.
 
 The five core families are listed by `timegym.scenarios.CORE_KINDS`, derived from
-the scenario defaults. `timegym.scenarios.default_scenarios(context_length=120,
+the scenario defaults. `timegym.scenarios.default_scenarios(history_length=120,
 horizon=12, *, n_targets=1, seed=0)` creates fresh specifications for those families.
 The old `Pipeline.test()` drew them when given no scenarios; `Pipeline.run()`
 draws the scorecard's ten kinds instead.

@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .common import require_conclusion, sha256
+from .common import answer_key_error, require_conclusion, sha256
 
 ROOT = Path(__file__).resolve().parents[1]
 ADDENDUM_DIR = ROOT / "experiments/results-v2-addendum"
@@ -93,7 +93,7 @@ def check_addendum_conclusions(addendum):
                        "and the stale state on the random walk with drift")
     pairs = {(pair["condition"], pair["fault"]): pair for pair in paired["pairs"]}
     require_conclusion(all(abs(pairs[condition, "reverse_prediction_lags"]["mean_difference"])
-                           < 0.2 * pairs[condition, "reverse_prediction_lags"]["clean_mean_reference_mse"]
+                           < 0.2 * answer_key_error(pairs[condition, "reverse_prediction_lags"], "clean_")
                            for condition in UNCHANGED_BY_REVERSED_LAGS),
                        "reversing the lags leaves the distance from the answer key almost unchanged on white "
                        "noise and opposing trends")

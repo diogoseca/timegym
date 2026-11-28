@@ -15,6 +15,7 @@ import importlib.metadata
 import json
 from pathlib import Path
 import platform
+import warnings
 
 import numpy as np
 from sklearn.linear_model import Ridge
@@ -25,7 +26,7 @@ import timegym
 from timegym import Pipeline, Scenario
 from timegym.metrics import mse
 
-from .common import protect_output, sha256
+from .common import answer_key_error, protect_output, scenario_settings, sha256
 from .model_faults import LagRidgeImplementation
 from .run_study import capability_models
 from .run_supplement import conformal_threshold, scenario_from_condition
@@ -60,7 +61,7 @@ def answer_key_counts(calibration_distances, records, alpha, conditions, branche
             cases = [row for row in records if row["condition"] == condition and row["branch"] == branch]
             rows.append({"condition": condition, "branch": branch, "n": len(cases),
                          "answer_key_threshold": threshold, "answer_key_rank": rank,
-                         "answer_key_alarms": int(sum(row["mean_reference_mse"] > threshold for row in cases)),
+                         "answer_key_alarms": int(sum(answer_key_error(row) > threshold for row in cases)),
                          "loss_alarms": int(sum(row["alarms"]["loss"] for row in cases))})
     return rows
 
@@ -89,7 +90,7 @@ def answer_key_alarm(spec, study2_protocol, study2):
             seed = model["calibration_seed_base"] + index * model["condition_seed_stride"] + case_number
             case = scenario.generate(seed=seed)
             forecast = Pipeline(LagRidgeImplementation(window=model["window"], alpha=model["ridge_alpha"])).predict(
-                case.task.context, case.task.future_index)
+                case.task.history, case.task.future_index)
             loss = mse(case.observed.to_numpy(), forecast.point)
             difference = abs(loss - frozen[condition["id"], seed])
             largest = max(largest, difference)
@@ -130,19 +131,19 @@ def repair_mechanism(spec, tolerance, study2_protocol, study2):
         answer = np.asarray(case.reference.mean, dtype=float)
         for branch in spec["branches"]:
             forecast = Pipeline(LagRidgeImplementation(branch, model["window"], model["ridge_alpha"])).predict(
-                case.task.context, case.task.future_index)
+                case.task.history, case.task.future_index)
             distance = mse(answer, forecast.point)
-            if abs(distance - frozen[branch, seed]["mean_reference_mse"]) > tolerance:
+            if abs(distance - answer_key_error(frozen[branch, seed])) > tolerance:
                 raise RuntimeError(f"Re-run {branch} case {seed} differs from the frozen distance to the answer key")
             squared[branch].append(((np.asarray(forecast.point) - answer) ** 2).mean(axis=1))
-        fitted = LagRidgeImplementation("clean", model["window"], model["ridge_alpha"]).fit(case.task.context)
+        fitted = LagRidgeImplementation("clean", model["window"], model["ridge_alpha"]).fit(case.task.history)
         targets = fitted.history_.shape[1]
         weights = fitted.regressor_.coef_ * fitted.targets_.scale_[:, None] / fitted.features_.scale_[None, :]
         weights = weights.reshape(targets, model["window"], targets)
         sums.append([float(weights[d, :, d].sum()) for d in range(targets)])
     sums = np.asarray(sums)
-    clean = {seed: row["mean_reference_mse"] for (branch, seed), row in frozen.items() if branch == "clean"}
-    closer = sum(frozen[spec["branches"][1], seed]["mean_reference_mse"] < value for seed, value in clean.items())
+    clean = {seed: answer_key_error(row) for (branch, seed), row in frozen.items() if branch == "clean"}
+    closer = sum(answer_key_error(frozen[spec["branches"][1], seed]) < value for seed, value in clean.items())
     summary = next(row for row in study2["model"]["loss_summaries"]
                    if row["condition"] == spec["condition"] and row["fault"] == spec["branches"][1])
     return {"condition": spec["condition"], "fault": spec["branches"][1], "n": len(sums),
@@ -155,7 +156,9 @@ def repair_mechanism(spec, tolerance, study2_protocol, study2):
 
 
 def scorecard_pipeline():
-    return Pipeline(window_length=24).add(StandardScaler()).add(Ridge(alpha=1.0))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)  # kept: the frozen protocol names this .add() chain
+        return Pipeline(window_length=24).add(StandardScaler()).add(Ridge(alpha=1.0))
 
 
 def cell_score(unavoidable, avoidable):
@@ -205,21 +208,21 @@ def scorecard_precision(spec):
 
 def trend_ar1(spec, tolerance, study1_protocol, study1):
     task = study1_protocol["capability_task"]
-    frozen = {(row["sigma"], row["seed"]): row["mean_reference_mse"] for row in study1["capability_records"]
+    frozen = {(row["sigma"], row["seed"]): answer_key_error(row) for row in study1["capability_records"]
               if row["scenario"] == spec["scenario"] and row["model"] == "gaussian_ar1"}
     rows = []
     for sigma in spec["sigma"]:
         scenario = Scenario(spec["scenario"], parameters={"sigma": sigma},
-                            **{key: task[key] for key in ("context_length", "horizon", "n_targets")})
+                            **scenario_settings({key: task[key] for key in ("context_length", "horizon", "n_targets")}))
         pipeline = Pipeline(capability_models(task)["gaussian_ar1"]())
         phis, offsets = [], []
         for seed in range(*spec["seeds"]):
             case = scenario.generate(seed=seed)
-            forecast = pipeline.predict(case.task.context, case.task.future_index)
+            forecast = pipeline.predict(case.task.history, case.task.future_index)
             answer = np.asarray(case.reference.mean, dtype=float)
             if abs(mse(answer, forecast.point) - frozen[sigma, seed]) > tolerance:
                 raise RuntimeError(f"Re-run AR(1) trend case sigma={sigma} seed={seed} differs from Study 1")
-            model = capability_models(task)["gaussian_ar1"]().fit(case.task.context)
+            model = capability_models(task)["gaussian_ar1"]().fit(case.task.history)
             phis.append(float(np.mean(model.phi_)))
             offsets.append(float(np.mean(np.asarray(forecast.point) - answer)))
         rows.append({"sigma": sigma, "n": len(phis), "mean_phi": float(np.mean(phis)),

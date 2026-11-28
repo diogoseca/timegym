@@ -8,6 +8,7 @@ from ._internal import (
     _has_complex_values,
     _levels,
 )
+from ._internal import _renamed_keywords, _old_name
 import hashlib
 import json
 from dataclasses import dataclass, field
@@ -138,21 +139,27 @@ def _describe_shift(k):
 
 
 # %% ../source/08_forecast_contracts.ipynb #08_forecast_contract-11
+@_renamed_keywords(context="history")
 @dataclass
 class ForecastTask:
-    """The information a forecaster may observe at a single forecast origin."""
+    """The information a forecaster may observe at a single forecast origin.
 
-    context: pd.DataFrame
+    ``history`` is the past, one row per time step and one column per series, and
+    ``future_index`` the labels of the steps to forecast, which begin after it ends.
+    ``context`` is the old name of ``history``; it still works and warns.
+    """
+
+    history: pd.DataFrame
     future_index: pd.Index
 
     def __post_init__(self) -> None:
-        if not isinstance(self.context, pd.DataFrame):
-            raise TypeError("context must be a pandas DataFrame")
-        if self.context.empty or len(self.context.columns) == 0:
-            raise ValueError("context must contain at least one row and target")
-        _target_labels(self.context.columns, "context target names")
+        if not isinstance(self.history, pd.DataFrame):
+            raise TypeError("history must be a pandas DataFrame")
+        if self.history.empty or len(self.history.columns) == 0:
+            raise ValueError("history must contain at least one row and target")
+        _target_labels(self.history.columns, "history target names")
         for name, index in (
-            ("context", self.context.index),
+            ("history", self.history.index),
             ("future", self.future_index),
         ):
             if not isinstance(index, pd.Index):
@@ -169,22 +176,34 @@ class ForecastTask:
                     f"{name} index must be nonempty, unique, and increasing"
                 )
         try:
-            values = _real_array(self.context.to_numpy(), "context")
+            values = _real_array(self.history.to_numpy(), "history")
         except (TypeError, ValueError) as exc:
-            raise ValueError("context values must be real numeric values") from exc
+            raise ValueError("history values must be real numeric values") from exc
         if not np.isfinite(values).all():
-            raise ValueError("context values must be finite")
+            raise ValueError("history values must be finite")
         try:
-            follows_context = self.future_index[0] > self.context.index[-1]
+            follows_history = self.future_index[0] > self.history.index[-1]
         except TypeError as exc:
-            raise ValueError("context and future indexes must be comparable") from exc
-        if not follows_context:
-            raise ValueError("future index must begin after the context ends")
+            raise ValueError("history and future indexes must be comparable") from exc
+        if not follows_history:
+            raise ValueError("future index must begin after the history ends")
+
+    @property
+    def context(self) -> pd.DataFrame:
+        """The old name of ``history``; it still works and warns."""
+        _old_name("ForecastTask", "context", "history")
+        return self.history
+
+    @context.setter
+    def context(self, value) -> None:
+        """Set ``history`` by its old name, with a warning."""
+        _old_name("ForecastTask", "context", "history")
+        self.history = value
 
     @property
     def target_names(self) -> tuple:
-        """The context's target column names, in order."""
-        return tuple(self.context.columns)
+        """The history's target column names, in order."""
+        return tuple(self.history.columns)
 
 
 # %% ../source/08_forecast_contracts.ipynb #08_forecast_contract-13
@@ -680,7 +699,7 @@ def cases_from_series(series, origins, horizon, *, name="series", manifest=None)
     Returns a list of ``Case`` objects with no answer key (``reference=None``),
     so each forecast is scored against what happened. Each manifest records
     ``kind`` (``name``), ``seed`` (None), ``origin`` (the last history label as
-    text), ``context_length``, ``horizon``, ``target_names`` and
+    text), ``history_length``, ``horizon``, ``target_names`` and
     ``series_sha256``, a fingerprint of the whole series, then the keys of
     ``manifest``, which must not repeat those names. Missing values in a case's
     history or future are refused, with the origin named, because TimeGym
@@ -724,7 +743,7 @@ def cases_from_series(series, origins, horizon, *, name="series", manifest=None)
         "kind",
         "seed",
         "origin",
-        "context_length",
+        "history_length",
         "horizon",
         "target_names",
         "series_sha256",
@@ -757,7 +776,7 @@ def cases_from_series(series, origins, horizon, *, name="series", manifest=None)
             "kind": name,
             "seed": None,
             "origin": str(index[rows - 1 : rows].astype(str)[0]),
-            "context_length": rows,
+            "history_length": rows,
             "horizon": n_future,
             "target_names": [str(target) for target in target_names],
             "series_sha256": fingerprint,

@@ -14,11 +14,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy import special, stats
-from ._internal import positive_int, _deprecated
+from ._internal import positive_int, _deprecated, _renamed_keywords
 from .contracts import _describe_shift, _index_shift
 from .diagnostics import _holm, _sign_flip_pvalue
 from .evaluation import ForecastRun
-from .grid import PATTERNS, GridCell, Pattern, _fresh_attainable, scenario_grid
+from .grid import PATTERNS, GridCell, Pattern, _history_length_of, scenario_grid
+from .models import _fresh_from, _is_maker, _steps_name
 from .plotting import _BAND_COLORS, _FORECAST, _HAIRLINE, _INK, _MUTED, _SURFACE
 from .reporting import CHECKS, TestReport, _case_checks, _own_checks
 
@@ -49,11 +50,11 @@ def _case_numbers(entry):
     conditional mean (the answer key). Samples stand in for a missing point
     forecast through their mean.
     """
-    forecast, case = entry.forecast, entry.case
+    forecast, reference = entry.forecast, entry.reference
     if (
         forecast is None
-        or case.reference is None
-        or not all(_case_checks(entry.result).values())
+        or reference is None
+        or not all(_case_checks(entry._result).values())
     ):
         return None
     if forecast.point is not None:
@@ -62,14 +63,9 @@ def _case_numbers(entry):
         point = np.asarray(forecast.samples, dtype=float).mean(axis=0)
     else:
         return None
-    truth = np.asarray(case.reference.mean, dtype=float)
+    truth = np.asarray(reference.mean, dtype=float)
     errors = point - truth
-    return (
-        float(np.mean(case.reference.variance)),
-        float(np.mean(errors**2)),
-        errors,
-        truth,
-    )
+    return float(np.mean(reference.variance)), float(np.mean(errors**2)), errors, truth
 
 
 def _score(best, avoidable):
@@ -207,8 +203,8 @@ def _attainable_score(
     unavoidable, avoidable = [], []
     for index in range(series):
         case = scenario.generate(seed=seed + index)
-        model = _fresh_attainable(pattern.attainable_by)
-        model.fit(case.task.context)
+        model = _fresh_from(pattern.attainable_by)
+        model.fit(case.task.history)
         truth = np.asarray(case.reference.mean, dtype=float)
         point = _point_forecast(
             model.predict(case.task.future_index), case.task
@@ -233,10 +229,10 @@ def _point_forecast(output, task):
 
 
 @functools.lru_cache(maxsize=None)
-def _simulated_attainable(key, noise_sd, context_length, horizon):
+def _simulated_attainable(key, noise_sd, history_length, horizon):
     """The attainable score of a row off the shipped table, computed once per session."""
     pattern = PATTERNS[key]
-    return _attainable_score(pattern, pattern.build(noise_sd, context_length, horizon))
+    return _attainable_score(pattern, pattern.build(noise_sd, history_length, horizon))
 
 
 def _attainable(cell, simulate=False):
@@ -250,11 +246,11 @@ def _attainable(cell, simulate=False):
     key, noise_sd = cell.pattern, cell.noise_sd
     if pattern.attainable_by is None:
         return np.nan
-    context_length, horizon = cell.scenario.context_length, cell.scenario.horizon
+    history_length, horizon = _history_length_of(cell.scenario), cell.scenario.horizon
     built_in = PATTERNS.get(key) is pattern
     if (
         built_in
-        and (context_length, horizon) == (120, 24)
+        and (history_length, horizon) == (120, 24)
         and noise_sd in _ATTAINABLE.get(key, {})
     ):
         return _ATTAINABLE[key][noise_sd]
@@ -263,7 +259,7 @@ def _attainable(cell, simulate=False):
     if not built_in:
         return _attainable_score(pattern, cell.scenario)
     return _simulated_attainable(
-        key, float(noise_sd), int(context_length), int(horizon)
+        key, float(noise_sd), int(history_length), int(horizon)
     )
 
 
@@ -386,14 +382,14 @@ def _check_problems(entries):
     """Describe failed output checks in a cell, with date shifts in steps."""
     problems = {}
     for entry in entries:
-        for key, passed in _case_checks(entry.result).items():
+        for key, passed in _case_checks(entry._result).items():
             if passed:
                 continue
-            text = CHECKS[key] if key in CHECKS else _own_checks(entry.result)[key][1]
+            text = CHECKS[key] if key in CHECKS else _own_checks(entry._result)[key][1]
             if key == "runs":
                 text = "Crashes"
             elif key == "dates" and entry.forecast is not None:
-                shift = _index_shift(entry.forecast.index, entry.case.task.future_index)
+                shift = _index_shift(entry.forecast.index, entry.future_index)
                 text = "Wrong dates" + (f": {_describe_shift(shift)}" if shift else "")
             else:
                 text = f"Fails check: {text.lower()}"
@@ -422,11 +418,16 @@ def _model_title(pipeline):
         return getattr(pipeline.model_factory, "__qualname__", "model_factory")
     model = pipeline.model
     if model is None:
-        from timegym.models import NaiveForecaster
+        from timegym.models import _naive_without_warning
 
-        model = NaiveForecaster()
+        model = _naive_without_warning()
     if isinstance(model, type):
         return _class_name(model)
+    if _is_maker(model):  # a function that returns a fresh model
+        return getattr(model, "__qualname__", _class_name(type(model)))
+    steps = _steps_name(model)
+    if steps:
+        return steps
     params = getattr(model, "params", None)
     if callable(params):
         arguments = ", ".join(f"{key}={value!r}" for key, value in params().items())
@@ -454,7 +455,7 @@ def _instance_pairs(entries):
         if numbers is not None:
             pairs.append(numbers[:2])
             valid.append(True)
-        elif not all(_case_checks(entry.result).values()):
+        elif not all(_case_checks(entry._result).values()):
             pairs.append((0.0, 0.0))
             valid.append(False)
     return pairs, valid
@@ -476,7 +477,7 @@ def _consecutive_seed(seeds):
     return seeds[0] if seeds == list(range(seeds[0], seeds[0] + len(seeds))) else None
 
 
-def _run_rows(scenarios, noise_levels=None, context_length=None, horizon=None):
+def _run_rows(scenarios, noise_levels=None, history_length=None, horizon=None):
     """What ``Pipeline.run`` draws, as GridCells, and whether they are the scorecard's kinds of series.
 
     Nothing, keys of ``PATTERNS`` and ``Pattern`` objects give the pattern-by-noise grid. Scenarios you
@@ -491,7 +492,7 @@ def _run_rows(scenarios, noise_levels=None, context_length=None, horizon=None):
         cells = scenario_grid(
             entries,
             2 if noise_levels is None else noise_levels,
-            context_length=120 if context_length is None else context_length,
+            history_length=120 if history_length is None else history_length,
             horizon=24 if horizon is None else horizon,
         )
         return cells, True
@@ -504,7 +505,7 @@ def _run_rows(scenarios, noise_levels=None, context_length=None, horizon=None):
         name
         for name, value in (
             ("noise_levels", noise_levels),
-            ("context_length", context_length),
+            ("history_length", history_length),
             ("horizon", horizon),
         )
         if value is not None
@@ -532,21 +533,20 @@ class _AsBuilt:
     def __init__(self, scenario):
         self.scenario = scenario
 
-    def __call__(self, noise, context_length, horizon):
+    def __call__(self, noise, history_length, horizon):
         return self.scenario
 
 
-def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level=None):
+def _card_from_run(
+    run, cells, *, title, seeds, simulate_attainable=False, interval_level=None
+):
     """Score every cell of ``run`` and return its Scorecard (``ForecastRun.scorecard``).
 
     It runs while the run still holds its series: the card keeps what it draws and compares with,
     the first draw of each cell and each series' avoidable error.
     """
     interval_level = _interval_level(0.95 if interval_level is None else interval_level)
-    if not any(
-        entry.case is not None and entry.case.reference is not None
-        for entry in run.cases
-    ):
+    if not any(entry.reference is not None for entry in run.cases):
         raise ValueError(
             "none of these series has an answer key, so they cannot be scored against one"
         )
@@ -557,7 +557,7 @@ def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level
     for index, cell in enumerate(cells):
         entries = by_cell[index]
         numbers = [found for found in map(_case_numbers, entries) if found]
-        broken = sum(not all(_case_checks(entry.result).values()) for entry in entries)
+        broken = sum(not all(_case_checks(entry._result).values()) for entry in entries)
         scorable = len(numbers) + broken
         best = float(np.mean([n[0] for n in numbers])) if numbers else np.nan
         avoidable = float(np.mean([n[1] for n in numbers])) if numbers else np.nan
@@ -570,11 +570,7 @@ def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level
         mistakes = _check_problems(entries)
         if numbers and round(score) < 70:  # as the verdict reads it
             mistakes += _mistakes(numbers)
-        observed = [
-            entry.result.metrics["mse"]
-            for entry in entries
-            if "mse" in entry.result.metrics
-        ]
+        observed = [entry.metrics["mse"] for entry in entries if "mse" in entry.metrics]
         rows.append(
             {
                 "pattern": cell.pattern,
@@ -586,7 +582,7 @@ def _card_from_run(run, cells, *, title, seeds, attainable=False, interval_level
                 "score_high": high,
                 "verdict": verdict(score),
                 "settled": _settled(low, high),
-                "attainable": _attainable(cell, simulate=attainable),
+                "attainable": _attainable(cell, simulate=simulate_attainable),
                 "mistakes": "; ".join(mistakes),
                 "unavoidable_mse": best,
                 "avoidable_mse": avoidable,
@@ -616,28 +612,34 @@ def _scorecard(
     noise_levels=2,
     instances=10,
     seed=0,
-    context_length=120,
+    history_length=120,
     horizon=24,
     title=None,
-    attainable=False,
+    simulate_attainable=False,
     interval_level=0.95,
 ):
-    """``pipeline.run(patterns, ..., keep_data=True).scorecard``: the card as ``Pipeline.scorecard`` made it."""
+    """``pipeline.run(patterns, ..., keep_data=True).scorecard``: the card as ``Pipeline.scorecard`` made it.
+
+    ``title`` heads the card in place of the pipeline's name; ``run`` takes no title.
+    """
     _interval_level(interval_level)  # None was never a level here
-    return pipeline.run(
+    card = pipeline.run(
         patterns,
         noise_levels=noise_levels,
         instances=instances,
         seed=seed,
-        context_length=context_length,
+        history_length=history_length,
         horizon=horizon,
-        title=title,
-        attainable=attainable,
+        simulate_attainable=simulate_attainable,
         interval_level=interval_level,
         keep_data=True,
     ).scorecard
+    if title is not None:
+        card.title = title
+    return card
 
 
+@_renamed_keywords(context_length="history_length", attainable="simulate_attainable")
 def scorecard(
     pipeline,
     patterns=None,
@@ -645,10 +647,10 @@ def scorecard(
     noise_levels=2,
     instances=10,
     seed=0,
-    context_length=120,
+    history_length=120,
     horizon=24,
     title=None,
-    attainable=False,
+    simulate_attainable=False,
     interval_level=0.95,
 ):
     """Score ``pipeline`` on the pattern-by-noise grid; deprecated: use ``pipeline.run(...).scorecard``."""
@@ -661,10 +663,10 @@ def scorecard(
         noise_levels=noise_levels,
         instances=instances,
         seed=seed,
-        context_length=context_length,
+        history_length=history_length,
         horizon=horizon,
         title=title,
-        attainable=attainable,
+        simulate_attainable=simulate_attainable,
         interval_level=interval_level,
     )
 
@@ -710,10 +712,10 @@ class Scorecard:
     itself an estimate, good to about a point; a model can land above it on a
     given card. The default grid's values are stored. Other noise levels,
     history lengths and horizons get NaN unless the card was made with
-    ``attainable=True``, which simulates them once per session: about 3 to 5
+    ``simulate_attainable=True``, which simulates them once per session: about 3 to 5
     seconds for each autoregressive or random-walk cell, well under a second
     for the others. A pattern of your own gets one only with
-    ``Pattern.attainable_by`` and ``attainable=True``.
+    ``Pattern.attainable_by`` and ``simulate_attainable=True``.
 
     ``save_baseline(path)`` writes each series' avoidable error to a small
     JSON file, and ``compare(baseline)`` compares a later card on the same
@@ -959,8 +961,10 @@ def _seed_words(card):
 
 # %% ../source/13_scorecard.ipynb #scorecard-compare
 # A baseline file names its format and version, so a file of another kind, or one written by a
-# newer TimeGym in a format this version cannot read, is refused instead of misread.
-_BASELINE_FORMAT, _BASELINE_VERSION = "timegym-scorecard-baseline", 1
+# newer TimeGym in a format this version cannot read, is refused instead of misread. Version 1,
+# written by TimeGym 1.14.1 and earlier, named the grid's history_length context_length; it is
+# still read.
+_BASELINE_FORMAT, _BASELINE_VERSION = "timegym-scorecard-baseline", 2
 
 # Two avoidable errors of one series agree when they differ by at most this share of the largest
 # avoidable error in the cell, in either version, or by _ABSOLUTE_TOLERANCE, whichever is larger:
@@ -1012,7 +1016,7 @@ def _grid(card):
         "noise_sds": [
             float(sd) for sd in dict.fromkeys(cell.noise_sd for cell in card.cells)
         ],
-        "context_length": int(first.context_length),
+        "history_length": int(_history_length_of(first)),
         "horizon": int(first.horizon),
     }
 
@@ -1063,6 +1067,17 @@ def _read_baseline(path):
             f"{record.get('timegym_version')}; this TimeGym reads version {_BASELINE_VERSION}. "
             "Upgrade TimeGym to compare with it."
         )
+    grid = record.get("grid")
+    if (
+        version == 1
+        and isinstance(grid, dict)
+        and "context_length" in grid
+        and "history_length" not in grid
+    ):
+        record["grid"] = {
+            ("history_length" if key == "context_length" else key): value
+            for key, value in grid.items()
+        }
 
     def number(value):
         return (
@@ -1118,7 +1133,7 @@ def _check_same_series(record, card, name):
     labels = {
         "patterns": "patterns",
         "noise_sds": "noise standard deviations",
-        "context_length": "history length (context_length)",
+        "history_length": "history length",
         "horizon": "horizon",
     }
     differences = [
@@ -1194,10 +1209,10 @@ def _compare(card, baseline, alpha):
                     np.nan if stored_score is None else float(stored_score)
                 ),
                 "score": row.score,
-                "baseline_avoidable": (
+                "baseline_avoidable_mse": (
                     float(np.mean(scored_before)) if scored_before else np.nan
                 ),
-                "avoidable": row.avoidable_mse,
+                "avoidable_mse": row.avoidable_mse,
                 "p_value": (
                     _sign_flip_pvalue(differences, card.seed) if moved else np.nan
                 ),
@@ -1234,7 +1249,7 @@ class ScorecardComparison:
     ``"unchanged"``, ``"changed, no worse"`` and ``"changed and worse"``),
     the baseline's and this card's ``score`` and mean avoidable error over the
     series each scored (``baseline_score``, ``score``,
-    ``baseline_avoidable``, ``avoidable``), the paired test's ``p_value``
+    ``baseline_avoidable_mse``, ``avoidable_mse``), the paired test's ``p_value``
     before Holm's correction (NaN where no series moved), and the number of
     series that ``newly_failing`` crash or fail an output check and that are
     ``newly_passing``. ``worse`` holds the rows that are changed and worse,
@@ -1330,7 +1345,7 @@ def _row_label(row):
 
 def _row_numbers(row):
     """``avoidable error 0.31 -> 0.74 (+139%), p = 0.0004``, with series that newly fail or pass."""
-    before, after = row["baseline_avoidable"], row["avoidable"]
+    before, after = row["baseline_avoidable_mse"], row["avoidable_mse"]
     text = f"avoidable error {_error(before)} -> {_error(after)}"
     if np.isfinite(before) and np.isfinite(after) and before > 0:
         # Close errors print alike at three digits; the relative change tells them apart.
@@ -1460,28 +1475,25 @@ def _whisker(ax, row, left, right, y, color, track, transform=None):
 
 def _example(ax, entry, row):
     """Draw instance 1 of a cell: recent history, what happened, answer key, forecast."""
-    case, horizon = entry.case, len(entry.case.task.future_index)
-    context = case.task.context.iloc[-min(len(case.task.context), 4 * horizon) :, 0]
+    future, horizon = entry.future_index, len(entry.future_index)
+    history = entry.history.iloc[-min(len(entry.history), 4 * horizon) :, 0]
     ax.plot(
-        context.index, context.to_numpy(), ".", color=_MUTED, markersize=2.2, alpha=0.75
+        history.index, history.to_numpy(), ".", color=_MUTED, markersize=2.2, alpha=0.75
     )
     ax.plot(
-        case.observed.index,
-        case.observed.iloc[:, 0].to_numpy(),
+        entry.observed.index,
+        entry.observed.iloc[:, 0].to_numpy(),
         ".",
         color=_MUTED,
         markersize=2.2,
         alpha=0.75,
     )
-    if case.reference is not None:
+    if entry.reference is not None:
         ax.plot(
-            case.task.future_index,
-            np.asarray(case.reference.mean)[:, 0],
-            color=_INK,
-            linewidth=1.1,
+            future, np.asarray(entry.reference.mean)[:, 0], color=_INK, linewidth=1.1
         )
-    ax.axvline(context.index[-1] + 0.5, color=_HAIRLINE, linewidth=0.8, linestyle="--")
-    valid = entry.forecast is not None and all(_case_checks(entry.result).values())
+    ax.axvline(history.index[-1] + 0.5, color=_HAIRLINE, linewidth=0.8, linestyle="--")
+    valid = entry.forecast is not None and all(_case_checks(entry._result).values())
     point = None
     if valid and entry.forecast.point is not None:
         point = np.asarray(entry.forecast.point, dtype=float)[:, 0]
@@ -1489,12 +1501,7 @@ def _example(ax, entry, row):
         point = np.asarray(entry.forecast.samples, dtype=float).mean(axis=0)[:, 0]
     if point is not None:
         ax.plot(
-            case.task.future_index,
-            point,
-            "x",
-            color=_FORECAST,
-            markersize=2.8,
-            markeredgewidth=0.8,
+            future, point, "x", color=_FORECAST, markersize=2.8, markeredgewidth=0.8
         )
     elif row.mistakes:
         ax.text(

@@ -7,20 +7,20 @@ script.
 
 | To bring your own | Write or call | Full description |
 | --- | --- | --- |
-| Model | an object with `fit(context)` and `predict(future_index)` | [Pipeline and reports](../api/pipeline.md) |
+| Model | an object with `fit(history)` and `predict(future_index)` | [Pipeline and reports](../api/pipeline.md) |
 | scikit-learn regressor | `Pipeline(Ridge(), window_length=12)` | [Models and reductions](../api/models.md) |
-| Target transform | an object with `clone_unfitted()`, `fit_transform(context)` and `inverse_transform(forecast)` | [Data preparation](../api/data-preparation.md#reversible-target-transforms) |
+| Target transform | an object with `clone_unfitted()`, `fit_transform(history)` and `inverse_transform(forecast)` | [Data preparation](../api/data-preparation.md#reversible-target-transforms) |
 | Data | `cases_from_series(series, origins, horizon)` or `Case(...)`, then `pipeline.run(cases=...)` | [Tasks and forecasts](../api/tasks-and-forecasts.md#your-own-data) |
 | Forecasts made elsewhere | `ForecastRun.from_forecasts(cases, forecasts)` | [Pipeline and reports](../api/pipeline.md) |
-| Score | a function whose argument names say what it needs, passed with `scores=` | [Scores and diagnostics](../api/diagnostics.md#your-own-scores) |
-| Output check | `within(lower, upper)`, or a function that returns True or a message, passed with `checks=` | [Scores and diagnostics](../api/diagnostics.md#your-own-output-checks) |
+| Metric | a function whose argument names say what it needs, passed with `metrics=` | [Metrics and diagnostics](../api/diagnostics.md#your-own-metrics) |
+| Output check | `within(lower, upper)`, or a function that returns True or a message, passed with `checks=` | [Metrics and diagnostics](../api/diagnostics.md#your-own-output-checks) |
 | Answer key from a curve you know | `Reference.from_function(curve, dates, covariance=...)` | [Scenarios and references](../api/scenarios.md) |
 | Kind of series, with its answer key | an object with `kind` and `generate(seed)` that returns a `Case` | this page |
 | Kind of series on the scorecard | a `Pattern` whose `simulate(rng, history, horizon, noise)` returns a series with its true mean and variance, passed to `pipeline.run([...])` | [Scorecards](../api/scorecard.md#your-own-kind-of-series) |
 
 ## Your model
 
-A model is any object with two methods. `fit(context)` gets the history, a
+A model is any object with two methods. `fit(history)` gets the history, a
 DataFrame with one column per series. `predict(future_index)` gets the dates to
 forecast and returns one value per date: a list, a NumPy array, a pandas Series
 or DataFrame, or a `Forecast`. TimeGym fits a fresh copy for every case, so
@@ -33,8 +33,8 @@ from timegym import Pipeline
 
 
 class RepeatLast:
-    def fit(self, context):
-        self.last = context.iloc[-1].to_numpy()   # the last row seen
+    def fit(self, history):
+        self.last = history.iloc[-1].to_numpy()   # the last row seen
         return self
 
     def predict(self, future_index):
@@ -51,14 +51,16 @@ quantiles, several series and a model with settings.
 ## A scikit-learn regressor
 
 A regressor learns to predict each value from the `window_length` values before
-it. `.add()` puts preprocessing steps in front of it; each is fitted on the
-history of each case only.
+it. Pass it as a list of steps that ends in the regressor, with preprocessing
+steps in front of it; each is fitted on the history of each case only. A
+pipeline you already made with scikit-learn's `make_pipeline` can be passed as
+it is.
 
 ```python
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 
-result = Pipeline(window_length=12).add(StandardScaler()).add(Ridge()).run()
+result = Pipeline([StandardScaler(), Ridge()], window_length=12).run()
 ```
 
 ## A target transform
@@ -75,8 +77,8 @@ class PerHundred:
     def clone_unfitted(self):
         return PerHundred()
 
-    def fit_transform(self, context):
-        return context / 100
+    def fit_transform(self, history):
+        return history / 100
 
     def inverse_transform(self, forecast):
         def back(values):
@@ -109,23 +111,23 @@ To prepare readings taken at irregular times, see
 ## Forecasts made elsewhere
 
 Forecasts from a model TimeGym cannot run, made earlier or by another program,
-get the same checks and scores. Pass one per case, in order; `None` marks a case
+get the same checks and metrics. Pass one per case, in order; `None` marks a case
 with no forecast.
 
 ```python
 from timegym import ForecastRun
 
-made_elsewhere = [np.full(7, case.task.context.iloc[-1, 0]) for case in cases]
-run = ForecastRun.from_forecasts(cases, made_elsewhere, metadata={"model": "weather service"})
+made_elsewhere = [np.full(7, case.task.history.iloc[-1, 0]) for case in cases]
+run = ForecastRun.from_forecasts(cases, made_elsewhere, name="weather service")
 run.report.assert_passed()
 ```
 
-## Your own scores
+## Your own metrics
 
-Every report records the same scores. Ask for more with `scores=`: names of
+Every report records the same metrics. Ask for more with `metrics=`: names of
 functions in `timegym.metrics`, such as `"brier"` for yes/no outcomes, or
-functions of your own. A score says what it needs by its argument names:
-`observed`, `predicted`, `quantiles`, `levels`, `samples` and `context`. Each
+functions of your own. A metric says what it needs by its argument names:
+`observed`, `predicted`, `quantiles`, `levels`, `samples` and `history`. Each
 value lands in `case.metrics` under its name.
 
 ```python
@@ -139,14 +141,14 @@ def within_10_percent(observed, predicted):
     return float(np.mean(np.abs(predicted - observed) <= 0.1 * np.abs(observed)))
 
 
-result = Pipeline(LastValueForecaster()).run(cases=cases, scores=["rmse", within_10_percent])
+result = Pipeline(LastValueForecaster()).run(cases=cases, metrics=["rmse", within_10_percent])
 rainy = cases_from_series((rain > 4).astype(float), origins=[60, 80, 100], horizon=7, name="rainy day")
 result = Pipeline(LastValueForecaster()).run(
-    cases=rainy, scores={"brier": "brier", "log_loss": partial(log_loss, eps=1e-6)})
+    cases=rainy, metrics={"brier": "brier", "log_loss": partial(log_loss, eps=1e-6)})
 ```
 
-Settings go through a dictionary that names each score, as for `log_loss`
-above. Replay computes again the scores from `timegym.metrics`; your own
+Settings go through a dictionary that names each metric, as for `log_loss`
+above. Replay computes again the metrics from `timegym.metrics`; your own
 functions cannot be rebuilt from a saved report, so replay leaves them out and
 says so.
 
@@ -155,7 +157,7 @@ says so.
 The built-in output checks know nothing about your data: rainfall below 0 mm
 passes them. Add checks of your own with `checks=`. `within(lower, upper)`
 checks that every value stays in a range, and `None` leaves a side open. Any
-function works too: it asks for its inputs by argument name, as a score does,
+function works too: it asks for its inputs by argument name, as a metric does,
 plus `target_names`, and returns `True` or a message saying what is wrong. Its
 title is the first line of its docstring.
 
@@ -164,9 +166,9 @@ from timegym import GaussianAR1Forecaster
 from timegym.checks import within
 
 
-def below_record(predicted, context):
+def below_record(predicted, history):
     """Point forecast no wetter than the wettest day so far."""
-    record = context.max()
+    record = history.max()
     return bool(np.all(predicted <= record)) or f"forecasts {predicted.max():.1f} mm, above the record {record:.1f} mm"
 
 
@@ -224,7 +226,7 @@ result = Pipeline(RepeatLast()).run([NoisyLine()], seeds=[0, 1, 2])
 ```
 
 With an answer key, the report has the error against it
-(`mean_reference_mse`), which separates a weak model from an unlucky one, and
+(`avoidable_mse`), which separates a weak model from an unlucky one, and
 `result.scorecard` has a row for the new kind of series.
 Replay rebuilds only TimeGym's own scenarios, so keep this code with the
 report. To put a kind of series on the scorecard, give a `Pattern` a function

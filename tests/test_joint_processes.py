@@ -7,7 +7,8 @@ import pandas as pd
 import pytest
 from scipy.stats import multivariate_normal
 
-from timegym import Scenario, Pipeline, TestReport as Report, SimulationReference
+from timegym import LastValueForecaster, Scenario, Pipeline, TestReport as Report, SimulationReference
+from timegym.checks import dependence
 from timegym.diagnostics import covariance_dependence_check, evaluate_forecast
 
 
@@ -25,17 +26,17 @@ def test_joint_shapes_prefix_rng_and_public_replay(kind, d):
     before = np.random.get_state()
     short = generate(kind, p, d=d, horizon=2)
     longer = generate(kind, p, d=d, horizon=6)
-    pd.testing.assert_frame_equal(short.task.context, longer.task.context)
+    pd.testing.assert_frame_equal(short.task.history, longer.task.history)
     pd.testing.assert_frame_equal(short.observed, longer.observed.iloc[:2])
     np.testing.assert_allclose(short.reference.mean, longer.reference.mean[:2])
     np.testing.assert_allclose(short.reference.covariance, longer.reference.covariance[:2*d, :2*d])
     assert short.reference.sample(32, 7).shape == (32, 2, d)
     assert short.reference.forecast(32, 7).validate(short.task) == []
     manifest = json.loads(json.dumps(short.manifest, allow_nan=False))
-    replay = Scenario(**{key: manifest[key] for key in ('kind', 'parameters', 'context_length', 'horizon', 'n_targets', 'seed')}).generate()
+    replay = Scenario(**{key: manifest[key] for key in ('kind', 'parameters', 'history_length', 'horizon', 'n_targets', 'seed')}).generate()
     assert replay.manifest == manifest
     np.testing.assert_array_equal(short.reference.sample(32, 7), replay.reference.sample(32, 7))
-    report = Pipeline().test([Scenario(kind, 24, 2, p, n_targets=d)], seeds=[19])
+    report = Pipeline(LastValueForecaster()).test([Scenario(kind, 24, 2, p, n_targets=d)], seeds=[19])
     replay_report = Report.from_json(report.to_json()).replay_case()
     assert all(v for k, v in replay_report.metadata['replay'].items() if k.endswith('match') or k.endswith('matches'))
     after = np.random.get_state()
@@ -84,7 +85,7 @@ def test_composite_vector_change_schedule_and_cross_horizon_covariance():
     for t in range(5, 9):
         amp = np.array([1., 3.] if t >= 7 else [0., 2.])
         means.append(np.array([1., 3.])+np.array([.1, -.1])*t+amp*np.sin(2*np.pi*t/np.array([4., 6.])))
-    offset = case.task.context.iloc[-1].to_numpy()-means[0]
+    offset = case.task.history.iloc[-1].to_numpy()-means[0]
     np.testing.assert_allclose(case.reference.mean, np.array(means[1:])+offset)
     r = np.array([[1., .6], [.6, 1.]])
     q = [np.outer(s, s)*r for s in ([.3, .7], [.9, .2], [.9, .2])]
@@ -155,7 +156,7 @@ def test_garch_observed_variance_and_second_step_cross_moment_quadrature():
     c=generate('garch',p,length=10,horizon=2)
     mu,omega,alpha,beta=[np.array(p[key]) for key in ('mu','omega','alpha','beta')]
     v=omega/(1-alpha-beta)
-    for r in c.task.context.values:v=omega+alpha*(r-mu)**2+beta*v
+    for r in c.task.history.values:v=omega+alpha*(r-mu)**2+beta*v
     np.testing.assert_allclose(c.reference.conditioning['next_variance_from_observed_history'],v)
     np.testing.assert_allclose(c.reference.covariance[:2,:2],np.outer(np.sqrt(v),np.sqrt(v))*[[1,.7],[.7,1]])
     # Two-dimensional Gauss-Hermite integration, independent of reference MC.
@@ -169,7 +170,7 @@ def test_garch_observed_variance_and_second_step_cross_moment_quadrature():
     np.testing.assert_array_equal(c.reference.covariance[:2,2:],np.zeros((2,2)))
     assert c.reference.moments_kind=='analytic_mean_monte_carlo_covariance'
     altered=generate('garch',{**p,'moment_seed':64},length=10,horizon=2)
-    pd.testing.assert_frame_equal(c.task.context,altered.task.context)
+    pd.testing.assert_frame_equal(c.task.history,altered.task.history)
     np.testing.assert_array_equal(c.reference.mean,altered.reference.mean)
     np.testing.assert_array_equal(c.reference.sample(17,8),altered.reference.sample(17,8))
     assert not np.array_equal(c.reference.covariance,altered.reference.covariance)
@@ -188,7 +189,7 @@ def test_markov_joint_filter_matches_independent_forward_calculation():
            regime_correlation=[[[1.,.7],[.7,1.]],[[1.,-.4],[-.4,1.]]])
     c=generate('markov_switching',p,length=12)
     posterior=np.array(p['initial_probs']);single=posterior.copy()
-    for value in c.task.context.values:
+    for value in c.task.history.values:
         likelihood=[]; univariate=[]
         for s in range(2):
             sigma=np.array(p['regime_sigma'][s]);mu=np.array(p['regime_mu'][s])
@@ -223,7 +224,7 @@ def test_markov_joint_moments_against_enumerated_hidden_state_paths(output):
         if output!='log_return':
             transform=np.kron(np.tril(np.ones((3,3))),np.eye(2))
             cov=transform@cov@transform.T
-            last=c.task.context.iloc[-1].to_numpy()
+            last=c.task.history.iloc[-1].to_numpy()
             mean=(np.log(last) if output=='price' else last)+mean.cumsum(0)
         mean=mean.ravel()
         if output=='price':
@@ -295,7 +296,7 @@ def test_joint_dependence_mutation_keeps_marginals_and_is_detected():
 def test_garch_exact_sampler_calibrates_fixed_numerical_covariance_target():
     c=generate('garch',{'correlation':.6},horizon=3)
     forecast=c.reference.forecast(64,71)
-    result=evaluate_forecast(c,forecast,check_dependence=True,n_calibration=19)
+    result=evaluate_forecast(c,forecast,checks=[dependence(n_calibration=19)])
     check=next(d for d in result.diagnostics if d.name=='reference_covariance')
     assert check.status in ('PASS','FAIL')
     assert 'fixed_independently_estimated' in check.evidence['covariance_target']
@@ -316,8 +317,8 @@ def test_joint_jump_regimes_are_explicitly_approximate_and_guarded():
 def test_joint_fresh_and_accumulated_residuals_share_innovations_at_fixed_seed():
     fresh = generate('composite', {'residual': 'white_noise', 'correlation': .6}, length=20)
     walk = generate('composite', {'residual': 'random_walk', 'correlation': .6}, length=20)
-    fresh_values = np.concatenate([fresh.task.context.values, fresh.observed.values])
-    walk_values = np.concatenate([walk.task.context.values, walk.observed.values])
+    fresh_values = np.concatenate([fresh.task.history.values, fresh.observed.values])
+    walk_values = np.concatenate([walk.task.history.values, walk.observed.values])
     np.testing.assert_allclose(np.diff(walk_values, axis=0), fresh_values[1:], atol=1e-14)
 
 
@@ -341,7 +342,7 @@ def test_joint_entry_points_share_manifest_keyword_vocabulary_and_resolved_build
     import timegym._process_common as common
     import timegym.joint_processes as joint
     from timegym.processes import resolve_process
-    arguments = dict(kind=kind, parameters={'correlation': .5}, context_length=12,
+    arguments = dict(kind=kind, parameters={'correlation': .5}, history_length=12,
                      horizon=2, n_targets=2, seed=9)
     resolved = resolve_process(**arguments)
 

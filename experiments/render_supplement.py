@@ -11,7 +11,8 @@ import argparse
 import json
 from pathlib import Path
 
-from .common import close_statistics, interval_cell, rate_cell, require_conclusion, scientific_tex, sha256
+from .common import (answer_key_error, close_statistics, interval_cell, rate_cell, require_conclusion, scientific_tex,
+                     sha256)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -266,7 +267,7 @@ def followup_text(results, records, clean, followup):
     require_conclusion(close_statistics(repair["frozen_clean_minus_faulty_reference_mse"],
                                         recorded["clean_minus_faulty_reference_mse"]),
                        "the follow-up quotes the frozen clean-minus-faulty distance from the answer key")
-    closer = sum(row["mean_reference_mse"] < clean[(row["condition"], row["seed"])]["mean_reference_mse"]
+    closer = sum(answer_key_error(row) < answer_key_error(clean[(row["condition"], row["seed"])])
                  for row in records if row["condition"] == repair["condition"] and row["branch"] == repair["fault"])
     require_conclusion(closer == repair["faulty_closer_to_answer_key"],
                        "the follow-up count of faulty cases closer to the answer key agrees with the frozen records")

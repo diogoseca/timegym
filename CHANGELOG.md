@@ -1,34 +1,279 @@
 # Changelog
 
-## 1.14.1 — 2026-11-24
+## Unreleased
 
 - Made `Pipeline.run` the one call for testing a model. Its result now
   carries the scorecard: `result = pipeline.run()`, then
   `result.scorecard.plot()` or `print(result.scorecard)`, with
-  `result.assert_passed()`, `result.to_json(path)` and `result.checks` read
+  `result.assert_passed()`, `result.save(path)` and `result.checks` read
   straight from its report. With no arguments `run()` draws the scorecard's
   ten kinds of series at low and high noise, 10 times each (200 series), and
-  it takes the scorecard's settings: `noise_levels`, `context_length`,
-  `horizon`, `title`, `attainable` and `interval_level`. Scenarios you built
+  it takes the scorecard's settings: `noise_levels`, `history_length`,
+  `horizon`, `simulate_attainable` and `interval_level`. Scenarios you built
   give one row each. A run of your own data (`cases=`) has no scorecard,
   since nobody knows its answer key, and reading `result.scorecard` says so
-  and points to `result.checks` and the errors in `result.report`.
-- `run()` now drops the series and forecasts once each one is scored, so a
-  large run stays small in memory. The report, the scorecard with its
-  picture, `save_baseline`, `compare` and `plot_errors()` work as before;
+  and points to `result.checks` and the errors in `result.metrics`.
+- `run()` now drops the series and forecasts once each one is measured, so a
+  large run stays small in memory. The report, the scorecard with its picture,
+  `save_baseline`, `compare` and `plot_errors()` work as before;
   `keep_data=True` keeps every series and forecast for `plot_forecasts()`,
-  `calibration` and your own reading, and `result.kept_data` says which.
-  Code that read `result.cases[i].case` or `.forecast` needs `keep_data=True`.
-  With nothing to forecast named, `run()` used to draw the five kinds of
-  `default_scenarios()` 3 times each; it now draws the scorecard's series, and
-  with scenarios named it draws each 10 times instead of 3.
+  `result.calibration()` and your own reading, and `result.kept_data` says
+  which. Code that read `result.cases[i].case` or `.forecast` needs
+  `keep_data=True`. With nothing to forecast named, `run()` used to draw the
+  five kinds of `default_scenarios()` 3 times each; it now draws the
+  scorecard's series, and with scenarios named it draws each 10 times instead
+  of 3.
 - `Pipeline.test(...)` and `Pipeline.scorecard(...)` still work as before and
   now warn: use `pipeline.run(...)` and `pipeline.run(...).scorecard`. They
   will be removed in a later release. `timegym.scorecard.scorecard` warns the
   same way, and the scorecard's closing line now says
   `Run pipeline.run(instances=30) to narrow them.`
-- Moved the docs, tutorials, source notebooks, examples, the paper's sentence
-  on the scorecard call and the installed-package check to the new call.
+- Moved the README, the docs, tutorials, source notebooks, examples, the
+  paper's sentence on the scorecard call, the script that draws the README's
+  pictures and the installed-package check to the new call.
+
+- One word for the past a forecaster sees: history. Write `fit(self, history)`
+  in your models, `Scenario(kind, history_length=120, horizon=12)`,
+  `task.history`, `pipeline.predict(history, future_index)`,
+  `mase(observed, predicted, history)`, `rmsse(observed, predicted, history)`,
+  `check_shift_equivariance(pipeline, history, future_index)` and
+  `history_length=` in `run()`, `scenario_grid` and `default_scenarios`. A
+  metric or a check of your own asks for the past by naming its argument
+  `history`. The built-in models and target transforms name their argument
+  `history` too, the built-in baselines keep what they fitted as `history_`,
+  and error messages say history where they said context.
+- The old names still work and warn, and will be removed in a later release:
+  `context_length=` wherever it was taken (`Scenario`, `Pipeline.scorecard`,
+  `scenario_grid`, `default_scenarios`, `generate_process`,
+  `generate_joint_process`, `resolve_process` and
+  `timegym.scorecard.scorecard`), `scenario.context_length`,
+  `ForecastTask(context=...)`, `task.context`, `context=` in
+  `Pipeline.predict`, `mase`, `rmsse`, `check_shift_equivariance`, `fit` of
+  the built-in models and `fit_transform` of the built-in target transforms,
+  `context_` on the built-in baselines, a metric or a check whose argument is
+  named `context` (it warns once per run), and a `build` of your own whose
+  scenario has `context_length` instead of `history_length`. A model of your
+  own written `fit(self, context)` needs no change, since TimeGym passes the
+  history by position.
+- New cases, reports and scorecard baselines record `history_length` where
+  they recorded `context_length`. Reports and baselines saved by 1.14.1 and
+  earlier still load, compare with new ones and replay. Code that reads
+  `case.manifest["context_length"]` from a new case needs
+  `case.manifest["history_length"]`: that is the one change that does not
+  warn. Scorecard baselines are now format version 2, so TimeGym 1.14.1
+  refuses a new baseline and asks to be upgraded instead of failing on the
+  missing key; the report format is unchanged.
+- Moved the docs, the glossary (History, where it said Context), the README,
+  tutorials, examples, source notebooks, the installed-package check and the
+  paper to the word history wherever they meant the past a forecaster sees.
+
+- One class for each built-in baseline, named for the forecast it makes:
+  `LastValueForecaster()`, `SeasonalLastValueForecaster(period)` (seasonal
+  naive: each step gets the last value seen at the same point of the cycle),
+  `MeanForecaster()`, `SeasonalMeanForecaster(period)` and `DriftForecaster()`,
+  all from `timegym`. Only the two seasonal ones take a `period`. Reports and
+  scorecards name each by its class, and each replays from a report.
+- `NaiveForecaster(strategy, period)` still works, makes the same forecasts as
+  before and now warns, naming the class that makes the same forecasts for the
+  strategy given, such as `SeasonalLastValueForecaster(period=12)`; it will be
+  removed in a later release. A pipeline warns once, not once per case. Reports
+  and scorecard baselines that name `NaiveForecaster` still load, compare and
+  replay, and replaying one does not warn. `LastValueForecaster` is still a
+  `NaiveForecaster`, as before.
+- Moved the docs, tutorials, examples, source notebooks and the
+  installed-package check to the new classes.
+
+- `Pipeline` takes the model to test first, in one of four forms: a model
+  (anything with `fit` and `predict`, copied fresh for every case, even if it
+  can also be called); a list of scikit-learn steps ending in a regressor,
+  such as `Pipeline([StandardScaler(), Ridge()], window_length=24)`, which
+  becomes one scikit-learn pipeline (a scikit-learn pipeline you already have
+  is taken as it is); a class; or a function that returns a fresh model, now
+  written `Pipeline(make_model)` and called for every case, as
+  `Pattern(attainable_by=...)` calls it. A list that does not end in a
+  regressor is refused when the pipeline is made.
+- Reports, comparisons and the scorecard title name a scikit-learn pipeline by
+  its steps, such as "StandardScaler + Ridge". It is described in the report
+  and not replayed from it, like other models of your own.
+- `.add()`, `model_factory=` and a pipeline with no model still work as before
+  and now warn: use the list of steps, which makes the same forecasts,
+  `Pipeline(make_model)`, and `Pipeline(LastValueForecaster())`, which makes
+  the forecasts a pipeline with no model makes. `.add()` warns once per
+  pipeline and a pipeline with no model warns when it is first used. They will
+  be removed in a later release.
+- Moved the docs, tutorials and source notebooks to the list of steps and to
+  a model in every pipeline. The scripts behind the paper's scorecard figure
+  and the follow-up study keep their `.add()` chain, which the figure's title
+  and the study's registered protocol name.
+
+- `Pipeline(model, ..., name="Forest")` names the model once for everything a
+  run shows: the scorecard's title, a heading above `plot_forecasts()` and
+  `plot_errors()`, its label in `compare_reports`, and
+  `result.metadata["name"]`, while `result.metadata["model"]` still names the
+  class. `compare_reports([a, b], c, metric="mae")` labels a list of reports by
+  their names, or by their models when they have none; a dictionary of named
+  reports works as before. The name is saved with the pipeline's
+  configuration, so replay keeps it. Without a name, titles, plots and reports
+  stay as they were.
+- `ForecastRun.from_forecasts(cases, forecasts, name="weather service")` names
+  recorded forecasts the same way. Naming them with
+  `metadata={"model": ...}` still works and now warns; it will be removed in a
+  later release. `Pipeline.scorecard(title=...)` and
+  `timegym.scorecard.scorecard(title=...)` keep their `title` while they warn.
+- Moved the docs, examples and source notebooks to `name=`.
+
+- `metrics=` is the one name for the numbers a run records for each case:
+  `pipeline.run(cases=cases, metrics=["brier", "log_loss"])`, and the same in
+  `ForecastRun.from_forecasts`, `timegym.diagnostics.evaluate_forecast` and
+  `Pipeline.test`. They are read back in each case's `metrics`, and chosen
+  with `metric=` and imported from `timegym.metrics` as before. New reports
+  list what was asked for under `metadata["metrics"]`.
+- `scores=` still works on each of these calls and warns; it will be removed
+  in a later release. Passing both is refused. Reports saved by 1.14.1 and
+  earlier list the metrics asked for under `metadata["scores"]`; they still
+  load, compare and replay them.
+- In the docs and docstrings, a score is now only the scorecard's number from
+  0 to 100; the numbers recorded for each case are metrics. The page "Scores
+  and diagnostics" is now "Metrics and diagnostics", at the same address, and
+  its section "Your own scores" is "Your own metrics". Error messages say
+  metric where they said score; the messages a report saves for a case keep
+  their words, so older reports replay exactly.
+- Moved the docs, examples, source notebooks and tests to `metrics=`.
+
+- Every case with an answer key now records `avoidable_mse` where it recorded
+  `mean_reference_mse`: the same number, the squared distance from the
+  forecast to the answer key, which is the part of the error the model could
+  have avoided. It is the number the scorecard's table calls
+  `avoidable_mse`, averaged there over a cell's series, and
+  `result.plot_errors()` draws it by default.
+- Its old name still works and warns: `case.metrics["mean_reference_mse"]`
+  (also with `.get` and `in`) and `metric="mean_reference_mse"` in
+  `plot_errors` and `compare_reports`. It will be removed in a later release.
+  Reports saved by 1.14.1 and earlier load with the new name, in each case's
+  metrics and in the `point_accuracy` evidence, so they compare and replay
+  with new ones. The function `timegym.metrics.mean_reference_mse`, which
+  computes it, keeps its name.
+- The columns `avoidable` and `baseline_avoidable` of a scorecard
+  comparison's `table` (`card.compare(baseline)`) are now `avoidable_mse` and
+  `baseline_avoidable_mse`. A table column cannot warn, so code that reads the
+  old columns needs the new names. Saved scorecard baselines keep their format
+  and still compare.
+- Moved the docs, tutorials, examples, source notebooks and tests to
+  `avoidable_mse`. The study records under `experiments/` keep
+  `mean_reference_mse`; the scripts that read them accept both names.
+
+- Added `timegym.checks.dependence(n_calibration=99, alpha=0.05)`, the check
+  that the forecast samples spread together the way the answer key does, asked
+  for like any other check: `pipeline.run(scenarios, checks=[dependence()])`.
+  It runs the same check, with the same seeds, as `check_dependence=True` did,
+  gives the same findings and the same `dependence` row in `result.checks`,
+  and works the same way in `ForecastRun.from_forecasts`,
+  `timegym.diagnostics.evaluate_forecast` and `Pipeline.test`.
+- `check_dependence=`, `n_calibration=`, `alpha=` and
+  `dependence_seed_offset=` still work on `run()`, `from_forecasts()` and
+  `Pipeline.test()`, as do the first three on `evaluate_forecast()`, and warn;
+  they will be removed in a later release. `run()` no longer lists them in its
+  signature. Passing them beside `dependence()` is refused. With
+  `dependence()` the check's draws are seeded 100000 after the case's, the old
+  default. `dependence_seed_offset` has no new form: any offset gives an
+  equally good check, since it only keeps the check's draws apart from the
+  case's.
+- Reports record the check's settings under `diagnostic_settings` as before,
+  so reports saved with either form, or by 1.14.1 and earlier, compare and
+  replay the same way.
+- Moved the docs, tutorials, source notebooks, tests and experiment scripts to
+  `checks=[dependence()]`.
+
+- Each entry of `result.cases` now reads its case's parts directly:
+  `entry.history`, `entry.future_index`, `entry.observed`, `entry.reference`,
+  `entry.forecast`, `entry.metrics`, `entry.diagnostics` and
+  `entry.manifest`. The last three are the case's entry in the report, the
+  same record as `result.report.cases[i]`, so a case's kind and seed are
+  `entry.manifest["kind"]` and `entry.manifest["seed"]`. In a run that drops
+  its data, the default, the series, the answer key and the forecast are
+  None, and the metrics, diagnostics and manifest stay. `entry.case` is still
+  the whole `Case`, to hand to another call.
+- `entry.result` still works and now warns; it will be removed in a later
+  release. `EvaluatedCase(case, forecast, result, scenario_index,
+  seed_index)` is made as before.
+- Moved the docs, tutorials, examples, source notebooks, tests, the plots,
+  the scorecard and the paper's scorecard figure to the entry's parts.
+
+- Added `result.metrics`, every case's metrics in one pandas table:
+  `result.metrics["mae"]` or
+  `result.metrics.groupby(["pattern", "noise"])["mae"].mean()`. It has one row
+  per case, in order, labelled by the case's position. The case's labels come
+  first and tell the scenarios apart: on the scorecard's kinds of series its
+  `pattern` and `noise`, the scorecard's row and column, and its `seed`; for
+  scenarios you built its `scenario`, the name of its row on the scorecard
+  (`"ar1"`, then `"ar1 (2)"` for a second of that kind), and its `seed`; for
+  cases cut from your own data its `kind` and `origin`. Then one column per
+  metric, in alphabetical order. A run records its scenarios' labels in
+  `result.metadata["scenario_labels"]`, so a saved report keeps them; one saved
+  by an earlier release is labelled by `kind` and `seed`. A case that crashed or
+  failed an output check is not scored, so its metrics are NaN, as in
+  `compare_reports` and the scorecard. It reads only the metrics, so it works
+  in a run that dropped its data, and `report.metrics` gives the same table on
+  a `TestReport`, including one read back from its file. The table is made
+  each time it is read.
+- Moved the examples, tutorials and source notebooks that built these tables
+  by hand to `result.metrics`, and showed it on the Pipeline and reports page.
+
+- Added `result.compare(baseline, *, metric, by=None, cluster=None,
+  alpha=0.05, higher_is_better=False, seed=0)` to a run and to a
+  `TestReport`. `candidate.compare(baseline, metric="mae")` is
+  `compare_reports(candidate, baseline, metric="mae")`: the same settings and
+  the same `ReportComparison`. `compare_reports` stays, without a warning, to
+  compare several candidates with one baseline at once.
+- Moved the docs, the README, the source notebooks and the tests that compare
+  one candidate to `result.compare`. The metrics page shows the method for one
+  candidate and `compare_reports` for several.
+
+- Added `result.save(path)` and `report.save(path)`, which write the report to
+  a JSON file and return `path`, and `TestReport.load(path)`, which reads it
+  back. `to_json()` with no path returns the text, as before, and
+  `TestReport.from_json(text)` reads text.
+- `report.to_json(path)` and `TestReport.read(path)` still work and now warn;
+  they will be removed in a later release. Saved reports load as before.
+  `card.save(path)`, which saves the scorecard's picture, and
+  `card.save_baseline(path)` are unchanged.
+- Moved the docs, the README, the tutorials, the source notebooks, the tests,
+  `examples/reproduce_report.py` and the installed-package check to `save`
+  and `load`.
+
+- The scorecard's switch that simulates a missing attainable score is now
+  `simulate_attainable=True`, as in
+  `pipeline.run(noise_levels=3, simulate_attainable=True)`. It simulates the
+  score of a row that has none stored, off the default grid or a pattern of
+  your own with `attainable_by`; the default grid shows its stored values
+  either way. `pipeline.scorecard(attainable=True)` and
+  `timegym.scorecard.scorecard(attainable=True)` still work and now warn;
+  they will be removed in a later release.
+- Moved the docs, the examples, the source notebooks and the tests to
+  `simulate_attainable=True`.
+
+- Added `result.calibration(*, bins=10, cluster=None, interval_level=0.95,
+  seed=0)` to a run: `result.calibration()` is
+  `timegym.diagnostics.calibration(result)`, read off the result like the
+  scorecard, on a run that keeps its data (`keep_data=True`). The confidence
+  of the slope's interval is now `interval_level=` in
+  `timegym.diagnostics.calibration` too, the scorecard's word for the same
+  idea, where 1.14.1 said `level=`, and the `Calibration` it returns records
+  it as `interval_level`, where 1.14.1 called it `level`.
+- `calibration(..., level=0.95)`, `Calibration.level` and
+  `Calibration(..., level=...)`, as 1.14.1 wrote them, still work and now
+  warn; they will be removed in a later release. Passing both `level=` and
+  `interval_level=` is refused. `result.calibration(level=...)` works and
+  warns the same way.
+- Moved the docs, the README and the source notebooks to
+  `result.calibration()`.
+
+- Every deprecation warning now says that the old name "will be removed in a
+  later release". The older ones, such as those for `get_stock`,
+  `generate_process` and `Pipeline.plot_tests`, said "in TimeGym 2.0"; a
+  warnings filter that matched those words needs the new ones.
+
+## 1.14.1 — 2026-11-24
 
 - Added `timegym.diagnostics.calibration(run, *, bins=10, cluster=None,
   level=0.95, seed=0)`, which asks whether forecasts of a yes/no outcome come

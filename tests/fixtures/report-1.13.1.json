@@ -1,0 +1,384 @@
+{
+  "cases": [
+    {
+      "diagnostics": [
+        {
+          "category": "correctness",
+          "evidence": {},
+          "message": "Forecast indices, target order, shapes, finiteness, and quantile order satisfy the declared contract.",
+          "name": "forecast_contract",
+          "status": "PASS"
+        },
+        {
+          "category": "capability",
+          "evidence": {
+            "mae": 0.5931226533722231,
+            "mase": 0.8501071184402371,
+            "mase_seasonality": 1,
+            "mean_reference_mse": 0.025129257405105326,
+            "mse": 0.3988124220470677
+          },
+          "message": "Point scores are descriptive; no capability acceptance tolerance was declared.",
+          "name": "point_accuracy",
+          "status": "INCONCLUSIVE"
+        },
+        {
+          "category": "capability",
+          "evidence": {},
+          "message": "No explicit quantile forecasts were supplied.",
+          "name": "quantile_accuracy",
+          "status": "UNSUPPORTED"
+        },
+        {
+          "category": "capability",
+          "evidence": {},
+          "message": "No joint predictive samples were supplied.",
+          "name": "sample_scores",
+          "status": "UNSUPPORTED"
+        }
+      ],
+      "manifest": {
+        "array_order": "horizon_major_C",
+        "conditioning": {
+          "future_observations_used": false,
+          "initialization": "stationary_distribution",
+          "known_generator_parameters": true,
+          "last_observed": [
+            0.4299883264640517
+          ],
+          "observed_through": 23
+        },
+        "context_length": 24,
+        "horizon": 3,
+        "kind": "ar1",
+        "n_targets": 1,
+        "parameters": {
+          "correlation": [
+            [
+              1.0
+            ]
+          ],
+          "mean": [
+            0.0
+          ],
+          "phi": 0.8,
+          "sigma": [
+            1.0
+          ]
+        },
+        "reference_kind": "analytic_conditional",
+        "schema_version": 1,
+        "seed": 0,
+        "target_names": [
+          "y"
+        ]
+      },
+      "metrics": {
+        "mae": 0.5931226533722231,
+        "mase": 0.8501071184402371,
+        "mean_reference_mse": 0.025129257405105326,
+        "mse": 0.3988124220470677
+      },
+      "scenario": "ar1",
+      "seed": 0
+    },
+    {
+      "diagnostics": [
+        {
+          "category": "correctness",
+          "evidence": {},
+          "message": "Forecast indices, target order, shapes, finiteness, and quantile order satisfy the declared contract.",
+          "name": "forecast_contract",
+          "status": "PASS"
+        },
+        {
+          "category": "capability",
+          "evidence": {
+            "mae": 3.9146673945516066,
+            "mase": 7.507730727760543,
+            "mase_seasonality": 1,
+            "mean_reference_mse": 0.2987563267746601,
+            "mse": 15.76923869166766
+          },
+          "message": "Point scores are descriptive; no capability acceptance tolerance was declared.",
+          "name": "point_accuracy",
+          "status": "INCONCLUSIVE"
+        },
+        {
+          "category": "capability",
+          "evidence": {},
+          "message": "No explicit quantile forecasts were supplied.",
+          "name": "quantile_accuracy",
+          "status": "UNSUPPORTED"
+        },
+        {
+          "category": "capability",
+          "evidence": {},
+          "message": "No joint predictive samples were supplied.",
+          "name": "sample_scores",
+          "status": "UNSUPPORTED"
+        }
+      ],
+      "manifest": {
+        "array_order": "horizon_major_C",
+        "conditioning": {
+          "future_observations_used": false,
+          "initialization": "stationary_distribution",
+          "known_generator_parameters": true,
+          "last_observed": [
+            1.4826047711649646
+          ],
+          "observed_through": 23
+        },
+        "context_length": 24,
+        "horizon": 3,
+        "kind": "ar1",
+        "n_targets": 1,
+        "parameters": {
+          "correlation": [
+            [
+              1.0
+            ]
+          ],
+          "mean": [
+            0.0
+          ],
+          "phi": 0.8,
+          "sigma": [
+            1.0
+          ]
+        },
+        "reference_kind": "analytic_conditional",
+        "schema_version": 1,
+        "seed": 1,
+        "target_names": [
+          "y"
+        ]
+      },
+      "metrics": {
+        "mae": 3.9146673945516066,
+        "mase": 7.507730727760543,
+        "mean_reference_mse": 0.2987563267746601,
+        "mse": 15.76923869166766
+      },
+      "scenario": "ar1",
+      "seed": 1
+    },
+    {
+      "diagnostics": [
+        {
+          "category": "correctness",
+          "evidence": {},
+          "message": "Forecast indices, target order, shapes, finiteness, and quantile order satisfy the declared contract.",
+          "name": "forecast_contract",
+          "status": "PASS"
+        },
+        {
+          "category": "capability",
+          "evidence": {
+            "mae": 0.45198778509021953,
+            "mase": 0.4900251105085368,
+            "mase_seasonality": 1,
+            "mean_reference_mse": 0.7808956851754263,
+            "mse": 0.2311822058386345
+          },
+          "message": "Point scores are descriptive; no capability acceptance tolerance was declared.",
+          "name": "point_accuracy",
+          "status": "INCONCLUSIVE"
+        },
+        {
+          "category": "capability",
+          "evidence": {},
+          "message": "No explicit quantile forecasts were supplied.",
+          "name": "quantile_accuracy",
+          "status": "UNSUPPORTED"
+        },
+        {
+          "category": "capability",
+          "evidence": {},
+          "message": "No joint predictive samples were supplied.",
+          "name": "sample_scores",
+          "status": "UNSUPPORTED"
+        }
+      ],
+      "manifest": {
+        "array_order": "horizon_major_C",
+        "conditioning": {
+          "future_observations_used": false,
+          "known_generator_parameters": true,
+          "observed_through": 15
+        },
+        "context_length": 16,
+        "horizon": 2,
+        "kind": "trend",
+        "n_targets": 1,
+        "parameters": {
+          "correlation": [
+            [
+              1.0
+            ]
+          ],
+          "intercept": [
+            0.0
+          ],
+          "sigma": [
+            1.0
+          ],
+          "slope": [
+            0.1
+          ]
+        },
+        "reference_kind": "analytic_conditional",
+        "schema_version": 1,
+        "seed": 0,
+        "target_names": [
+          "y"
+        ]
+      },
+      "metrics": {
+        "mae": 0.45198778509021953,
+        "mase": 0.4900251105085368,
+        "mean_reference_mse": 0.7808956851754263,
+        "mse": 0.2311822058386345
+      },
+      "scenario": "trend",
+      "seed": 0
+    },
+    {
+      "diagnostics": [
+        {
+          "category": "correctness",
+          "evidence": {},
+          "message": "Forecast indices, target order, shapes, finiteness, and quantile order satisfy the declared contract.",
+          "name": "forecast_contract",
+          "status": "PASS"
+        },
+        {
+          "category": "capability",
+          "evidence": {
+            "mae": 0.5752135343763424,
+            "mase": 0.7531144391649862,
+            "mase_seasonality": 1,
+            "mean_reference_mse": 0.20396292259644927,
+            "mse": 0.3443473657071323
+          },
+          "message": "Point scores are descriptive; no capability acceptance tolerance was declared.",
+          "name": "point_accuracy",
+          "status": "INCONCLUSIVE"
+        },
+        {
+          "category": "capability",
+          "evidence": {},
+          "message": "No explicit quantile forecasts were supplied.",
+          "name": "quantile_accuracy",
+          "status": "UNSUPPORTED"
+        },
+        {
+          "category": "capability",
+          "evidence": {},
+          "message": "No joint predictive samples were supplied.",
+          "name": "sample_scores",
+          "status": "UNSUPPORTED"
+        }
+      ],
+      "manifest": {
+        "array_order": "horizon_major_C",
+        "conditioning": {
+          "future_observations_used": false,
+          "known_generator_parameters": true,
+          "observed_through": 15
+        },
+        "context_length": 16,
+        "horizon": 2,
+        "kind": "trend",
+        "n_targets": 1,
+        "parameters": {
+          "correlation": [
+            [
+              1.0
+            ]
+          ],
+          "intercept": [
+            0.0
+          ],
+          "sigma": [
+            1.0
+          ],
+          "slope": [
+            0.1
+          ]
+        },
+        "reference_kind": "analytic_conditional",
+        "schema_version": 1,
+        "seed": 1,
+        "target_names": [
+          "y"
+        ]
+      },
+      "metrics": {
+        "mae": 0.5752135343763424,
+        "mase": 0.7531144391649862,
+        "mean_reference_mse": 0.20396292259644927,
+        "mse": 0.3443473657071323
+      },
+      "scenario": "trend",
+      "seed": 1
+    }
+  ],
+  "metadata": {
+    "dependencies": {
+      "numpy": "2.5.5",
+      "pandas": "3.1.1",
+      "scikit-learn": "1.9.1",
+      "scipy": "1.18.1",
+      "timegym": "1.13.1"
+    },
+    "diagnostic_settings": {
+      "alpha": 0.05,
+      "check_dependence": false,
+      "dependence_seed_offset": 100000,
+      "n_calibration": 99
+    },
+    "model": "NaiveForecaster",
+    "pipeline_config": {
+      "model": {
+        "class": "NaiveForecaster",
+        "kind": "builtin",
+        "parameters": {
+          "period": 1,
+          "strategy": "last"
+        }
+      },
+      "reduction": "recursive",
+      "replayable": true,
+      "schema_version": 3,
+      "target_transform": null,
+      "window_length": 12
+    },
+    "python": "3.13.18",
+    "python_implementation": "CPython",
+    "reduction": "recursive",
+    "source": {
+      "algorithm": "sha256",
+      "digest": "15cd0633cc521f3b7e49c56d01f71a84f33bbdbd9a7a1b3619e8607eceb7ee23",
+      "file_count": 25,
+      "scope": "timegym/**/*.py relative paths and contents"
+    },
+    "target_transform": null,
+    "timegym_version": "1.13.1",
+    "window_length": 12
+  },
+  "schema_version": "2.0",
+  "summary": {
+    "cases": 4,
+    "diagnostics": 16,
+    "failed_cases": 0,
+    "status_counts": {
+      "ERROR": 0,
+      "FAIL": 0,
+      "INCONCLUSIVE": 4,
+      "PASS": 4,
+      "UNSUPPORTED": 8
+    }
+  }
+}

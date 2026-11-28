@@ -183,7 +183,7 @@ def test_the_registered_scorecard_uses_exactly_the_zoo_seed_blocks(protocol, mon
         raise _Abort
 
     monkeypatch.setattr(timegym.Scenario, "generate", record_generate)
-    monkeypatch.setattr(timegym.pipeline, "evaluate_forecast", record_evaluate)
+    monkeypatch.setattr(timegym.pipeline, "_evaluate_forecast", record_evaluate)
     monkeypatch.setattr(timegym.pipeline.Pipeline, "run", stop_after_run)
     with pytest.raises(_Abort):
         run_zoo.scorecard(_Zeros())
@@ -211,7 +211,7 @@ class _Card:
 
     def save_baseline(self, path):
         record = {"title": self.title, "seed": run_zoo.SEED, "instances": run_zoo.INSTANCES,
-                  "grid": {"patterns": list(timegym.PATTERNS), "noise_sds": [0.5, 2.0], "context_length": 120,
+                  "grid": {"patterns": list(timegym.PATTERNS), "noise_sds": [0.5, 2.0], "history_length": 120,
                            "horizon": 24},
                   "cells": [{"pattern": row["pattern"], "noise_sd": row["noise_sd"], "score": row["score"],
                              "avoidable": [None] * 30} for row in self.table.to_dict(orient="records")]}

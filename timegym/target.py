@@ -9,7 +9,7 @@ from ._internal import positive_int, _deprecated
 import dataclasses
 from collections.abc import Sequence
 from scipy import optimize, special, stats
-from ._internal import _real_array
+from ._internal import _real_array, _renamed_keywords
 from .contracts import Forecast
 
 __all__ = [
@@ -217,25 +217,25 @@ def differencing(
 
 
 # %% ../source/05_target_engineering.ipynb #target-transform-base
-def _context_values(context: pd.DataFrame) -> NDArray[np.float64]:
-    if not isinstance(context, pd.DataFrame):
-        raise TypeError("context must be a pandas DataFrame")
-    values = _real_array(context.to_numpy(), "context")
+def _history_values(history: pd.DataFrame) -> NDArray[np.float64]:
+    if not isinstance(history, pd.DataFrame):
+        raise TypeError("history must be a pandas DataFrame")
+    values = _real_array(history.to_numpy(), "history")
     if values.size == 0 or not np.isfinite(values).all():
-        raise ValueError("context must contain finite numeric values")
+        raise ValueError("history must contain finite numeric values")
     return values
 
 
-def _positive_values(context: pd.DataFrame, owner: str) -> NDArray[np.float64]:
-    values = _context_values(context)
+def _positive_values(history: pd.DataFrame, owner: str) -> NDArray[np.float64]:
+    values = _history_values(history)
     nonpositive = values <= 0
     if nonpositive.any():
         column = int(np.argmax(nonpositive.any(axis=0)))
         row = int(np.argmax(nonpositive[:, column]))
         raise ValueError(
-            f"{owner} requires strictly positive context values; target {context.columns[column]!r} "
+            f"{owner} requires strictly positive history values; target {history.columns[column]!r} "
             f"has {int(nonpositive[:, column].sum())} nonpositive value(s), the first at index "
-            f"{context.index[row]!r}"
+            f"{history.index[row]!r}"
         )
     return values
 
@@ -249,14 +249,14 @@ class _TargetTransform:
     def clone_unfitted(self):
         return type(self)(**self.params())
 
-    def _fitted_on(self, context: pd.DataFrame) -> None:
-        self.target_names_ = tuple(context.columns)
+    def _fitted_on(self, history: pd.DataFrame) -> None:
+        self.target_names_ = tuple(history.columns)
 
     def _check_forecast(self, forecast: Forecast) -> Forecast:
-        """Return the forecast to invert; unnamed series are the fitted context's."""
+        """Return the forecast to invert; unnamed series are the fitted history's."""
         if not hasattr(self, "target_names_"):
             raise ValueError(
-                f"Call {type(self).__name__}.fit_transform(context) before inverse_transform"
+                f"Call {type(self).__name__}.fit_transform(history) before inverse_transform"
             )
         if not isinstance(forecast, Forecast):
             raise TypeError("inverse_transform requires a timegym.Forecast")
@@ -269,7 +269,7 @@ class _TargetTransform:
             )
         if tuple(forecast.target_names) != self.target_names_:
             raise ValueError(
-                "Forecast targets or their order differ from the fitted context"
+                "Forecast targets or their order differ from the fitted history"
             )
         return forecast
 
@@ -320,12 +320,13 @@ class LogTransform(_TargetTransform):
     else exp of the 0.5 quantile, else exp of the point read as a median.
     """
 
-    def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
-        """Record the target names and return the log of a strictly positive context."""
-        values = _positive_values(context, "LogTransform")
-        self._fitted_on(context)
+    @_renamed_keywords(context="history")
+    def fit_transform(self, history: pd.DataFrame) -> pd.DataFrame:
+        """Record the target names and return the log of a strictly positive history."""
+        values = _positive_values(history, "LogTransform")
+        self._fitted_on(history)
         return pd.DataFrame(
-            np.log(values), index=context.index.copy(), columns=context.columns.copy()
+            np.log(values), index=history.index.copy(), columns=history.columns.copy()
         )
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
@@ -346,30 +347,31 @@ def _box_cox_lambda(values: NDArray[np.float64]) -> float:
 
 
 class BoxCoxTransform(_TargetTransform):
-    """Box-Cox transform with one lambda per target, fitted by maximum likelihood on the context.
+    """Box-Cox transform with one lambda per target, fitted by maximum likelihood on the history.
 
-    The lambdas are recomputed for every context and never see future values.
-    Each lies in [-1, 2]: on short contexts the unbounded estimate can be so
+    The lambdas are recomputed for every history and never see future values.
+    Each lies in [-1, 2]: on short histories the unbounded estimate can be so
     extreme that ordinary forecast noise has no preimage. Inversion follows
     LogTransform's point rule. A transformed value v with lambda * v + 1 <= 0
     has no Box-Cox preimage, and inverting it raises.
     """
 
-    def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
-        """Fit one lambda per target on this context and return the transformed context."""
-        values = _positive_values(context, "BoxCoxTransform")
+    @_renamed_keywords(context="history")
+    def fit_transform(self, history: pd.DataFrame) -> pd.DataFrame:
+        """Fit one lambda per target on this history and return the transformed history."""
+        values = _positive_values(history, "BoxCoxTransform")
         constant = np.ptp(values, axis=0) == 0
         if constant.any():
             raise ValueError(
-                f"Box-Cox lambda is not identified for target {context.columns[np.argmax(constant)]!r}, "
-                "which is constant in the context"
+                f"Box-Cox lambda is not identified for target {history.columns[np.argmax(constant)]!r}, "
+                "which is constant in the history"
             )
         self.lambdas_ = np.array([_box_cox_lambda(column) for column in values.T])
-        self._fitted_on(context)
+        self._fitted_on(history)
         return pd.DataFrame(
             special.boxcox(values, self.lambdas_),
-            index=context.index.copy(),
-            columns=context.columns.copy(),
+            index=history.index.copy(),
+            columns=history.columns.copy(),
         )
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
@@ -393,11 +395,11 @@ class BoxCoxTransform(_TargetTransform):
 
 # %% ../source/05_target_engineering.ipynb #target-difference
 class DifferenceTransform(_TargetTransform):
-    """Repeated lag differences that keep the context tail needed to undo them.
+    """Repeated lag differences that keep the history tail needed to undo them.
 
     ``order`` counts repeated differences and ``lag`` is their distance, as in
     ``differencing``: order=1, lag=12 is a monthly seasonal difference. The
-    forecast rows must be the steps that immediately follow the context.
+    forecast rows must be the steps that immediately follow the history.
     Points (means) and samples integrate exactly. Marginal quantiles of
     differences do not determine quantiles of their sums, so quantiles are
     recomputed from the integrated samples, or omitted without samples.
@@ -411,23 +413,24 @@ class DifferenceTransform(_TargetTransform):
         """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return {"order": self.order, "lag": self.lag}
 
-    def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
-        """Keep the context tail needed for inversion and return the differenced context."""
-        _context_values(context)
+    @_renamed_keywords(context="history")
+    def fit_transform(self, history: pd.DataFrame) -> pd.DataFrame:
+        """Keep the history tail needed for inversion and return the differenced history."""
+        _history_values(history)
         span = self.order * self.lag
-        if len(context) <= span:
+        if len(history) <= span:
             raise ValueError(
                 f"DifferenceTransform(order={self.order}, lag={self.lag}) needs more than "
-                f"{span} context rows"
+                f"{span} rows of history"
             )
         self.tails_ = [
-            differencing(context, stage, lag=self.lag).to_numpy(dtype=float)[
+            differencing(history, stage, lag=self.lag).to_numpy(dtype=float)[
                 -self.lag :
             ]
             for stage in range(self.order)
         ]
-        self._fitted_on(context)
-        return differencing(context, self.order, lag=self.lag)
+        self._fitted_on(history)
+        return differencing(history, self.order, lag=self.lag)
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
         """Integrate a forecast that meets its contract back to levels.
@@ -509,13 +512,14 @@ class ComposedTransform(_TargetTransform):
         """Return the constructor arguments that ``clone_unfitted`` rebuilds from."""
         return {"transforms": self.transforms}
 
-    def fit_transform(self, context: pd.DataFrame) -> pd.DataFrame:
+    @_renamed_keywords(context="history")
+    def fit_transform(self, history: pd.DataFrame) -> pd.DataFrame:
         """Fit and apply each member in order, each on the previous member's output."""
-        _context_values(context)
-        self._fitted_on(context)
+        _history_values(history)
+        self._fitted_on(history)
         for transform in self.transforms:
-            context = transform.fit_transform(context)
-        return context
+            history = transform.fit_transform(history)
+        return history
 
     def inverse_transform(self, forecast: Forecast) -> Forecast:
         """Invert the members in reverse order."""

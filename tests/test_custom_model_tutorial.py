@@ -24,20 +24,20 @@ def model_class():
 def test_analogues_preserve_whole_continuations_and_never_use_a_partial_future(model_class):
     # Exact historical match [0, 1] has continuation [8, 9]. The latest
     # matching window has no observed continuation and must be excluded.
-    context = pd.DataFrame({"a": [0, 1, 8, 9, 0, 1],
+    history = pd.DataFrame({"a": [0, 1, 8, 9, 0, 1],
                             "b": [0, 10, 80, 90, 0, 10]})
-    model = model_class(window_length=2, k=1).fit(context)
+    model = model_class(window_length=2, k=1).fit(history)
     forecast = model.predict(pd.RangeIndex(6, 8))
     np.testing.assert_array_equal(forecast.samples, [[[8, 80], [9, 90]]])
     np.testing.assert_array_equal(forecast.point, [[8, 80], [9, 90]])
     assert forecast.target_names == ("a", "b")
-    assert forecast.validate(ForecastTask(context, pd.RangeIndex(6, 8))) == []
+    assert forecast.validate(ForecastTask(history, pd.RangeIndex(6, 8))) == []
     assert model.neighbor_starts_.tolist() == [0]
 
 
 def test_analogues_average_k_paths_and_have_stable_ties(model_class):
-    context = pd.DataFrame({"y": [0, 1, 2, 0, 3, 4, 0]})
-    model = model_class(window_length=1, k=2).fit(context)
+    history = pd.DataFrame({"y": [0, 1, 2, 0, 3, 4, 0]})
+    model = model_class(window_length=1, k=2).fit(history)
     forecast = model.predict(pd.RangeIndex(7, 9))
     np.testing.assert_array_equal(forecast.samples, [[[1], [2]], [[3], [4]]])
     np.testing.assert_array_equal(forecast.point, [[2], [3]])
@@ -46,10 +46,10 @@ def test_analogues_average_k_paths_and_have_stable_ties(model_class):
 
 
 def test_analogues_fit_snapshot_and_unfitted_clones(model_class):
-    context = pd.DataFrame({"y": [0, 1, 8, 9, 0, 1]})
-    model = model_class(window_length=2, k=1).fit(context)
+    history = pd.DataFrame({"y": [0, 1, 8, 9, 0, 1]})
+    model = model_class(window_length=2, k=1).fit(history)
     expected = model.predict(pd.RangeIndex(6, 8)).point.copy()
-    context.iloc[:] = -999
+    history.iloc[:] = -999
     np.testing.assert_array_equal(model.predict(pd.RangeIndex(6, 8)).point, expected)
     clone = model.clone_unfitted()
     assert clone is not model and clone.params() == model.params()
@@ -69,7 +69,7 @@ def test_analogues_reject_invalid_settings(model_class, parameter, value):
 
 def test_analogues_reject_insufficient_history_and_invalid_indexes(model_class):
     model = model_class(window_length=2, k=2).fit(pd.DataFrame({"y": [0, 1, 2, 3]}))
-    with pytest.raises(ValueError, match="context rows"):
+    with pytest.raises(ValueError, match="rows of history"):
         model.predict(pd.RangeIndex(4, 6))
     with pytest.raises(ValueError, match="after"):
         model.predict(pd.RangeIndex(3, 5))
@@ -80,10 +80,10 @@ def test_analogues_reject_insufficient_history_and_invalid_indexes(model_class):
 def test_pipeline_refits_tutorial_model_without_fitting_template(model_class):
     template = model_class(window_length=3, k=3)
     pipeline = Pipeline(template)
-    scenario = Scenario("seasonal", context_length=40, horizon=4)
+    scenario = Scenario("seasonal", history_length=40, horizon=4)
     report = pipeline.run([scenario], seeds=[7, 19]).report
-    assert not hasattr(template, "context_")
+    assert not hasattr(template, "history_")
     assert all(any(d.name == "forecast_contract" and d.status == "PASS"
                    for d in result.diagnostics) for result in report.cases)
-    assert all("mean_reference_mse" in result.metrics for result in report.cases)
+    assert all("avoidable_mse" in result.metrics for result in report.cases)
     assert pipeline.to_config()["replayable"] is False

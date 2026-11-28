@@ -3,7 +3,7 @@
 \subsection{Study 3: generated mutants}
 \label{sec:results-mutants}
 
-Cosmic Ray generated 119 mutants of the 82-line subject. 55 raise an exception on every input, so no check is needed to see them. Of the 64 that run, 20 return the clean forecast on all 24 screening inputs and are counted as equivalent; 44 change a forecast. Of the 16 catalogue mutants one is equivalent, a target scaler reused across contexts (the Ridge fit is linear in its targets, so the inverse transform undoes it), and none of the four Study 2 bugs is. The equivalent sources were also run on every evaluation case, and none differed from the clean pipeline there; 6 and 48 screening inputs give the same equivalent mutants as 24.
+Cosmic Ray generated 119 mutants of the 82-line subject. 55 raise an exception on every input, so no check is needed to see them. Of the 64 that run, 20 return the clean forecast on all 24 screening inputs and are counted as equivalent; 44 change a forecast. Of the 16 catalogue mutants one is equivalent, a target scaler reused across histories (the Ridge fit is linear in its targets, so the inverse transform undoes it), and none of the four Study 2 bugs is. The equivalent sources were also run on every evaluation case, and none differed from the clean pipeline there; 6 and 48 screening inputs give the same equivalent mutants as 24.
 
 Table~\ref{tab:mutants} counts, for each check, the mutants caught in at least one of the six conditions and, in parentheses, the pairs of a mutant and a condition in which it was caught.
 

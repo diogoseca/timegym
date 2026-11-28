@@ -33,13 +33,13 @@ def test_replay_prefix_and_rng_isolation(kind):
     state = np.random.get_state()
     short = case(kind, horizon=2)
     longer = case(kind, horizon=9)
-    pd.testing.assert_frame_equal(short.task.context, longer.task.context)
+    pd.testing.assert_frame_equal(short.task.history, longer.task.history)
     np.testing.assert_allclose(short.reference.mean, longer.reference.mean[:2])
     np.testing.assert_allclose(short.reference.covariance, longer.reference.covariance[:2, :2])
     assert short.reference.conditioning['future_observations_used'] is False
     manifest = json.loads(json.dumps(short.manifest, allow_nan=False))
     replay = Scenario(**{key: manifest[key] for key in (
-        'kind', 'parameters', 'context_length', 'horizon', 'n_targets', 'seed')}).generate()
+        'kind', 'parameters', 'history_length', 'horizon', 'n_targets', 'seed')}).generate()
     pd.testing.assert_frame_equal(short.observed, replay.observed)
     assert short.reference.forecast(n_samples=40, seed=2).validate(short.task) == []
     np.testing.assert_array_equal(short.reference.sample(30, 2), replay.reference.sample(30, 2))
@@ -93,8 +93,8 @@ def test_composite_same_seed_holds_noise_fixed_when_mean_changes():
     common = dict(amplitude=2., period=12., sigma=.3)
     baseline = case('composite', common, length=20, horizon=4)
     changed = case('composite', {**common, 'change_point': 10, 'changes': {'amplitude': 4.}}, length=20, horizon=4)
-    y0 = np.r_[baseline.task.context.y, baseline.observed.y]
-    y1 = np.r_[changed.task.context.y, changed.observed.y]
+    y0 = np.r_[baseline.task.history.y, baseline.observed.y]
+    y1 = np.r_[changed.task.history.y, changed.observed.y]
     t = np.arange(len(y0))
     np.testing.assert_allclose(y1-y0, np.where(t >= 10, 2*np.sin(2*np.pi*t/12), 0), atol=1e-14)
 
@@ -107,30 +107,30 @@ def test_composite_same_seed_holds_noise_fixed_when_mean_changes():
 def test_inert_jump_component_does_not_change_diffusion_or_state_path(kind, parameters, jump_settings):
     baseline = case(kind, parameters)
     jumps = case(kind, {**parameters, **jump_settings})
-    pd.testing.assert_frame_equal(baseline.task.context, jumps.task.context)
+    pd.testing.assert_frame_equal(baseline.task.history, jumps.task.history)
     pd.testing.assert_frame_equal(baseline.observed, jumps.observed)
 
 
 def test_merton_zero_jumps_reduce_to_gbm_and_price_mean_obeys_physical_drift():
     parameters = dict(mu=.12, sigma=.3, jump_rate=0., dt=.2)
     price = case('merton_jump_diffusion', parameters, horizon=3)
-    last = price.task.context.y.iloc[-1]
+    last = price.task.history.y.iloc[-1]
     steps = np.arange(1, 4)
     np.testing.assert_allclose(price.reference.mean[:, 0], last*np.exp(.12*.2*steps))
     logs = case('merton_jump_diffusion', {**parameters, 'output': 'log_price'}, horizon=3)
-    np.testing.assert_allclose(np.log(price.task.context.y), logs.task.context.y)
+    np.testing.assert_allclose(np.log(price.task.history.y), logs.task.history.y)
     np.testing.assert_allclose(logs.reference.variance[:, 0], .3**2*.2*steps)
     assert logs.reference.kind == 'analytic_conditional'
     assert np.all(price.reference.mean[:, 0] > np.exp(logs.reference.mean[:, 0]))
     jumps = case('merton_jump_diffusion', {**parameters, 'jump_rate': 1.}, horizon=3)
-    np.testing.assert_allclose(jumps.reference.mean[:, 0], jumps.task.context.y.iloc[-1]*np.exp(.12*.2*steps))
+    np.testing.assert_allclose(jumps.reference.mean[:, 0], jumps.task.history.y.iloc[-1]*np.exp(.12*.2*steps))
 
 
 def test_garch_variance_is_history_conditioned_and_paths_use_their_own_innovations():
     parameters = dict(mu=.01, omega=.02, alpha=.35, beta=.4, initial_variance=.1)
     generated = case('garch', parameters, horizon=3)
     variance = .1
-    for value in generated.task.context.y:
+    for value in generated.task.history.y:
         variance = .02+.35*(value-.01)**2+.4*variance
     expected = [variance]
     for _ in range(2):
@@ -181,14 +181,14 @@ def test_identical_regimes_reduce_to_single_merton_distribution():
     assert 'not_a_posterior_error_bound' in regimes.reference.conditioning['filter_note']
 
 
-def test_deterministic_regimes_and_single_observation_price_context():
+def test_deterministic_regimes_and_single_observation_price_history():
     parameters = dict(regime_mu=[0., 0.], regime_sigma=[0., 0.], output='price')
     generated = case('markov_switching', parameters, length=1, horizon=3)
     np.testing.assert_allclose(generated.reference.mean, 100.)
     np.testing.assert_allclose(generated.reference.covariance, 0., atol=1e-10)
     np.testing.assert_allclose(generated.reference.sample(4), 100.)
     longer = case('markov_switching', parameters, length=10, horizon=3)
-    np.testing.assert_allclose(longer.task.context.y, 100.)
+    np.testing.assert_allclose(longer.task.history.y, 100.)
 
 
 @pytest.mark.parametrize('kind,parameters', [
@@ -248,8 +248,8 @@ def test_process_labels_separate_seasonality_accumulation_and_parameter_change()
 def test_fresh_and_accumulated_residuals_share_innovations_at_fixed_seed():
     fresh = case('composite', {'residual': 'white_noise'}, length=20, horizon=4)
     walk = case('composite', {'residual': 'random_walk'}, length=20, horizon=4)
-    fresh_values = np.r_[fresh.task.context.y, fresh.observed.y]
-    walk_values = np.r_[walk.task.context.y, walk.observed.y]
+    fresh_values = np.r_[fresh.task.history.y, fresh.observed.y]
+    walk_values = np.r_[walk.task.history.y, walk.observed.y]
     np.testing.assert_allclose(np.diff(walk_values), fresh_values[1:], atol=1e-14)
 
 
@@ -332,7 +332,7 @@ def test_discrete_regime_filter_uses_exact_support_not_a_tolerance_band():
 def test_reference_zero_seed_does_not_reuse_observed_or_held_out_innovations(kind, parameters):
     generated = case(kind, parameters, length=12, horizon=2, seed=0)
     samples = generated.reference.sample(8192, seed=0)
-    assert not np.array_equal(samples[:12, 0, 0], generated.task.context.y.to_numpy())
+    assert not np.array_equal(samples[:12, 0, 0], generated.task.history.y.to_numpy())
     assert samples[12, 0, 0] != generated.observed.y.iloc[0]
     np.testing.assert_array_equal(samples, generated.reference.sample(8192, seed=0))
 
@@ -351,7 +351,7 @@ def test_one_target_processes_accept_correlation_without_changing_scalar_laws(ki
     baseline = case(kind)
     correlated = case(kind, {'correlation': correlation})
     assert correlated.manifest == baseline.manifest
-    pd.testing.assert_frame_equal(correlated.task.context, baseline.task.context)
+    pd.testing.assert_frame_equal(correlated.task.history, baseline.task.history)
     np.testing.assert_array_equal(correlated.reference.sample(8, 9), baseline.reference.sample(8, 9))
 
 
@@ -365,7 +365,7 @@ def test_one_target_processes_accept_correlation_without_changing_scalar_laws(ki
 def test_length_one_parameter_vectors_collapse_to_scalar_manifests(kind, scalar, vector):
     left, right = case(kind, scalar), case(kind, vector)
     assert left.manifest == right.manifest
-    pd.testing.assert_frame_equal(left.task.context, right.task.context)
+    pd.testing.assert_frame_equal(left.task.history, right.task.history)
     np.testing.assert_array_equal(left.reference.sample(8, 9), right.reference.sample(8, 9))
 
 
@@ -388,7 +388,7 @@ def test_controlled_scenario_resolves_once_and_owns_its_parameter_snapshot(monke
         return original(*args, **kwargs)
 
     monkeypatch.setattr(scenarios, 'resolve_process', counted)
-    specification = scenarios.Scenario(kind, context_length=12, horizon=2, n_targets=n_targets)
+    specification = scenarios.Scenario(kind, history_length=12, horizon=2, n_targets=n_targets)
     first = specification.generate(seed=8)
     specification.display_name
     again = specification.generate(seed=8)
@@ -403,7 +403,7 @@ def test_controlled_scenario_resolves_once_and_owns_its_parameter_snapshot(monke
 def test_controlled_parameters_are_copied_at_construction():
     from timegym import Scenario
     parameters = {'change_point': 3, 'changes': {'slope': .2}}
-    specification = Scenario('composite', context_length=8, horizon=2, parameters=parameters)
+    specification = Scenario('composite', history_length=8, horizon=2, parameters=parameters)
     original = specification.generate()
     parameters['changes']['slope'] = 2.
     pd.testing.assert_frame_equal(original.observed, specification.generate().observed)

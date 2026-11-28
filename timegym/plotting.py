@@ -6,6 +6,7 @@ import textwrap
 import numpy as np
 import pandas as pd
 from . import metrics
+from .reporting import _metric_name
 from .scenarios import scenario_label
 
 __all__ = ["plot_forecasts", "plot_errors", "plot_calibration"]
@@ -62,7 +63,7 @@ _STYLE = {
 }
 # Plain names for the figure key; the artists keep their descriptive labels.
 _KEY_NAMES = {
-    "Observed context": "Observations",
+    "Observed history": "Observations",
     "Held-out observations": "Observations",
     "Known conditional mean": "Answer key",
     "Conditional mean (approx. filter)": "Answer key (approximate filter)",
@@ -89,9 +90,9 @@ def _groups(run):
 
 
 # %% ../source/11_plotting.ipynb #11_plotting-11
-def _time_coordinates(context_index, future_index, ax):
+def _time_coordinates(history_index, future_index, ax):
     """Return coordinates and a midpoint without relying on pandas plot state."""
-    indexes = (context_index, future_index)
+    indexes = (history_index, future_index)
     if all(isinstance(index, (pd.DatetimeIndex, pd.PeriodIndex)) for index in indexes):
         import matplotlib.dates as mdates
 
@@ -114,19 +115,19 @@ def _time_coordinates(context_index, future_index, ax):
     else:
         # A custom model may use ordered nonnumeric labels. Show those labels
         # explicitly on an ordinal axis rather than pretending they are dates.
-        labels = list(context_index) + list(future_index)
+        labels = list(history_index) + list(future_index)
         coordinates = [
-            np.arange(len(context_index)),
-            np.arange(len(context_index), len(labels)),
+            np.arange(len(history_index)),
+            np.arange(len(history_index), len(labels)),
         ]
         locations = np.unique(
             np.linspace(0, len(labels) - 1, min(6, len(labels)), dtype=int)
         )
         ax.set_xticks(locations, [str(labels[position]) for position in locations])
         label = "Index label (equally spaced)"
-    context_x, future_x = coordinates
-    cutoff = context_x[-1] + (future_x[0] - context_x[-1]) / 2
-    return context_x, future_x, cutoff, label
+    history_x, future_x = coordinates
+    cutoff = history_x[-1] + (future_x[0] - history_x[-1]) / 2
+    return history_x, future_x, cutoff, label
 
 
 # %% ../source/11_plotting.ipynb #11_plotting-13
@@ -155,7 +156,7 @@ def _annotate(ax, messages):
 def _diagnostic_problems(entry):
     return [
         f"{diagnostic.status} · {diagnostic.name}: {diagnostic.message}"
-        for diagnostic in entry.result.diagnostics
+        for diagnostic in entry.diagnostics
         if diagnostic.failed
     ]
 
@@ -176,9 +177,9 @@ def _valid_reference(case):
 # %% ../source/11_plotting.ipynb #11_plotting-19
 def _which_case(entry):
     """Name one case of a group: its seed, or where its history ends for your own data."""
-    if entry.result.seed is not None:
-        return f"seed {entry.result.seed}"
-    origin = entry.result.manifest.get("origin")
+    if entry._result.seed is not None:
+        return f"seed {entry._result.seed}"
+    origin = entry.manifest.get("origin")
     return "" if origin is None else f"history ends {origin}"
 
 
@@ -274,19 +275,19 @@ def _draw_case(
         )
         return
     dimension = task.target_names.index(target)
-    start = _history_start(history, len(task.context), len(task.future_index))
-    context_x, future_x, cutoff, xlabel = _time_coordinates(
-        task.context.index[start:], task.future_index, ax
+    start = _history_start(history, len(task.history), len(task.future_index))
+    history_x, future_x, cutoff, xlabel = _time_coordinates(
+        task.history.index[start:], task.future_index, ax
     )
     ax.plot(
-        context_x,
-        task.context.iloc[start:, dimension].to_numpy(),
+        history_x,
+        task.history.iloc[start:, dimension].to_numpy(),
         color=_MUTED,
         alpha=0.8,
         marker=".",
         markersize=2.6,
         linestyle="None",
-        label="Observed context",
+        label="Observed history",
     )
     observed_valid = (
         case.observed.index.equals(task.future_index)
@@ -409,14 +410,14 @@ def _draw_case(
     ax.axvline(
         cutoff, color=_HAIRLINE, linewidth=0.9, linestyle="--", label="Forecast origin"
     )
-    ax.set_xlim(context_x[0], future_x[-1])
+    ax.set_xlim(history_x[0], future_x[-1])
     ax.set_xlabel(xlabel)
     ax.set_ylabel(str(target))
     several = len(task.target_names) > 1
     if title is None:
         label = scenario_label(
-            entry.result.scenario,
-            case.manifest.get("parameters"),
+            entry._result.scenario,
+            entry.manifest.get("parameters"),
             target_index=dimension,
         )
         which = _which_case(entry)
@@ -430,23 +431,49 @@ def _draw_case(
 
 
 # %% ../source/11_plotting.ipynb #11_plotting-21
-def _figure_key(fig):
-    """One key above all panels, in plain words, instead of a legend in each."""
+def _run_name(run):
+    """The name the run's pipeline or recorded forecasts were given, or None."""
+    name = getattr(run, "metadata", {}).get("name")
+    return name if isinstance(name, str) and name else None
+
+
+def _figure_name(fig, name):
+    """A named run's name above every panel."""
+    if name:
+        fig.suptitle(
+            name, x=0.01, ha="left", fontsize=12, fontweight="bold", color=_INK
+        )
+
+
+def _figure_key(fig, name=None):
+    """One key above all panels, in plain words, instead of a legend in each; a run's name heads it."""
     handles = {}
     for ax in fig.axes:
         for handle, label in zip(*ax.get_legend_handles_labels()):
             handles.setdefault(_KEY_NAMES.get(label, label), handle)
-    if handles:
-        fig.legend(
-            list(handles.values()),
-            list(handles),
-            loc="outside upper left",
-            ncols=len(handles),
-            markerscale=1.8,
-            handlelength=1.6,
-            columnspacing=1.8,
-            labelcolor=_MUTED,
-        )
+    if not handles:
+        _figure_name(fig, name)
+        return
+    heading = (
+        {}
+        if not name
+        else {
+            "title": name,
+            "title_fontproperties": {"size": 12, "weight": "bold"},
+            "alignment": "left",
+        }
+    )
+    fig.legend(
+        list(handles.values()),
+        list(handles),
+        loc="outside upper left",
+        ncols=len(handles),
+        markerscale=1.8,
+        handlelength=1.6,
+        columnspacing=1.8,
+        labelcolor=_MUTED,
+        **heading,
+    )
 
 
 def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
@@ -457,8 +484,9 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
     case's 0-100 score sits in its colored band beside its error against the
     answer key and against what happened. ``history`` is how many past steps
     to show: four times the horizon by default, ``"all"`` for the whole
-    context. Bands, when requested, are marginal intervals, never
-    simultaneous path regions.
+    history. Bands, when requested, are marginal intervals, never
+    simultaneous path regions. A run whose pipeline has a name, such as
+    ``Pipeline(model, name="Forest")``, shows it above the panels.
     """
     if not isinstance(show_quantiles, bool):
         raise ValueError("show_quantiles must be a boolean")
@@ -470,7 +498,7 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
     for scenario_index, entries in groups.items():
         targets = list(
             dict.fromkeys(
-                target for entry in entries for target in entry.case.task.target_names
+                target for entry in entries for target in entry.history.columns
             )
         )
         rows.extend((scenario_index, target) for target in targets)
@@ -517,26 +545,30 @@ def plot_forecasts(run, *, show_quantiles=False, figsize=None, history=None):
                     )
         for ax in axes[:-1].flat:  # the time axis is named once, under the last row
             ax.set_xlabel("")
-        _figure_key(fig)
+        _figure_key(fig, _run_name(run))
         return fig
 
 
 # %% ../source/11_plotting.ipynb #11_plotting-23
 def plot_errors(
-    run, metric="mean_reference_mse", *, bins=None, missing="raise", figsize=None
+    run, metric="avoidable_mse", *, bins=None, missing="raise", figsize=None
 ):
     """Show distributions of retained whole-case metrics, one row per scenario.
 
+    ``metric`` names a metric in ``case.metrics``; the default,
+    ``"avoidable_mse"``, is the error against the answer key, and
+    ``"mean_reference_mse"``, its old name, still works and warns.
     These are distributions over evaluated cases, not over predictive sample
     draws or dependent coordinates. A black line marks each row's median.
     Scenario positions remain distinct even when their kind strings match.
-    Missing or nonfinite scores raise by default; ``missing='annotate'``
+    Missing or nonfinite values raise by default; ``missing='annotate'``
     shows their counts and diagnostic reasons in each panel instead, so they
-    are never silently dropped.
+    are never silently dropped. A named run shows its name above the panels.
     """
     groups = _groups(run)
     if not isinstance(metric, str) or not metric:
         raise ValueError("metric must be a nonempty metric name")
+    metric = _metric_name(metric)
     if missing not in {"raise", "annotate"}:
         raise ValueError("missing must be 'raise' or 'annotate'")
     if bins is not None:
@@ -546,7 +578,7 @@ def plot_errors(
     for scenario_index, entries in groups.items():
         values, unavailable = [], []
         for entry in entries:
-            value = entry.result.metrics.get(metric)
+            value = entry.metrics.get(metric)
             if isinstance(value, (int, float, np.integer, np.floating)) and np.isfinite(
                 value
             ):
@@ -579,7 +611,7 @@ def plot_errors(
         )
         label = (
             "Error against the answer key (MSE)"
-            if metric == "mean_reference_mse"
+            if metric == "avoidable_mse"
             else "Error against what happened (MSE)" if metric == "mse" else metric
         )
         for ax, (scenario_index, entries) in zip(axes[:, 0], groups.items()):
@@ -608,7 +640,7 @@ def plot_errors(
             ax.set_ylabel("Cases")
             titled = _run_title(run, scenario_index)
             process = titled or scenario_label(
-                entries[0].result.scenario, entries[0].result.manifest.get("parameters")
+                entries[0]._result.scenario, entries[0].manifest.get("parameters")
             )
             ax.set_title(
                 f"{'' if titled else f'{scenario_index + 1}. '}{process}", loc="left"
@@ -626,7 +658,8 @@ def plot_errors(
                         f"{_which_case(entry) or f'case {entry.seed_index + 1}'}: {problem[0] if problem else 'metric unavailable'}"
                     )
                 _annotate(ax, messages)
-        axes[-1, 0].set_xlabel(f"{label}, one score per case")
+        axes[-1, 0].set_xlabel(f"{label}, one value per case")
+        _figure_name(fig, _run_name(run))
         return fig
 
 
@@ -688,7 +721,9 @@ def plot_calibration(calibration, *, figsize=None):
         if np.isfinite(slope):
             summary = f"slope {slope:.2f}"
             if np.isfinite(low):
-                summary += f" ({100 * calibration.level:g}%: {low:.2f} to {high:.2f})"
+                summary += (
+                    f" ({100 * calibration.interval_level:g}%: {low:.2f} to {high:.2f})"
+                )
         else:
             summary = "no slope"
         summary += f" · {calibration.forecasts:,} forecasts"

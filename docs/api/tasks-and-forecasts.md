@@ -6,14 +6,14 @@ to forecast, which continue where the past ends (after steps 0 to 119, the next
 12 are 120 to 131), and returns one value per label: a list, a NumPy array, a
 pandas Series or DataFrame, or a `Forecast`. A list or array has no labels of
 its own, so TimeGym reads its rows as the requested steps in order and its
-columns as the context's series. Before scoring, TimeGym runs the output checks
+columns as the history's series. Before scoring, TimeGym runs the output checks
 (the *forecast contract*): right dates, right series in the right order, the
 right shape, no NaN or infinity, and quantiles that do not cross. A forecast
 that fails one fails the test with a named reason and is not scored.
 
-`ForecastTask(context, future_index)` validates a finite pandas DataFrame, unique
+`ForecastTask(history, future_index)` validates a finite pandas DataFrame, unique
 ordered target names, increasing unique time labels, and a future index after the
-context. Context is all that ordinary models may use to fit. Future targets and
+history. The history is all that ordinary models may use to fit. Future targets and
 privileged reference parameters remain with the evaluator.
 
 `Forecast(index, point=None, quantiles=None, levels=(), samples=None,
@@ -26,8 +26,8 @@ stable code/message dictionaries.
 from timegym import Forecast
 
 class RepeatLast:
-    def fit(self, context):
-        self.last = context.iloc[-1]   # the last row seen
+    def fit(self, history):
+        self.last = history.iloc[-1]   # the last row seen
         return self
 
     def predict(self, future_index):
@@ -80,7 +80,7 @@ result = Pipeline(LastValueForecaster()).run(cases=cases)
 ```
 
 Each case's manifest records `kind` (`name`), `seed` (`None`), `origin` (the
-last history label, as text), `context_length`, `horizon`, `target_names` and
+last history label, as text), `history_length`, `horizon`, `target_names` and
 `series_sha256`, a SHA-256 fingerprint of the whole series: its column names,
 its index labels as text and its values as 64-bit floats. Two cases cut from
 the same data have the same fingerprint. The keys of `manifest` are added to

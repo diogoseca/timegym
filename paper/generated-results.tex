@@ -95,7 +95,7 @@ Random walk & 100 N & 100 N & 37 F & 37 F & 87 G & 87 G \\
 
 \subsection{Study 1: an inverse-scaling repair}
 
-A separate predictor standardizes its training context and forecasts the mean in standardized units. The fault omits the inverse transform; the repair applies the training mean and scale. The historical-mean predictor is shift equivariant, so this particular metamorphic relation is a valid declared contract. On white-noise cases with mean 5 and innovation scale 2, the relation failed for 64/64 faulty fits (Wilson 95\% interval [94.3, 100.0]\%) and 0/64 repaired fits ([0.0, 5.7]\%). The paired repaired-minus-faulty MAE difference was -3.4711 [-3.6333, -3.3090] (95\% t interval).
+A separate predictor standardizes its training history and forecasts the mean in standardized units. The fault omits the inverse transform; the repair applies the training mean and scale. The historical-mean predictor is shift equivariant, so this particular metamorphic relation is a valid declared contract. On white-noise cases with mean 5 and innovation scale 2, the relation failed for 64/64 faulty fits (Wilson 95\% interval [94.3, 100.0]\%) and 0/64 repaired fits ([0.0, 5.7]\%). The paired repaired-minus-faulty MAE difference was -3.4711 [-3.6333, -3.3090] (95\% t interval).
 
 We then apply the same known omission and repair to AirPassengers, the monthly 1949--1960 international-airline passenger series in thousands~\cite{rAirPassengers}. All scaling statistics are fitted on each training prefix. The four ordered origins each forecast the next 12 months; their results are reported separately because they are not independent series replicates.
 

@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from timegym import Forecast, NaiveForecaster, Pipeline, Scenario
+from timegym import Forecast, LastValueForecaster, MeanForecaster, Pipeline, Scenario
 from timegym.evaluation import ForecastRun
 from timegym.plotting import _FORECAST, _INK, _MUTED
 
@@ -32,24 +32,24 @@ def test_run_fits_once_per_case_and_plots_retained_outputs_without_refitting():
             self.predict_count = 0
             models.append(self)
 
-        def fit(self, context):
+        def fit(self, history):
             self.fit_count += 1
-            self.names = tuple(context.columns)
-            self.last = context.iloc[-1].to_numpy()
+            self.names = tuple(history.columns)
+            self.last = history.iloc[-1].to_numpy()
             return self
 
         def predict(self, future_index):
             self.predict_count += 1
             return Forecast(future_index, point=np.tile(self.last, (len(future_index), 1)), target_names=self.names)
 
-    run = Pipeline(model_factory=CountingModel).run(
-        [Scenario("trend", context_length=12, horizon=3), Scenario("ar1", context_length=12, horizon=3)], seeds=[5, 7], keep_data=True)
+    run = Pipeline(CountingModel).run(
+        [Scenario("trend", history_length=12, horizon=3), Scenario("ar1", history_length=12, horizon=3)], seeds=[5, 7], keep_data=True)
     assert isinstance(run, ForecastRun)
     assert len(models) == len(run.cases) == 4
     assert all(model.fit_count == model.predict_count == 1 for model in models)
     assert len({id(model) for model in models}) == 4
-    assert run.cases[0].forecast.index.equals(run.cases[0].case.task.future_index)
-    assert run.report.cases[0] is run.cases[0].result
+    assert run.cases[0].forecast.index.equals(run.cases[0].future_index)
+    assert run.report.cases[0].metrics == run.cases[0].metrics
     run.plot_forecasts()
     run.plot_errors()
     run.plot_forecasts()
@@ -58,8 +58,8 @@ def test_run_fits_once_per_case_and_plots_retained_outputs_without_refitting():
 
 
 def test_test_schema_and_replay_remain_identical_to_run_report():
-    pipeline = Pipeline(NaiveForecaster("mean"))
-    scenarios = [Scenario("white_noise", context_length=12, horizon=3)]
+    pipeline = Pipeline(MeanForecaster())
+    scenarios = [Scenario("white_noise", history_length=12, horizon=3)]
     run = pipeline.run(scenarios, seeds=[2], keep_data=True)
     report = pipeline.test(scenarios, seeds=[2])
     assert run.report.to_dict() == report.to_dict()
@@ -69,7 +69,7 @@ def test_test_schema_and_replay_remain_identical_to_run_report():
 
 
 def test_forecasts_are_unconnected_blue_crosses_and_observations_gray_dots():
-    run = Pipeline().run([Scenario("trend", context_length=24, horizon=9)], seeds=[8], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([Scenario("trend", history_length=24, horizon=9)], seeds=[8], keep_data=True)
     figure = run.plot_forecasts()
     axis = figure.axes[0]
     lines = {line.get_label(): line for line in axis.lines}
@@ -78,7 +78,7 @@ def test_forecasts_are_unconnected_blue_crosses_and_observations_gray_dots():
     assert point.get_linestyle() == "None"
     assert point.get_color() == _FORECAST
     assert len(point.get_xdata()) == 9
-    for name in ["Observed context", "Held-out observations"]:
+    for name in ["Observed history", "Held-out observations"]:
         assert lines[name].get_marker() == "."
         assert lines[name].get_linestyle() == "None"
         assert lines[name].get_color() == _MUTED
@@ -100,10 +100,10 @@ def test_forecasts_are_unconnected_blue_crosses_and_observations_gray_dots():
 
 
 def test_forecast_panels_show_recent_history_unless_asked_for_all():
-    run = Pipeline().run([Scenario("trend", context_length=100, horizon=5)], seeds=[8], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([Scenario("trend", history_length=100, horizon=5)], seeds=[8], keep_data=True)
     recent = run.plot_forecasts().axes[0]
-    context = next(line for line in recent.lines if line.get_label() == "Observed context")
-    np.testing.assert_array_equal(context.get_xdata(), np.arange(80, 100))
+    history = next(line for line in recent.lines if line.get_label() == "Observed history")
+    np.testing.assert_array_equal(history.get_xdata(), np.arange(80, 100))
     np.testing.assert_allclose(recent.get_xlim(), [80, 104])
     everything = run.plot_forecasts(history="all").axes[0]
     np.testing.assert_allclose(everything.get_xlim(), [0, 104])
@@ -114,9 +114,9 @@ def test_forecast_panels_show_recent_history_unless_asked_for_all():
 
 
 def test_multitarget_single_seed_and_duplicate_scenario_kinds_have_distinct_rows():
-    run = Pipeline().run([
-        Scenario("ar1", context_length=12, horizon=3, n_targets=2),
-        Scenario("ar1", context_length=20, horizon=4, n_targets=1),
+    run = Pipeline(LastValueForecaster()).run([
+        Scenario("ar1", history_length=12, horizon=3, n_targets=2),
+        Scenario("ar1", history_length=20, horizon=4, n_targets=1),
     ], seeds=[5], keep_data=True)
     figure = run.plot_forecasts()
     assert len(figure.axes) == 3
@@ -128,7 +128,7 @@ def test_multitarget_single_seed_and_duplicate_scenario_kinds_have_distinct_rows
 
 
 def test_two_seed_columns_preserve_duplicate_seed_positions():
-    run = Pipeline().run([Scenario("white_noise", context_length=10, horizon=3, n_targets=2)], seeds=[5, 5], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([Scenario("white_noise", history_length=10, horizon=3, n_targets=2)], seeds=[5, 5], keep_data=True)
     figure = run.plot_forecasts()
     assert len(figure.axes) == 4
     assert [axis.get_ylabel() for axis in figure.axes] == ["y0", "y0", "y1", "y1"]
@@ -146,13 +146,13 @@ def test_date_period_timedelta_and_numeric_axes_preserve_bounds(index):
     class IndexedScenario(Scenario):
         def generate(self, seed=None):
             case = super().generate(seed)
-            case.task.context.index = index[:7]
+            case.task.history.index = index[:7]
             case.task.future_index = index[7:]
             case.observed.index = index[7:]
             case.reference.index = index[7:]
             return case
 
-    run = Pipeline().run([IndexedScenario("white_noise", context_length=7, horizon=3)], seeds=[2], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([IndexedScenario("white_noise", history_length=7, horizon=3)], seeds=[2], keep_data=True)
     figure = run.plot_forecasts()
     figure.canvas.draw()
     axis = figure.axes[0]
@@ -171,12 +171,12 @@ def test_date_period_timedelta_and_numeric_axes_preserve_bounds(index):
 
 def test_execution_errors_are_retained_and_annotated():
     class Broken:
-        def fit(self, context):
+        def fit(self, history):
             raise RuntimeError("intentional failure")
 
-    run = Pipeline(model_factory=Broken).run([Scenario("ar1", context_length=12, horizon=3)], seeds=[7], keep_data=True)
+    run = Pipeline(Broken).run([Scenario("ar1", history_length=12, horizon=3)], seeds=[7], keep_data=True)
     assert run.cases[0].forecast is None
-    assert run.cases[0].result.diagnostics[0].status == "ERROR"
+    assert run.cases[0].diagnostics[0].status == "ERROR"
     axis = run.plot_forecasts().axes[0]
     assert any("intentional failure" in text.get_text() for text in axis.texts)
     assert not any(line.get_label() == "Predictive mean" for line in axis.lines)
@@ -188,27 +188,27 @@ def test_execution_errors_are_retained_and_annotated():
 
 
 def test_invalid_forecast_contract_is_not_drawn_as_valid_predictions():
-    class SwappedLabels(NaiveForecaster):
+    class SwappedLabels(LastValueForecaster):
         def predict(self, future_index):
             result = super().predict(future_index)
             result.target_names = tuple(reversed(result.target_names))
             return result
 
-    run = Pipeline(SwappedLabels()).run([Scenario("ar1", context_length=12, horizon=3, n_targets=2)], seeds=[4], keep_data=True)
+    run = Pipeline(SwappedLabels()).run([Scenario("ar1", history_length=12, horizon=3, n_targets=2)], seeds=[4], keep_data=True)
     assert run.cases[0].forecast is not None
-    assert any(d.status == "FAIL" for d in run.cases[0].result.diagnostics)
+    assert any(d.status == "FAIL" for d in run.cases[0].diagnostics)
     for axis in run.plot_forecasts().axes:
         assert not any(line.get_label() == "Predictive mean" for line in axis.lines)
         assert any("target_mismatch" in text.get_text() for text in axis.texts)
 
 
 def test_samples_are_not_silently_converted_to_point_or_quantile_outputs():
-    class SampleOnly(NaiveForecaster):
+    class SampleOnly(LastValueForecaster):
         def predict(self, future_index):
             point = super().predict(future_index)
             return Forecast(point.index, samples=np.tile(point.point, (8, 1, 1)), target_names=point.target_names)
 
-    run = Pipeline(SampleOnly()).run([Scenario("ar1", context_length=12, horizon=3)], seeds=[3], keep_data=True)
+    run = Pipeline(SampleOnly()).run([Scenario("ar1", history_length=12, horizon=3)], seeds=[3], keep_data=True)
     axis = run.plot_forecasts(show_quantiles=True).axes[0]
     assert not any(line.get_label() == "Predictive mean" for line in axis.lines)
     assert not axis.collections
@@ -220,7 +220,7 @@ def test_explicit_quantile_bands_are_opt_in_and_labeled_marginal():
     from timegym import GaussianAR1Forecaster
 
     run = Pipeline(GaussianAR1Forecaster(n_samples=24, seed=3)).run(
-        [Scenario("ar1", context_length=12, horizon=3)], seeds=[4], keep_data=True)
+        [Scenario("ar1", history_length=12, horizon=3)], seeds=[4], keep_data=True)
     assert not run.plot_forecasts().axes[0].collections
     axis = run.plot_forecasts(show_quantiles=True).axes[0]
     assert len(axis.collections) == 1
@@ -228,10 +228,10 @@ def test_explicit_quantile_bands_are_opt_in_and_labeled_marginal():
 
 
 def test_unknown_or_partly_missing_metrics_never_disappear_silently():
-    run = Pipeline().run([Scenario("ar1", context_length=12, horizon=3)], seeds=[1, 2], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([Scenario("ar1", history_length=12, horizon=3)], seeds=[1, 2], keep_data=True)
     with pytest.raises(ValueError, match="unknown_score"):
         run.plot_errors("unknown_score")
-    del run.cases[1].result.metrics["mean_reference_mse"]
+    del run.cases[1].metrics["avoidable_mse"]
     with pytest.raises(ValueError, match="seed 2"):
         run.plot_errors()
     axis = run.plot_errors(missing="annotate").axes[0]
@@ -242,9 +242,9 @@ def test_unknown_or_partly_missing_metrics_never_disappear_silently():
 
 
 def test_plot_style_is_local_and_pipeline_plots_return_figures():
-    scenarios = [Scenario("white_noise", context_length=10, horizon=3)]
+    scenarios = [Scenario("white_noise", history_length=10, horizon=3)]
     before = dict(plt.rcParams)
-    pipeline = Pipeline()
+    pipeline = Pipeline(LastValueForecaster())
     first = pipeline.run(scenarios, seeds=[4], keep_data=True).plot_forecasts()
     second = pipeline.run(scenarios, seeds=[4, 5], keep_data=True).plot_errors(metric="mse")
     assert len(first.axes) == len(second.axes) == 1
@@ -259,7 +259,7 @@ def test_importing_package_does_not_import_matplotlib():
 
 
 def test_mixed_random_walk_drift_is_named_per_target_and_aggregated_in_error_plot():
-    run = Pipeline().run([Scenario("random_walk", context_length=12, horizon=3, n_targets=2,
+    run = Pipeline(LastValueForecaster()).run([Scenario("random_walk", history_length=12, horizon=3, n_targets=2,
                                    parameters={"drift": [0., 1e-15]})], seeds=[7], keep_data=True)
     axes = run.plot_forecasts().axes
     assert "Random walk without drift · y0" in axes[0].get_title(loc="left")
@@ -277,7 +277,7 @@ def test_custom_case_kind_remains_plotable_without_a_builtin_scenario_label():
             case.manifest["parameters"] = {"source": "custom dataset"}
             return case
 
-    run = Pipeline().run([MeasuredCase("white_noise", context_length=12, horizon=3)], seeds=[7], keep_data=True)
+    run = Pipeline(LastValueForecaster()).run([MeasuredCase("white_noise", history_length=12, horizon=3)], seeds=[7], keep_data=True)
     assert "Measured sensor signal" in run.plot_forecasts().axes[0].get_title(loc="left")
     assert "Measured sensor signal" in run.plot_errors().axes[0].get_title(loc="left")
 
@@ -298,3 +298,18 @@ def test_real_data_panel_has_no_seed_and_labels_its_one_error():
     assert axis.get_title(loc="left") == "1. Store sales"
     details = [text.get_text() for text in axis.texts]
     assert any(text.startswith("error vs what happened ") for text in details), details
+
+
+def test_a_named_run_shows_its_name_above_the_panels():
+    scenarios = [Scenario("trend", history_length=24, horizon=4)]
+    named = Pipeline(LastValueForecaster(), name="Repeat").run(scenarios, seeds=[1, 2], keep_data=True)
+    forecasts, errors = named.plot_forecasts(), named.plot_errors()
+    assert forecasts.legends[0].get_title().get_text() == "Repeat"  # heading the key, so the two never overlap
+    assert errors.get_suptitle() == "Repeat"
+    unnamed = Pipeline(LastValueForecaster()).run(scenarios, seeds=[1, 2], keep_data=True)
+    assert unnamed.plot_forecasts().legends[0].get_title().get_text() == ""
+    assert unnamed.plot_errors().get_suptitle() == ""
+    recorded = ForecastRun.from_forecasts([entry.case for entry in named.cases],
+                                          [entry.forecast for entry in named.cases], name="made elsewhere")
+    assert recorded.plot_forecasts().legends[0].get_title().get_text() == "made elsewhere"
+    plt.close("all")

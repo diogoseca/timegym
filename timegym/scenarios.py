@@ -15,7 +15,7 @@ from .processes import (
     _process_label,
 )
 from ._internal import positive_int
-from ._internal import nonnegative_int
+from ._internal import nonnegative_int, _renamed_keywords, _old_name
 
 __all__ = ["Case", "CORE_KINDS", "scenario_label", "Scenario", "default_scenarios"]
 
@@ -154,6 +154,7 @@ def _kalman_forecast(
 
 
 # %% ../source/01_synthetic_data.ipynb #01_synthetic_data-13
+@_renamed_keywords(context_length="history_length")
 @dataclass
 class Scenario:
     """A fully specified known-parameter data-generating process.
@@ -182,10 +183,14 @@ class Scenario:
     targets, with explicit dependence laws and reference capabilities. These
     four controlled families snapshot resolved parameters at construction;
     create a new Scenario to change their parameters.
+
+    ``history_length`` is the number of steps of history a case holds and
+    ``horizon`` the number to forecast. ``context_length`` is the old name of
+    ``history_length``; it still works and warns.
     """
 
     kind: str
-    context_length: int = 120
+    history_length: int = 120
     horizon: int = 12
     parameters: dict[str, Any] = field(default_factory=dict)
     n_targets: int = 1
@@ -201,11 +206,23 @@ class Scenario:
         return resolve_process(
             self.kind,
             self.parameters,
-            self.context_length,
+            self.history_length,
             self.horizon,
             self.n_targets,
             self.seed,
         )
+
+    @property
+    def context_length(self) -> int:
+        """The old name of ``history_length``; it still works and warns."""
+        _old_name("Scenario", "context_length", "history_length")
+        return self.history_length
+
+    @context_length.setter
+    def context_length(self, value) -> None:
+        """Set ``history_length`` by its old name, with a warning."""
+        _old_name("Scenario", "context_length", "history_length")
+        self.history_length = value
 
     @property
     def display_name(self) -> str:
@@ -220,7 +237,7 @@ class Scenario:
             raise ValueError(
                 f"Unknown scenario {self.kind!r}; choose from {tuple(_DEFAULTS)}"
             )
-        length = positive_int(self.context_length, "context_length")
+        length = positive_int(self.history_length, "history_length")
         horizon = positive_int(self.horizon, "horizon")
         dimensions = positive_int(self.n_targets, "n_targets")
         nonnegative_int(self.seed, "seed")
@@ -270,13 +287,13 @@ class Scenario:
         return resolved, correlation, length, horizon, dimensions
 
     def generate(self, seed: int | None = None) -> Case:
-        """Generate context and held-out observations without global RNG state."""
+        """Generate the history and held-out observations without global RNG state."""
         if self.kind in PROCESS_KINDS:
             run_seed = nonnegative_int(self.seed if seed is None else seed, "seed")
             return _generate_resolved_process(
                 self.kind,
                 self._resolved_parameters,
-                self.context_length,
+                self.history_length,
                 self.horizon,
                 self.n_targets,
                 run_seed,
@@ -412,10 +429,10 @@ class Scenario:
             conditioning["reference_method"] = "kalman_filter"
 
         names = ("y",) if dimensions == 1 else tuple(f"y{i}" for i in range(dimensions))
-        context_index = pd.RangeIndex(length)
+        history_index = pd.RangeIndex(length)
         future_index = pd.RangeIndex(length, length + horizon)
-        context = pd.DataFrame(
-            values[:length].copy(), index=context_index, columns=names
+        history = pd.DataFrame(
+            values[:length].copy(), index=history_index, columns=names
         )
         observed = pd.DataFrame(
             values[length:].copy(), index=future_index, columns=names
@@ -431,7 +448,7 @@ class Scenario:
         manifest = {
             "schema_version": MANIFEST_SCHEMA_VERSION,
             "kind": self.kind,
-            "context_length": length,
+            "history_length": length,
             "horizon": horizon,
             "n_targets": dimensions,
             "target_names": list(names),
@@ -449,21 +466,23 @@ class Scenario:
             target_names=names,
             conditioning=conditioning,
         )
-        return Case(ForecastTask(context, future_index), observed, reference, manifest)
+        return Case(ForecastTask(history, future_index), observed, reference, manifest)
 
 
 # %% ../source/01_synthetic_data.ipynb #01_synthetic_data-18
-def default_scenarios(context_length=120, horizon=12, *, n_targets=1, seed=0):
+@_renamed_keywords(context_length="history_length")
+def default_scenarios(history_length=120, horizon=12, *, n_targets=1, seed=0):
     """Return fresh specifications for the five core families.
 
     Call ``generate`` on each specification to draw a case. The same supplied
     seed is recorded in each specification. Use independent replicate seeds
-    when aggregating experimental results.
+    when aggregating experimental results. ``context_length`` is the old name
+    of ``history_length``; it still works and warns.
     """
     return [
         Scenario(
             kind,
-            context_length=context_length,
+            history_length=history_length,
             horizon=horizon,
             n_targets=n_targets,
             seed=seed,
