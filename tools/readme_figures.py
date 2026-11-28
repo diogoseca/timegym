@@ -26,11 +26,11 @@ def save(figure, name):
     print(f"Saved {folder / name}")
 
 
-pipeline.scorecard().save(folder / "scorecard.png")
+pipeline.run().scorecard.save(folder / "scorecard.png")
 print(f"Saved {folder / 'scorecard.png'}")
-trend = pipeline.scorecard(["trend"], instances=3)
-save(trend.run.plot_forecasts(), "readme-trend-forecasts.png")
+trend = pipeline.run(["trend"], instances=3, keep_data=True)
+save(trend.plot_forecasts(), "readme-trend-forecasts.png")
 save(
-    pipeline.scorecard(["trend"], instances=20).run.plot_errors(metric="mse"),
+    pipeline.run(["trend"], instances=20).plot_errors(metric="mse"),
     "readme-trend-errors.png",
 )
